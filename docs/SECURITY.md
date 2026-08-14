@@ -33,6 +33,8 @@ Cifrado autenticado
 Almacenamiento local
 ```
 
+Mientras el módulo criptográfico todavía no esté implementado, la bóveda local solo puede persistir metadatos técnicos no sensibles. No se almacenarán notas, imágenes ni otro contenido privado en texto plano como solución temporal.
+
 Las decisiones concretas de algoritmos, parámetros, formato de claves y recuperación se documentarán antes de implementar el módulo criptográfico.
 
 ## V2
