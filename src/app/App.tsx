@@ -1,11 +1,47 @@
+import { useEffect, useState } from 'react'
+import { initializeLocalVault } from '../security/vault/vaultService'
+
 const foundationItems = [
   'React + TypeScript',
   'PWA instalable',
   'Diseño adaptable',
+  'Bóveda local',
   'Validación automática',
 ]
 
+type VaultUiState = 'checking' | 'ready' | 'error'
+
 export function App() {
+  const [vaultState, setVaultState] = useState<VaultUiState>('checking')
+
+  useEffect(() => {
+    let active = true
+
+    void initializeLocalVault().then((result) => {
+      if (!active) return
+      setVaultState(result.status === 'ready' ? 'ready' : 'error')
+    })
+
+    return () => {
+      active = false
+    }
+  }, [])
+
+  const vaultStatus = {
+    checking: {
+      title: 'Preparando bóveda local',
+      description: 'OANIX está comprobando el almacenamiento privado de este dispositivo.',
+    },
+    ready: {
+      title: 'Bóveda local preparada',
+      description: 'El contenedor local ya existe. La contraseña maestra y el cifrado son los siguientes pasos de la V1.',
+    },
+    error: {
+      title: 'Bóveda local no disponible',
+      description: 'El navegador no pudo preparar el almacenamiento local de OANIX en este dispositivo.',
+    },
+  }[vaultState]
+
   return (
     <main className="app-shell">
       <section className="hero" aria-labelledby="oanix-title">
@@ -13,19 +49,19 @@ export function App() {
         <p className="eyebrow">OANIX · V1</p>
         <h1 id="oanix-title">Tus notas. Tu dispositivo. Tu privacidad.</h1>
         <p className="hero-copy">
-          Estamos construyendo la base de OANIX: una aplicación de notas segura,
+          Estamos construyendo OANIX como una aplicación de notas segura,
           offline-first y preparada para crecer por módulos sin perder el orden.
         </p>
 
-        <div className="status-card" aria-label="Estado de la base técnica">
-          <span className="status-dot" aria-hidden="true" />
+        <div className="status-card" aria-live="polite" aria-label="Estado de la bóveda local">
+          <span className={`status-dot status-dot--${vaultState}`} aria-hidden="true" />
           <div>
-            <strong>Base técnica activa</strong>
-            <p>La bóveda y el editor se incorporarán en los siguientes pasos de la V1.</p>
+            <strong>{vaultStatus.title}</strong>
+            <p>{vaultStatus.description}</p>
           </div>
         </div>
 
-        <ul className="foundation-list" aria-label="Tecnologías preparadas">
+        <ul className="foundation-list" aria-label="Base técnica preparada">
           {foundationItems.map((item) => (
             <li key={item}>{item}</li>
           ))}
