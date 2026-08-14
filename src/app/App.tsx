@@ -30,7 +30,7 @@ export function App() {
   const vaultStatus = {
     checking: {
       title: 'Preparando bóveda local',
-      description: 'OANIX está comprobando el almacenamiento privado de este dispositivo.',
+      description: 'OANIX está comprobando el almacenamiento local de este dispositivo.',
     },
     ready: {
       title: 'Bóveda local preparada',
