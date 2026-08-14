@@ -13,6 +13,8 @@ html { min-width: 320px; background: #f7f7f5; }
 body { margin: 0; min-width: 320px; min-height: 100vh; }
 
 button, input, textarea { font: inherit; }
+button { cursor: pointer; }
+button:disabled, input:disabled { cursor: not-allowed; opacity: 0.62; }
 
 .app-shell {
   min-height: 100vh;
@@ -69,21 +71,151 @@ h1 {
   line-height: 1.7;
 }
 
-.status-card {
-  display: flex;
-  gap: 0.9rem;
-  align-items: flex-start;
+.status-dot {
+  flex: 0 0 auto;
+  width: 0.72rem;
+  height: 0.72rem;
+  margin-top: 0.35rem;
+  border-radius: 50%;
+}
+
+.status-dot--checking { background: #d97706; box-shadow: 0 0 0 5px rgba(217, 119, 6, 0.12); }
+.status-dot--ready { background: #16a34a; box-shadow: 0 0 0 5px rgba(22, 163, 74, 0.12); }
+.status-dot--error { background: #dc2626; box-shadow: 0 0 0 5px rgba(220, 38, 38, 0.12); }
+
+.vault-panel,
+.vault-access {
   margin-top: 2rem;
-  padding: 1rem 1.1rem;
+  padding: 1.1rem;
+  border: 1px solid #e5e7eb;
   border-radius: 18px;
   background: #f3f4f6;
 }
 
-.status-card p { margin: 0.25rem 0 0; color: #6b7280; line-height: 1.45; }
-.status-dot { flex: 0 0 auto; width: 0.72rem; height: 0.72rem; margin-top: 0.35rem; border-radius: 50%; }
-.status-dot--checking { background: #d97706; box-shadow: 0 0 0 5px rgba(217, 119, 6, 0.12); }
-.status-dot--ready { background: #16a34a; box-shadow: 0 0 0 5px rgba(22, 163, 74, 0.12); }
-.status-dot--error { background: #dc2626; box-shadow: 0 0 0 5px rgba(220, 38, 38, 0.12); }
+.vault-panel {
+  display: flex;
+  gap: 0.9rem;
+  align-items: flex-start;
+}
+
+.vault-panel p,
+.vault-access__heading p {
+  margin: 0.25rem 0 0;
+  color: #6b7280;
+  line-height: 1.45;
+}
+
+.vault-panel--unlocked {
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.vault-panel__status,
+.vault-access__heading {
+  display: flex;
+  gap: 0.9rem;
+  align-items: flex-start;
+}
+
+.vault-panel--error { background: #fef2f2; border-color: #fecaca; }
+
+.vault-form {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1.25rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.45rem;
+  color: #374151;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.field input {
+  width: 100%;
+  min-height: 46px;
+  padding: 0.72rem 0.85rem;
+  border: 1px solid #d1d5db;
+  border-radius: 12px;
+  outline: none;
+  background: #fff;
+  color: #111827;
+}
+
+.field input:focus {
+  border-color: #6b7280;
+  box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.08);
+}
+
+.password-input {
+  position: relative;
+}
+
+.password-input input {
+  padding-right: 5.7rem;
+}
+
+.input-action {
+  position: absolute;
+  top: 50%;
+  right: 0.45rem;
+  transform: translateY(-50%);
+  padding: 0.45rem 0.55rem;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #4b5563;
+  font-size: 0.82rem;
+  font-weight: 750;
+}
+
+.input-action:hover { background: #f3f4f6; }
+
+.primary-button,
+.secondary-button {
+  min-height: 44px;
+  border-radius: 12px;
+  font-weight: 800;
+}
+
+.primary-button {
+  border: 1px solid #111827;
+  padding: 0.75rem 1rem;
+  background: #111827;
+  color: #fff;
+}
+
+.primary-button:hover:not(:disabled) { background: #1f2937; }
+
+.secondary-button {
+  flex: 0 0 auto;
+  border: 1px solid #d1d5db;
+  padding: 0.65rem 0.9rem;
+  background: #fff;
+  color: #374151;
+}
+
+.secondary-button:hover:not(:disabled) { background: #f9fafb; }
+
+.form-message {
+  margin: 0;
+  padding: 0.7rem 0.8rem;
+  border-radius: 10px;
+  background: #fef2f2;
+  color: #991b1b;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.security-note {
+  margin: 1rem 0 0;
+  color: #6b7280;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
 
 .foundation-list {
   display: grid;
@@ -104,11 +236,16 @@ h1 {
   font-weight: 650;
 }
 
-.foundation-list li:last-child:nth-child(odd) { grid-column: 1 / -1; }
-
 @media (max-width: 560px) {
   .app-shell { padding: 0; place-items: stretch; }
-  .hero { min-height: 100vh; border: 0; border-radius: 0; padding-top: max(2rem, env(safe-area-inset-top)); }
+  .hero {
+    min-height: 100vh;
+    border: 0;
+    border-radius: 0;
+    padding-top: max(2rem, env(safe-area-inset-top));
+    padding-bottom: max(2rem, env(safe-area-inset-bottom));
+  }
+  .vault-panel--unlocked { align-items: stretch; flex-direction: column; }
+  .secondary-button { width: 100%; }
   .foundation-list { grid-template-columns: 1fr; }
-  .foundation-list li:last-child:nth-child(odd) { grid-column: auto; }
 }

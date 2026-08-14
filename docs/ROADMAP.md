@@ -13,7 +13,7 @@ Objetivo: entregar una PWA útil, segura, offline-first y completamente funciona
 - [x] Base del proyecto PWA
 - [x] Diseño responsive para móvil, tablet y PC
 - [x] Bóveda local
-- [ ] Contraseña maestra
+- [x] Contraseña maestra
 - [ ] Cifrado local
 - [ ] Notas
 - [ ] Editor de texto enriquecido

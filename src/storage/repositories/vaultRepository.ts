@@ -1,10 +1,11 @@
+import type { VaultProtectionMetadata } from '../../security/crypto/vaultCrypto'
 import { openLocalDatabase, VAULT_METADATA_STORE } from '../local/database'
 
 export interface VaultMetadata {
   key: 'primary'
   schemaVersion: 1
   createdAt: string
-  protection: 'pending'
+  protection: 'pending' | VaultProtectionMetadata
 }
 
 const PRIMARY_VAULT_KEY = 'primary'
