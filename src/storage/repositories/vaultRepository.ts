@@ -22,6 +22,7 @@ export async function readVaultMetadata(): Promise<VaultMetadata | null> {
 
   try {
     const transaction = database.transaction(VAULT_METADATA_STORE, 'readonly')
+    const completion = transactionCompleted(transaction)
     const store = transaction.objectStore(VAULT_METADATA_STORE)
     const request = store.get(PRIMARY_VAULT_KEY)
 
@@ -30,7 +31,7 @@ export async function readVaultMetadata(): Promise<VaultMetadata | null> {
       request.onerror = () => reject(request.error ?? new Error('Unable to read vault metadata.'))
     })
 
-    await transactionCompleted(transaction)
+    await completion
     return metadata
   } finally {
     database.close()
@@ -42,8 +43,9 @@ export async function writeVaultMetadata(metadata: VaultMetadata): Promise<void>
 
   try {
     const transaction = database.transaction(VAULT_METADATA_STORE, 'readwrite')
+    const completion = transactionCompleted(transaction)
     transaction.objectStore(VAULT_METADATA_STORE).put(metadata)
-    await transactionCompleted(transaction)
+    await completion
   } finally {
     database.close()
   }
