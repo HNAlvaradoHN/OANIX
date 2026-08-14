@@ -80,7 +80,10 @@ h1 {
 }
 
 .status-card p { margin: 0.25rem 0 0; color: #6b7280; line-height: 1.45; }
-.status-dot { flex: 0 0 auto; width: 0.72rem; height: 0.72rem; margin-top: 0.35rem; border-radius: 50%; background: #16a34a; box-shadow: 0 0 0 5px rgba(22, 163, 74, 0.12); }
+.status-dot { flex: 0 0 auto; width: 0.72rem; height: 0.72rem; margin-top: 0.35rem; border-radius: 50%; }
+.status-dot--checking { background: #d97706; box-shadow: 0 0 0 5px rgba(217, 119, 6, 0.12); }
+.status-dot--ready { background: #16a34a; box-shadow: 0 0 0 5px rgba(22, 163, 74, 0.12); }
+.status-dot--error { background: #dc2626; box-shadow: 0 0 0 5px rgba(220, 38, 38, 0.12); }
 
 .foundation-list {
   display: grid;
@@ -101,8 +104,11 @@ h1 {
   font-weight: 650;
 }
 
+.foundation-list li:last-child:nth-child(odd) { grid-column: 1 / -1; }
+
 @media (max-width: 560px) {
   .app-shell { padding: 0; place-items: stretch; }
   .hero { min-height: 100vh; border: 0; border-radius: 0; padding-top: max(2rem, env(safe-area-inset-top)); }
   .foundation-list { grid-template-columns: 1fr; }
+  .foundation-list li:last-child:nth-child(odd) { grid-column: auto; }
 }
