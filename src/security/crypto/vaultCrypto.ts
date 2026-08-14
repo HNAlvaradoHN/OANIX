@@ -11,7 +11,15 @@ const SALT_LENGTH = 16
 const VAULT_KEY_LENGTH = 32
 const GCM_IV_LENGTH = 12
 const GCM_TAG_LENGTH = 128
+const WRAPPED_VAULT_KEY_LENGTH = VAULT_KEY_LENGTH + GCM_TAG_LENGTH / 8
 const VAULT_KEY_AAD = new TextEncoder().encode('OANIX:vault-key:v1')
+
+interface Argon2idParameters {
+  memoryKiB: number
+  iterations: number
+  parallelism: number
+  hashLength: number
+}
 
 export interface VaultProtectionMetadata {
   scheme: 'argon2id-aes-gcm-v1'
@@ -76,14 +84,18 @@ export function validateMasterPassword(password: string): string | null {
   return null
 }
 
-async function deriveWrappingKeyMaterial(password: string, salt: Uint8Array): Promise<Uint8Array> {
+async function deriveWrappingKeyMaterial(
+  password: string,
+  salt: Uint8Array,
+  parameters: Argon2idParameters,
+): Promise<Uint8Array> {
   const result = await argon2id({
     password: normalizeMasterPassword(password),
     salt,
-    parallelism: KDF_PARALLELISM,
-    iterations: KDF_ITERATIONS,
-    memorySize: KDF_MEMORY_KIB,
-    hashLength: KDF_HASH_LENGTH,
+    parallelism: parameters.parallelism,
+    iterations: parameters.iterations,
+    memorySize: parameters.memoryKiB,
+    hashLength: parameters.hashLength,
     outputType: 'binary',
   })
 
@@ -98,13 +110,38 @@ async function importAesKey(bytes: Uint8Array, usages: KeyUsage[]): Promise<Cryp
   const cryptoApi = requireWebCrypto()
   const copy = Uint8Array.from(bytes)
 
-  return cryptoApi.subtle.importKey(
-    'raw',
-    copy.buffer,
-    { name: 'AES-GCM' },
-    false,
-    usages,
-  )
+  try {
+    return await cryptoApi.subtle.importKey(
+      'raw',
+      copy.buffer,
+      { name: 'AES-GCM' },
+      false,
+      usages,
+    )
+  } finally {
+    copy.fill(0)
+  }
+}
+
+function validateProtectionMetadata(protection: VaultProtectionMetadata): void {
+  if (protection.scheme !== 'argon2id-aes-gcm-v1') {
+    throw new Error('Unsupported vault protection scheme.')
+  }
+
+  if (
+    protection.kdf.algorithm !== 'argon2id' ||
+    protection.kdf.version !== 19 ||
+    protection.kdf.memoryKiB !== KDF_MEMORY_KIB ||
+    protection.kdf.iterations !== KDF_ITERATIONS ||
+    protection.kdf.parallelism !== KDF_PARALLELISM ||
+    protection.kdf.hashLength !== KDF_HASH_LENGTH
+  ) {
+    throw new Error('Unsupported or altered Argon2id parameters.')
+  }
+
+  if (protection.keyWrap.algorithm !== 'AES-GCM') {
+    throw new Error('Unsupported vault key wrapping algorithm.')
+  }
 }
 
 export async function createVaultProtection(password: string): Promise<{
@@ -118,7 +155,12 @@ export async function createVaultProtection(password: string): Promise<{
   let wrappingKeyBytes: Uint8Array | null = null
 
   try {
-    wrappingKeyBytes = await deriveWrappingKeyMaterial(password, salt)
+    wrappingKeyBytes = await deriveWrappingKeyMaterial(password, salt, {
+      memoryKiB: KDF_MEMORY_KIB,
+      iterations: KDF_ITERATIONS,
+      parallelism: KDF_PARALLELISM,
+      hashLength: KDF_HASH_LENGTH,
+    })
     const wrappingKey = await importAesKey(wrappingKeyBytes, ['encrypt'])
     const wrappedKeyBuffer = await cryptoApi.subtle.encrypt(
       {
@@ -163,19 +205,35 @@ export async function openVaultProtection(
   password: string,
   protection: VaultProtectionMetadata,
 ): Promise<CryptoKey> {
-  if (protection.scheme !== 'argon2id-aes-gcm-v1') {
-    throw new Error('Unsupported vault protection scheme.')
-  }
+  validateProtectionMetadata(protection)
 
   const cryptoApi = requireWebCrypto()
   const salt = base64ToBytes(protection.kdf.salt)
   const iv = base64ToBytes(protection.keyWrap.iv)
   const wrappedKey = base64ToBytes(protection.keyWrap.wrappedKey)
+
+  if (salt.byteLength !== SALT_LENGTH) {
+    throw new Error('Invalid Argon2id salt length.')
+  }
+
+  if (iv.byteLength !== GCM_IV_LENGTH) {
+    throw new Error('Invalid AES-GCM IV length.')
+  }
+
+  if (wrappedKey.byteLength !== WRAPPED_VAULT_KEY_LENGTH) {
+    throw new Error('Invalid wrapped vault key length.')
+  }
+
   let wrappingKeyBytes: Uint8Array | null = null
   let vaultKeyBytes: Uint8Array | null = null
 
   try {
-    wrappingKeyBytes = await deriveWrappingKeyMaterial(password, salt)
+    wrappingKeyBytes = await deriveWrappingKeyMaterial(password, salt, {
+      memoryKiB: protection.kdf.memoryKiB,
+      iterations: protection.kdf.iterations,
+      parallelism: protection.kdf.parallelism,
+      hashLength: protection.kdf.hashLength,
+    })
     const wrappingKey = await importAesKey(wrappingKeyBytes, ['decrypt'])
     const vaultKeyBuffer = await cryptoApi.subtle.decrypt(
       {
