@@ -10,9 +10,9 @@ OANIX se desarrolla estrictamente por versiones. Una función perteneciente a un
 
 Objetivo: entregar una PWA útil, segura, offline-first y completamente funcional en un solo dispositivo.
 
-- [ ] Base del proyecto PWA
-- [ ] Diseño responsive para móvil, tablet y PC
-- [ ] Bóveda local
+- [x] Base del proyecto PWA
+- [x] Diseño responsive para móvil, tablet y PC
+- [x] Bóveda local
 - [ ] Contraseña maestra
 - [ ] Cifrado local
 - [ ] Notas
