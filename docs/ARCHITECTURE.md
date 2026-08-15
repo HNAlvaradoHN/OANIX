@@ -59,6 +59,22 @@ Local storage
 
 La UI no debe acceder directamente a IndexedDB ni manipular claves criptográficas.
 
+## Dirección de interfaz
+
+OANIX adopta una experiencia de navegación inspirada en la claridad de aplicaciones de mensajería como Telegram, pero mantiene una identidad y arquitectura propias orientadas exclusivamente a notas privadas.
+
+Principios de esta experiencia:
+
+- la lista principal presenta las notas como entradas compactas similares a una lista de conversaciones;
+- abrir una nota debe sentirse tan directo como entrar a una conversación, sin convertir el contenido en un chat ni introducir mensajería entre personas;
+- en móvil se navega de la lista a la nota abierta y se vuelve con una acción clara;
+- en tablet y PC se aprovecha un diseño de dos paneles: lista a la izquierda y nota abierta a la derecha;
+- las carpetas se representarán como pestañas sobre la lista cuando llegue el punto `Carpetas` del roadmap; no se implementan antes;
+- fijados, archivo, etiquetas y búsqueda se añadirán únicamente cuando su alcance correspondiente esté activo;
+- no se copian logotipos, activos gráficos ni funciones sociales de Telegram.
+
+La inspiración es de interacción y organización, no una dependencia técnica ni una copia literal de interfaz.
+
 ## Contenido de una nota
 
 OANIX se diseña alrededor de bloques para evitar que una nota dependa de un único documento HTML gigante.
@@ -72,8 +88,23 @@ Tipos previstos para V1:
 - cita
 - código
 - imagen
+- ficha de contacto privada
+
+La ficha de contacto permitirá guardar dentro de una nota información como nombre, teléfono, correo y observaciones. No convierte OANIX en una red social ni sincroniza contactos del sistema por defecto.
 
 Los archivos adjuntos generales se prepararán arquitectónicamente, pero su alcance exacto se confirmará antes de implementarlos.
+
+## Modelo inicial de nota
+
+El punto `Notas` crea el contenedor cifrado básico antes del editor. Una nota V1 comienza con:
+
+- identificador aleatorio;
+- título;
+- fecha de creación;
+- fecha de actualización;
+- contenedor de bloques vacío y versionado.
+
+El editor enriquecido amplía ese contenedor en el siguiente punto del roadmap. Una nota nunca se guarda en texto plano como solución temporal.
 
 ## Regla de cambios
 
