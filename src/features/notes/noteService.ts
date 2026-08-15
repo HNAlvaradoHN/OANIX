@@ -1,5 +1,5 @@
 import { listNotes, readNote, saveNote } from '../../storage/repositories/noteRepository'
-import type { NoteBlock, NoteRecord } from './noteTypes'
+import type { NoteRecord, StoredNoteBlock } from './noteTypes'
 
 const DEFAULT_NOTE_TITLE = 'Nueva nota'
 const UNTITLED_NOTE_TITLE = 'Sin título'
@@ -82,7 +82,7 @@ export function renameNote(noteId: string, title: string): Promise<NoteRecord> {
   }))
 }
 
-export function replaceNoteContent(noteId: string, blocks: NoteBlock[]): Promise<NoteRecord> {
+export function replaceNoteContent(noteId: string, blocks: StoredNoteBlock[]): Promise<NoteRecord> {
   return enqueueNoteMutation(noteId, (existing) => ({
     ...existing,
     updatedAt: new Date().toISOString(),
