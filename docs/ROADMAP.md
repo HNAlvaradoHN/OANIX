@@ -19,6 +19,17 @@ Objetivo: entregar una PWA útil, segura, offline-first y completamente funciona
 - [x] Editor de texto enriquecido
 - [x] Bloques de código
 - [x] Imágenes
+
+### Pendiente inmediato antes de Checklists — Pulido móvil del editor
+
+- [ ] Permitir reducir más las imágenes en móvil manteniendo siempre su proporción, especialmente imágenes verticales tipo recibo.
+- [ ] Mantener controles de imagen utilizables y legibles cuando la imagen sea pequeña, sin invadir el contenido.
+- [ ] Sustituir en móvil la barra horizontal de formato por un botón flotante de herramientas que permanezca accesible durante el scroll y permita añadir más acciones en el futuro.
+- [ ] Mantener Deshacer y Rehacer como controles flotantes de acceso rápido en móvil.
+- [ ] Revisar el comportamiento con teclado virtual, scroll, selección de texto, imágenes y bloques especiales.
+- [ ] Auditar botones, menús, tarjetas y controles responsive para evitar textos cortados, desbordados o ilegibles; incluye acciones largas como `Convertir a texto` y `Eliminar bloque`.
+- [ ] Validar visualmente en móvil y pasar CI antes de continuar.
+
 - [ ] Checklists
 - [ ] Fichas de contacto privadas
 - [ ] Carpetas
@@ -68,5 +79,7 @@ Objetivo: empaquetar la misma base de código como aplicación Android.
 ## Estado actual
 
 **Versión activa: V1 — Núcleo local**
+
+**Siguiente bloque de trabajo:** Pulido móvil del editor. Después continúa Checklists.
 
 No se implementan funciones de V2, V3 o V4 mientras V1 no esté cerrada, salvo preparación arquitectónica explícitamente documentada.
