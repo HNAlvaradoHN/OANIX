@@ -17,6 +17,13 @@ export function defaultImageWidthPercent(mobile: boolean): number {
   return mobile ? MOBILE_DEFAULT_IMAGE_WIDTH_PERCENT : DESKTOP_DEFAULT_IMAGE_WIDTH_PERCENT
 }
 
+export function imageAlignmentFromCenterRatio(centerRatio: number): 'left' | 'center' | 'right' {
+  if (!Number.isFinite(centerRatio)) return 'center'
+  if (centerRatio < 1 / 3) return 'left'
+  if (centerRatio > 2 / 3) return 'right'
+  return 'center'
+}
+
 export function clampImageWidthPercent(
   editorWidth: number,
   widthPercent: number,
