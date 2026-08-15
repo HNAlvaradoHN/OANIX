@@ -1,0 +1,207 @@
+.image-note-editor-root {
+  position: relative;
+}
+
+.image-note-editor__input {
+  position: fixed;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.image-note-editor__error {
+  margin: 0.75rem 0 0;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  background: #fff1f2;
+  color: #b42318;
+  font-size: 0.82rem;
+}
+
+.image-note-editor-root .editor-image-block {
+  margin: 1rem 0;
+  overflow: hidden;
+  border: 1px solid #d8e0ea;
+  border-radius: 14px;
+  background: #f8fafc;
+  color: #172033;
+  -webkit-text-fill-color: currentColor;
+}
+
+.image-note-editor-root .editor-image-block__preview {
+  position: relative;
+  display: grid;
+  width: 100%;
+  min-height: 9rem;
+  max-height: 34rem;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  background: #e9eef5;
+  cursor: zoom-in;
+  place-items: center;
+}
+
+.image-note-editor-root .editor-image-block__preview img {
+  display: block;
+  width: 100%;
+  max-height: 34rem;
+  object-fit: contain;
+  background: #e9eef5;
+}
+
+.image-note-editor-root .editor-image-block__preview img:not([src]) {
+  min-height: 9rem;
+}
+
+.image-note-editor-root .editor-image-block__loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #64748b;
+  font-size: 0.82rem;
+  pointer-events: none;
+}
+
+.image-note-editor-root .editor-image-block__loading:empty {
+  display: none;
+}
+
+.image-note-editor-root .editor-image-block__footer {
+  display: grid;
+  grid-template-columns: minmax(8rem, auto) minmax(10rem, 1fr) auto;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.65rem 0.75rem;
+  border-top: 1px solid #e2e8f0;
+  background: #fff;
+}
+
+.image-note-editor-root .editor-image-block__meta {
+  min-width: 0;
+}
+
+.image-note-editor-root .editor-image-block__meta strong,
+.image-note-editor-root .editor-image-block__meta span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.image-note-editor-root .editor-image-block__meta strong {
+  font-size: 0.8rem;
+}
+
+.image-note-editor-root .editor-image-block__meta span {
+  margin-top: 0.08rem;
+  color: #7b8794;
+  font-size: 0.7rem;
+}
+
+.image-note-editor-root .editor-image-block__alt {
+  width: 100%;
+  min-width: 0;
+  height: 2.2rem;
+  padding: 0 0.7rem;
+  border: 1px solid #d8e0ea;
+  border-radius: 8px;
+  outline: none;
+  background: #f8fafc;
+  color: #334155;
+  -webkit-text-fill-color: currentColor;
+  font: inherit;
+  font-size: 0.78rem;
+}
+
+.image-note-editor-root .editor-image-block__alt:focus {
+  border-color: #93b4ff;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.image-note-editor-root .editor-image-block__remove {
+  min-height: 2.2rem;
+  padding: 0 0.7rem;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #b42318;
+  -webkit-text-fill-color: currentColor;
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.image-note-editor-root .editor-image-block__remove:hover,
+.image-note-editor-root .editor-image-block__remove:focus-visible {
+  outline: none;
+  background: #fff1f2;
+}
+
+.image-lightbox {
+  position: fixed;
+  z-index: 1000;
+  inset: 0;
+  display: grid;
+  padding: 1.25rem;
+  background: rgba(4, 10, 20, 0.88);
+  place-items: center;
+}
+
+.image-lightbox__content {
+  position: relative;
+  display: grid;
+  max-width: 96vw;
+  max-height: 94vh;
+  place-items: center;
+}
+
+.image-lightbox__content img {
+  display: block;
+  max-width: 94vw;
+  max-height: 90vh;
+  border-radius: 12px;
+  object-fit: contain;
+  box-shadow: 0 20px 70px rgba(0, 0, 0, 0.35);
+}
+
+.image-lightbox__close {
+  position: absolute;
+  z-index: 1;
+  top: 0.65rem;
+  right: 0.65rem;
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.78);
+  color: #fff;
+  font-size: 1.65rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+@media (max-width: 760px) {
+  .image-note-editor-root .editor-image-block__footer {
+    grid-template-columns: 1fr auto;
+  }
+
+  .image-note-editor-root .editor-image-block__alt {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .image-note-editor-root .editor-image-block__preview,
+  .image-note-editor-root .editor-image-block__preview img {
+    max-height: 25rem;
+  }
+
+  .image-lightbox {
+    padding: 0.5rem;
+  }
+}

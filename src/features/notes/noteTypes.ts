@@ -31,6 +31,15 @@ export function normalizeCodeLanguage(value: unknown): CodeLanguage {
     : 'plaintext'
 }
 
+export const IMAGE_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'] as const
+export type ImageMimeType = (typeof IMAGE_MIME_TYPES)[number]
+
+export function normalizeImageMimeType(value: unknown): ImageMimeType | null {
+  return typeof value === 'string' && (IMAGE_MIME_TYPES as readonly string[]).includes(value)
+    ? (value as ImageMimeType)
+    : null
+}
+
 export interface ParagraphBlock {
   id: string
   type: 'paragraph'
@@ -74,6 +83,16 @@ export interface CodeBlock {
   text: string
 }
 
+export interface ImageBlock {
+  id: string
+  type: 'image'
+  imageId: string
+  mimeType: ImageMimeType
+  name: string
+  byteLength: number
+  alt?: string
+}
+
 export type NoteBlock =
   | ParagraphBlock
   | HeadingBlock
@@ -83,6 +102,8 @@ export type NoteBlock =
   | DividerBlock
   | CodeBlock
 
+export type StoredNoteBlock = NoteBlock | ImageBlock
+
 export interface NoteRecord {
   version: 1
   id: string
@@ -91,7 +112,7 @@ export interface NoteRecord {
   updatedAt: string
   content: {
     format: 'blocks-v1'
-    blocks: NoteBlock[]
+    blocks: StoredNoteBlock[]
   }
 }
 
@@ -128,7 +149,7 @@ function isRunArray(value: unknown): value is RichTextRun[] {
   return Array.isArray(value) && value.every(isRichTextRun)
 }
 
-function isNoteBlock(value: unknown): value is NoteBlock {
+function isStoredNoteBlock(value: unknown): value is StoredNoteBlock {
   if (!value || typeof value !== 'object') return false
 
   const block = value as {
@@ -139,6 +160,11 @@ function isNoteBlock(value: unknown): value is NoteBlock {
     items?: unknown
     language?: unknown
     text?: unknown
+    imageId?: unknown
+    mimeType?: unknown
+    name?: unknown
+    byteLength?: unknown
+    alt?: unknown
   }
 
   if (typeof block.id !== 'string' || block.id.length === 0 || typeof block.type !== 'string') {
@@ -152,6 +178,19 @@ function isNoteBlock(value: unknown): value is NoteBlock {
       typeof block.text === 'string' &&
       typeof block.language === 'string' &&
       normalizeCodeLanguage(block.language) === block.language
+    )
+  }
+
+  if (block.type === 'image') {
+    return (
+      typeof block.imageId === 'string' &&
+      block.imageId.length > 0 &&
+      normalizeImageMimeType(block.mimeType) !== null &&
+      typeof block.name === 'string' &&
+      typeof block.byteLength === 'number' &&
+      Number.isSafeInteger(block.byteLength) &&
+      block.byteLength >= 0 &&
+      (block.alt === undefined || typeof block.alt === 'string')
     )
   }
 
@@ -186,7 +225,7 @@ export function isNoteRecord(value: unknown): value is NoteRecord {
     !!note.content &&
     note.content.format === 'blocks-v1' &&
     Array.isArray(note.content.blocks) &&
-    note.content.blocks.every(isNoteBlock)
+    note.content.blocks.every(isStoredNoteBlock)
   )
 }
 
@@ -194,11 +233,12 @@ function runsToPlainText(runs: RichTextRun[]): string {
   return runs.map((run) => run.text).join('')
 }
 
-export function noteBlocksToPlainText(blocks: NoteBlock[]): string {
+export function noteBlocksToPlainText(blocks: StoredNoteBlock[]): string {
   return blocks
     .flatMap((block) => {
       if (block.type === 'divider') return []
       if (block.type === 'code') return [block.text]
+      if (block.type === 'image') return [block.alt?.trim() || block.name]
       if (block.type === 'bulletList' || block.type === 'orderedList') {
         return block.items.map(runsToPlainText)
       }

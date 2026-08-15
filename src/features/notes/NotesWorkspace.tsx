@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
-import { CodeBlockEditor } from '../editor/CodeBlockEditor'
+import { deleteEncryptedImage } from '../images/imageService'
+import { ImageNoteEditor } from '../images/ImageNoteEditor'
 import { createEmptyNote, loadNotes, renameNote, replaceNoteContent } from './noteService'
-import { noteBlocksToPlainText, type NoteBlock, type NoteRecord } from './noteTypes'
+import { noteBlocksToPlainText, type NoteRecord, type StoredNoteBlock } from './noteTypes'
 import './notes.css'
 
 interface NotesWorkspaceProps {
@@ -12,7 +13,7 @@ type SaveState = 'idle' | 'dirty' | 'saving' | 'saved' | 'error'
 
 interface PendingContent {
   noteId: string
-  blocks: NoteBlock[]
+  blocks: StoredNoteBlock[]
 }
 
 function formatNoteTime(isoDate: string): string {
@@ -157,7 +158,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     return result
   }
 
-  function handleContentChange(blocks: NoteBlock[]) {
+  function handleContentChange(blocks: StoredNoteBlock[]) {
     if (!selectedNote) return
 
     pendingContentRef.current = { noteId: selectedNote.id, blocks }
@@ -167,6 +168,17 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     saveTimerRef.current = window.setTimeout(() => {
       void flushPendingContent()
     }, 550)
+  }
+
+  async function handleRemovedImage(imageId: string): Promise<void> {
+    if (!(await flushPendingContent())) return
+
+    try {
+      await deleteEncryptedImage(imageId)
+    } catch {
+      // The note is already safely saved without the image reference. A failed cleanup
+      // may leave encrypted orphan bytes, but never a broken note reference.
+    }
   }
 
   async function handleCreateNote() {
@@ -355,12 +367,13 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
                 />
               </label>
 
-              <CodeBlockEditor
+              <ImageNoteEditor
                 key={selectedNote.id}
                 noteId={selectedNote.id}
                 initialBlocks={selectedNote.content.blocks}
                 onChange={handleContentChange}
                 onBlur={() => void flushPendingContent()}
+                onRemoveImage={handleRemovedImage}
               />
             </div>
           </>
