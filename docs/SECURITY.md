@@ -15,6 +15,8 @@ El diseño debe aspirar a que una copia completa de la base de datos del servido
 - La contraseña maestra no debe enviarse al servidor como contenido recuperable.
 - La búsqueda privada debe ejecutarse localmente sobre contenido descifrado.
 - El código pegado dentro de una nota se trata como contenido, no se ejecuta.
+- El editor no persiste HTML arbitrario del navegador; transforma la vista editable a un modelo propio de bloques y marcas permitidas.
+- Los enlaces guardados por el editor se limitan a protocolos explícitamente permitidos.
 - No introducir IA remota en el núcleo de seguridad de V1.
 
 ## V1
@@ -108,6 +110,16 @@ Para localizar registros, IndexedDB conserva una clave técnica derivada del tip
 
 La misma capa criptográfica admite bytes y JSON para que imágenes y otros tipos binarios puedan seguir la misma política cuando lleguen a su punto correspondiente del roadmap.
 
+### Notas y editor enriquecido
+
+Las notas se almacenan como registros cifrados de tipo `note`. El contenido usa un modelo estructurado `blocks-v1`; no se persiste el `innerHTML` de `contentEditable`.
+
+El editor solo transforma a datos persistentes los elementos que OANIX reconoce actualmente: párrafos, encabezados, listas, citas, separadores y segmentos de texto con negrita, cursiva o enlaces permitidos. Cualquier estructura del DOM fuera de ese modelo se aplana a texto o se descarta como formato.
+
+Los enlaces se normalizan y solo se conservan con protocolos `http`, `https`, `mailto` o `tel`. El pegado en esta etapa introduce texto plano, evitando que estilos, scripts o marcado externo entren directamente al modelo persistido.
+
+El autoguardado cifra el modelo completo antes de cada escritura. Las mutaciones de una misma nota se serializan para impedir que dos actualizaciones concurrentes, por ejemplo título y contenido, se sobrescriban entre sí.
+
 ### Comprobación de almacenamiento cifrado
 
 Después de crear o desbloquear la bóveda, OANIX puede realizar una comprobación de ida y vuelta con un registro técnico aleatorio:
@@ -131,10 +143,6 @@ La implementación intenta sobrescribir los `Uint8Array` temporales que contiene
 ### Recuperación
 
 V1 no incorpora recuperación de contraseña. Si el usuario pierde la contraseña maestra después de almacenar contenido cifrado, OANIX no tendrá una clave alternativa con la que abrir esa bóveda. La recuperación pertenece a V2 y deberá diseñarse sin introducir una puerta trasera que permita al servidor leer el contenido.
-
-### Estado del contenido
-
-La infraestructura de cifrado local ya está preparada, pero el sistema de notas todavía no se implementa. No se introducirán notas, imágenes u otros tipos privados persistentes hasta su punto correspondiente del roadmap.
 
 ## Referencias técnicas
 

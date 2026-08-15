@@ -1,10 +1,18 @@
-import { useEffect, useMemo, useState, type KeyboardEvent } from 'react'
-import { createEmptyNote, loadNotes, renameNote } from './noteService'
-import type { NoteRecord } from './noteTypes'
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
+import { RichTextEditor } from '../editor/RichTextEditor'
+import { createEmptyNote, loadNotes, renameNote, replaceNoteContent } from './noteService'
+import { noteBlocksToPlainText, type NoteBlock, type NoteRecord } from './noteTypes'
 import './notes.css'
 
 interface NotesWorkspaceProps {
   onLock: () => void
+}
+
+type SaveState = 'idle' | 'dirty' | 'saving' | 'saved' | 'error'
+
+interface PendingContent {
+  noteId: string
+  blocks: NoteBlock[]
 }
 
 function formatNoteTime(isoDate: string): string {
@@ -29,6 +37,19 @@ function noteInitial(title: string): string {
   return first ? first.toUpperCase() : 'N'
 }
 
+function notePreview(note: NoteRecord): string {
+  return noteBlocksToPlainText(note.content.blocks) || 'Nota vacía · empieza a escribir'
+}
+
+function saveStateLabel(saveState: SaveState, savingTitle: boolean): string {
+  if (savingTitle) return 'Guardando título…'
+  if (saveState === 'dirty') return 'Cambios pendientes…'
+  if (saveState === 'saving') return 'Guardando cifrado…'
+  if (saveState === 'saved') return 'Guardado · cifrado local'
+  if (saveState === 'error') return 'No se pudo guardar'
+  return 'Cifrada en este dispositivo'
+}
+
 export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
   const [notes, setNotes] = useState<NoteRecord[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -36,7 +57,10 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
   const [savingTitle, setSavingTitle] = useState(false)
+  const [saveState, setSaveState] = useState<SaveState>('idle')
   const [error, setError] = useState('')
+  const pendingContentRef = useRef<PendingContent | null>(null)
+  const saveTimerRef = useRef<number | null>(null)
 
   const selectedNote = useMemo(
     () => notes.find((note) => note.id === selectedId) ?? null,
@@ -68,7 +92,66 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     setDraftTitle(selectedNote?.title ?? '')
   }, [selectedNote?.id, selectedNote?.title])
 
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current !== null) {
+        window.clearTimeout(saveTimerRef.current)
+      }
+    }
+  }, [])
+
+  function replaceNoteInState(updated: NoteRecord) {
+    setNotes((current) =>
+      current
+        .map((note) => (note.id === updated.id ? updated : note))
+        .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt)),
+    )
+  }
+
+  function clearSaveTimer() {
+    if (saveTimerRef.current !== null) {
+      window.clearTimeout(saveTimerRef.current)
+      saveTimerRef.current = null
+    }
+  }
+
+  async function flushPendingContent(): Promise<boolean> {
+    clearSaveTimer()
+    const pending = pendingContentRef.current
+    if (!pending) return true
+
+    pendingContentRef.current = null
+    setSaveState('saving')
+    setError('')
+
+    try {
+      const updated = await replaceNoteContent(pending.noteId, pending.blocks)
+      replaceNoteInState(updated)
+      setSaveState(pendingContentRef.current ? 'dirty' : 'saved')
+      return true
+    } catch {
+      if (!pendingContentRef.current) pendingContentRef.current = pending
+      setSaveState('error')
+      setError('No se pudieron guardar los cambios cifrados de la nota.')
+      return false
+    }
+  }
+
+  function handleContentChange(blocks: NoteBlock[]) {
+    if (!selectedNote) return
+
+    pendingContentRef.current = { noteId: selectedNote.id, blocks }
+    setSaveState('dirty')
+    setError('')
+    clearSaveTimer()
+    saveTimerRef.current = window.setTimeout(() => {
+      void flushPendingContent()
+    }, 550)
+  }
+
   async function handleCreateNote() {
+    if (!(await flushPendingContent())) return
+
     setCreating(true)
     setError('')
 
@@ -76,6 +159,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
       const note = await createEmptyNote()
       setNotes((current) => [note, ...current])
       setSelectedId(note.id)
+      setSaveState('idle')
     } catch {
       setError('No se pudo crear la nota cifrada.')
     } finally {
@@ -91,23 +175,42 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
       return
     }
 
+    if (!(await flushPendingContent())) return
+
     setSavingTitle(true)
     setError('')
 
     try {
       const updated = await renameNote(selectedNote.id, draftTitle)
-      setNotes((current) =>
-        current
-          .map((note) => (note.id === updated.id ? updated : note))
-          .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt)),
-      )
+      replaceNoteInState(updated)
       setDraftTitle(updated.title)
+      setSaveState('saved')
     } catch {
       setDraftTitle(selectedNote.title)
+      setSaveState('error')
       setError('No se pudo guardar el nuevo título de la nota.')
     } finally {
       setSavingTitle(false)
     }
+  }
+
+  async function handleSelectNote(noteId: string) {
+    if (noteId === selectedId) return
+    if (!(await flushPendingContent())) return
+
+    setSelectedId(noteId)
+    setSaveState('idle')
+  }
+
+  async function handleBack() {
+    if (!(await flushPendingContent())) return
+    setSelectedId(null)
+    setSaveState('idle')
+  }
+
+  async function handleLockWorkspace() {
+    if (!(await flushPendingContent())) return
+    onLock()
   }
 
   function handleTitleKeyDown(event: KeyboardEvent<HTMLInputElement>) {
@@ -131,7 +234,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
             <button
               className="icon-button"
               type="button"
-              onClick={onLock}
+              onClick={() => void handleLockWorkspace()}
               aria-label="Bloquear OANIX"
               title="Bloquear OANIX"
             >
@@ -140,7 +243,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
             <button
               className="new-note-button"
               type="button"
-              onClick={handleCreateNote}
+              onClick={() => void handleCreateNote()}
               disabled={creating}
             >
               <span aria-hidden="true">＋</span>
@@ -168,7 +271,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
               <div className="notes-empty__icon" aria-hidden="true">✎</div>
               <strong>Aún no hay notas</strong>
               <p>Crea la primera. Se guardará cifrada en este dispositivo.</p>
-              <button className="empty-action" type="button" onClick={handleCreateNote} disabled={creating}>
+              <button className="empty-action" type="button" onClick={() => void handleCreateNote()} disabled={creating}>
                 Crear primera nota
               </button>
             </div>
@@ -178,7 +281,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
                 className={`note-row${selectedId === note.id ? ' note-row--selected' : ''}`}
                 type="button"
                 key={note.id}
-                onClick={() => setSelectedId(note.id)}
+                onClick={() => void handleSelectNote(note.id)}
               >
                 <span className="note-row__avatar" aria-hidden="true">{noteInitial(note.title)}</span>
                 <span className="note-row__body">
@@ -186,7 +289,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
                     <strong>{note.title}</strong>
                     <time dateTime={note.updatedAt}>{formatNoteTime(note.updatedAt)}</time>
                   </span>
-                  <span className="note-row__preview">Nota vacía · lista para el editor</span>
+                  <span className="note-row__preview">{notePreview(note)}</span>
                 </span>
               </button>
             ))
@@ -201,7 +304,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
               <button
                 className="back-button"
                 type="button"
-                onClick={() => setSelectedId(null)}
+                onClick={() => void handleBack()}
                 aria-label="Volver a la lista de notas"
               >
                 ←
@@ -210,7 +313,9 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
                 <span className="note-view__avatar" aria-hidden="true">{noteInitial(selectedNote.title)}</span>
                 <div>
                   <strong>{selectedNote.title}</strong>
-                  <span>Cifrada en este dispositivo</span>
+                  <span className={saveState === 'error' ? 'save-status save-status--error' : 'save-status'}>
+                    {saveStateLabel(saveState, savingTitle)}
+                  </span>
                 </div>
               </div>
             </header>
@@ -230,14 +335,13 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
                 />
               </label>
 
-              <div className="note-editor-placeholder">
-                <div className="note-editor-placeholder__icon" aria-hidden="true">✦</div>
-                <strong>La nota ya existe y está cifrada</strong>
-                <p>
-                  El editor de contenido será el siguiente bloque de V1. Aquí aparecerán texto,
-                  listas, código, imágenes y otros bloques sin convertir la nota en un chat real.
-                </p>
-              </div>
+              <RichTextEditor
+                key={selectedNote.id}
+                noteId={selectedNote.id}
+                initialBlocks={selectedNote.content.blocks}
+                onChange={handleContentChange}
+                onBlur={() => void flushPendingContent()}
+              />
             </div>
           </>
         ) : (
