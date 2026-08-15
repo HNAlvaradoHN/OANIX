@@ -40,6 +40,15 @@ export function normalizeImageMimeType(value: unknown): ImageMimeType | null {
     : null
 }
 
+export const IMAGE_ALIGNMENTS = ['left', 'center', 'right'] as const
+export type ImageAlignment = (typeof IMAGE_ALIGNMENTS)[number]
+
+export function normalizeImageAlignment(value: unknown): ImageAlignment | null {
+  return typeof value === 'string' && (IMAGE_ALIGNMENTS as readonly string[]).includes(value)
+    ? (value as ImageAlignment)
+    : null
+}
+
 export interface ParagraphBlock {
   id: string
   type: 'paragraph'
@@ -91,6 +100,10 @@ export interface ImageBlock {
   name: string
   byteLength: number
   alt?: string
+  widthPercent?: number
+  alignment?: ImageAlignment
+  locked?: boolean
+  showName?: boolean
 }
 
 export type NoteBlock =
@@ -165,6 +178,10 @@ function isStoredNoteBlock(value: unknown): value is StoredNoteBlock {
     name?: unknown
     byteLength?: unknown
     alt?: unknown
+    widthPercent?: unknown
+    alignment?: unknown
+    locked?: unknown
+    showName?: unknown
   }
 
   if (typeof block.id !== 'string' || block.id.length === 0 || typeof block.type !== 'string') {
@@ -190,7 +207,15 @@ function isStoredNoteBlock(value: unknown): value is StoredNoteBlock {
       typeof block.byteLength === 'number' &&
       Number.isSafeInteger(block.byteLength) &&
       block.byteLength >= 0 &&
-      (block.alt === undefined || typeof block.alt === 'string')
+      (block.alt === undefined || typeof block.alt === 'string') &&
+      (block.widthPercent === undefined ||
+        (typeof block.widthPercent === 'number' &&
+          Number.isSafeInteger(block.widthPercent) &&
+          block.widthPercent >= 35 &&
+          block.widthPercent <= 100)) &&
+      (block.alignment === undefined || normalizeImageAlignment(block.alignment) !== null) &&
+      (block.locked === undefined || typeof block.locked === 'boolean') &&
+      (block.showName === undefined || typeof block.showName === 'boolean')
     )
   }
 
@@ -238,7 +263,11 @@ export function noteBlocksToPlainText(blocks: StoredNoteBlock[]): string {
     .flatMap((block) => {
       if (block.type === 'divider') return []
       if (block.type === 'code') return [block.text]
-      if (block.type === 'image') return [block.alt?.trim() || block.name]
+      if (block.type === 'image') {
+        const description = block.alt?.trim()
+        if (description) return [description]
+        return [block.showName === false ? 'Imagen' : block.name]
+      }
       if (block.type === 'bulletList' || block.type === 'orderedList') {
         return block.items.map(runsToPlainText)
       }

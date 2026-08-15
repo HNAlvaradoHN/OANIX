@@ -2,8 +2,8 @@
   white-space: pre-wrap;
 }
 
-.code-block-editor-root .editor-code-block__remove {
-  margin-left: auto;
+.code-block-editor-root .editor-code-block__convert,
+.code-block-editor-root .editor-code-block__delete {
   padding: 0.42rem 0.7rem;
   border: 0;
   border-radius: 8px;
@@ -16,9 +16,105 @@
   cursor: pointer;
 }
 
-.code-block-editor-root .editor-code-block__remove:hover,
-.code-block-editor-root .editor-code-block__remove:focus-visible {
+.code-block-editor-root .editor-code-block__convert {
+  margin-left: auto;
+}
+
+.code-block-editor-root .editor-code-block__convert:hover,
+.code-block-editor-root .editor-code-block__convert:focus-visible {
+  outline: none;
+  background: rgba(59, 130, 246, 0.16);
+  color: #dbeafe;
+}
+
+.code-block-editor-root .editor-code-block__delete:hover,
+.code-block-editor-root .editor-code-block__delete:focus-visible {
   outline: none;
   background: #3a2430;
   color: #fecaca;
+}
+
+.code-delete-dialog {
+  position: fixed;
+  z-index: 1400;
+  inset: 0;
+  display: grid;
+  padding: 1rem;
+  background: rgba(15, 23, 42, 0.48);
+  place-items: center;
+}
+
+.code-delete-dialog__panel {
+  width: min(28rem, 100%);
+  padding: 1.15rem;
+  border: 1px solid #d8e0ea;
+  border-radius: 16px;
+  background: #fff;
+  color: #172033;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.24);
+}
+
+.code-delete-dialog__panel h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.code-delete-dialog__panel p {
+  margin: 0.6rem 0 0;
+  color: #64748b;
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.code-delete-dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.55rem;
+  margin-top: 1rem;
+}
+
+.code-delete-dialog__cancel,
+.code-delete-dialog__confirm {
+  min-height: 2.45rem;
+  padding: 0 0.9rem;
+  border-radius: 9px;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.code-delete-dialog__cancel {
+  border: 1px solid #d8e0ea;
+  background: #fff;
+  color: #334155;
+}
+
+.code-delete-dialog__confirm {
+  border: 1px solid #b42318;
+  background: #b42318;
+  color: #fff;
+}
+
+.code-delete-dialog__cancel:focus-visible,
+.code-delete-dialog__confirm:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, 0.22);
+  outline-offset: 2px;
+}
+
+@media (max-width: 640px) {
+  .code-block-editor-root .editor-code-block__convert,
+  .code-block-editor-root .editor-code-block__delete {
+    padding-inline: 0.5rem;
+    font-size: 0.7rem;
+  }
+
+  .code-delete-dialog__actions {
+    flex-direction: column-reverse;
+  }
+
+  .code-delete-dialog__cancel,
+  .code-delete-dialog__confirm {
+    width: 100%;
+  }
 }
