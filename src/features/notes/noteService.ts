@@ -39,11 +39,12 @@ function enqueueNoteMutation(
     })
 
   mutationQueues.set(noteId, next)
-  void next.finally(() => {
+  const cleanup = () => {
     if (mutationQueues.get(noteId) === next) {
       mutationQueues.delete(noteId)
     }
-  })
+  }
+  void next.then(cleanup, cleanup)
 
   return next
 }

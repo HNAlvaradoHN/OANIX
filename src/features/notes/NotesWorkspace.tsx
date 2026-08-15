@@ -60,12 +60,18 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
   const [saveState, setSaveState] = useState<SaveState>('idle')
   const [error, setError] = useState('')
   const pendingContentRef = useRef<PendingContent | null>(null)
+  const activeSaveRef = useRef<Promise<boolean> | null>(null)
   const saveTimerRef = useRef<number | null>(null)
+  const selectedIdRef = useRef<string | null>(null)
 
   const selectedNote = useMemo(
     () => notes.find((note) => note.id === selectedId) ?? null,
     [notes, selectedId],
   )
+
+  useEffect(() => {
+    selectedIdRef.current = selectedId
+  }, [selectedId])
 
   useEffect(() => {
     let active = true
@@ -118,23 +124,37 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
   async function flushPendingContent(): Promise<boolean> {
     clearSaveTimer()
     const pending = pendingContentRef.current
-    if (!pending) return true
+
+    if (!pending) {
+      return activeSaveRef.current ? await activeSaveRef.current : true
+    }
 
     pendingContentRef.current = null
-    setSaveState('saving')
+    if (selectedIdRef.current === pending.noteId) setSaveState('saving')
     setError('')
 
-    try {
-      const updated = await replaceNoteContent(pending.noteId, pending.blocks)
-      replaceNoteInState(updated)
-      setSaveState(pendingContentRef.current ? 'dirty' : 'saved')
-      return true
-    } catch {
-      if (!pendingContentRef.current) pendingContentRef.current = pending
-      setSaveState('error')
-      setError('No se pudieron guardar los cambios cifrados de la nota.')
-      return false
-    }
+    const savePromise = (async () => {
+      try {
+        const updated = await replaceNoteContent(pending.noteId, pending.blocks)
+        replaceNoteInState(updated)
+        setError('')
+
+        if (selectedIdRef.current === pending.noteId) {
+          setSaveState(pendingContentRef.current ? 'dirty' : 'saved')
+        }
+        return true
+      } catch {
+        if (!pendingContentRef.current) pendingContentRef.current = pending
+        if (selectedIdRef.current === pending.noteId) setSaveState('error')
+        setError('No se pudieron guardar los cambios cifrados de la nota.')
+        return false
+      }
+    })()
+
+    activeSaveRef.current = savePromise
+    const result = await savePromise
+    if (activeSaveRef.current === savePromise) activeSaveRef.current = null
+    return result
   }
 
   function handleContentChange(blocks: NoteBlock[]) {
