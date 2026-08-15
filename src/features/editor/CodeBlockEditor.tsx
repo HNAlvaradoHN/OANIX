@@ -257,6 +257,24 @@ export function CodeBlockEditor(props: CodeBlockEditorProps) {
       convertCodeBlockToText(root, block)
     }
 
+    function syncCodeSelectionMode() {
+      root.querySelectorAll<HTMLElement>('[data-code-block="true"]').forEach((block) => {
+        delete block.dataset.codeSelectionLocal
+      })
+
+      const selection = document.getSelection()
+      if (!selection || selection.rangeCount === 0) return
+
+      const elementFor = (node: Node | null): Element | null =>
+        node instanceof Element ? node : node?.parentElement ?? null
+      const anchorContent = elementFor(selection.anchorNode)?.closest<HTMLElement>('[data-code-content="true"]') ?? null
+      const focusContent = elementFor(selection.focusNode)?.closest<HTMLElement>('[data-code-content="true"]') ?? null
+
+      if (!anchorContent || anchorContent !== focusContent || !root.contains(anchorContent)) return
+      const block = anchorContent.closest<HTMLElement>('[data-code-block="true"]')
+      if (block) block.dataset.codeSelectionLocal = 'true'
+    }
+
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape' && activeDialog) {
         event.preventDefault()
@@ -266,11 +284,14 @@ export function CodeBlockEditor(props: CodeBlockEditorProps) {
 
     root.addEventListener('click', handleClick, true)
     document.addEventListener('keydown', handleKeyDown)
+    document.addEventListener('selectionchange', syncCodeSelectionMode)
+    syncCodeSelectionMode()
 
     return () => {
       observer.disconnect()
       root.removeEventListener('click', handleClick, true)
       document.removeEventListener('keydown', handleKeyDown)
+      document.removeEventListener('selectionchange', syncCodeSelectionMode)
       closeActiveDialog()
     }
   }, [props.noteId])

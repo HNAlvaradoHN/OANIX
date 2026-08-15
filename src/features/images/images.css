@@ -490,7 +490,18 @@
   user-select: none;
 }
 
+.image-note-editor-root .editor-surface > [data-image-block="true"]::selection,
+.image-note-editor-root .editor-surface > [data-image-block="true"] *::selection {
+  background: transparent;
+  color: inherit;
+}
+
 .image-note-editor-root .editor-image-block__alt {
   -webkit-user-select: text;
   user-select: text;
+}
+
+.image-note-editor-root .editor-image-block__alt:focus::selection {
+  background: #2563eb;
+  color: #fff;
 }

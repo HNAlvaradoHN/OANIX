@@ -290,6 +290,126 @@ function placeCaretAtEnd(editor: HTMLElement): void {
   selection.addRange(range)
 }
 
+function placeCaretAtStart(element: HTMLElement): void {
+  const selection = window.getSelection()
+  if (!selection) return
+
+  const range = document.createRange()
+  range.selectNodeContents(element)
+  range.collapse(true)
+  selection.removeAllRanges()
+  selection.addRange(range)
+}
+
+function createCaretParagraph(): HTMLParagraphElement {
+  const paragraph = document.createElement('p')
+  paragraph.dataset.blockId = createBlockId()
+  paragraph.append(document.createElement('br'))
+  return paragraph
+}
+
+function isEmptyCaretParagraph(element: Element | null): element is HTMLParagraphElement {
+  return (
+    element instanceof HTMLParagraphElement &&
+    (element.textContent ?? '').trim() === '' &&
+    !element.querySelector('[data-code-block="true"], [data-image-block="true"]')
+  )
+}
+
+function isProtectedEditorBlock(element: HTMLElement): boolean {
+  return element.dataset.codeBlock === 'true' || element.dataset.imageBlock === 'true'
+}
+
+function directEditorBlocks(editor: HTMLElement): HTMLElement[] {
+  return Array.from(editor.children).filter((child): child is HTMLElement => child instanceof HTMLElement)
+}
+
+function placeCaretFromEditorBackground(editor: HTMLElement, clientY: number): boolean {
+  const blocks = directEditorBlocks(editor)
+
+  if (blocks.length === 0) {
+    const paragraph = createCaretParagraph()
+    editor.append(paragraph)
+    editor.focus()
+    placeCaretAtStart(paragraph)
+    return true
+  }
+
+  const protectedAtY = blocks.find((block) => {
+    if (!isProtectedEditorBlock(block)) return false
+    const rect = block.getBoundingClientRect()
+    return clientY >= rect.top && clientY <= rect.bottom
+  })
+
+  if (protectedAtY) {
+    const next = protectedAtY.nextElementSibling
+    if (isEmptyCaretParagraph(next)) {
+      editor.focus()
+      placeCaretAtStart(next)
+      return false
+    }
+
+    const paragraph = createCaretParagraph()
+    protectedAtY.after(paragraph)
+    editor.focus()
+    placeCaretAtStart(paragraph)
+    return true
+  }
+
+  const nextIndex = blocks.findIndex((block) => clientY < block.getBoundingClientRect().top)
+
+  if (nextIndex === 0) {
+    const first = blocks[0]
+    if (isEmptyCaretParagraph(first)) {
+      editor.focus()
+      placeCaretAtStart(first)
+      return false
+    }
+
+    const paragraph = createCaretParagraph()
+    first.before(paragraph)
+    editor.focus()
+    placeCaretAtStart(paragraph)
+    return true
+  }
+
+  if (nextIndex > 0) {
+    const previous = blocks[nextIndex - 1]
+    const next = blocks[nextIndex]
+
+    if (isEmptyCaretParagraph(previous)) {
+      editor.focus()
+      placeCaretAtEnd(previous)
+      return false
+    }
+
+    if (isEmptyCaretParagraph(next)) {
+      editor.focus()
+      placeCaretAtStart(next)
+      return false
+    }
+
+    const paragraph = createCaretParagraph()
+    next.before(paragraph)
+    editor.focus()
+    placeCaretAtStart(paragraph)
+    return true
+  }
+
+  const last = blocks.at(-1)
+  if (last && isEmptyCaretParagraph(last)) {
+    editor.focus()
+    placeCaretAtStart(last)
+    return false
+  }
+
+  const paragraph = createCaretParagraph()
+  editor.append(paragraph)
+  editor.focus()
+  placeCaretAtStart(paragraph)
+  return true
+}
+
 function selectionIsInsideEditor(editor: HTMLElement, selection: Selection | null): selection is Selection {
   if (!selection || selection.rangeCount === 0) return false
   return editor.contains(selection.getRangeAt(0).commonAncestorContainer)
@@ -678,6 +798,15 @@ function RichTextEditorComponent({
       } catch {
         window.alert('No se pudo copiar el código en este navegador.')
       }
+      return
+    }
+
+    if (event.target === editor) {
+      hideLinkPopover()
+      event.preventDefault()
+      const insertedParagraph = placeCaretFromEditorBackground(editor, event.clientY)
+      if (insertedParagraph) emitChange()
+      syncToolbarState()
       return
     }
 
