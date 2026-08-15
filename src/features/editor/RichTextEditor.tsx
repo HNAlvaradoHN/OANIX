@@ -1250,8 +1250,9 @@ function RichTextEditorComponent({
   }
 
   function handleEditorKeyDown(event: ReactKeyboardEvent<HTMLDivElement>) {
+    const editor = editorRef.current
     const target = event.target
-    if (!(target instanceof Element)) return
+    if (!editor || !(target instanceof Element)) return
 
     const dailyTitle = target.closest<HTMLInputElement>('[data-daily-entry-title="true"]')
     if (dailyTitle) {
