@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ClipboardEvent, type MouseEvent } from 'react'
+import { memo, useEffect, useRef, type ClipboardEvent, type MouseEvent } from 'react'
 import {
   normalizeNoteLink,
   noteBlocksToPlainText,
@@ -180,7 +180,10 @@ function parseEditorBlocks(root: HTMLElement): NoteBlock[] {
 
     if (tag === 'ul' || tag === 'ol') {
       const items = Array.from(node.children)
-        .filter((child): child is HTMLElement => child instanceof HTMLElement && child.tagName.toLowerCase() === 'li')
+        .filter(
+          (child): child is HTMLElement =>
+            child instanceof HTMLElement && child.tagName.toLowerCase() === 'li',
+        )
         .map(parseBlockRuns)
 
       blocks.push({
@@ -201,18 +204,28 @@ function isEditorEmpty(blocks: NoteBlock[]): boolean {
   return blocks.every((block) => block.type !== 'divider') && noteBlocksToPlainText(blocks).length === 0
 }
 
-export function RichTextEditor({ noteId, initialBlocks, onChange, onBlur }: RichTextEditorProps) {
+function setEditorEmptyState(editor: HTMLElement, blocks: NoteBlock[]): void {
+  editor.dataset.empty = isEditorEmpty(blocks) ? 'true' : 'false'
+}
+
+function RichTextEditorComponent({
+  noteId,
+  initialBlocks,
+  onChange,
+  onBlur,
+}: RichTextEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null)
-  const [empty, setEmpty] = useState(() => isEditorEmpty(initialBlocks))
 
   useEffect(() => {
     const editor = editorRef.current
     if (!editor) return
 
     editor.innerHTML = blocksToHtml(initialBlocks)
-    setEmpty(isEditorEmpty(initialBlocks))
-    // The component is keyed by note id. Content updates are deliberately not pushed back
-    // into the live DOM while the user is typing, which preserves the browser selection.
+    setEditorEmptyState(editor, initialBlocks)
+
+    // The editable DOM owns the live typing session. Rebuilding it while autosave or
+    // parent state updates are happening would destroy the browser selection/content.
+    // A different note remounts the component through its key and receives fresh blocks.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [noteId])
 
@@ -221,7 +234,7 @@ export function RichTextEditor({ noteId, initialBlocks, onChange, onBlur }: Rich
     if (!editor) return
 
     const blocks = parseEditorBlocks(editor)
-    setEmpty(isEditorEmpty(blocks))
+    setEditorEmptyState(editor, blocks)
     onChange(blocks)
   }
 
@@ -315,7 +328,7 @@ export function RichTextEditor({ noteId, initialBlocks, onChange, onBlur }: Rich
         role="textbox"
         aria-multiline="true"
         aria-label="Contenido de la nota"
-        data-empty={empty ? 'true' : 'false'}
+        data-empty={isEditorEmpty(initialBlocks) ? 'true' : 'false'}
         data-placeholder="Escribe algo…"
         onInput={emitChange}
         onBlur={onBlur}
@@ -325,3 +338,8 @@ export function RichTextEditor({ noteId, initialBlocks, onChange, onBlur }: Rich
     </div>
   )
 }
+
+export const RichTextEditor = memo(
+  RichTextEditorComponent,
+  (previous, next) => previous.noteId === next.noteId,
+)
