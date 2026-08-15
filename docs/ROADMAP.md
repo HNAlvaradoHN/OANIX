@@ -15,11 +15,12 @@ Objetivo: entregar una PWA útil, segura, offline-first y completamente funciona
 - [x] Bóveda local
 - [x] Contraseña maestra
 - [x] Cifrado local
-- [ ] Notas
+- [x] Notas
 - [ ] Editor de texto enriquecido
 - [ ] Bloques de código
 - [ ] Imágenes
 - [ ] Checklists
+- [ ] Fichas de contacto privadas
 - [ ] Carpetas
 - [ ] Etiquetas
 - [ ] Búsqueda local

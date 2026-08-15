@@ -21,6 +21,9 @@ Todos los cambios relevantes del proyecto se registran aquí por versión.
 - Cifrado autenticado de contenido local mediante AES-256-GCM con IV único por escritura y AAD ligado al tipo e identificador del registro.
 - Repositorio genérico de registros cifrados para impedir que el contenido privado llegue a IndexedDB en texto plano.
 - Comprobación de ida y vuelta de almacenamiento cifrado al desbloquear la bóveda.
+- Sistema inicial de notas cifradas con creación, listado, apertura y cambio de título.
+- Interfaz principal de notas inspirada en navegación tipo mensajería, adaptada a OANIX con vista de dos paneles en pantallas grandes y navegación lista → nota en móvil.
+- Dirección documentada para pestañas de carpetas y fichas de contacto privadas sin adelantar su implementación.
 
 ## Versionado
 
