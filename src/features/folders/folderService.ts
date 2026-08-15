@@ -2,9 +2,11 @@ import {
   deleteFolderRecord,
   listFolders,
   readFolder,
+  readFolderOrder,
   saveFolder,
+  saveFolderOrder,
 } from '../../storage/repositories/folderRepository'
-import { normalizeFolderName, type FolderRecord } from './folderTypes'
+import { applyFolderOrder, moveFolderId, normalizeFolderName, type FolderRecord } from './folderTypes'
 
 const mutationQueues = new Map<string, Promise<unknown>>()
 
@@ -16,12 +18,6 @@ function createFolderId(): string {
   return Array.from(globalThis.crypto.getRandomValues(new Uint8Array(16)))
     .map((byte) => byte.toString(16).padStart(2, '0'))
     .join('')
-}
-
-function sortFolders(folders: FolderRecord[]): FolderRecord[] {
-  return folders.sort((left, right) =>
-    left.name.localeCompare(right.name, 'es', { sensitivity: 'base' }),
-  )
 }
 
 function enqueueFolderMutation(
@@ -48,10 +44,12 @@ function enqueueFolderMutation(
 }
 
 export async function loadFolders(): Promise<FolderRecord[]> {
-  return sortFolders(await listFolders())
+  const [folders, orderedIds] = await Promise.all([listFolders(), readFolderOrder()])
+  return applyFolderOrder(folders, orderedIds)
 }
 
 export async function createFolder(name: string): Promise<FolderRecord> {
+  const existingFolders = await loadFolders()
   const now = new Date().toISOString()
   const folder: FolderRecord = {
     version: 1,
@@ -61,6 +59,7 @@ export async function createFolder(name: string): Promise<FolderRecord> {
     updatedAt: now,
   }
   await saveFolder(folder)
+  await saveFolderOrder([...existingFolders.map((item) => item.id), folder.id])
   return folder
 }
 
@@ -81,6 +80,8 @@ export function deleteFolder(folderId: string): Promise<FolderRecord> {
       const existing = await readFolder(folderId)
       if (!existing) throw new Error('La carpeta ya no existe.')
       await deleteFolderRecord(folderId)
+      const orderedIds = await readFolderOrder()
+      await saveFolderOrder(orderedIds.filter((id) => id !== folderId))
       return existing
     })
 
@@ -90,4 +91,21 @@ export function deleteFolder(folderId: string): Promise<FolderRecord> {
   }
   void next.then(cleanup, cleanup)
   return next
+}
+
+export async function reorderFolder(
+  folderId: string,
+  direction: 'up' | 'down',
+): Promise<FolderRecord[]> {
+  const folders = await loadFolders()
+  const currentIds = folders.map((folder) => folder.id)
+  const nextIds = moveFolderId(currentIds, folderId, direction)
+  if (nextIds.every((id, index) => id === currentIds[index])) return folders
+
+  await saveFolderOrder(nextIds)
+  const byId = new Map(folders.map((folder) => [folder.id, folder]))
+  return nextIds.flatMap((id) => {
+    const folder = byId.get(id)
+    return folder ? [folder] : []
+  })
 }

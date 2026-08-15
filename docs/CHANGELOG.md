@@ -66,3 +66,7 @@ OANIX utilizará versiones claras y progresivas. No se publicará una versión c
 - Entradas por día dentro de una misma nota: separador visual con fecha local automática, título opcional por entrada, preparación compatible con notas antiguas y nueva sección cuando cambia el día local del dispositivo.
 
 - Carpetas cifradas V1: creación, renombrado, eliminación sin borrar notas, pestañas de filtro, creación contextual de notas y movimiento entre carpetas desde `⋮`.
+
+- Portada de acceso renovada con composición visual animada, glass UI y movimiento respetuoso de `prefers-reduced-motion`.
+- Las actualizaciones PWA dejan de recargar automáticamente la pantalla de contraseña; una versión nueva espera un reinicio seguro de la aplicación.
+- Carpetas con orden manual cifrado, indicación de desplazamiento horizontal y cierre automático de la nota abierta al cambiar de carpeta.
