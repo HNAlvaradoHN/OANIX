@@ -1,0 +1,31 @@
+name: Apply V1 folders
+
+on:
+  push:
+    branches:
+      - agent/v1-folders
+    paths:
+      - .github/apply_folders.py
+      - .github/workflows/apply-folders.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/v1-folders
+      - name: Apply implementation
+        run: python .github/apply_folders.py
+      - name: Remove temporary patch files
+        run: rm .github/apply_folders.py .github/workflows/apply-folders.yml
+      - name: Commit implementation
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "V1: add encrypted folders"
+          git push origin HEAD:agent/v1-folders
