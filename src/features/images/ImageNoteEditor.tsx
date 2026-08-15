@@ -537,11 +537,17 @@ export function ImageNoteEditor({
     decorateToolbar(root)
     hydrateStoredImages(root)
 
+    const observerOptions: MutationObserverInit = { childList: true, subtree: true }
     const observer = new MutationObserver(() => {
+      // Hydration mutates image controls (labels, loading state, etc.).
+      // Disconnect while applying those internal changes so the observer
+      // cannot recursively react to mutations caused by its own callback.
+      observer.disconnect()
       decorateToolbar(root)
       hydrateStoredImages(root)
+      observer.observe(root, observerOptions)
     })
-    observer.observe(root, { childList: true, subtree: true })
+    observer.observe(root, observerOptions)
 
     function handleMouseDown(event: MouseEvent) {
       const target = event.target
