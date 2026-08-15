@@ -5,6 +5,7 @@ import {
   type ClipboardEvent,
   type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent,
+  type PointerEvent as ReactPointerEvent,
 } from 'react'
 import {
   CODE_LANGUAGES,
@@ -509,6 +510,8 @@ function RichTextEditorComponent({
   const initialHtmlRef = useRef(blocksToHtml(initialBlocks))
   const lastHtmlRef = useRef(initialHtmlRef.current)
   const restoringRef = useRef(false)
+  const pointerStartRef = useRef<{ x: number; y: number } | null>(null)
+  const pointerDraggedRef = useRef(false)
 
   const attachEditor = useCallback(
     (editor: HTMLDivElement | null) => {
@@ -777,6 +780,27 @@ function RichTextEditorComponent({
     runCommand('createLink', href)
   }
 
+  function handleEditorPointerDown(event: ReactPointerEvent<HTMLDivElement>) {
+    if (event.button != 0) return
+    pointerStartRef.current = { x: event.clientX, y: event.clientY }
+    pointerDraggedRef.current = false
+  }
+
+  function handleEditorPointerMove(event: ReactPointerEvent<HTMLDivElement>) {
+    const start = pointerStartRef.current
+    if (!start || (event.buttons & 1) === 0) return
+
+    const distance = Math.hypot(event.clientX - start.x, event.clientY - start.y)
+    if (distance > 4) pointerDraggedRef.current = true
+  }
+
+  function handleEditorPointerUp() {
+    window.setTimeout(() => {
+      pointerStartRef.current = null
+      pointerDraggedRef.current = false
+    }, 0)
+  }
+
   async function handleEditorClick(event: MouseEvent<HTMLDivElement>) {
     const editor = editorRef.current
     if (!editor) return
@@ -803,6 +827,13 @@ function RichTextEditorComponent({
 
     if (event.target === editor) {
       hideLinkPopover()
+
+      const selection = document.getSelection()
+      if (pointerDraggedRef.current || (selection && !selection.isCollapsed)) {
+        syncToolbarState()
+        return
+      }
+
       event.preventDefault()
       const insertedParagraph = placeCaretFromEditorBackground(editor, event.clientY)
       if (insertedParagraph) emitChange()
@@ -951,6 +982,9 @@ function RichTextEditorComponent({
         aria-multiline="true"
         aria-label="Contenido de la nota"
         data-placeholder="Escribe algo…"
+        onPointerDown={handleEditorPointerDown}
+        onPointerMove={handleEditorPointerMove}
+        onPointerUp={handleEditorPointerUp}
         onClick={handleEditorClick}
         onInput={emitChange}
         onKeyDown={handleEditorKeyDown}
