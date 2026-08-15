@@ -6,7 +6,7 @@ import {
   type NoteBlock,
   type StoredNoteBlock,
 } from '../notes/noteTypes'
-import { loadEncryptedImage, storeEncryptedImage } from './imageService'
+import { loadEncryptedImage, loadEncryptedImagePreview, storeEncryptedImage } from './imageService'
 import './images.css'
 
 interface ImageNoteEditorProps {
@@ -15,6 +15,7 @@ interface ImageNoteEditorProps {
   onChange: (blocks: StoredNoteBlock[]) => void
   onBlur: () => void
   onRemoveImage: (imageId: string) => Promise<void>
+  onRestoreImage: (imageId: string) => void
 }
 
 interface PreviewState {
@@ -38,6 +39,22 @@ const MIN_IMAGE_WIDTH_PIXELS = 220
 const COMPACT_IMAGE_PERCENT = 55
 const MAX_PREVIEW_ZOOM = 4
 const MIN_PREVIEW_ZOOM = 1
+const MAX_HISTORY_ENTRIES = 80
+const HISTORY_GROUP_MS = 700
+
+function cloneStoredBlocks(blocks: StoredNoteBlock[]): StoredNoteBlock[] {
+  return structuredClone(blocks)
+}
+
+function storedBlocksEqual(left: StoredNoteBlock[], right: StoredNoteBlock[]): boolean {
+  return JSON.stringify(left) === JSON.stringify(right)
+}
+
+function imageIdsFromBlocks(blocks: StoredNoteBlock[]): Set<string> {
+  return new Set(
+    blocks.filter((block): block is ImageBlock => block.type === 'image').map((block) => block.imageId),
+  )
+}
 
 function createBlockId(): string {
   if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID()
@@ -344,6 +361,7 @@ export function ImageNoteEditor({
   onChange,
   onBlur,
   onRemoveImage,
+  onRestoreImage,
 }: ImageNoteEditorProps) {
   const rootRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -356,7 +374,13 @@ export function ImageNoteEditor({
   )
   const initialEditorBlocksRef = useRef(toEditorBlocks(initialBlocks))
   const objectUrlsRef = useRef(new Map<string, string>())
+  const previewUrlsRef = useRef(new Map<string, string>())
   const insertionAfterIdRef = useRef<string | null>(null)
+  const historyRef = useRef<StoredNoteBlock[][]>([])
+  const currentBlocksRef = useRef(cloneStoredBlocks(initialBlocks))
+  const lastHistoryAtRef = useRef(0)
+  const forceHistoryBoundaryRef = useRef(true)
+  const [editorEpoch, setEditorEpoch] = useState(0)
   const [preview, setPreview] = useState<PreviewState | null>(null)
   const [previewZoom, setPreviewZoom] = useState(1)
   const [imageError, setImageError] = useState('')
@@ -365,8 +389,36 @@ export function ImageNoteEditor({
     return editorBlocks.map((block) => imagesRef.current.get(block.id) ?? block)
   }
 
+  function updateUndoButton(root = rootRef.current) {
+    const button = root?.querySelector<HTMLButtonElement>('[data-undo-tool="true"]')
+    if (button) button.disabled = historyRef.current.length === 0
+  }
+
+  function rememberHistory(nextBlocks: StoredNoteBlock[]): boolean {
+    const current = currentBlocksRef.current
+    if (storedBlocksEqual(current, nextBlocks)) return false
+
+    const now = Date.now()
+    if (
+      forceHistoryBoundaryRef.current ||
+      historyRef.current.length === 0 ||
+      now - lastHistoryAtRef.current > HISTORY_GROUP_MS
+    ) {
+      historyRef.current.push(cloneStoredBlocks(current))
+      if (historyRef.current.length > MAX_HISTORY_ENTRIES) historyRef.current.shift()
+    }
+
+    currentBlocksRef.current = cloneStoredBlocks(nextBlocks)
+    lastHistoryAtRef.current = now
+    forceHistoryBoundaryRef.current = false
+    updateUndoButton()
+    return true
+  }
+
   function handleEditorChange(editorBlocks: NoteBlock[]) {
-    onChange(mergedBlocks(editorBlocks))
+    const nextBlocks = mergedBlocks(editorBlocks)
+    if (!rememberHistory(nextBlocks)) return
+    onChange(nextBlocks)
   }
 
   function emitEditorInput(root: HTMLElement) {
@@ -398,6 +450,16 @@ export function ImageNoteEditor({
     return next
   }
 
+  function revokeImageUrls(imageId: string) {
+    const urls = new Set([
+      objectUrlsRef.current.get(imageId),
+      previewUrlsRef.current.get(imageId),
+    ].filter((value): value is string => !!value))
+    for (const url of urls) URL.revokeObjectURL(url)
+    objectUrlsRef.current.delete(imageId)
+    previewUrlsRef.current.delete(imageId)
+  }
+
   async function ensureObjectUrl(block: ImageBlock): Promise<string | null> {
     const existing = objectUrlsRef.current.get(block.imageId)
     if (existing) return existing
@@ -410,9 +472,21 @@ export function ImageNoteEditor({
     return url
   }
 
+  async function ensurePreviewObjectUrl(block: ImageBlock): Promise<string | null> {
+    const existing = previewUrlsRef.current.get(block.imageId)
+    if (existing) return existing
+
+    const blob = await loadEncryptedImagePreview(block.imageId, block.mimeType)
+    if (!blob) return null
+
+    const url = URL.createObjectURL(blob)
+    previewUrlsRef.current.set(block.imageId, url)
+    return url
+  }
+
   async function hydrateImageElement(root: HTMLElement, block: ImageBlock, figure: HTMLElement) {
     try {
-      const url = await ensureObjectUrl(block)
+      const url = await ensurePreviewObjectUrl(block)
       if (!url || !figure.isConnected || !root.contains(figure)) {
         const loading = figure.querySelector<HTMLElement>('[data-image-loading="true"]')
         if (loading) loading.textContent = 'Imagen no disponible'
@@ -431,18 +505,33 @@ export function ImageNoteEditor({
 
   function decorateToolbar(root: HTMLElement) {
     const toolbar = root.querySelector<HTMLElement>('.editor-toolbar')
-    if (!toolbar || toolbar.querySelector('[data-image-tool="true"]')) return
+    if (!toolbar) return
 
-    const button = document.createElement('button')
-    button.type = 'button'
-    button.className = 'editor-tool'
-    button.dataset.imageTool = 'true'
-    button.textContent = 'Imagen'
-    button.title = 'Insertar imagen cifrada'
-    button.setAttribute('aria-label', 'Insertar imagen')
+    if (!toolbar.querySelector('[data-image-tool="true"]')) {
+      const button = document.createElement('button')
+      button.type = 'button'
+      button.className = 'editor-tool'
+      button.dataset.imageTool = 'true'
+      button.textContent = 'Imagen'
+      button.title = 'Insertar imagen cifrada'
+      button.setAttribute('aria-label', 'Insertar imagen')
 
-    const codeTool = toolbar.querySelector('[data-format="code"]')
-    toolbar.insertBefore(button, codeTool)
+      const codeTool = toolbar.querySelector('[data-format="code"]')
+      toolbar.insertBefore(button, codeTool)
+    }
+
+    if (!toolbar.querySelector('[data-undo-tool="true"]')) {
+      const undo = document.createElement('button')
+      undo.type = 'button'
+      undo.className = 'editor-tool'
+      undo.dataset.undoTool = 'true'
+      undo.textContent = '↶'
+      undo.title = 'Deshacer último cambio'
+      undo.setAttribute('aria-label', 'Deshacer último cambio')
+      toolbar.append(undo)
+    }
+
+    updateUndoButton(root)
   }
 
   function hydrateStoredImages(root: HTMLElement) {
@@ -461,7 +550,7 @@ export function ImageNoteEditor({
         applyImageElementState(element, block)
       }
 
-      if (!objectUrlsRef.current.has(block.imageId)) {
+      if (!previewUrlsRef.current.has(block.imageId)) {
         void hydrateImageElement(root, block, element)
       }
     }
@@ -475,6 +564,7 @@ export function ImageNoteEditor({
     if (!root || !editor || files.length === 0) return
 
     setImageError('')
+    forceHistoryBoundaryRef.current = true
     let afterId = insertionAfterIdRef.current
     let lastElement: HTMLElement | null = null
 
@@ -497,6 +587,7 @@ export function ImageNoteEditor({
 
         const element = createImageElement(block, url)
         insertAfterBlock(editor, element, afterId)
+        void hydrateImageElement(root, block, element)
         ensureTrailingParagraph(editor, element)
         afterId = block.id
         lastElement = element
@@ -508,6 +599,41 @@ export function ImageNoteEditor({
     insertionAfterIdRef.current = afterId
     if (lastElement) selectImageFigure(root, lastElement)
     emitEditorInput(root)
+  }
+
+  function undoLastChange(root: HTMLElement) {
+    const previous = historyRef.current.pop()
+    if (!previous) {
+      updateUndoButton(root)
+      return
+    }
+
+    const current = currentBlocksRef.current
+    const currentImageIds = imageIdsFromBlocks(current)
+    const previousImageIds = imageIdsFromBlocks(previous)
+
+    for (const imageId of currentImageIds) {
+      if (!previousImageIds.has(imageId)) {
+        revokeImageUrls(imageId)
+        void onRemoveImage(imageId)
+      }
+    }
+    for (const imageId of previousImageIds) {
+      if (!currentImageIds.has(imageId)) onRestoreImage(imageId)
+    }
+
+    imagesRef.current = new Map(
+      previous
+        .filter((block): block is ImageBlock => block.type === 'image')
+        .map((block) => [block.id, block]),
+    )
+    initialEditorBlocksRef.current = toEditorBlocks(previous)
+    currentBlocksRef.current = cloneStoredBlocks(previous)
+    lastHistoryAtRef.current = 0
+    forceHistoryBoundaryRef.current = true
+    onChange(cloneStoredBlocks(previous))
+    setEditorEpoch((currentEpoch) => currentEpoch + 1)
+    updateUndoButton(root)
   }
 
   async function openImage(block: ImageBlock) {
@@ -552,8 +678,13 @@ export function ImageNoteEditor({
     function handleMouseDown(event: MouseEvent) {
       const target = event.target
       if (!(target instanceof Element)) return
-      if (!target.closest('[data-image-tool="true"]')) return
 
+      const toolbarButton = target.closest<HTMLButtonElement>('.editor-toolbar button')
+      if (toolbarButton && root.contains(toolbarButton)) {
+        forceHistoryBoundaryRef.current = true
+      }
+
+      if (!target.closest('[data-image-tool="true"]')) return
       insertionAfterIdRef.current = currentDirectBlockId(root)
       event.preventDefault()
     }
@@ -573,6 +704,7 @@ export function ImageNoteEditor({
 
       event.preventDefault()
       event.stopPropagation()
+      forceHistoryBoundaryRef.current = true
       selectImageFigure(root, figure)
 
       resizeState = {
@@ -617,6 +749,14 @@ export function ImageNoteEditor({
     function handleClick(event: MouseEvent) {
       const target = event.target
       if (!(target instanceof Element)) return
+
+      const undoTool = target.closest<HTMLElement>('[data-undo-tool="true"]')
+      if (undoTool && root.contains(undoTool)) {
+        event.preventDefault()
+        event.stopPropagation()
+        undoLastChange(root)
+        return
+      }
 
       const imageTool = target.closest<HTMLElement>('[data-image-tool="true"]')
       if (imageTool && root.contains(imageTool)) {
@@ -694,13 +834,8 @@ export function ImageNoteEditor({
         event.stopPropagation()
 
         const imageBlock = imagesRef.current.get(blockId)
-        if (imageBlock) {
-          const url = objectUrlsRef.current.get(imageBlock.imageId)
-          if (url) {
-            URL.revokeObjectURL(url)
-            objectUrlsRef.current.delete(imageBlock.imageId)
-          }
-        }
+        forceHistoryBoundaryRef.current = true
+        if (imageBlock) revokeImageUrls(imageBlock.imageId)
 
         imagesRef.current.delete(blockId)
         figure.remove()
@@ -773,6 +908,15 @@ export function ImageNoteEditor({
     }
 
     function handleKeyDown(event: KeyboardEvent) {
+      if ((event.ctrlKey || event.metaKey) && !event.shiftKey && event.key.toLowerCase() === 'z') {
+        const target = event.target
+        if (target instanceof Node && root.contains(target)) {
+          event.preventDefault()
+          undoLastChange(root)
+          return
+        }
+      }
+
       if (event.key === 'Escape') {
         setPreview(null)
         setPreviewZoom(1)
@@ -801,8 +945,10 @@ export function ImageNoteEditor({
       document.removeEventListener('pointercancel', handlePointerUp, true)
       document.removeEventListener('keydown', handleKeyDown)
 
-      for (const url of objectUrlsRef.current.values()) URL.revokeObjectURL(url)
+      const urls = new Set([...objectUrlsRef.current.values(), ...previewUrlsRef.current.values()])
+      for (const url of urls) URL.revokeObjectURL(url)
       objectUrlsRef.current.clear()
+      previewUrlsRef.current.clear()
     }
   }, [noteId])
 
@@ -826,6 +972,7 @@ export function ImageNoteEditor({
   return (
     <div ref={rootRef} className="image-note-editor-root">
       <CodeBlockEditor
+        key={`${noteId}:${editorEpoch}`}
         noteId={noteId}
         initialBlocks={initialEditorBlocksRef.current}
         onChange={handleEditorChange}

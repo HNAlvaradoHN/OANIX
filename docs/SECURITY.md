@@ -128,13 +128,13 @@ Las imágenes no se incrustan como base64 ni como bytes en el registro JSON de l
 
 Los bytes de cada imagen pasan por `encryptVaultBytes` con la misma clave activa de la bóveda, un IV AES-GCM aleatorio nuevo y AAD ligado al tipo `image` y al identificador aleatorio de la imagen. En IndexedDB no se persiste una copia descifrada de esos bytes.
 
-En esta etapa se admiten JPEG, PNG, WebP y GIF, con un límite inicial de 15 MiB por imagen. SVG se rechaza para evitar introducir contenido activo basado en marcado dentro del flujo de imágenes. El tipo declarado se usa únicamente para presentar el `Blob` descifrado al navegador; OANIX nunca ejecuta la imagen como código.
+En esta etapa se admiten JPEG, PNG, WebP y GIF, con un límite de 50 MiB por imagen original en V1. SVG se rechaza para evitar introducir contenido activo basado en marcado dentro del flujo de imágenes. El tipo declarado se usa únicamente para presentar el `Blob` descifrado al navegador; OANIX nunca ejecuta la imagen como código.
 
-Cuando una imagen se muestra, OANIX descifra sus bytes únicamente con la bóveda abierta y crea una URL `blob:` temporal en memoria. Esa URL se revoca al desmontar el editor o quitar la imagen. OANIX no genera ni almacena miniaturas en texto plano.
+Para no renderizar originales pesados dentro de la nota, OANIX intenta generar una vista previa de hasta aproximadamente 1600 px durante la inserción. Esa vista previa se cifra en un registro separado de tipo `image-preview`; nunca se guarda una miniatura en texto plano. Las imágenes antiguas sin preview pueden generar una de forma perezosa al volver a mostrarse. Al abrir la imagen en grande se descifra el original, no la preview. Las URL `blob:` temporales de ambas representaciones se revocan al desmontar el editor o quitar la imagen.
 
 La interfaz admite selección de archivos/galería, varias imágenes, pegado desde el portapapeles cuando el navegador entrega un archivo de imagen, descripción opcional y vista ampliada. La descripción y el nombre forman parte del registro cifrado de la nota.
 
-Al quitar una imagen, OANIX guarda primero la nota sin la referencia. Solo después de un guardado exitoso intenta eliminar el registro binario cifrado. Si esa limpieza falla, puede quedar un blob cifrado huérfano ocupando espacio, pero no se destruye una imagen que todavía esté referenciada por una nota persistida.
+Al quitar una imagen, OANIX conserva temporalmente sus registros cifrados mientras la acción todavía puede deshacerse en la sesión actual. Al abandonar la nota o bloquear la bóveda, después de guardar la nota sin la referencia, intenta eliminar tanto el original como su preview cifrada. Si esa limpieza falla, puede quedar un blob cifrado huérfano ocupando espacio, pero no se destruye una imagen que todavía esté referenciada por una nota persistida.
 
 ### Comprobación de almacenamiento cifrado
 

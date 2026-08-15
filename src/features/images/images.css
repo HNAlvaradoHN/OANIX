@@ -454,3 +454,31 @@
     max-height: 86vh;
   }
 }
+
+
+/* OANIX compact image text flow */
+.image-note-editor-root .editor-image-block__meta [data-image-name="true"][hidden] {
+  display: none !important;
+}
+
+@media (min-width: 761px) {
+  .image-note-editor-root .editor-surface > .editor-image-block[data-image-compact="true"][data-image-alignment="left"] {
+    float: left;
+    margin: 0.35rem 1rem 0.75rem 0;
+  }
+
+  .image-note-editor-root .editor-surface > .editor-image-block[data-image-compact="true"][data-image-alignment="right"] {
+    float: right;
+    margin: 0.35rem 0 0.75rem 1rem;
+  }
+
+  .image-note-editor-root .editor-surface > :is(h1, h2, h3, blockquote, ul, ol, hr, .editor-code-block) {
+    clear: both;
+  }
+
+  .image-note-editor-root .editor-surface::after {
+    display: block;
+    clear: both;
+    content: '';
+  }
+}

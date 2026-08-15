@@ -64,6 +64,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
   const activeSaveRef = useRef<Promise<boolean> | null>(null)
   const saveTimerRef = useRef<number | null>(null)
   const selectedIdRef = useRef<string | null>(null)
+  const pendingImageDeletesRef = useRef(new Set<string>())
 
   const selectedNote = useMemo(
     () => notes.find((note) => note.id === selectedId) ?? null,
@@ -171,18 +172,23 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
   }
 
   async function handleRemovedImage(imageId: string): Promise<void> {
-    if (!(await flushPendingContent())) return
+    pendingImageDeletesRef.current.add(imageId)
+  }
 
-    try {
-      await deleteEncryptedImage(imageId)
-    } catch {
-      // The note is already safely saved without the image reference. A failed cleanup
-      // may leave encrypted orphan bytes, but never a broken note reference.
-    }
+  function handleRestoredImage(imageId: string) {
+    pendingImageDeletesRef.current.delete(imageId)
+  }
+
+  async function finalizeRemovedImages(): Promise<void> {
+    const imageIds = [...pendingImageDeletesRef.current]
+    pendingImageDeletesRef.current.clear()
+
+    await Promise.allSettled(imageIds.map((imageId) => deleteEncryptedImage(imageId)))
   }
 
   async function handleCreateNote() {
     if (!(await flushPendingContent())) return
+    await finalizeRemovedImages()
 
     setCreating(true)
     setError('')
@@ -229,6 +235,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
   async function handleSelectNote(noteId: string) {
     if (noteId === selectedId) return
     if (!(await flushPendingContent())) return
+    await finalizeRemovedImages()
 
     setSelectedId(noteId)
     setSaveState('idle')
@@ -236,12 +243,14 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
 
   async function handleBack() {
     if (!(await flushPendingContent())) return
+    await finalizeRemovedImages()
     setSelectedId(null)
     setSaveState('idle')
   }
 
   async function handleLockWorkspace() {
     if (!(await flushPendingContent())) return
+    await finalizeRemovedImages()
     onLock()
   }
 
@@ -374,6 +383,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
                 onChange={handleContentChange}
                 onBlur={() => void flushPendingContent()}
                 onRemoveImage={handleRemovedImage}
+                onRestoreImage={handleRestoredImage}
               />
             </div>
           </>
