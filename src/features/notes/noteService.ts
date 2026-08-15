@@ -55,7 +55,7 @@ export async function loadNotes(): Promise<NoteRecord[]> {
   return notes.sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
 }
 
-export async function createEmptyNote(): Promise<NoteRecord> {
+export async function createEmptyNote(folderId: string | null = null): Promise<NoteRecord> {
   const nowDate = new Date()
   const now = nowDate.toISOString()
   const note: NoteRecord = {
@@ -64,6 +64,7 @@ export async function createEmptyNote(): Promise<NoteRecord> {
     title: DEFAULT_NOTE_TITLE,
     createdAt: now,
     updatedAt: now,
+    folderId,
     content: {
       format: 'blocks-v1',
       blocks: createDailyEntryBlocks(nowDate),
@@ -118,5 +119,12 @@ export function replaceNoteContent(noteId: string, blocks: StoredNoteBlock[]): P
       format: 'blocks-v1',
       blocks,
     },
+  }))
+}
+
+export function moveNoteToFolder(noteId: string, folderId: string | null): Promise<NoteRecord> {
+  return enqueueNoteMutation(noteId, (existing) => ({
+    ...existing,
+    folderId,
   }))
 }

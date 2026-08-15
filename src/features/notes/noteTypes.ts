@@ -154,6 +154,7 @@ export interface NoteRecord {
   title: string
   createdAt: string
   updatedAt: string
+  folderId?: string | null
   content: {
     format: 'blocks-v1'
     blocks: StoredNoteBlock[]
@@ -312,6 +313,7 @@ export function isNoteRecord(value: unknown): value is NoteRecord {
     typeof note.title === 'string' &&
     typeof note.createdAt === 'string' &&
     typeof note.updatedAt === 'string' &&
+    (note.folderId === undefined || note.folderId === null || typeof note.folderId === 'string') &&
     !!note.content &&
     note.content.format === 'blocks-v1' &&
     Array.isArray(note.content.blocks) &&

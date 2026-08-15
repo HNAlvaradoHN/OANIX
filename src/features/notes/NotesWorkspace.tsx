@@ -7,10 +7,12 @@ import {
   type MouseEvent as ReactMouseEvent,
 } from 'react'
 import { deleteEncryptedImage } from '../images/imageService'
+import { createFolder, deleteFolder, loadFolders, renameFolder } from '../folders/folderService'
+import type { FolderRecord } from '../folders/folderTypes'
 import { storageSaveErrorMessage } from '../../storage/local/storageErrors'
 import { usesSinglePaneLayout } from '../../shared/responsiveLayout'
 import { ImageNoteEditor } from '../images/ImageNoteEditor'
-import { createEmptyNote, deleteNote, loadNotes, renameNote, replaceNoteContent } from './noteService'
+import { createEmptyNote, deleteNote, loadNotes, moveNoteToFolder, renameNote, replaceNoteContent } from './noteService'
 import { prepareDailyEntriesForEditing } from './dailyEntries'
 import { noteBlocksToPlainText, type NoteRecord, type StoredNoteBlock } from './noteTypes'
 import './notes.css'
@@ -78,6 +80,15 @@ function saveStateLabel(saveState: SaveState, savingTitle: boolean): string {
 
 export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
   const [notes, setNotes] = useState<NoteRecord[]>([])
+  const [folders, setFolders] = useState<FolderRecord[]>([])
+  const [activeFolderId, setActiveFolderId] = useState<string | 'all'>('all')
+  const [folderManagerOpen, setFolderManagerOpen] = useState(false)
+  const [newFolderName, setNewFolderName] = useState('')
+  const [editingFolderId, setEditingFolderId] = useState<string | null>(null)
+  const [editingFolderName, setEditingFolderName] = useState('')
+  const [folderBusyId, setFolderBusyId] = useState<string | null>(null)
+  const [creatingFolder, setCreatingFolder] = useState(false)
+  const [moveNoteId, setMoveNoteId] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [draftTitle, setDraftTitle] = useState('')
   const [loading, setLoading] = useState(true)
@@ -104,6 +115,16 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     [notes, selectedId],
   )
   const deletingSelected = !!selectedNote && deletingId === selectedNote.id
+  const visibleNotes = useMemo(
+    () => activeFolderId === 'all'
+      ? notes
+      : notes.filter((note) => note.folderId === activeFolderId),
+    [notes, activeFolderId],
+  )
+  const moveTargetNote = useMemo(
+    () => notes.find((note) => note.id === moveNoteId) ?? null,
+    [notes, moveNoteId],
+  )
 
   useEffect(() => {
     selectedIdRef.current = selectedId
@@ -169,14 +190,15 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
   useEffect(() => {
     let active = true
 
-    void loadNotes()
-      .then((storedNotes) => {
+    void Promise.all([loadNotes(), loadFolders()])
+      .then(([storedNotes, storedFolders]) => {
         if (!active) return
         setNotes(storedNotes)
+        setFolders(storedFolders)
       })
       .catch(() => {
         if (!active) return
-        setError('No se pudieron cargar las notas cifradas de este dispositivo.')
+        setError('No se pudieron cargar las notas y carpetas cifradas de este dispositivo.')
       })
       .finally(() => {
         if (active) setLoading(false)
@@ -214,6 +236,8 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
         setWorkspaceMenuOpen(false)
         setActiveNoteMenuOpen(false)
         setNoteInfoOpen(false)
+        setMoveNoteId(null)
+        setFolderManagerOpen(false)
       }
     }
 
@@ -232,6 +256,17 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
         .map((note) => (note.id === updated.id ? updated : note))
         .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt)),
     )
+  }
+
+  function sortFolderState(nextFolders: FolderRecord[]): FolderRecord[] {
+    return [...nextFolders].sort((left, right) =>
+      left.name.localeCompare(right.name, 'es', { sensitivity: 'base' }),
+    )
+  }
+
+  function folderName(folderId: string | null | undefined): string {
+    if (!folderId) return 'Sin carpeta'
+    return folders.find((folder) => folder.id === folderId)?.name ?? 'Carpeta no disponible'
   }
 
   function clearSaveTimer() {
@@ -372,7 +407,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     setError('')
 
     try {
-      const note = await createEmptyNote()
+      const note = await createEmptyNote(activeFolderId === 'all' ? null : activeFolderId)
       setNotes((current) => [note, ...current])
       selectedIdRef.current = note.id
       setSelectedId(note.id)
@@ -382,6 +417,119 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
       setError('No se pudo crear la nota cifrada.')
     } finally {
       setCreating(false)
+    }
+  }
+
+  function folderNameExists(name: string, exceptId?: string): boolean {
+    const candidate = name.trim().replace(/\s+/g, ' ').toLocaleLowerCase()
+    return folders.some((folder) =>
+      folder.id !== exceptId && folder.name.toLocaleLowerCase() === candidate,
+    )
+  }
+
+  async function handleCreateFolder() {
+    const name = newFolderName.trim().replace(/\s+/g, ' ')
+    if (!name) {
+      setError('Escribe un nombre para la carpeta.')
+      return
+    }
+    if (folderNameExists(name)) {
+      setError('Ya existe una carpeta con ese nombre.')
+      return
+    }
+
+    setCreatingFolder(true)
+    setError('')
+    try {
+      const folder = await createFolder(name)
+      setFolders((current) => sortFolderState([...current, folder]))
+      setNewFolderName('')
+      setActiveFolderId(folder.id)
+    } catch (folderError) {
+      setError(folderError instanceof Error ? folderError.message : 'No se pudo crear la carpeta cifrada.')
+    } finally {
+      setCreatingFolder(false)
+    }
+  }
+
+  function beginFolderRename(folder: FolderRecord) {
+    setEditingFolderId(folder.id)
+    setEditingFolderName(folder.name)
+    setError('')
+  }
+
+  async function handleRenameFolder(folder: FolderRecord) {
+    const name = editingFolderName.trim().replace(/\s+/g, ' ')
+    if (!name) {
+      setError('El nombre de la carpeta no puede estar vacío.')
+      return
+    }
+    if (folderNameExists(name, folder.id)) {
+      setError('Ya existe una carpeta con ese nombre.')
+      return
+    }
+
+    setFolderBusyId(folder.id)
+    setError('')
+    try {
+      const updated = await renameFolder(folder.id, name)
+      setFolders((current) => sortFolderState(
+        current.map((item) => item.id === updated.id ? updated : item),
+      ))
+      setEditingFolderId(null)
+      setEditingFolderName('')
+    } catch (folderError) {
+      setError(folderError instanceof Error ? folderError.message : 'No se pudo renombrar la carpeta.')
+    } finally {
+      setFolderBusyId(null)
+    }
+  }
+
+  async function handleMoveNote(targetNote: NoteRecord, folderId: string | null) {
+    if (targetNote.id === selectedIdRef.current && !(await flushPendingContent())) return
+
+    setFolderBusyId(targetNote.id)
+    setError('')
+    try {
+      const updated = await moveNoteToFolder(targetNote.id, folderId)
+      replaceNoteInState(updated)
+      setMoveNoteId(null)
+      setNoteMenuId(null)
+      setActiveNoteMenuOpen(false)
+    } catch {
+      setError('No se pudo mover la nota a la carpeta seleccionada.')
+    } finally {
+      setFolderBusyId(null)
+    }
+  }
+
+  async function handleDeleteFolder(folder: FolderRecord) {
+    const affected = notes.filter((note) => note.folderId === folder.id)
+    const detail = affected.length === 0
+      ? 'La carpeta se eliminará. No contiene notas.'
+      : `La carpeta se eliminará y ${affected.length} nota${affected.length === 1 ? '' : 's'} volverá${affected.length === 1 ? '' : 'n'} a “Sin carpeta”.`
+    if (!window.confirm(`¿Eliminar la carpeta “${folder.name}”?\n\n${detail}\n\nLas notas NO se eliminarán.`)) return
+
+    if (!(await flushPendingContent())) return
+    setFolderBusyId(folder.id)
+    setError('')
+    try {
+      const movedNotes = await Promise.all(affected.map((note) => moveNoteToFolder(note.id, null)))
+      if (movedNotes.length > 0) {
+        const movedById = new Map(movedNotes.map((note) => [note.id, note]))
+        setNotes((current) => current.map((note) => movedById.get(note.id) ?? note))
+      }
+      await deleteFolder(folder.id)
+      setFolders((current) => current.filter((item) => item.id !== folder.id))
+      if (activeFolderId === folder.id) setActiveFolderId('all')
+      if (editingFolderId === folder.id) {
+        setEditingFolderId(null)
+        setEditingFolderName('')
+      }
+    } catch {
+      setError('No se pudo completar la eliminación de la carpeta.')
+    } finally {
+      setFolderBusyId(null)
     }
   }
 
@@ -463,7 +611,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     const listRect = event.currentTarget.closest('.notes-list')?.getBoundingClientRect()
     const topBoundary = listRect?.top ?? 0
     const bottomBoundary = listRect?.bottom ?? window.innerHeight
-    const estimatedMenuHeight = 58
+    const estimatedMenuHeight = 108
     const spaceBelow = bottomBoundary - buttonRect.bottom
     const spaceAbove = buttonRect.top - topBoundary
 
@@ -513,6 +661,16 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
                     role="menuitem"
                     onClick={() => {
                       setWorkspaceMenuOpen(false)
+                      setFolderManagerOpen(true)
+                    }}
+                  >
+                    <span aria-hidden="true">📁</span> Administrar carpetas
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setWorkspaceMenuOpen(false)
                       window.alert('OANIX V1 · bóveda local cifrada · offline-first')
                     }}
                   >
@@ -525,8 +683,34 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
         </header>
 
         <nav className="notes-tabs" aria-label="Carpetas de notas">
-          <button className="notes-tab notes-tab--active" type="button" aria-current="page">
+          <button
+            className={`notes-tab${activeFolderId === 'all' ? ' notes-tab--active' : ''}`}
+            type="button"
+            aria-current={activeFolderId === 'all' ? 'page' : undefined}
+            onClick={() => setActiveFolderId('all')}
+          >
             Todas
+          </button>
+          {folders.map((folder) => (
+            <button
+              className={`notes-tab${activeFolderId === folder.id ? ' notes-tab--active' : ''}`}
+              type="button"
+              key={folder.id}
+              aria-current={activeFolderId === folder.id ? 'page' : undefined}
+              title={folder.name}
+              onClick={() => setActiveFolderId(folder.id)}
+            >
+              {folder.name}
+            </button>
+          ))}
+          <button
+            className="notes-tab notes-tab--add"
+            type="button"
+            aria-label="Crear o administrar carpetas"
+            title="Carpetas"
+            onClick={() => setFolderManagerOpen(true)}
+          >
+            ＋
           </button>
         </nav>
 
@@ -547,8 +731,17 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
                 Crear primera nota
               </button>
             </div>
+          ) : visibleNotes.length === 0 ? (
+            <div className="notes-empty">
+              <div className="notes-empty__icon" aria-hidden="true">📁</div>
+              <strong>Esta carpeta está vacía</strong>
+              <p>Las notas que crees aquí quedarán organizadas en esta carpeta cifrada.</p>
+              <button className="empty-action" type="button" onClick={() => void handleCreateNote()} disabled={creating}>
+                Crear nota aquí
+              </button>
+            </div>
           ) : (
-            notes.map((note) => (
+            visibleNotes.map((note) => (
               <div
                 className={`note-row${selectedId === note.id ? ' note-row--selected' : ''}${noteMenuId === note.id ? ' note-row--menu-open' : ''}`}
                 key={note.id}
@@ -588,6 +781,16 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
                       role="menu"
                       aria-label={`Acciones de ${note.title}`}
                     >
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          setNoteMenuId(null)
+                          setMoveNoteId(note.id)
+                        }}
+                      >
+                        Mover a carpeta
+                      </button>
                       <button
                         className="note-row__menu-danger"
                         type="button"
@@ -654,6 +857,16 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
                 </button>
                 {activeNoteMenuOpen && (
                   <div className="note-view__menu" role="menu" aria-label="Acciones de la nota">
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setActiveNoteMenuOpen(false)
+                        setMoveNoteId(selectedNote.id)
+                      }}
+                    >
+                      <span aria-hidden="true">📁</span> Mover a carpeta
+                    </button>
                     <button
                       type="button"
                       role="menuitem"
@@ -741,6 +954,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
                 <div><dt>Título</dt><dd>{selectedNote.title}</dd></div>
                 <div><dt>Creada</dt><dd>{new Date(selectedNote.createdAt).toLocaleString('es-HN')}</dd></div>
                 <div><dt>Modificada</dt><dd>{new Date(selectedNote.updatedAt).toLocaleString('es-HN')}</dd></div>
+                <div><dt>Carpeta</dt><dd>{folderName(selectedNote.folderId)}</dd></div>
                 <div><dt>Bloques</dt><dd>{selectedNote.content.blocks.length}</dd></div>
                 <div><dt>Protección</dt><dd>Cifrada localmente</dd></div>
               </dl>
@@ -748,6 +962,90 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
           </div>
         )}
       </section>
+
+      {folderManagerOpen && (
+        <div className="folder-dialog" role="presentation" onClick={() => setFolderManagerOpen(false)}>
+          <div className="folder-dialog__panel" role="dialog" aria-modal="true" aria-label="Administrar carpetas" onClick={(event) => event.stopPropagation()}>
+            <div className="folder-dialog__header">
+              <div><strong>Carpetas</strong><span>Organización cifrada de tus notas</span></div>
+              <button type="button" onClick={() => setFolderManagerOpen(false)} aria-label="Cerrar">×</button>
+            </div>
+            <div className="folder-create-row">
+              <input
+                value={newFolderName}
+                onChange={(event) => setNewFolderName(event.target.value)}
+                onKeyDown={(event) => { if (event.key === 'Enter') void handleCreateFolder() }}
+                maxLength={60}
+                placeholder="Nueva carpeta"
+                aria-label="Nombre de nueva carpeta"
+              />
+              <button type="button" onClick={() => void handleCreateFolder()} disabled={creatingFolder}>
+                {creatingFolder ? 'Creando…' : 'Crear'}
+              </button>
+            </div>
+            <div className="folder-list">
+              {folders.length === 0 ? (
+                <p className="folder-list__empty">Aún no has creado carpetas.</p>
+              ) : folders.map((folder) => (
+                <div className="folder-list__row" key={folder.id}>
+                  {editingFolderId === folder.id ? (
+                    <>
+                      <input
+                        className="folder-list__rename"
+                        value={editingFolderName}
+                        onChange={(event) => setEditingFolderName(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter') void handleRenameFolder(folder)
+                          if (event.key === 'Escape') setEditingFolderId(null)
+                        }}
+                        maxLength={60}
+                        autoFocus
+                        aria-label={`Nuevo nombre para ${folder.name}`}
+                      />
+                      <div className="folder-list__actions">
+                        <button type="button" onClick={() => void handleRenameFolder(folder)} disabled={folderBusyId === folder.id}>Guardar</button>
+                        <button type="button" onClick={() => setEditingFolderId(null)}>Cancelar</button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="folder-list__identity">
+                        <span aria-hidden="true">📁</span>
+                        <div><strong>{folder.name}</strong><small>{notes.filter((note) => note.folderId === folder.id).length} notas</small></div>
+                      </div>
+                      <div className="folder-list__actions">
+                        <button type="button" onClick={() => beginFolderRename(folder)}>Renombrar</button>
+                        <button className="folder-list__delete" type="button" onClick={() => void handleDeleteFolder(folder)} disabled={folderBusyId === folder.id}>Eliminar</button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {moveTargetNote && (
+        <div className="folder-dialog" role="presentation" onClick={() => setMoveNoteId(null)}>
+          <div className="folder-dialog__panel folder-dialog__panel--move" role="dialog" aria-modal="true" aria-label="Mover nota a carpeta" onClick={(event) => event.stopPropagation()}>
+            <div className="folder-dialog__header">
+              <div><strong>Mover nota</strong><span>{moveTargetNote.title}</span></div>
+              <button type="button" onClick={() => setMoveNoteId(null)} aria-label="Cerrar">×</button>
+            </div>
+            <div className="folder-move-list">
+              <button type="button" className={!moveTargetNote.folderId ? 'folder-move-option folder-move-option--active' : 'folder-move-option'} onClick={() => void handleMoveNote(moveTargetNote, null)} disabled={folderBusyId === moveTargetNote.id}>
+                <span aria-hidden="true">📄</span><strong>Sin carpeta</strong>{!moveTargetNote.folderId && <span aria-hidden="true">✓</span>}
+              </button>
+              {folders.map((folder) => (
+                <button type="button" key={folder.id} className={moveTargetNote.folderId === folder.id ? 'folder-move-option folder-move-option--active' : 'folder-move-option'} onClick={() => void handleMoveNote(moveTargetNote, folder.id)} disabled={folderBusyId === moveTargetNote.id}>
+                  <span aria-hidden="true">📁</span><strong>{folder.name}</strong>{moveTargetNote.folderId === folder.id && <span aria-hidden="true">✓</span>}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   )
 }
