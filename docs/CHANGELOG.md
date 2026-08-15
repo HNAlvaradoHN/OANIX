@@ -3,6 +3,7 @@
 Todos los cambios relevantes del proyecto se registran aquí por versión.
 
 ## Unreleased
+- Refinamiento móvil de imágenes y código: imágenes sin flujo lateral, escalado proporcional por ambos ejes, panel de acciones legible, código contenido y editor de código a pantalla completa.
 
 ### Added
 

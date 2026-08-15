@@ -186,3 +186,171 @@
     overflow-wrap: anywhere;
   }
 }
+
+
+/* OANIX contained code card and full-screen code editor */
+.code-block-editor-root .editor-code-block,
+.code-block-editor-root .editor-code-block__toolbar,
+.code-block-editor-root .editor-code-block__content {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.code-block-editor-root .editor-code-block__expand {
+  padding: 0.42rem 0.7rem;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #cbd5e1;
+  -webkit-text-fill-color: currentColor;
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.code-block-editor-root .editor-code-block__expand:hover,
+.code-block-editor-root .editor-code-block__expand:focus-visible {
+  outline: none;
+  background: rgba(59, 130, 246, 0.16);
+  color: #dbeafe;
+}
+
+.code-fullscreen-dialog {
+  position: fixed;
+  z-index: 1700;
+  inset: 0;
+  background: #0b1220;
+}
+
+.code-fullscreen-dialog__panel {
+  width: 100vw;
+  height: 100dvh;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  gap: 0.7rem;
+  box-sizing: border-box;
+  padding:
+    max(0.75rem, env(safe-area-inset-top))
+    max(0.75rem, env(safe-area-inset-right))
+    max(0.75rem, env(safe-area-inset-bottom))
+    max(0.75rem, env(safe-area-inset-left));
+  background: #0f172a;
+  color: #e5edf8;
+}
+
+.code-fullscreen-dialog__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.code-fullscreen-dialog__header strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 1rem;
+}
+
+.code-fullscreen-dialog__done,
+.code-fullscreen-dialog__language {
+  min-height: 2.7rem;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  background: #1e293b;
+  color: #e5edf8;
+  font: inherit;
+  font-weight: 750;
+}
+
+.code-fullscreen-dialog__done {
+  flex: 0 0 auto;
+  padding: 0 1rem;
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #fff;
+}
+
+.code-fullscreen-dialog__language {
+  width: 100%;
+  min-width: 0;
+  padding: 0 0.75rem;
+}
+
+.code-fullscreen-dialog__editor {
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  box-sizing: border-box;
+  resize: none;
+  padding: 1rem;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  outline: none;
+  background: #0b1220;
+  color: #e5edf8;
+  caret-color: #fff;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  tab-size: 2;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  overflow: auto;
+}
+
+.code-fullscreen-dialog__editor:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18);
+}
+
+.code-fullscreen-dialog__hint {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 0.73rem;
+  line-height: 1.35;
+}
+
+@media (max-width: 640px) {
+  .code-block-editor-root .editor-code-block {
+    width: calc(100% - 0.45rem);
+    max-width: calc(100% - 0.45rem);
+    margin-right: auto;
+    margin-left: auto;
+    overflow: hidden;
+  }
+
+  .code-block-editor-root .editor-code-block__content {
+    max-height: 18rem;
+    overflow-x: hidden;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .code-block-editor-root .editor-code-block__convert,
+  .code-block-editor-root .editor-code-block__delete,
+  .code-block-editor-root .editor-code-block__expand,
+  .code-block-editor-root .editor-code-block__copy {
+    width: 100%;
+    min-width: 0;
+    min-height: 2.5rem;
+    margin: 0;
+    padding: 0.5rem 0.4rem;
+    line-height: 1.15;
+    text-align: center;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .code-block-editor-root .editor-code-block__copy {
+    grid-column: auto;
+  }
+}
