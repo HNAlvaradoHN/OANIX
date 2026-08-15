@@ -359,6 +359,19 @@ export function CodeBlockEditor(props: CodeBlockEditorProps) {
       dialog?.close()
     }
 
+    function closeCodeActionMenus() {
+      root.querySelectorAll<HTMLElement>('[data-code-actions-menu="true"]').forEach((candidate) => {
+        candidate.hidden = true
+      })
+      root.querySelectorAll<HTMLButtonElement>('[data-code-actions-toggle="true"]').forEach((candidate) => {
+        candidate.setAttribute('aria-expanded', 'false')
+      })
+      root.querySelectorAll<HTMLElement>('[data-code-block="true"]').forEach((block) => {
+        delete block.dataset.codeMenuOpen
+        delete block.dataset.codeMenuDirection
+      })
+    }
+
     function handleClick(event: MouseEvent) {
       const target = event.target
       if (!(target instanceof Element)) return
@@ -368,24 +381,33 @@ export function CodeBlockEditor(props: CodeBlockEditorProps) {
         event.preventDefault()
         event.stopPropagation()
         const toolbar = actionToggle.closest<HTMLElement>('.editor-code-block__toolbar')
+        const block = actionToggle.closest<HTMLElement>('[data-code-block="true"]')
         const menu = toolbar?.querySelector<HTMLElement>('[data-code-actions-menu="true"]')
-        if (!menu) return
+        if (!menu || !block) return
         const opening = menu.hidden
-        root.querySelectorAll<HTMLElement>('[data-code-actions-menu="true"]').forEach((candidate) => { candidate.hidden = true })
-        root.querySelectorAll<HTMLButtonElement>('[data-code-actions-toggle="true"]').forEach((candidate) => candidate.setAttribute('aria-expanded', 'false'))
-        menu.hidden = !opening
-        actionToggle.setAttribute('aria-expanded', String(opening))
+        closeCodeActionMenus()
+
+        if (opening) {
+          const viewport = window.visualViewport
+          const visibleTop = viewport?.offsetTop ?? 0
+          const visibleBottom = visibleTop + (viewport?.height ?? window.innerHeight)
+          const toggleRect = actionToggle.getBoundingClientRect()
+          const estimatedMenuHeight = 150
+          const spaceBelow = visibleBottom - toggleRect.bottom
+          const spaceAbove = toggleRect.top - visibleTop
+
+          block.dataset.codeMenuOpen = 'true'
+          block.dataset.codeMenuDirection =
+            spaceBelow < estimatedMenuHeight && spaceAbove > spaceBelow ? 'up' : 'down'
+          menu.hidden = false
+          actionToggle.setAttribute('aria-expanded', 'true')
+        }
         return
       }
 
       const clickedCodeAction = target.closest('[data-code-copy="true"], [data-code-convert="true"], [data-code-delete="true"], [data-code-expand="true"]')
-      if (clickedCodeAction) {
-        const toolbar = clickedCodeAction.closest<HTMLElement>('.editor-code-block__toolbar')
-        const menu = toolbar?.querySelector<HTMLElement>('[data-code-actions-menu="true"]')
-        const toggle = toolbar?.querySelector<HTMLButtonElement>('[data-code-actions-toggle="true"]')
-        if (menu) menu.hidden = true
-        toggle?.setAttribute('aria-expanded', 'false')
-      }
+      if (clickedCodeAction) closeCodeActionMenus()
+      else if (!target.closest('[data-code-actions-menu="true"]')) closeCodeActionMenus()
 
       const convertButton = target.closest<HTMLElement>('[data-code-convert="true"]')
       if (convertButton && root.contains(convertButton)) {
@@ -461,6 +483,8 @@ export function CodeBlockEditor(props: CodeBlockEditorProps) {
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key !== 'Escape') return
 
+      closeCodeActionMenus()
+
       if (activeFullscreenDialog) {
         event.preventDefault()
         closeFullscreenDialog()
@@ -473,7 +497,14 @@ export function CodeBlockEditor(props: CodeBlockEditorProps) {
       }
     }
 
+    function handleDocumentPointerDown(event: PointerEvent) {
+      const target = event.target
+      if (target instanceof Element && target.closest('[data-code-actions-toggle="true"], [data-code-actions-menu="true"]')) return
+      closeCodeActionMenus()
+    }
+
     root.addEventListener('click', handleClick, true)
+    document.addEventListener('pointerdown', handleDocumentPointerDown)
     document.addEventListener('keydown', handleKeyDown)
     document.addEventListener('selectionchange', syncCodeSelectionMode)
     syncCodeSelectionMode()
@@ -481,6 +512,7 @@ export function CodeBlockEditor(props: CodeBlockEditorProps) {
     return () => {
       observer.disconnect()
       root.removeEventListener('click', handleClick, true)
+      document.removeEventListener('pointerdown', handleDocumentPointerDown)
       document.removeEventListener('keydown', handleKeyDown)
       document.removeEventListener('selectionchange', syncCodeSelectionMode)
       closeActiveDialog()

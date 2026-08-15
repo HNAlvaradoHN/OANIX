@@ -467,3 +467,45 @@
   overflow-wrap: anywhere !important;
   word-break: break-word;
 }
+
+/* OANIX adaptive unclipped code menu v3 */
+.code-block-editor-root .editor-code-block[data-code-menu-open='true'] {
+  position: relative;
+  z-index: 45;
+  overflow: visible !important;
+}
+
+.code-block-editor-root .editor-code-block[data-code-menu-direction='up'] .editor-code-block__actions-menu {
+  top: auto;
+  bottom: calc(100% + .35rem);
+}
+
+.code-block-editor-root .editor-code-block__actions-menu {
+  max-height: min(16rem, 46dvh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+@container (max-width: 34rem) {
+  .code-block-editor-root .editor-code-block__actions-menu,
+  .code-block-editor-root .editor-code-block[data-code-menu-direction='up'] .editor-code-block__actions-menu {
+    position: fixed !important;
+    z-index: 1800 !important;
+    top: auto !important;
+    right: max(.75rem, env(safe-area-inset-right)) !important;
+    bottom: calc(4.7rem + env(safe-area-inset-bottom) + var(--oanix-keyboard-inset, 0px)) !important;
+    left: max(.75rem, env(safe-area-inset-left)) !important;
+    width: auto !important;
+    max-height: min(44dvh, calc(var(--oanix-visual-height, 100dvh) - 6.5rem));
+    padding: .45rem;
+    overflow-y: auto;
+    border-radius: 1rem;
+    box-shadow: 0 20px 55px rgba(2,6,23,.5);
+  }
+
+  .code-block-editor-root .editor-code-block__actions-menu button {
+    min-height: 2.9rem !important;
+    padding-inline: .8rem !important;
+    font-size: .82rem !important;
+  }
+}

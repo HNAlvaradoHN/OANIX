@@ -128,3 +128,11 @@ Antes de modificar código existente:
 5. registrar el cambio mediante Git.
 
 No se reescriben archivos completos basándose en memoria o suposiciones cuando ya existe una implementación funcional.
+
+## Regla responsive de OANIX
+
+- Cada cambio de interfaz se diseña como un único comportamiento para móvil, tablet y PC; no se mantienen versiones paralelas del mismo componente.
+- El contenedor y el viewport visible gobiernan el tamaño mediante `minmax`, `clamp`, flex/grid, wrapping y container queries.
+- Los breakpoints se reservan para cambios estructurales reales (por ejemplo, una o dos columnas), no para parchear modelos concretos de dispositivo.
+- Menús, overlays, imágenes, código y controles deben permanecer dentro del espacio visible y considerar teclado virtual, safe areas, zoom y textos largos.
+- Toda modificación visual debe revisarse en un rango continuo de anchos antes de considerarse cerrada.
