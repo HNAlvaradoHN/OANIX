@@ -24,6 +24,11 @@ Todos los cambios relevantes del proyecto se registran aquí por versión.
 - Sistema inicial de notas cifradas con creación, listado, apertura y cambio de título.
 - Navegación principal inspirada en una lista de conversaciones, adaptada a notas y responsive en móvil, tablet y PC.
 - Editor de texto enriquecido sobre `blocks-v1` con párrafos, encabezados, negrita, cursiva, listas, citas, enlaces validados y separadores.
+- Bloques de código inertes con selector de lenguaje, indentación, copia, conversión a texto y eliminación confirmada.
+- Imágenes cifradas separadas del registro de la nota, con redimensionado, alineación, bloqueo, vista ampliada y zoom.
+- Previews cifradas ligeras para imágenes pesadas, conservando el original cifrado para la vista ampliada.
+- Flujo de texto alrededor de imágenes compactas alineadas a izquierda o derecha en pantallas amplias.
+- Historial de deshacer para cambios del contenido de la nota, accesible desde la barra del editor y Ctrl/Cmd+Z.
 - Autoguardado cifrado del contenido y serialización de mutaciones de una misma nota para evitar sobrescrituras entre título y contenido.
 - Vista previa de texto real de cada nota en la lista principal.
 
