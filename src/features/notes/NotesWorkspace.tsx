@@ -216,10 +216,12 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
   }, [selectedNote?.id, selectedNote?.title])
 
   useEffect(() => {
-    const tabs = folderTabsRef.current
-    if (!tabs) return
+    const observedTabs = folderTabsRef.current
+    if (!observedTabs) return
 
     function updateHint() {
+      const tabs = folderTabsRef.current
+      if (!tabs) return
       const overflow = tabs.scrollWidth > tabs.clientWidth + 4
       if (!overflow) {
         setFolderScrollHint(null)
@@ -231,7 +233,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
 
     const frame = window.requestAnimationFrame(updateHint)
     const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(updateHint)
-    observer?.observe(tabs)
+    observer?.observe(observedTabs)
     window.addEventListener('resize', updateHint)
     return () => {
       window.cancelAnimationFrame(frame)
