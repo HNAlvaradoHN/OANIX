@@ -22,8 +22,10 @@ Todos los cambios relevantes del proyecto se registran aquí por versión.
 - Repositorio genérico de registros cifrados para impedir que el contenido privado llegue a IndexedDB en texto plano.
 - Comprobación de ida y vuelta de almacenamiento cifrado al desbloquear la bóveda.
 - Sistema inicial de notas cifradas con creación, listado, apertura y cambio de título.
-- Interfaz principal de notas inspirada en navegación tipo mensajería, adaptada a OANIX con vista de dos paneles en pantallas grandes y navegación lista → nota en móvil.
-- Dirección documentada para pestañas de carpetas y fichas de contacto privadas sin adelantar su implementación.
+- Navegación principal inspirada en una lista de conversaciones, adaptada a notas y responsive en móvil, tablet y PC.
+- Editor de texto enriquecido sobre `blocks-v1` con párrafos, encabezados, negrita, cursiva, listas, citas, enlaces validados y separadores.
+- Autoguardado cifrado del contenido y serialización de mutaciones de una misma nota para evitar sobrescrituras entre título y contenido.
+- Vista previa de texto real de cada nota en la lista principal.
 
 ## Versionado
 

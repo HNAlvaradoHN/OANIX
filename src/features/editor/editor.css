@@ -1,0 +1,137 @@
+.editor-frame {
+  margin-top: 1.5rem;
+  border: 1px solid #d9e0e7;
+  border-radius: 18px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 10px 30px rgba(30, 41, 59, 0.05);
+}
+
+.editor-toolbar {
+  position: sticky;
+  top: 76px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  overflow-x: auto;
+  padding: 0.55rem 0.65rem;
+  border-bottom: 1px solid #e6ebf0;
+  background: rgba(255, 255, 255, 0.97);
+  backdrop-filter: blur(12px);
+  scrollbar-width: none;
+}
+
+.editor-toolbar::-webkit-scrollbar { display: none; }
+
+.editor-tool {
+  flex: 0 0 auto;
+  min-width: 2.35rem;
+  height: 2.25rem;
+  padding: 0 0.65rem;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #52606f;
+  font-size: 0.82rem;
+  font-weight: 750;
+}
+
+.editor-tool:hover,
+.editor-tool:focus-visible {
+  outline: none;
+  background: #eef4ff;
+  color: #2563eb;
+}
+
+.editor-tool--strong { font-weight: 900; }
+.editor-tool--italic { font-family: Georgia, serif; font-style: italic; }
+
+.editor-toolbar__separator {
+  flex: 0 0 auto;
+  width: 1px;
+  height: 1.35rem;
+  margin: 0 0.15rem;
+  background: #dde3ea;
+}
+
+.editor-surface {
+  position: relative;
+  min-height: 430px;
+  padding: clamp(1.15rem, 3vw, 2rem);
+  outline: none;
+  color: #202b38;
+  font-size: 1.04rem;
+  line-height: 1.72;
+  overflow-wrap: anywhere;
+}
+
+.editor-surface[data-empty='true']::before {
+  content: attr(data-placeholder);
+  position: absolute;
+  top: clamp(1.15rem, 3vw, 2rem);
+  left: clamp(1.15rem, 3vw, 2rem);
+  color: #a0a9b5;
+  pointer-events: none;
+}
+
+.editor-surface p {
+  margin: 0 0 0.9rem;
+}
+
+.editor-surface h1,
+.editor-surface h2,
+.editor-surface h3 {
+  margin: 1.45rem 0 0.65rem;
+  color: #111827;
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+}
+
+.editor-surface h1:first-child,
+.editor-surface h2:first-child,
+.editor-surface h3:first-child { margin-top: 0; }
+
+.editor-surface h1 { font-size: 1.85rem; }
+.editor-surface h2 { font-size: 1.55rem; }
+.editor-surface h3 { font-size: 1.25rem; }
+
+.editor-surface ul,
+.editor-surface ol {
+  margin: 0 0 1rem;
+  padding-left: 1.6rem;
+}
+
+.editor-surface li { margin: 0.22rem 0; }
+
+.editor-surface blockquote {
+  margin: 1rem 0;
+  padding: 0.25rem 0 0.25rem 1rem;
+  border-left: 3px solid #2563eb;
+  color: #52606f;
+}
+
+.editor-surface hr {
+  margin: 1.5rem 0;
+  border: 0;
+  border-top: 1px solid #d9e0e7;
+}
+
+.editor-surface a {
+  color: #2563eb;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.editor-surface strong { color: #111827; }
+
+@media (max-width: 760px) {
+  .editor-frame {
+    margin-right: -0.1rem;
+    margin-left: -0.1rem;
+    border-radius: 16px;
+  }
+
+  .editor-toolbar { top: 76px; }
+  .editor-surface { min-height: calc(100vh - 300px); }
+}

@@ -1,8 +1,9 @@
 import { listNotes, readNote, saveNote } from '../../storage/repositories/noteRepository'
-import type { NoteRecord } from './noteTypes'
+import type { NoteBlock, NoteRecord } from './noteTypes'
 
 const DEFAULT_NOTE_TITLE = 'Nueva nota'
 const UNTITLED_NOTE_TITLE = 'Sin título'
+const mutationQueues = new Map<string, Promise<unknown>>()
 
 function createNoteId(): string {
   if (globalThis.crypto?.randomUUID) {
@@ -16,6 +17,36 @@ function createNoteId(): string {
   return Array.from(globalThis.crypto.getRandomValues(new Uint8Array(16)))
     .map((byte) => byte.toString(16).padStart(2, '0'))
     .join('')
+}
+
+function enqueueNoteMutation(
+  noteId: string,
+  mutate: (note: NoteRecord) => NoteRecord,
+): Promise<NoteRecord> {
+  const previous = mutationQueues.get(noteId) ?? Promise.resolve()
+  const next = previous
+    .catch(() => undefined)
+    .then(async () => {
+      const existing = await readNote(noteId)
+
+      if (!existing) {
+        throw new Error('La nota ya no existe.')
+      }
+
+      const updated = mutate(existing)
+      await saveNote(updated)
+      return updated
+    })
+
+  mutationQueues.set(noteId, next)
+  const cleanup = () => {
+    if (mutationQueues.get(noteId) === next) {
+      mutationQueues.delete(noteId)
+    }
+  }
+  void next.then(cleanup, cleanup)
+
+  return next
 }
 
 export async function loadNotes(): Promise<NoteRecord[]> {
@@ -41,20 +72,23 @@ export async function createEmptyNote(): Promise<NoteRecord> {
   return note
 }
 
-export async function renameNote(noteId: string, title: string): Promise<NoteRecord> {
-  const existing = await readNote(noteId)
-
-  if (!existing) {
-    throw new Error('La nota ya no existe.')
-  }
-
+export function renameNote(noteId: string, title: string): Promise<NoteRecord> {
   const normalizedTitle = title.trim() || UNTITLED_NOTE_TITLE
-  const updated: NoteRecord = {
+
+  return enqueueNoteMutation(noteId, (existing) => ({
     ...existing,
     title: normalizedTitle,
     updatedAt: new Date().toISOString(),
-  }
+  }))
+}
 
-  await saveNote(updated)
-  return updated
+export function replaceNoteContent(noteId: string, blocks: NoteBlock[]): Promise<NoteRecord> {
+  return enqueueNoteMutation(noteId, (existing) => ({
+    ...existing,
+    updatedAt: new Date().toISOString(),
+    content: {
+      format: 'blocks-v1',
+      blocks,
+    },
+  }))
 }
