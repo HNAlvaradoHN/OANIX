@@ -159,6 +159,8 @@ function createCodeFullscreenDialog(
   const sourceContent = block.querySelector<HTMLElement>('[data-code-content="true"]')
   const sourceLanguage = block.querySelector<HTMLSelectElement>('[data-code-language="true"]')
   if (!editor || !sourceContent || !sourceLanguage) return null
+  const sourceContentElement: HTMLElement = sourceContent
+  const sourceLanguageElement: HTMLSelectElement = sourceLanguage
 
   const backdrop = document.createElement('div')
   backdrop.className = 'code-fullscreen-dialog'
@@ -184,10 +186,10 @@ function createCodeFullscreenDialog(
 
   header.append(title, done)
 
-  const language = sourceLanguage.cloneNode(true) as HTMLSelectElement
+  const language = sourceLanguageElement.cloneNode(true) as HTMLSelectElement
   language.className = 'code-fullscreen-dialog__language'
   language.removeAttribute('data-code-language')
-  language.value = sourceLanguage.value
+  language.value = sourceLanguageElement.value
   language.setAttribute('aria-label', 'Lenguaje del código completo')
 
   const textarea = document.createElement('textarea')
@@ -218,16 +220,16 @@ function createCodeFullscreenDialog(
     closed = true
 
     if (block.isConnected && root.contains(block)) {
-      sourceContent.textContent = textarea.value
-      sourceLanguage.value = language.value
+      sourceContentElement.textContent = textarea.value
+      sourceLanguageElement.value = language.value
       block.dataset.language = language.value
-      Array.from(sourceLanguage.options).forEach((option) => {
+      Array.from(sourceLanguageElement.options).forEach((option) => {
         option.toggleAttribute('selected', option.value === language.value)
       })
 
-      sourceContent.focus()
-      placeCaretAtEnd(sourceContent)
-      sourceContent.dispatchEvent(new Event('input', { bubbles: true }))
+      sourceContentElement.focus()
+      placeCaretAtEnd(sourceContentElement)
+      sourceContentElement.dispatchEvent(new Event('input', { bubbles: true }))
     }
 
     document.body.style.overflow = previousBodyOverflow

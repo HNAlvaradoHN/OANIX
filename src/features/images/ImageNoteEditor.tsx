@@ -8,7 +8,7 @@ import {
   type StoredNoteBlock,
 } from '../notes/noteTypes'
 import { loadEncryptedImage, loadEncryptedImagePreview, storeEncryptedImage } from './imageService'
-import { clampImageWidthPercent, defaultImageWidthPercent, isMobileImageViewport, resizeImageWidthPercent } from './imageLayout'
+import { defaultImageWidthPercent, isMobileImageViewport, resizeImageWidthPercent } from './imageLayout'
 import './images.css'
 
 interface ImageNoteEditorProps {
@@ -405,10 +405,6 @@ function ensureTrailingParagraph(editor: HTMLElement): void {
 function usesMobileImageLayout(): boolean {
   const viewportWidth = window.visualViewport?.width ?? window.innerWidth
   return isMobileImageViewport(viewportWidth)
-}
-
-function clampImageWidth(editorWidth: number, widthPercent: number): number {
-  return clampImageWidthPercent(editorWidth, widthPercent, usesMobileImageLayout())
 }
 
 export function ImageNoteEditor({
