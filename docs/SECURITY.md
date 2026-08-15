@@ -108,19 +108,33 @@ La capa de repositorio recibe datos en memoria, los cifra antes de escribirlos e
 
 Para localizar registros, IndexedDB conserva una clave técnica derivada del tipo e identificador del registro. El contenido privado permanece dentro del payload cifrado. Este metadato local deberá revisarse de nuevo al diseñar la sincronización de V2 para minimizar cualquier información visible al servidor.
 
-La misma capa criptográfica admite bytes y JSON para que imágenes y otros tipos binarios puedan seguir la misma política cuando lleguen a su punto correspondiente del roadmap.
+La misma capa criptográfica admite bytes y JSON para que imágenes y otros tipos binarios sigan la misma política.
 
 ### Notas y editor enriquecido
 
 Las notas se almacenan como registros cifrados de tipo `note`. El contenido usa un modelo estructurado `blocks-v1`; no se persiste el `innerHTML` de `contentEditable`.
 
-El editor solo transforma a datos persistentes los elementos que OANIX reconoce actualmente: párrafos, encabezados, listas, citas, separadores, bloques de código y segmentos de texto con negrita, cursiva o enlaces permitidos. Cualquier estructura del DOM fuera de ese modelo se aplana a texto o se descarta como formato.
+El editor solo transforma a datos persistentes los elementos que OANIX reconoce actualmente: párrafos, encabezados, listas, citas, separadores, bloques de código, referencias de imagen y segmentos de texto con negrita, cursiva o enlaces permitidos. Cualquier estructura del DOM fuera de ese modelo se aplana a texto o se descarta como formato.
 
-Los enlaces se normalizan y solo se conservan con protocolos `http`, `https`, `mailto` o `tel`. El pegado en esta etapa introduce texto plano, evitando que estilos, scripts o marcado externo entren directamente al modelo persistido.
+Los enlaces se normalizan y solo se conservan con protocolos `http`, `https`, `mailto` o `tel`. El pegado de texto introduce texto plano, evitando que estilos, scripts o marcado externo entren directamente al modelo persistido.
 
 Los bloques de código almacenan únicamente texto y un identificador de lenguaje permitido. El selector de lenguaje es metadato de presentación: OANIX no evalúa, interpreta ni ejecuta el contenido del bloque. La acción de copiar solo entrega ese texto al portapapeles del dispositivo.
 
 El autoguardado cifra el modelo completo antes de cada escritura. Las mutaciones de una misma nota se serializan para impedir que dos actualizaciones concurrentes, por ejemplo título y contenido, se sobrescriban entre sí.
+
+### Imágenes cifradas
+
+Las imágenes no se incrustan como base64 ni como bytes en el registro JSON de la nota. La nota cifrada conserva únicamente un bloque `image` con una referencia aleatoria y metadatos necesarios para la interfaz, mientras los bytes se almacenan en un registro cifrado independiente de tipo `image`.
+
+Los bytes de cada imagen pasan por `encryptVaultBytes` con la misma clave activa de la bóveda, un IV AES-GCM aleatorio nuevo y AAD ligado al tipo `image` y al identificador aleatorio de la imagen. En IndexedDB no se persiste una copia descifrada de esos bytes.
+
+En esta etapa se admiten JPEG, PNG, WebP y GIF, con un límite inicial de 15 MiB por imagen. SVG se rechaza para evitar introducir contenido activo basado en marcado dentro del flujo de imágenes. El tipo declarado se usa únicamente para presentar el `Blob` descifrado al navegador; OANIX nunca ejecuta la imagen como código.
+
+Cuando una imagen se muestra, OANIX descifra sus bytes únicamente con la bóveda abierta y crea una URL `blob:` temporal en memoria. Esa URL se revoca al desmontar el editor o quitar la imagen. OANIX no genera ni almacena miniaturas en texto plano.
+
+La interfaz admite selección de archivos/galería, varias imágenes, pegado desde el portapapeles cuando el navegador entrega un archivo de imagen, descripción opcional y vista ampliada. La descripción y el nombre forman parte del registro cifrado de la nota.
+
+Al quitar una imagen, OANIX guarda primero la nota sin la referencia. Solo después de un guardado exitoso intenta eliminar el registro binario cifrado. Si esa limpieza falla, puede quedar un blob cifrado huérfano ocupando espacio, pero no se destruye una imagen que todavía esté referenciada por una nota persistida.
 
 ### Comprobación de almacenamiento cifrado
 
