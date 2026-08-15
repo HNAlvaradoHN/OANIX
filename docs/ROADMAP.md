@@ -17,7 +17,7 @@ Objetivo: entregar una PWA útil, segura, offline-first y completamente funciona
 - [x] Cifrado local
 - [x] Notas
 - [x] Editor de texto enriquecido
-- [ ] Bloques de código
+- [x] Bloques de código
 - [ ] Imágenes
 - [ ] Checklists
 - [ ] Fichas de contacto privadas

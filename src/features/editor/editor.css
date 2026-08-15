@@ -147,6 +147,78 @@
 
 .editor-surface strong { color: #111827; }
 
+.editor-code-block {
+  margin: 1.1rem 0;
+  overflow: hidden;
+  border: 1px solid #263244;
+  border-radius: 14px;
+  background: #0f172a;
+  color: #e5edf8;
+  -webkit-text-fill-color: currentColor;
+}
+
+.editor-code-block__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 2.65rem;
+  padding: 0.4rem 0.55rem 0.4rem 0.7rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+  background: #111c31;
+}
+
+.editor-code-block__language,
+.editor-code-block__copy {
+  border: 0;
+  border-radius: 8px;
+  color: #cbd5e1;
+  -webkit-text-fill-color: currentColor;
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.editor-code-block__language {
+  max-width: 12rem;
+  padding: 0.4rem 1.8rem 0.4rem 0.55rem;
+  background: #1e293b;
+}
+
+.editor-code-block__copy {
+  padding: 0.42rem 0.7rem;
+  background: transparent;
+  cursor: pointer;
+}
+
+.editor-code-block__copy:hover,
+.editor-code-block__copy:focus-visible,
+.editor-code-block__language:focus-visible {
+  outline: none;
+  background: #26354e;
+  color: #fff;
+}
+
+.editor-code-block__content {
+  min-height: 4.75rem;
+  padding: 1rem 1.05rem 1.15rem;
+  outline: none;
+  color: #e5edf8;
+  caret-color: #fff;
+  -webkit-text-fill-color: currentColor;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  tab-size: 2;
+  white-space: pre-wrap;
+  overflow-wrap: normal;
+  overflow-x: auto;
+}
+
+.editor-code-block__content:focus {
+  box-shadow: inset 3px 0 0 #3b82f6;
+}
+
 .editor-link-popover {
   position: absolute;
   z-index: 8;
@@ -203,4 +275,13 @@
   }
 
   .editor-surface { min-height: calc(100vh - 300px); }
+
+  .editor-code-block__toolbar {
+    align-items: stretch;
+  }
+
+  .editor-code-block__language {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
 }
