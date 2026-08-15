@@ -9,10 +9,12 @@ import {
 import { deleteEncryptedImage } from '../images/imageService'
 import { createFolder, deleteFolder, loadFolders, renameFolder, reorderFolder } from '../folders/folderService'
 import type { FolderRecord } from '../folders/folderTypes'
+import { createTag, deleteTag, loadTags, renameTag } from '../tags/tagService'
+import type { TagRecord } from '../tags/tagTypes'
 import { storageSaveErrorMessage } from '../../storage/local/storageErrors'
 import { usesSinglePaneLayout } from '../../shared/responsiveLayout'
 import { ImageNoteEditor } from '../images/ImageNoteEditor'
-import { createEmptyNote, deleteNote, loadNotes, moveNoteToFolder, renameNote, replaceNoteContent } from './noteService'
+import { createEmptyNote, deleteNote, loadNotes, moveNoteToFolder, renameNote, replaceNoteContent, setNoteTags } from './noteService'
 import { prepareDailyEntriesForEditing } from './dailyEntries'
 import { noteBlocksToPlainText, type NoteRecord, type StoredNoteBlock } from './noteTypes'
 import './notes.css'
@@ -81,7 +83,9 @@ function saveStateLabel(saveState: SaveState, savingTitle: boolean): string {
 export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
   const [notes, setNotes] = useState<NoteRecord[]>([])
   const [folders, setFolders] = useState<FolderRecord[]>([])
+  const [tags, setTags] = useState<TagRecord[]>([])
   const [activeFolderId, setActiveFolderId] = useState<string | 'all'>('all')
+  const [activeTagId, setActiveTagId] = useState<string | 'all'>('all')
   const [folderManagerOpen, setFolderManagerOpen] = useState(false)
   const [newFolderName, setNewFolderName] = useState('')
   const [editingFolderId, setEditingFolderId] = useState<string | null>(null)
@@ -90,6 +94,16 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
   const [creatingFolder, setCreatingFolder] = useState(false)
   const [moveNoteId, setMoveNoteId] = useState<string | null>(null)
   const [folderScrollEdges, setFolderScrollEdges] = useState({ left: false, right: false })
+  const [tagFilterOpen, setTagFilterOpen] = useState(false)
+  const [tagManagerOpen, setTagManagerOpen] = useState(false)
+  const [newTagName, setNewTagName] = useState('')
+  const [editingTagId, setEditingTagId] = useState<string | null>(null)
+  const [editingTagName, setEditingTagName] = useState('')
+  const [tagBusyId, setTagBusyId] = useState<string | null>(null)
+  const [creatingTag, setCreatingTag] = useState(false)
+  const [tagEditorNoteId, setTagEditorNoteId] = useState<string | null>(null)
+  const [tagDraftIds, setTagDraftIds] = useState<string[]>([])
+  const [savingNoteTags, setSavingNoteTags] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [draftTitle, setDraftTitle] = useState('')
   const [loading, setLoading] = useState(true)
@@ -117,15 +131,24 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     [notes, selectedId],
   )
   const deletingSelected = !!selectedNote && deletingId === selectedNote.id
+  const activeTag = useMemo(
+    () => activeTagId === 'all' ? null : tags.find((tag) => tag.id === activeTagId) ?? null,
+    [tags, activeTagId],
+  )
   const visibleNotes = useMemo(
-    () => activeFolderId === 'all'
-      ? notes
-      : notes.filter((note) => note.folderId === activeFolderId),
-    [notes, activeFolderId],
+    () => notes.filter((note) =>
+      (activeFolderId === 'all' || note.folderId === activeFolderId) &&
+      (activeTagId === 'all' || (note.tagIds ?? []).includes(activeTagId)),
+    ),
+    [notes, activeFolderId, activeTagId],
   )
   const moveTargetNote = useMemo(
     () => notes.find((note) => note.id === moveNoteId) ?? null,
     [notes, moveNoteId],
+  )
+  const tagEditorNote = useMemo(
+    () => notes.find((note) => note.id === tagEditorNoteId) ?? null,
+    [notes, tagEditorNoteId],
   )
 
   useEffect(() => {
@@ -192,15 +215,16 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
   useEffect(() => {
     let active = true
 
-    void Promise.all([loadNotes(), loadFolders()])
-      .then(([storedNotes, storedFolders]) => {
+    void Promise.all([loadNotes(), loadFolders(), loadTags()])
+      .then(([storedNotes, storedFolders, storedTags]) => {
         if (!active) return
         setNotes(storedNotes)
         setFolders(storedFolders)
+        setTags(storedTags)
       })
       .catch(() => {
         if (!active) return
-        setError('No se pudieron cargar las notas y carpetas cifradas de este dispositivo.')
+        setError('No se pudieron cargar las notas, carpetas y etiquetas cifradas de este dispositivo.')
       })
       .finally(() => {
         if (active) setLoading(false)
@@ -269,6 +293,9 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
         setNoteInfoOpen(false)
         setMoveNoteId(null)
         setFolderManagerOpen(false)
+        setTagFilterOpen(false)
+        setTagManagerOpen(false)
+        setTagEditorNoteId(null)
       }
     }
 
@@ -292,6 +319,17 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
   function folderName(folderId: string | null | undefined): string {
     if (!folderId) return 'Sin carpeta'
     return folders.find((folder) => folder.id === folderId)?.name ?? 'Carpeta no disponible'
+  }
+
+  function tagRecordsFor(note: NoteRecord): TagRecord[] {
+    const ids = new Set(note.tagIds ?? [])
+    return tags.filter((tag) => ids.has(tag.id))
+  }
+
+  function sortTagState(nextTags: TagRecord[]): TagRecord[] {
+    return [...nextTags].sort((left, right) =>
+      left.name.localeCompare(right.name, 'es', { sensitivity: 'base' }),
+    )
   }
 
   function clearSaveTimer() {
@@ -442,6 +480,28 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     }
   }
 
+  async function handleSelectTag(tagId: string | 'all') {
+    if (tagId === activeTagId) {
+      setTagFilterOpen(false)
+      return
+    }
+    if (!(await flushPendingContent())) return
+    await finalizeRemovedImages()
+
+    setActiveTagId(tagId)
+    selectedIdRef.current = null
+    setSelectedId(null)
+    setSaveState('idle')
+    setNoteMenuId(null)
+    setActiveNoteMenuOpen(false)
+    setNoteInfoOpen(false)
+    setTagFilterOpen(false)
+
+    if (mobileSinglePane()) {
+      window.history.replaceState({ ...currentHistoryState(), oanixView: 'list' }, '')
+    }
+  }
+
   async function handleCreateNote() {
     if (!(await flushPendingContent())) return
     await finalizeRemovedImages()
@@ -450,7 +510,10 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     setError('')
 
     try {
-      const note = await createEmptyNote(activeFolderId === 'all' ? null : activeFolderId)
+      const note = await createEmptyNote(
+        activeFolderId === 'all' ? null : activeFolderId,
+        activeTagId === 'all' ? [] : [activeTagId],
+      )
       setNotes((current) => [note, ...current])
       selectedIdRef.current = note.id
       setSelectedId(note.id)
@@ -587,6 +650,143 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     }
   }
 
+  function tagNameExists(name: string, exceptId?: string): boolean {
+    const candidate = name.trim().replace(/\s+/g, ' ').toLocaleLowerCase()
+    return tags.some((tag) =>
+      tag.id !== exceptId && tag.name.toLocaleLowerCase() === candidate,
+    )
+  }
+
+  async function handleCreateTag() {
+    const name = newTagName.trim().replace(/\s+/g, ' ')
+    if (!name) {
+      setError('Escribe un nombre para la etiqueta.')
+      return
+    }
+    if (tagNameExists(name)) {
+      setError('Ya existe una etiqueta con ese nombre.')
+      return
+    }
+
+    setCreatingTag(true)
+    setError('')
+    try {
+      const tag = await createTag(name)
+      setTags((current) => sortTagState([...current, tag]))
+      setNewTagName('')
+    } catch (tagError) {
+      setError(tagError instanceof Error ? tagError.message : 'No se pudo crear la etiqueta cifrada.')
+    } finally {
+      setCreatingTag(false)
+    }
+  }
+
+  function beginTagRename(tag: TagRecord) {
+    setEditingTagId(tag.id)
+    setEditingTagName(tag.name)
+    setError('')
+  }
+
+  async function handleRenameTag(tag: TagRecord) {
+    const name = editingTagName.trim().replace(/\s+/g, ' ')
+    if (!name) {
+      setError('El nombre de la etiqueta no puede estar vacío.')
+      return
+    }
+    if (tagNameExists(name, tag.id)) {
+      setError('Ya existe una etiqueta con ese nombre.')
+      return
+    }
+
+    setTagBusyId(tag.id)
+    setError('')
+    try {
+      const updated = await renameTag(tag.id, name)
+      setTags((current) => sortTagState(
+        current.map((item) => item.id === updated.id ? updated : item),
+      ))
+      setEditingTagId(null)
+      setEditingTagName('')
+    } catch (tagError) {
+      setError(tagError instanceof Error ? tagError.message : 'No se pudo renombrar la etiqueta.')
+    } finally {
+      setTagBusyId(null)
+    }
+  }
+
+  function openTagEditor(note: NoteRecord) {
+    setTagDraftIds(note.tagIds ?? [])
+    setTagEditorNoteId(note.id)
+    setNoteMenuId(null)
+    setActiveNoteMenuOpen(false)
+    setError('')
+  }
+
+  function toggleTagDraft(tagId: string) {
+    setTagDraftIds((current) =>
+      current.includes(tagId)
+        ? current.filter((id) => id !== tagId)
+        : [...current, tagId],
+    )
+  }
+
+  async function handleSaveNoteTags() {
+    if (!tagEditorNote || savingNoteTags) return
+    if (tagEditorNote.id === selectedIdRef.current && !(await flushPendingContent())) return
+
+    setSavingNoteTags(true)
+    setError('')
+    try {
+      const validIds = tagDraftIds.filter((tagId) => tags.some((tag) => tag.id === tagId))
+      const updated = await setNoteTags(tagEditorNote.id, validIds)
+      replaceNoteInState(updated)
+      if (updated.id === selectedIdRef.current) setSaveState('saved')
+      setTagEditorNoteId(null)
+    } catch {
+      setError('No se pudieron guardar las etiquetas de la nota.')
+    } finally {
+      setSavingNoteTags(false)
+    }
+  }
+
+  async function handleDeleteTag(tag: TagRecord) {
+    const affected = notes.filter((note) => (note.tagIds ?? []).includes(tag.id))
+    const detail = affected.length === 0
+      ? 'La etiqueta se eliminará. No está asignada a ninguna nota.'
+      : `La etiqueta se quitará de ${affected.length} nota${affected.length === 1 ? '' : 's'}.`
+    if (!window.confirm(`¿Eliminar la etiqueta “${tag.name}”?\n\n${detail}\n\nLas notas NO se eliminarán.`)) return
+
+    if (!(await flushPendingContent())) return
+    setTagBusyId(tag.id)
+    setError('')
+    try {
+      const updatedNotes = await Promise.all(
+        affected.map((note) => setNoteTags(note.id, (note.tagIds ?? []).filter((id) => id !== tag.id))),
+      )
+      if (updatedNotes.length > 0) {
+        const updatedById = new Map(updatedNotes.map((note) => [note.id, note]))
+        setNotes((current) => current.map((note) => updatedById.get(note.id) ?? note))
+      }
+      await deleteTag(tag.id)
+      setTags((current) => current.filter((item) => item.id !== tag.id))
+      setTagDraftIds((current) => current.filter((id) => id !== tag.id))
+      if (activeTagId === tag.id) {
+        setActiveTagId('all')
+        selectedIdRef.current = null
+        setSelectedId(null)
+        setSaveState('idle')
+      }
+      if (editingTagId === tag.id) {
+        setEditingTagId(null)
+        setEditingTagName('')
+      }
+    } catch {
+      setError('No se pudo completar la eliminación de la etiqueta.')
+    } finally {
+      setTagBusyId(null)
+    }
+  }
+
   async function persistTitle() {
     if (!selectedNote || savingTitle) return
 
@@ -665,7 +865,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     const listRect = event.currentTarget.closest('.notes-list')?.getBoundingClientRect()
     const topBoundary = listRect?.top ?? 0
     const bottomBoundary = listRect?.bottom ?? window.innerHeight
-    const estimatedMenuHeight = 108
+    const estimatedMenuHeight = 150
     const spaceBelow = bottomBoundary - buttonRect.bottom
     const spaceAbove = buttonRect.top - topBoundary
 
@@ -729,6 +929,16 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
                     }}
                   >
                     <span aria-hidden="true">📁</span> Administrar carpetas
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setWorkspaceMenuOpen(false)
+                      setTagManagerOpen(true)
+                    }}
+                  >
+                    <span aria-hidden="true">🏷</span> Administrar etiquetas
                   </button>
                   <button
                     type="button"
@@ -813,6 +1023,29 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
           </button>
         </div>
 
+        <div className="notes-tag-filter">
+          <button
+            className={`tag-filter-button${activeTag ? ' tag-filter-button--active' : ''}`}
+            type="button"
+            onClick={() => tags.length === 0 ? setTagManagerOpen(true) : setTagFilterOpen(true)}
+            aria-label="Filtrar notas por etiqueta"
+            title="Filtrar por etiqueta"
+          >
+            <span aria-hidden="true">🏷</span>
+            <span>{activeTag?.name ?? 'Todas las etiquetas'}</span>
+            <span aria-hidden="true">⌄</span>
+          </button>
+          <button
+            className="tag-manage-button"
+            type="button"
+            onClick={() => setTagManagerOpen(true)}
+            aria-label="Administrar etiquetas"
+            title="Administrar etiquetas"
+          >
+            ＋
+          </button>
+        </div>
+
         {error && <p className="notes-error" role="alert">{error}</p>}
 
         <div className="notes-list">
@@ -832,9 +1065,13 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
             </div>
           ) : visibleNotes.length === 0 ? (
             <div className="notes-empty">
-              <div className="notes-empty__icon" aria-hidden="true">📁</div>
-              <strong>Esta carpeta está vacía</strong>
-              <p>Las notas que crees aquí quedarán organizadas en esta carpeta cifrada.</p>
+              <div className="notes-empty__icon" aria-hidden="true">{activeTag ? '🏷' : '📁'}</div>
+              <strong>{activeTag ? 'No hay notas con esta etiqueta' : 'Esta carpeta está vacía'}</strong>
+              <p>
+                {activeTag
+                  ? `Las notas nuevas creadas con este filtro recibirán “${activeTag.name}”.`
+                  : 'Las notas que crees aquí quedarán organizadas en esta carpeta cifrada.'}
+              </p>
               <button className="empty-action" type="button" onClick={() => void handleCreateNote()} disabled={creating}>
                 Crear nota aquí
               </button>
@@ -880,6 +1117,13 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
                       role="menu"
                       aria-label={`Acciones de ${note.title}`}
                     >
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => openTagEditor(note)}
+                      >
+                        Etiquetas
+                      </button>
                       <button
                         type="button"
                         role="menuitem"
@@ -959,6 +1203,13 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
                     <button
                       type="button"
                       role="menuitem"
+                      onClick={() => openTagEditor(selectedNote)}
+                    >
+                      <span aria-hidden="true">🏷</span> Etiquetas
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
                       onClick={() => {
                         setActiveNoteMenuOpen(false)
                         setMoveNoteId(selectedNote.id)
@@ -1008,6 +1259,15 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
                 />
               </label>
 
+              <div className="note-tag-strip" aria-label="Etiquetas de la nota">
+                {tagRecordsFor(selectedNote).map((tag) => (
+                  <span className="note-tag-chip" key={tag.id}>#{tag.name}</span>
+                ))}
+                <button type="button" className="note-tag-add" onClick={() => openTagEditor(selectedNote)}>
+                  ＋ Etiqueta
+                </button>
+              </div>
+
               {saveState === 'error' && error && (
                 <div className="note-save-error" role="alert">
                   <span>{error}</span>
@@ -1054,6 +1314,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
                 <div><dt>Creada</dt><dd>{new Date(selectedNote.createdAt).toLocaleString('es-HN')}</dd></div>
                 <div><dt>Modificada</dt><dd>{new Date(selectedNote.updatedAt).toLocaleString('es-HN')}</dd></div>
                 <div><dt>Carpeta</dt><dd>{folderName(selectedNote.folderId)}</dd></div>
+                <div><dt>Etiquetas</dt><dd>{tagRecordsFor(selectedNote).map((tag) => tag.name).join(', ') || 'Sin etiquetas'}</dd></div>
                 <div><dt>Bloques</dt><dd>{selectedNote.content.blocks.length}</dd></div>
                 <div><dt>Protección</dt><dd>Cifrada localmente</dd></div>
               </dl>
@@ -1124,6 +1385,122 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
                   )}
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {tagFilterOpen && (
+        <div className="folder-dialog" role="presentation" onClick={() => setTagFilterOpen(false)}>
+          <div className="folder-dialog__panel folder-dialog__panel--move" role="dialog" aria-modal="true" aria-label="Filtrar por etiqueta" onClick={(event) => event.stopPropagation()}>
+            <div className="folder-dialog__header">
+              <div><strong>Filtrar por etiqueta</strong><span>Combina el filtro con la carpeta seleccionada</span></div>
+              <button type="button" onClick={() => setTagFilterOpen(false)} aria-label="Cerrar">×</button>
+            </div>
+            <div className="folder-move-list">
+              <button type="button" className={activeTagId === 'all' ? 'folder-move-option folder-move-option--active' : 'folder-move-option'} onClick={() => void handleSelectTag('all')}>
+                <span aria-hidden="true">🏷</span><strong>Todas las etiquetas</strong>{activeTagId === 'all' && <span aria-hidden="true">✓</span>}
+              </button>
+              {tags.map((tag) => (
+                <button type="button" key={tag.id} className={activeTagId === tag.id ? 'folder-move-option folder-move-option--active' : 'folder-move-option'} onClick={() => void handleSelectTag(tag.id)}>
+                  <span aria-hidden="true">#</span><strong>{tag.name}</strong>{activeTagId === tag.id && <span aria-hidden="true">✓</span>}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {tagManagerOpen && (
+        <div className="folder-dialog" role="presentation" onClick={() => setTagManagerOpen(false)}>
+          <div className="folder-dialog__panel" role="dialog" aria-modal="true" aria-label="Administrar etiquetas" onClick={(event) => event.stopPropagation()}>
+            <div className="folder-dialog__header">
+              <div><strong>Etiquetas</strong><span>Clasificación cifrada y reutilizable</span></div>
+              <button type="button" onClick={() => setTagManagerOpen(false)} aria-label="Cerrar">×</button>
+            </div>
+            <div className="folder-create-row">
+              <input
+                value={newTagName}
+                onChange={(event) => setNewTagName(event.target.value)}
+                onKeyDown={(event) => { if (event.key === 'Enter') void handleCreateTag() }}
+                maxLength={40}
+                placeholder="Nueva etiqueta"
+                aria-label="Nombre de nueva etiqueta"
+              />
+              <button type="button" onClick={() => void handleCreateTag()} disabled={creatingTag}>
+                {creatingTag ? 'Creando…' : 'Crear'}
+              </button>
+            </div>
+            <div className="folder-list">
+              {tags.length === 0 ? (
+                <p className="folder-list__empty">Aún no has creado etiquetas.</p>
+              ) : tags.map((tag) => (
+                <div className="folder-list__row" key={tag.id}>
+                  {editingTagId === tag.id ? (
+                    <>
+                      <input
+                        className="folder-list__rename"
+                        value={editingTagName}
+                        onChange={(event) => setEditingTagName(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter') void handleRenameTag(tag)
+                          if (event.key === 'Escape') setEditingTagId(null)
+                        }}
+                        maxLength={40}
+                        autoFocus
+                        aria-label={`Nuevo nombre para ${tag.name}`}
+                      />
+                      <div className="folder-list__actions">
+                        <button type="button" onClick={() => void handleRenameTag(tag)} disabled={tagBusyId === tag.id}>Guardar</button>
+                        <button type="button" onClick={() => setEditingTagId(null)}>Cancelar</button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="folder-list__identity">
+                        <span aria-hidden="true">🏷</span>
+                        <div><strong>{tag.name}</strong><small>{notes.filter((note) => (note.tagIds ?? []).includes(tag.id)).length} notas</small></div>
+                      </div>
+                      <div className="folder-list__actions">
+                        <button type="button" onClick={() => beginTagRename(tag)}>Renombrar</button>
+                        <button className="folder-list__delete" type="button" onClick={() => void handleDeleteTag(tag)} disabled={tagBusyId === tag.id}>Eliminar</button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {tagEditorNote && (
+        <div className="folder-dialog" role="presentation" onClick={() => setTagEditorNoteId(null)}>
+          <div className="folder-dialog__panel folder-dialog__panel--move tag-dialog__panel--assign" role="dialog" aria-modal="true" aria-label="Etiquetas de la nota" onClick={(event) => event.stopPropagation()}>
+            <div className="folder-dialog__header">
+              <div><strong>Etiquetas de la nota</strong><span>{tagEditorNote.title}</span></div>
+              <button type="button" onClick={() => setTagEditorNoteId(null)} aria-label="Cerrar">×</button>
+            </div>
+            <div className="tag-assign-list">
+              {tags.length === 0 ? (
+                <div className="tag-assign-empty">
+                  <span aria-hidden="true">🏷</span>
+                  <strong>Aún no hay etiquetas</strong>
+                  <button type="button" onClick={() => { setTagEditorNoteId(null); setTagManagerOpen(true) }}>Crear etiqueta</button>
+                </div>
+              ) : tags.map((tag) => (
+                <label className="tag-assign-option" key={tag.id}>
+                  <input type="checkbox" checked={tagDraftIds.includes(tag.id)} onChange={() => toggleTagDraft(tag.id)} />
+                  <span aria-hidden="true">#</span>
+                  <strong>{tag.name}</strong>
+                </label>
+              ))}
+            </div>
+            <div className="tag-dialog__footer">
+              <button type="button" onClick={() => setTagEditorNoteId(null)}>Cancelar</button>
+              <button className="tag-dialog__save" type="button" onClick={() => void handleSaveNoteTags()} disabled={savingNoteTags || tags.length === 0}>
+                {savingNoteTags ? 'Guardando…' : 'Guardar'}
+              </button>
             </div>
           </div>
         </div>

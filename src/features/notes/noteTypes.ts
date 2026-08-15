@@ -155,6 +155,7 @@ export interface NoteRecord {
   createdAt: string
   updatedAt: string
   folderId?: string | null
+  tagIds?: string[]
   content: {
     format: 'blocks-v1'
     blocks: StoredNoteBlock[]
@@ -314,6 +315,10 @@ export function isNoteRecord(value: unknown): value is NoteRecord {
     typeof note.createdAt === 'string' &&
     typeof note.updatedAt === 'string' &&
     (note.folderId === undefined || note.folderId === null || typeof note.folderId === 'string') &&
+    (note.tagIds === undefined ||
+      (Array.isArray(note.tagIds) &&
+        note.tagIds.every((tagId) => typeof tagId === 'string' && tagId.length > 0) &&
+        new Set(note.tagIds).size === note.tagIds.length)) &&
     !!note.content &&
     note.content.format === 'blocks-v1' &&
     Array.isArray(note.content.blocks) &&

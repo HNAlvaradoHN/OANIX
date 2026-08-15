@@ -55,7 +55,7 @@ export async function loadNotes(): Promise<NoteRecord[]> {
   return notes.sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
 }
 
-export async function createEmptyNote(folderId: string | null = null): Promise<NoteRecord> {
+export async function createEmptyNote(folderId: string | null = null, tagIds: string[] = []): Promise<NoteRecord> {
   const nowDate = new Date()
   const now = nowDate.toISOString()
   const note: NoteRecord = {
@@ -65,6 +65,7 @@ export async function createEmptyNote(folderId: string | null = null): Promise<N
     createdAt: now,
     updatedAt: now,
     folderId,
+    tagIds: [...new Set(tagIds.filter((tagId) => tagId.length > 0))],
     content: {
       format: 'blocks-v1',
       blocks: createDailyEntryBlocks(nowDate),
@@ -126,5 +127,14 @@ export function moveNoteToFolder(noteId: string, folderId: string | null): Promi
   return enqueueNoteMutation(noteId, (existing) => ({
     ...existing,
     folderId,
+  }))
+}
+
+export function setNoteTags(noteId: string, tagIds: string[]): Promise<NoteRecord> {
+  const normalizedTagIds = [...new Set(tagIds.map((tagId) => tagId.trim()).filter(Boolean))]
+  return enqueueNoteMutation(noteId, (existing) => ({
+    ...existing,
+    tagIds: normalizedTagIds,
+    updatedAt: new Date().toISOString(),
   }))
 }
