@@ -8,6 +8,7 @@ import {
   type StoredNoteBlock,
 } from '../notes/noteTypes'
 import { loadEncryptedImage, loadEncryptedImagePreview, storeEncryptedImage } from './imageService'
+import { clampImageWidthPercent, defaultImageWidthPercent, isMobileImageViewport } from './imageLayout'
 import './images.css'
 
 interface ImageNoteEditorProps {
@@ -35,8 +36,6 @@ interface ResizeState {
 }
 
 const DEFAULT_IMAGE_WIDTH = 100
-const MIN_IMAGE_WIDTH_PERCENT = 35
-const MIN_IMAGE_WIDTH_PIXELS = 220
 const COMPACT_IMAGE_PERCENT = 55
 const MAX_PREVIEW_ZOOM = 4
 const MIN_PREVIEW_ZOOM = 1
@@ -400,10 +399,13 @@ function ensureTrailingParagraph(editor: HTMLElement): void {
   editor.append(trailing)
 }
 
+function usesMobileImageLayout(): boolean {
+  const viewportWidth = window.visualViewport?.width ?? window.innerWidth
+  return isMobileImageViewport(viewportWidth)
+}
+
 function clampImageWidth(editorWidth: number, widthPercent: number): number {
-  const pixelMinimum = editorWidth > 0 ? (MIN_IMAGE_WIDTH_PIXELS / editorWidth) * 100 : 100
-  const minimum = Math.min(100, Math.max(MIN_IMAGE_WIDTH_PERCENT, Math.ceil(pixelMinimum)))
-  return Math.min(100, Math.max(minimum, Math.round(widthPercent)))
+  return clampImageWidthPercent(editorWidth, widthPercent, usesMobileImageLayout())
 }
 
 export function ImageNoteEditor({
@@ -437,16 +439,19 @@ export function ImageNoteEditor({
   const [preview, setPreview] = useState<PreviewState | null>(null)
   const [previewZoom, setPreviewZoom] = useState(1)
   const [imageError, setImageError] = useState('')
+  const [mobileToolsOpen, setMobileToolsOpen] = useState(false)
 
   function mergedBlocks(editorBlocks: NoteBlock[]): StoredNoteBlock[] {
     return editorBlocks.map((block) => imagesRef.current.get(block.id) ?? block)
   }
 
   function updateHistoryButtons(root: HTMLElement | null = rootRef.current) {
-    const undo = root?.querySelector<HTMLButtonElement>('[data-undo-tool="true"]')
-    const redo = root?.querySelector<HTMLButtonElement>('[data-redo-tool="true"]')
-    if (undo) undo.disabled = undoHistoryRef.current.length === 0
-    if (redo) redo.disabled = redoHistoryRef.current.length === 0
+    root?.querySelectorAll<HTMLButtonElement>('[data-undo-tool="true"]').forEach((undo) => {
+      undo.disabled = undoHistoryRef.current.length === 0
+    })
+    root?.querySelectorAll<HTMLButtonElement>('[data-redo-tool="true"]').forEach((redo) => {
+      redo.disabled = redoHistoryRef.current.length === 0
+    })
   }
 
   function rememberHistory(nextBlocks: StoredNoteBlock[]): boolean {
@@ -673,7 +678,7 @@ export function ImageNoteEditor({
           id: createBlockId(),
           type: 'image',
           ...stored,
-          widthPercent: DEFAULT_IMAGE_WIDTH,
+          widthPercent: defaultImageWidthPercent(usesMobileImageLayout()),
           alignment: 'center',
           locked: false,
           showName: true,
@@ -1045,6 +1050,7 @@ export function ImageNoteEditor({
       if (event.key === 'Escape') {
         setPreview(null)
         setPreviewZoom(1)
+        setMobileToolsOpen(false)
       }
     }
 
@@ -1095,7 +1101,10 @@ export function ImageNoteEditor({
   }
 
   return (
-    <div ref={rootRef} className="image-note-editor-root">
+    <div
+      ref={rootRef}
+      className={`image-note-editor-root${mobileToolsOpen ? ' image-note-editor-root--mobile-tools-open' : ''}`}
+    >
       <CodeBlockEditor
         key={`${noteId}:${editorEpoch}`}
         noteId={noteId}
@@ -1103,6 +1112,38 @@ export function ImageNoteEditor({
         onChange={handleEditorChange}
         onBlur={onBlur}
       />
+
+      <div className="mobile-editor-dock" role="toolbar" aria-label="Acciones rápidas del editor">
+        <button
+          className="mobile-editor-dock__history"
+          type="button"
+          data-undo-tool="true"
+          aria-label="Deshacer último cambio"
+          title="Deshacer"
+        >
+          ↶
+        </button>
+        <button
+          className="mobile-editor-dock__history"
+          type="button"
+          data-redo-tool="true"
+          aria-label="Rehacer último cambio"
+          title="Rehacer"
+        >
+          ↷
+        </button>
+        <button
+          className="mobile-editor-dock__tools"
+          type="button"
+          data-mobile-tools-toggle="true"
+          aria-label={mobileToolsOpen ? 'Cerrar herramientas de edición' : 'Abrir herramientas de edición'}
+          aria-expanded={mobileToolsOpen}
+          title="Herramientas de edición"
+          onClick={() => setMobileToolsOpen((open) => !open)}
+        >
+          ☷
+        </button>
+      </div>
 
       <input
         ref={inputRef}
