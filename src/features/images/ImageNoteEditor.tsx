@@ -868,6 +868,11 @@ export function ImageNoteEditor({
       const target = event.target
       if (!(target instanceof Element)) return
 
+      const selectedToolbarTool = target.closest<HTMLButtonElement>('.editor-toolbar button')
+      if (selectedToolbarTool && root.contains(selectedToolbarTool)) {
+        queueMicrotask(() => setMobileToolsOpen(false))
+      }
+
       const undoTool = target.closest<HTMLElement>('[data-undo-tool="true"]')
       if (undoTool && root.contains(undoTool)) {
         event.preventDefault()

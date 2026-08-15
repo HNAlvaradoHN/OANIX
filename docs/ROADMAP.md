@@ -31,6 +31,7 @@ Objetivo: entregar una PWA útil, segura, offline-first y completamente funciona
 - [ ] Mantener los bloques de código contenidos dentro de la nota y ofrecer una vista/editor de código a pantalla completa para líneas largas.
 - [ ] Auditar botones, menús, tarjetas y controles responsive para evitar textos cortados, desbordados o ilegibles; incluye acciones largas como `Convertir a texto` y `Eliminar bloque`.
 - [ ] Validar visualmente en móvil y pasar CI antes de continuar.
+- [ ] Confirmar guardado cifrado real en móvil, navegación Atrás/gesto y auditoría responsive en móvil, tablet y PC.
 
 - [ ] Checklists
 - [ ] Fichas de contacto privadas

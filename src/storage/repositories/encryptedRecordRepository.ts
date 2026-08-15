@@ -5,6 +5,7 @@ import {
 } from '../../security/crypto/contentCrypto'
 import { requireActiveVaultKey } from '../../security/vault/vaultSession'
 import { ENCRYPTED_RECORDS_STORE, openLocalDatabase } from '../local/database'
+import { retryTransientStorageOperation } from '../local/storageErrors'
 
 interface StoredEncryptedRecord {
   key: string
@@ -59,20 +60,22 @@ export async function writeEncryptedRecord<T>(
   const vaultKey = requireActiveVaultKey()
   const context = { recordType, recordId }
   const payload = await encryptVaultJson(vaultKey, value, context)
-  const database = await openLocalDatabase()
+  await retryTransientStorageOperation(async () => {
+    const database = await openLocalDatabase()
 
-  try {
-    const transaction = database.transaction(ENCRYPTED_RECORDS_STORE, 'readwrite')
-    const completion = transactionCompleted(transaction)
-    const storedRecord: StoredEncryptedRecord = {
-      key: encryptedRecordKey(recordType, recordId),
-      payload,
+    try {
+      const transaction = database.transaction(ENCRYPTED_RECORDS_STORE, 'readwrite')
+      const completion = transactionCompleted(transaction)
+      const storedRecord: StoredEncryptedRecord = {
+        key: encryptedRecordKey(recordType, recordId),
+        payload,
+      }
+      transaction.objectStore(ENCRYPTED_RECORDS_STORE).put(storedRecord)
+      await completion
+    } finally {
+      database.close()
     }
-    transaction.objectStore(ENCRYPTED_RECORDS_STORE).put(storedRecord)
-    await completion
-  } finally {
-    database.close()
-  }
+  })
 }
 
 export async function readEncryptedRecord<T>(
