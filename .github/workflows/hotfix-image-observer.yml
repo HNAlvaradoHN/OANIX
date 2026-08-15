@@ -1,0 +1,46 @@
+name: Apply image observer hotfix
+
+on:
+  push:
+    branches:
+      - fix/image-observer-loop
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/image-observer-loop
+
+      - name: Patch image observer
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('src/features/images/ImageNoteEditor.tsx')
+          text = path.read_text(encoding='utf-8')
+
+          old = """    const observer = new MutationObserver(() => {\n      decorateToolbar(root)\n      hydrateStoredImages(root)\n    })\n    observer.observe(root, { childList: true, subtree: true })"""
+
+          new = """    const observerOptions: MutationObserverInit = { childList: true, subtree: true }\n    const observer = new MutationObserver(() => {\n      // Hydration mutates image controls (labels, loading state, etc.).\n      // Disconnect while applying those internal changes so the observer\n      // cannot recursively react to mutations caused by its own callback.\n      observer.disconnect()\n      decorateToolbar(root)\n      hydrateStoredImages(root)\n      observer.observe(root, observerOptions)\n    })\n    observer.observe(root, observerOptions)"""
+
+          if old not in text:
+              raise SystemExit('Expected observer block was not found; refusing to patch.')
+
+          path.write_text(text.replace(old, new, 1), encoding='utf-8')
+          PY
+
+      - name: Commit hotfix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/features/images/ImageNoteEditor.tsx
+          git diff --cached --quiet && exit 0
+          git commit -m "fix: prevent recursive image observer loop"
+          git push origin HEAD:fix/image-observer-loop
