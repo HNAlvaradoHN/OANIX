@@ -18,6 +18,9 @@ Todos los cambios relevantes del proyecto se registran aquí por versión.
 - Contraseña maestra local con derivación Argon2id y normalización Unicode NFC.
 - Clave aleatoria de bóveda protegida mediante AES-256-GCM y mantenida en memoria como `CryptoKey` no extraíble.
 - Flujo de creación, desbloqueo y bloqueo de la bóveda desde la interfaz.
+- Cifrado autenticado de contenido local mediante AES-256-GCM con IV único por escritura y AAD ligado al tipo e identificador del registro.
+- Repositorio genérico de registros cifrados para impedir que el contenido privado llegue a IndexedDB en texto plano.
+- Comprobación de ida y vuelta de almacenamiento cifrado al desbloquear la bóveda.
 
 ## Versionado
 

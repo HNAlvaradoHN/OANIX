@@ -66,7 +66,7 @@ Los parámetros y el salt se almacenan junto con los metadatos de protección pa
 
 ### Clave de la bóveda
 
-Al proteger una bóveda por primera vez se generan 32 bytes aleatorios mediante el generador criptográfico del navegador. Esa clave es independiente de la contraseña maestra y será la raíz del cifrado del contenido local.
+Al proteger una bóveda por primera vez se generan 32 bytes aleatorios mediante el generador criptográfico del navegador. Esa clave es independiente de la contraseña maestra y es la raíz del cifrado del contenido local.
 
 La clave de la bóveda se protege con AES-256-GCM mediante Web Crypto:
 
@@ -77,7 +77,7 @@ Tag GCM:           128 bits
 AAD:               OANIX:vault-key:v1
 ```
 
-En IndexedDB solo se persisten:
+En IndexedDB solo se persisten para esta protección:
 
 - versión del esquema;
 - salt y parámetros de Argon2id;
@@ -86,6 +86,39 @@ En IndexedDB solo se persisten:
 - identificador versionado del formato criptográfico.
 
 No se almacenan la contraseña maestra, la salida de Argon2id ni la clave de bóveda en texto plano.
+
+### Cifrado del contenido local
+
+Los registros privados de V1 se cifran con AES-256-GCM usando la clave de bóveda desbloqueada. Cada escritura genera un IV aleatorio nuevo de 12 bytes y usa una etiqueta de autenticación GCM de 128 bits.
+
+El formato persistido del contenido es versionado:
+
+```text
+Esquema:       aes-gcm-v1
+IV:            12 bytes aleatorios
+Ciphertext:    contenido cifrado + tag GCM
+AAD:           [OANIX, content, 1, tipo de registro, id de registro]
+```
+
+El tipo y el identificador del registro forman parte de los datos autenticados. Por ello, copiar un ciphertext válido hacia otro tipo o identificador hace fallar la autenticación al intentar descifrarlo.
+
+La capa de repositorio recibe datos en memoria, los cifra antes de escribirlos en IndexedDB y solo devuelve datos después de descifrarlos con la clave activa. La interfaz no accede directamente a IndexedDB ni manipula la clave criptográfica.
+
+Para localizar registros, IndexedDB conserva una clave técnica derivada del tipo e identificador del registro. El contenido privado permanece dentro del payload cifrado. Este metadato local deberá revisarse de nuevo al diseñar la sincronización de V2 para minimizar cualquier información visible al servidor.
+
+La misma capa criptográfica admite bytes y JSON para que imágenes y otros tipos binarios puedan seguir la misma política cuando lleguen a su punto correspondiente del roadmap.
+
+### Comprobación de almacenamiento cifrado
+
+Después de crear o desbloquear la bóveda, OANIX puede realizar una comprobación de ida y vuelta con un registro técnico aleatorio:
+
+1. genera un valor aleatorio sin contenido del usuario;
+2. lo cifra y lo escribe mediante el repositorio cifrado;
+3. lo lee y descifra;
+4. comprueba que coincide;
+5. elimina el registro técnico.
+
+Si la comprobación falla, la interfaz no presenta la bóveda como lista para usar. Esta prueba confirma en el navegador que Web Crypto e IndexedDB funcionan juntos; no sustituye las pruebas criptográficas y de integración que deberán completarse antes de cerrar V1.
 
 ### Desbloqueo y sesión
 
@@ -99,9 +132,9 @@ La implementación intenta sobrescribir los `Uint8Array` temporales que contiene
 
 V1 no incorpora recuperación de contraseña. Si el usuario pierde la contraseña maestra después de almacenar contenido cifrado, OANIX no tendrá una clave alternativa con la que abrir esa bóveda. La recuperación pertenece a V2 y deberá diseñarse sin introducir una puerta trasera que permita al servidor leer el contenido.
 
-### Estado del cifrado de contenido
+### Estado del contenido
 
-La protección de la clave de bóveda ya forma parte de la contraseña maestra, pero **las notas, imágenes y demás contenido privado todavía no se persistirán** hasta completar el siguiente punto del roadmap: `Cifrado local`.
+La infraestructura de cifrado local ya está preparada, pero el sistema de notas todavía no se implementa. No se introducirán notas, imágenes u otros tipos privados persistentes hasta su punto correspondiente del roadmap.
 
 ## Referencias técnicas
 
