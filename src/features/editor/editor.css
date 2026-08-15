@@ -272,6 +272,32 @@
   color: #1d4ed8;
 }
 
+
+@media (min-width: 761px) and (max-width: 1100px) {
+  .editor-frame {
+    margin-top: 1.15rem;
+    grid-template-rows: auto minmax(390px, auto);
+  }
+
+  .editor-toolbar {
+    flex-wrap: wrap;
+    overflow-x: visible;
+    row-gap: 0.25rem;
+  }
+
+  .editor-tool {
+    min-width: 2.15rem;
+    height: 2.15rem;
+    padding-inline: 0.5rem;
+    font-size: 0.78rem;
+  }
+
+  .editor-surface {
+    min-height: 390px;
+    padding-inline: clamp(1rem, 2.2vw, 1.5rem);
+  }
+}
+
 @media (max-width: 760px) {
   .editor-frame {
     margin-right: -0.1rem;

@@ -3,6 +3,8 @@
 Todos los cambios relevantes del proyecto se registran aquí por versión.
 
 ## Unreleased
+
+- Refuerzo de guardado local móvil con reintento de IndexedDB, error visible/reintentable, navegación Atrás integrada al historial, cierre automático de herramientas y breakpoints explícitos móvil/tablet/PC.
 - Refinamiento móvil de imágenes y código: imágenes sin flujo lateral, escalado proporcional por ambos ejes, panel de acciones legible, código contenido y editor de código a pantalla completa.
 
 ### Added

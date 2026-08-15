@@ -217,6 +217,33 @@
   color: #dbeafe;
 }
 
+
+@media (min-width: 641px) and (max-width: 1100px) {
+  .code-block-editor-root .editor-code-block__toolbar {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+    gap: 0.35rem;
+  }
+
+  .code-block-editor-root .editor-code-block__language {
+    grid-column: 1 / -1;
+    width: 100%;
+    max-width: none;
+  }
+
+  .code-block-editor-root .editor-code-block__convert,
+  .code-block-editor-root .editor-code-block__delete,
+  .code-block-editor-root .editor-code-block__expand,
+  .code-block-editor-root .editor-code-block__copy {
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}
+
 .code-fullscreen-dialog {
   position: fixed;
   z-index: 1700;

@@ -7,6 +7,8 @@ import {
   type MouseEvent as ReactMouseEvent,
 } from 'react'
 import { deleteEncryptedImage } from '../images/imageService'
+import { storageSaveErrorMessage } from '../../storage/local/storageErrors'
+import { usesSinglePaneLayout } from '../../shared/responsiveLayout'
 import { ImageNoteEditor } from '../images/ImageNoteEditor'
 import { createEmptyNote, deleteNote, loadNotes, renameNote, replaceNoteContent } from './noteService'
 import { noteBlocksToPlainText, type NoteRecord, type StoredNoteBlock } from './noteTypes'
@@ -21,6 +23,21 @@ type SaveState = 'idle' | 'dirty' | 'saving' | 'saved' | 'error'
 interface PendingContent {
   noteId: string
   blocks: StoredNoteBlock[]
+}
+
+interface OanixHistoryState {
+  oanixView?: 'list' | 'note'
+  noteId?: string
+}
+
+function mobileSinglePane(): boolean {
+  const width = window.visualViewport?.width ?? window.innerWidth
+  return usesSinglePaneLayout(width)
+}
+
+function currentHistoryState(): Record<string, unknown> {
+  const value = window.history.state
+  return value && typeof value === 'object' ? value as Record<string, unknown> : {}
 }
 
 function formatNoteTime(isoDate: string): string {
@@ -74,6 +91,8 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
   const activeSaveRef = useRef<Promise<boolean> | null>(null)
   const saveTimerRef = useRef<number | null>(null)
   const selectedIdRef = useRef<string | null>(null)
+  const notesRef = useRef<NoteRecord[]>([])
+  const historyBackAlreadySavedRef = useRef(false)
   const pendingImageDeletesRef = useRef(new Set<string>())
 
   const selectedNote = useMemo(
@@ -85,6 +104,63 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
   useEffect(() => {
     selectedIdRef.current = selectedId
   }, [selectedId])
+
+  useEffect(() => {
+    notesRef.current = notes
+  }, [notes])
+
+  useEffect(() => {
+    if (!mobileSinglePane()) return
+
+    const state = currentHistoryState() as OanixHistoryState
+    if (state.oanixView !== 'note') {
+      window.history.replaceState({ ...currentHistoryState(), oanixView: 'list' }, '')
+    }
+
+    function closeNoteView() {
+      selectedIdRef.current = null
+      setSelectedId(null)
+      setSaveState('idle')
+    }
+
+    function handlePopState(event: PopStateEvent) {
+      if (!mobileSinglePane()) return
+      const nextState = (event.state ?? {}) as OanixHistoryState
+
+      if (nextState.oanixView === 'note' && nextState.noteId) {
+        if (notesRef.current.some((note) => note.id === nextState.noteId)) {
+          selectedIdRef.current = nextState.noteId
+          setSelectedId(nextState.noteId)
+          setSaveState('idle')
+        }
+        return
+      }
+
+      const openId = selectedIdRef.current
+      if (!openId) return
+
+      if (historyBackAlreadySavedRef.current) {
+        historyBackAlreadySavedRef.current = false
+        closeNoteView()
+        return
+      }
+
+      void (async () => {
+        if (!(await flushPendingContent())) {
+          window.history.pushState(
+            { ...currentHistoryState(), oanixView: 'note', noteId: openId },
+            '',
+          )
+          return
+        }
+        await finalizeRemovedImages()
+        closeNoteView()
+      })()
+    }
+
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [])
 
   useEffect(() => {
     let active = true
@@ -176,10 +252,11 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
           setSaveState(pendingContentRef.current ? 'dirty' : 'saved')
         }
         return true
-      } catch {
+      } catch (saveError) {
+        console.error('OANIX encrypted note save failed', saveError)
         if (!pendingContentRef.current) pendingContentRef.current = pending
         if (selectedIdRef.current === pending.noteId) setSaveState('error')
-        setError('No se pudieron guardar los cambios cifrados de la nota.')
+        setError(storageSaveErrorMessage(saveError))
         return false
       }
     })()
@@ -268,6 +345,14 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     }
   }
 
+  function pushMobileNoteHistory(noteId: string) {
+    if (!mobileSinglePane()) return
+    window.history.pushState(
+      { ...currentHistoryState(), oanixView: 'note', noteId },
+      '',
+    )
+  }
+
   async function handleCreateNote() {
     if (!(await flushPendingContent())) return
     await finalizeRemovedImages()
@@ -278,7 +363,9 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     try {
       const note = await createEmptyNote()
       setNotes((current) => [note, ...current])
+      selectedIdRef.current = note.id
       setSelectedId(note.id)
+      pushMobileNoteHistory(note.id)
       setSaveState('idle')
     } catch {
       setError('No se pudo crear la nota cifrada.')
@@ -320,13 +407,24 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     if (!(await flushPendingContent())) return
     await finalizeRemovedImages()
 
+    selectedIdRef.current = noteId
     setSelectedId(noteId)
+    pushMobileNoteHistory(noteId)
     setSaveState('idle')
   }
 
   async function handleBack() {
     if (!(await flushPendingContent())) return
     await finalizeRemovedImages()
+
+    const state = (window.history.state ?? {}) as OanixHistoryState
+    if (mobileSinglePane() && state.oanixView === 'note') {
+      historyBackAlreadySavedRef.current = true
+      window.history.back()
+      return
+    }
+
+    selectedIdRef.current = null
     setSelectedId(null)
     setSaveState('idle')
   }
@@ -515,6 +613,15 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
                   aria-busy={savingTitle}
                 />
               </label>
+
+              {saveState === 'error' && error && (
+                <div className="note-save-error" role="alert">
+                  <span>{error}</span>
+                  <button type="button" onClick={() => void flushPendingContent()}>
+                    Reintentar
+                  </button>
+                </div>
+              )}
 
               <ImageNoteEditor
                 key={selectedNote.id}

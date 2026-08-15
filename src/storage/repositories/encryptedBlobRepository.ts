@@ -5,6 +5,7 @@ import {
 } from '../../security/crypto/contentCrypto'
 import { requireActiveVaultKey } from '../../security/vault/vaultSession'
 import { ENCRYPTED_RECORDS_STORE, openLocalDatabase } from '../local/database'
+import { retryTransientStorageOperation } from '../local/storageErrors'
 
 interface StoredEncryptedBlob {
   key: string
@@ -34,20 +35,22 @@ export async function writeEncryptedBlob(
 ): Promise<void> {
   const vaultKey = requireActiveVaultKey()
   const payload = await encryptVaultBytes(vaultKey, bytes, { recordType, recordId })
-  const database = await openLocalDatabase()
+  await retryTransientStorageOperation(async () => {
+    const database = await openLocalDatabase()
 
-  try {
-    const transaction = database.transaction(ENCRYPTED_RECORDS_STORE, 'readwrite')
-    const completion = transactionCompleted(transaction)
-    const storedRecord: StoredEncryptedBlob = {
-      key: encryptedBlobKey(recordType, recordId),
-      payload,
+    try {
+      const transaction = database.transaction(ENCRYPTED_RECORDS_STORE, 'readwrite')
+      const completion = transactionCompleted(transaction)
+      const storedRecord: StoredEncryptedBlob = {
+        key: encryptedBlobKey(recordType, recordId),
+        payload,
+      }
+      transaction.objectStore(ENCRYPTED_RECORDS_STORE).put(storedRecord)
+      await completion
+    } finally {
+      database.close()
     }
-    transaction.objectStore(ENCRYPTED_RECORDS_STORE).put(storedRecord)
-    await completion
-  } finally {
-    database.close()
-  }
+  })
 }
 
 export async function readEncryptedBlob(
