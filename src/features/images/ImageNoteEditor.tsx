@@ -1116,16 +1116,6 @@ export function ImageNoteEditor({
     inputRef.current?.click()
   }
 
-  function handleDockUndo() {
-    const root = rootRef.current
-    if (root) undoLastChange(root)
-  }
-
-  function handleDockRedo() {
-    const root = rootRef.current
-    if (root) redoLastChange(root)
-  }
-
   function closePreview() {
     setPreview(null)
     setPreviewZoom(1)
@@ -1185,7 +1175,6 @@ export function ImageNoteEditor({
           data-undo-tool="true"
           aria-label="Deshacer último cambio"
           title="Deshacer"
-          onClick={handleDockUndo}
         >↶</button>
         <button
           className="mobile-editor-dock__history"
@@ -1193,7 +1182,6 @@ export function ImageNoteEditor({
           data-redo-tool="true"
           aria-label="Rehacer último cambio"
           title="Rehacer"
-          onClick={handleDockRedo}
         >↷</button>
         <button
           className="mobile-editor-dock__format"
