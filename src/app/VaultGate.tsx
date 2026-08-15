@@ -5,6 +5,7 @@ import {
   lockLocalVault,
   MASTER_PASSWORD_MIN_CHARACTERS,
   unlockLocalVault,
+  verifyLocalEncryption,
 } from '../security/vault/vaultService'
 
 type GateState = 'checking' | 'setup' | 'locked' | 'unlocked' | 'error'
@@ -37,6 +38,30 @@ export function VaultGate() {
     }
   }, [])
 
+  async function verifyUnlockedVault(createdPassword: boolean): Promise<boolean> {
+    const verification = await verifyLocalEncryption()
+
+    if (verification.status === 'error') {
+      lockLocalVault()
+      setPassword('')
+      setConfirmation('')
+      setShowPassword(false)
+      setState('locked')
+      setMessage(
+        createdPassword
+          ? `La contraseña maestra se creó, pero ${verification.message.toLowerCase()}`
+          : verification.message,
+      )
+      return false
+    }
+
+    setPassword('')
+    setConfirmation('')
+    setMessage('')
+    setState('unlocked')
+    return true
+  }
+
   async function handleSetup(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setMessage('')
@@ -48,16 +73,15 @@ export function VaultGate() {
 
     setBusy(true)
     const result = await createMasterPassword(password)
-    setBusy(false)
 
     if (result.status === 'error') {
+      setBusy(false)
       setMessage(result.message)
       return
     }
 
-    setPassword('')
-    setConfirmation('')
-    setState('unlocked')
+    await verifyUnlockedVault(true)
+    setBusy(false)
   }
 
   async function handleUnlock(event: FormEvent<HTMLFormElement>) {
@@ -65,15 +89,15 @@ export function VaultGate() {
     setMessage('')
     setBusy(true)
     const result = await unlockLocalVault(password)
-    setBusy(false)
 
     if (result.status === 'error') {
+      setBusy(false)
       setMessage(result.message)
       return
     }
 
-    setPassword('')
-    setState('unlocked')
+    await verifyUnlockedVault(false)
+    setBusy(false)
   }
 
   function handleLock() {
@@ -116,7 +140,7 @@ export function VaultGate() {
           <span className="status-dot status-dot--ready" aria-hidden="true" />
           <div>
             <strong>Bóveda desbloqueada</strong>
-            <p>La clave de la bóveda está disponible únicamente en memoria durante esta sesión.</p>
+            <p>La clave está en memoria y OANIX verificó el almacenamiento cifrado antes de abrir la bóveda.</p>
           </div>
         </div>
         <button className="secondary-button" type="button" onClick={handleLock}>
@@ -196,7 +220,9 @@ export function VaultGate() {
 
         <button className="primary-button" type="submit" disabled={busy}>
           {busy
-            ? 'Protegiendo…'
+            ? isSetup
+              ? 'Protegiendo y comprobando…'
+              : 'Desbloqueando y comprobando…'
             : isSetup
               ? 'Crear contraseña maestra'
               : 'Desbloquear bóveda'}

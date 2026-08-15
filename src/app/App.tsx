@@ -6,6 +6,7 @@ const foundationItems = [
   'Diseño adaptable',
   'Bóveda local',
   'Contraseña maestra',
+  'Cifrado local',
   'Validación automática',
 ]
 
@@ -17,8 +18,8 @@ export function App() {
         <p className="eyebrow">OANIX · V1</p>
         <h1 id="oanix-title">Tus notas. Tu dispositivo. Tu privacidad.</h1>
         <p className="hero-copy">
-          OANIX está construyendo su núcleo local paso a paso. La contraseña maestra
-          protege la clave de la bóveda; el cifrado del contenido será el siguiente bloque de la V1.
+          OANIX ya tiene bóveda, contraseña maestra y almacenamiento cifrado local.
+          El siguiente bloque de la V1 será el sistema de notas.
         </p>
 
         <VaultGate />

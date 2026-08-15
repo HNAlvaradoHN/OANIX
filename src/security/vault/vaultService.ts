@@ -14,6 +14,11 @@ import {
   writeVaultMetadata,
   type VaultMetadata,
 } from '../../storage/repositories/vaultRepository'
+import {
+  deleteEncryptedRecord,
+  readEncryptedRecord,
+  writeEncryptedRecord,
+} from '../../storage/repositories/encryptedRecordRepository'
 
 export { MASTER_PASSWORD_MIN_CHARACTERS }
 
@@ -26,6 +31,23 @@ export type VaultInitializationResult =
 export type VaultActionResult =
   | { status: 'success' }
   | { status: 'error'; message: string }
+
+interface EncryptionProbe {
+  version: 1
+  token: string
+}
+
+const ENCRYPTION_PROBE_TYPE = 'system.encryption-check'
+
+function randomProbeToken(): string {
+  if (!globalThis.crypto?.getRandomValues) {
+    throw new Error('Secure random generation is not available in this browser.')
+  }
+
+  return Array.from(globalThis.crypto.getRandomValues(new Uint8Array(16)))
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('')
+}
 
 export async function initializeLocalVault(): Promise<VaultInitializationResult> {
   try {
@@ -114,6 +136,40 @@ export async function unlockLocalVault(password: string): Promise<VaultActionRes
     return {
       status: 'error',
       message: 'Contraseña incorrecta o datos de la bóveda dañados.',
+    }
+  }
+}
+
+export async function verifyLocalEncryption(): Promise<VaultActionResult> {
+  if (!isVaultUnlocked()) {
+    return { status: 'error', message: 'La bóveda debe estar desbloqueada para comprobar el cifrado local.' }
+  }
+
+  const recordId = randomProbeToken()
+  const probe: EncryptionProbe = {
+    version: 1,
+    token: randomProbeToken(),
+  }
+
+  try {
+    await writeEncryptedRecord(ENCRYPTION_PROBE_TYPE, recordId, probe)
+    const restored = await readEncryptedRecord<EncryptionProbe>(ENCRYPTION_PROBE_TYPE, recordId)
+
+    if (!restored || restored.version !== probe.version || restored.token !== probe.token) {
+      throw new Error('Encrypted storage round-trip failed.')
+    }
+
+    return { status: 'success' }
+  } catch {
+    return {
+      status: 'error',
+      message: 'No se pudo comprobar el cifrado local de OANIX en este dispositivo.',
+    }
+  } finally {
+    try {
+      await deleteEncryptedRecord(ENCRYPTION_PROBE_TYPE, recordId)
+    } catch {
+      // The probe contains no user content. A failed cleanup can be retried on a later verification.
     }
   }
 }
