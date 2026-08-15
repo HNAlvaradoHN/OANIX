@@ -138,3 +138,10 @@ No se reescriben archivos completos basándose en memoria o suposiciones cuando 
 - Toda modificación visual debe revisarse en un rango continuo de anchos antes de considerarse cerrada.
 
 Los checklists de V1 son bloques estructurados dentro de `blocks-v1`: cada elemento guarda únicamente su texto y estado completado. Se cifran junto con el resto de la nota y no dependen de HTML persistido.
+
+## Fichas de contacto privadas V1
+
+- Una ficha de contacto es un bloque `contact` dentro de `blocks-v1`; se cifra y guarda junto con la nota.
+- V1 no escribe en la agenda del sistema ni sincroniza contactos con servicios externos.
+- Los campos iniciales son nombre, teléfono, correo, organización y notas; todos permanecen opcionales para permitir fichas parciales.
+- La tarjeta usa una sola implementación fluida por contenedor para móvil, tablet y PC.

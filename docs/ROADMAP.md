@@ -34,7 +34,7 @@ Objetivo: entregar una PWA útil, segura, offline-first y completamente funciona
 - [x] Confirmar guardado cifrado real en móvil, navegación Atrás/gesto y auditoría responsive en móvil, tablet y PC.
 
 - [x] Checklists
-- [ ] Fichas de contacto privadas
+- [x] Fichas de contacto privadas
 - [ ] Carpetas
 - [ ] Etiquetas
 - [ ] Búsqueda local
@@ -83,6 +83,6 @@ Objetivo: empaquetar la misma base de código como aplicación Android.
 
 **Versión activa: V1 — Núcleo local**
 
-**Siguiente bloque de trabajo:** Fichas de contacto privadas.
+**Siguiente bloque de trabajo:** Carpetas.
 
 No se implementan funciones de V2, V3 o V4 mientras V1 no esté cerrada, salvo preparación arquitectónica explícitamente documentada.
