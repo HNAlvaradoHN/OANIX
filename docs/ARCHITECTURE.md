@@ -136,3 +136,5 @@ No se reescriben archivos completos basándose en memoria o suposiciones cuando 
 - Los breakpoints se reservan para cambios estructurales reales (por ejemplo, una o dos columnas), no para parchear modelos concretos de dispositivo.
 - Menús, overlays, imágenes, código y controles deben permanecer dentro del espacio visible y considerar teclado virtual, safe areas, zoom y textos largos.
 - Toda modificación visual debe revisarse en un rango continuo de anchos antes de considerarse cerrada.
+
+Los checklists de V1 son bloques estructurados dentro de `blocks-v1`: cada elemento guarda únicamente su texto y estado completado. Se cifran junto con el resto de la nota y no dependen de HTML persistido.

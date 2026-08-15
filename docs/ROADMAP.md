@@ -22,18 +22,18 @@ Objetivo: entregar una PWA útil, segura, offline-first y completamente funciona
 
 ### Pendiente inmediato antes de Checklists — Pulido móvil del editor
 
-- [ ] Permitir reducir más las imágenes en móvil manteniendo siempre su proporción, especialmente imágenes verticales tipo recibo.
-- [ ] Mantener controles de imagen utilizables y legibles cuando la imagen sea pequeña, sin invadir el contenido.
-- [ ] Sustituir en móvil la barra horizontal de formato por un botón flotante de herramientas que permanezca accesible durante el scroll y permita añadir más acciones en el futuro.
-- [ ] Mantener Deshacer y Rehacer como controles flotantes de acceso rápido en móvil.
-- [ ] Revisar el comportamiento con teclado virtual, scroll, selección de texto, imágenes y bloques especiales.
-- [ ] En móvil, tratar imágenes como bloques completos sin texto lateral y permitir escalarlas desde cualquier esquina sin salir del margen útil.
-- [ ] Mantener los bloques de código contenidos dentro de la nota y ofrecer una vista/editor de código a pantalla completa para líneas largas.
-- [ ] Auditar botones, menús, tarjetas y controles responsive para evitar textos cortados, desbordados o ilegibles; incluye acciones largas como `Convertir a texto` y `Eliminar bloque`.
-- [ ] Validar visualmente en móvil y pasar CI antes de continuar.
-- [ ] Confirmar guardado cifrado real en móvil, navegación Atrás/gesto y auditoría responsive en móvil, tablet y PC.
+- [x] Permitir reducir más las imágenes en móvil manteniendo siempre su proporción, especialmente imágenes verticales tipo recibo.
+- [x] Mantener controles de imagen utilizables y legibles cuando la imagen sea pequeña, sin invadir el contenido.
+- [x] Sustituir en móvil la barra horizontal de formato por un botón flotante de herramientas que permanezca accesible durante el scroll y permita añadir más acciones en el futuro.
+- [x] Mantener Deshacer y Rehacer como controles flotantes de acceso rápido en móvil.
+- [x] Revisar el comportamiento con teclado virtual, scroll, selección de texto, imágenes y bloques especiales.
+- [x] En móvil, tratar imágenes como bloques completos sin texto lateral y permitir escalarlas desde cualquier esquina sin salir del margen útil.
+- [x] Mantener los bloques de código contenidos dentro de la nota y ofrecer una vista/editor de código a pantalla completa para líneas largas.
+- [x] Auditar botones, menús, tarjetas y controles responsive para evitar textos cortados, desbordados o ilegibles; incluye acciones largas como `Convertir a texto` y `Eliminar bloque`.
+- [x] Validar visualmente en móvil y pasar CI antes de continuar.
+- [x] Confirmar guardado cifrado real en móvil, navegación Atrás/gesto y auditoría responsive en móvil, tablet y PC.
 
-- [ ] Checklists
+- [x] Checklists
 - [ ] Fichas de contacto privadas
 - [ ] Carpetas
 - [ ] Etiquetas
@@ -83,6 +83,6 @@ Objetivo: empaquetar la misma base de código como aplicación Android.
 
 **Versión activa: V1 — Núcleo local**
 
-**Siguiente bloque de trabajo:** Pulido móvil del editor. Después continúa Checklists.
+**Siguiente bloque de trabajo:** Fichas de contacto privadas.
 
 No se implementan funciones de V2, V3 o V4 mientras V1 no esté cerrada, salvo preparación arquitectónica explícitamente documentada.

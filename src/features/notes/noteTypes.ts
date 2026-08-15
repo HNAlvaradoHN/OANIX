@@ -80,6 +80,17 @@ export interface OrderedListBlock {
   items: RichTextRun[][]
 }
 
+export interface ChecklistItem {
+  text: string
+  checked: boolean
+}
+
+export interface ChecklistBlock {
+  id: string
+  type: 'checklist'
+  items: ChecklistItem[]
+}
+
 export interface DividerBlock {
   id: string
   type: 'divider'
@@ -112,6 +123,7 @@ export type NoteBlock =
   | QuoteBlock
   | BulletListBlock
   | OrderedListBlock
+  | ChecklistBlock
   | DividerBlock
   | CodeBlock
 
@@ -160,6 +172,12 @@ function isRichTextRun(value: unknown): value is RichTextRun {
 
 function isRunArray(value: unknown): value is RichTextRun[] {
   return Array.isArray(value) && value.every(isRichTextRun)
+}
+
+function isChecklistItem(value: unknown): value is ChecklistItem {
+  if (!value || typeof value !== 'object') return false
+  const item = value as Partial<ChecklistItem>
+  return typeof item.text === 'string' && typeof item.checked === 'boolean'
 }
 
 function isStoredNoteBlock(value: unknown): value is StoredNoteBlock {
@@ -219,6 +237,10 @@ function isStoredNoteBlock(value: unknown): value is StoredNoteBlock {
     )
   }
 
+  if (block.type === 'checklist') {
+    return Array.isArray(block.items) && block.items.every(isChecklistItem)
+  }
+
   if (block.type === 'paragraph' || block.type === 'quote') {
     return isRunArray(block.runs)
   }
@@ -267,6 +289,9 @@ export function noteBlocksToPlainText(blocks: StoredNoteBlock[]): string {
         const description = block.alt?.trim()
         if (description) return [description]
         return [block.showName === false ? 'Imagen' : block.name]
+      }
+      if (block.type === 'checklist') {
+        return block.items.map((item) => `${item.checked ? '☑' : '☐'} ${item.text}`.trimEnd())
       }
       if (block.type === 'bulletList' || block.type === 'orderedList') {
         return block.items.map(runsToPlainText)

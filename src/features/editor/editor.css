@@ -419,3 +419,73 @@
   .editor-frame { border-radius: 1rem; }
   .editor-surface { padding-inline: clamp(.85rem, 4cqw, 1.15rem); }
 }
+
+/* OANIX V1 checklist blocks */
+.editor-checklist {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  display: grid;
+  gap: .35rem;
+  margin: .7rem 0;
+  padding: .15rem 0;
+  box-sizing: border-box;
+}
+.editor-checklist__item {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: clamp(.45rem, 1.8cqw, .65rem);
+  padding: .15rem 0;
+}
+.editor-checklist__toggle {
+  width: clamp(1.85rem, 7cqw, 2.1rem);
+  height: clamp(1.85rem, 7cqw, 2.1rem);
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  margin-top: .08rem;
+  padding: 0;
+  border: 2px solid #94a3b8;
+  border-radius: .55rem;
+  background: transparent;
+  color: #fff;
+  font: inherit;
+  font-size: .9rem;
+  font-weight: 900;
+  line-height: 1;
+  cursor: pointer;
+}
+.editor-checklist__item[data-checked='true'] .editor-checklist__toggle {
+  border-color: #2563eb;
+  background: #2563eb;
+}
+.editor-checklist__toggle:focus-visible {
+  outline: 3px solid rgba(37,99,235,.22);
+  outline-offset: 2px;
+}
+.editor-checklist__text {
+  min-width: 0;
+  min-height: 2rem;
+  padding: .3rem .4rem;
+  border-radius: .45rem;
+  outline: none;
+  color: inherit;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.editor-checklist__text:focus {
+  background: rgba(37,99,235,.06);
+  box-shadow: inset 0 0 0 1px rgba(37,99,235,.14);
+}
+.editor-checklist__item[data-checked='true'] .editor-checklist__text {
+  color: #7b8794;
+  text-decoration: line-through;
+  text-decoration-thickness: 1.5px;
+}
+@container (max-width: 24rem) {
+  .editor-checklist__item { gap: .4rem; }
+  .editor-checklist__text { padding-inline: .25rem; }
+}
