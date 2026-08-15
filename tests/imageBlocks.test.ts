@@ -94,10 +94,16 @@ test('SVG and malformed image metadata are rejected', () => {
   negativeSize.content.blocks[0].byteLength = -1
   assert.equal(isNoteRecord(negativeSize), false)
 
+  const compactMobile = imageNote('image/png')
+  const compactBlock = compactMobile.content.blocks[0]
+  if (compactBlock.type !== 'image') throw new Error('Expected image block')
+  compactBlock.widthPercent = 22
+  assert.equal(isNoteRecord(compactMobile), true, 'mobile image widths must survive persistence validation')
+
   const tooSmall = imageNote('image/png') as unknown as {
     content: { blocks: Array<Record<string, unknown>> }
   }
-  tooSmall.content.blocks[0].widthPercent = 20
+  tooSmall.content.blocks[0].widthPercent = 5
   assert.equal(isNoteRecord(tooSmall), false)
 
   const invalidAlignment = imageNote('image/png') as unknown as {

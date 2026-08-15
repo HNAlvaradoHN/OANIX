@@ -211,7 +211,7 @@ function isStoredNoteBlock(value: unknown): value is StoredNoteBlock {
       (block.widthPercent === undefined ||
         (typeof block.widthPercent === 'number' &&
           Number.isSafeInteger(block.widthPercent) &&
-          block.widthPercent >= 35 &&
+          block.widthPercent >= 10 &&
           block.widthPercent <= 100)) &&
       (block.alignment === undefined || normalizeImageAlignment(block.alignment) !== null) &&
       (block.locked === undefined || typeof block.locked === 'boolean') &&

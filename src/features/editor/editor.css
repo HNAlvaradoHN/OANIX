@@ -388,3 +388,34 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* OANIX fluid command surface v2 */
+.editor-frame {
+  min-width: 0;
+  margin-top: clamp(1rem, 2.2vw, 1.5rem);
+  grid-template-rows: minmax(clamp(26rem, 62dvh, 48rem), auto) !important;
+  overflow: visible;
+}
+.editor-toolbar { display: none !important; }
+.editor-surface {
+  min-width: 0;
+  min-height: clamp(26rem, 62dvh, 48rem);
+  padding: clamp(1rem, 3.5cqw, 2rem);
+  padding-bottom: clamp(6rem, 12dvh, 8rem);
+  font-size: clamp(.98rem, 2.2cqw, 1.08rem);
+}
+.editor-surface h1 { font-size: clamp(1.65rem, 5cqw, 2rem); }
+.editor-surface h2 { font-size: clamp(1.4rem, 4.2cqw, 1.7rem); }
+.editor-surface h3 { font-size: clamp(1.18rem, 3.5cqw, 1.35rem); }
+.editor-code-block { max-width: 100%; }
+.editor-code-block__content {
+  max-width: 100%;
+  overflow-x: hidden;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+@container (max-width: 34rem) {
+  .editor-frame { border-radius: 1rem; }
+  .editor-surface { padding-inline: clamp(.85rem, 4cqw, 1.15rem); }
+}

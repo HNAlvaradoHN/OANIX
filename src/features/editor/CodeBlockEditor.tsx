@@ -109,39 +109,60 @@ function deleteCodeBlock(root: HTMLElement, block: HTMLElement): void {
 
 function decorateCodeBlocks(root: HTMLElement): void {
   root.querySelectorAll<HTMLElement>('.editor-code-block__toolbar').forEach((toolbar) => {
-    const copyButton = toolbar.querySelector('[data-code-copy="true"]')
+    if (toolbar.querySelector('[data-code-actions-toggle="true"]')) return
 
-    if (!toolbar.querySelector('[data-code-convert="true"]')) {
-      const convert = document.createElement('button')
-      convert.type = 'button'
-      convert.className = 'editor-code-block__convert'
-      convert.dataset.codeConvert = 'true'
-      convert.textContent = 'Convertir a texto'
-      convert.title = 'Quitar el formato de código y conservar todo el contenido'
-      convert.setAttribute('aria-label', 'Convertir bloque de código a texto conservando el contenido')
+    const copyButton = toolbar.querySelector<HTMLButtonElement>('[data-code-copy="true"]')
+    if (!copyButton) return
 
-      const remove = document.createElement('button')
-      remove.type = 'button'
-      remove.className = 'editor-code-block__delete'
-      remove.dataset.codeDelete = 'true'
-      remove.textContent = 'Eliminar bloque'
-      remove.title = 'Eliminar el bloque y todo su contenido'
-      remove.setAttribute('aria-label', 'Eliminar bloque de código y su contenido')
+    const actions = document.createElement('div')
+    actions.className = 'editor-code-block__toolbar-actions'
 
-      toolbar.insertBefore(convert, copyButton)
-      toolbar.insertBefore(remove, copyButton)
-    }
+    const expand = document.createElement('button')
+    expand.type = 'button'
+    expand.className = 'editor-code-block__expand'
+    expand.dataset.codeExpand = 'true'
+    expand.textContent = '⛶'
+    expand.title = 'Ver código completo'
+    expand.setAttribute('aria-label', 'Ver código completo y editarlo en pantalla completa')
 
-    if (!toolbar.querySelector('[data-code-expand="true"]')) {
-      const expand = document.createElement('button')
-      expand.type = 'button'
-      expand.className = 'editor-code-block__expand'
-      expand.dataset.codeExpand = 'true'
-      expand.textContent = 'Ver completo'
-      expand.title = 'Ver y editar código en pantalla completa'
-      expand.setAttribute('aria-label', 'Ver código completo y editarlo en pantalla completa')
-      toolbar.insertBefore(expand, copyButton)
-    }
+    const toggle = document.createElement('button')
+    toggle.type = 'button'
+    toggle.className = 'editor-code-block__actions-toggle'
+    toggle.dataset.codeActionsToggle = 'true'
+    toggle.textContent = '⋮'
+    toggle.title = 'Acciones del bloque de código'
+    toggle.setAttribute('aria-label', 'Acciones del bloque de código')
+    toggle.setAttribute('aria-haspopup', 'menu')
+    toggle.setAttribute('aria-expanded', 'false')
+
+    const menu = document.createElement('div')
+    menu.className = 'editor-code-block__actions-menu'
+    menu.dataset.codeActionsMenu = 'true'
+    menu.setAttribute('role', 'menu')
+    menu.hidden = true
+
+    copyButton.classList.add('editor-code-block__menu-action')
+    copyButton.setAttribute('role', 'menuitem')
+
+    const convert = document.createElement('button')
+    convert.type = 'button'
+    convert.className = 'editor-code-block__convert editor-code-block__menu-action'
+    convert.dataset.codeConvert = 'true'
+    convert.textContent = 'Convertir a texto'
+    convert.title = 'Quitar el formato de código y conservar todo el contenido'
+    convert.setAttribute('role', 'menuitem')
+
+    const remove = document.createElement('button')
+    remove.type = 'button'
+    remove.className = 'editor-code-block__delete editor-code-block__menu-action'
+    remove.dataset.codeDelete = 'true'
+    remove.textContent = 'Eliminar bloque'
+    remove.title = 'Eliminar el bloque y todo su contenido'
+    remove.setAttribute('role', 'menuitem')
+
+    menu.append(copyButton, convert, remove)
+    actions.append(expand, toggle, menu)
+    toolbar.append(actions)
   })
 }
 
@@ -341,6 +362,30 @@ export function CodeBlockEditor(props: CodeBlockEditorProps) {
     function handleClick(event: MouseEvent) {
       const target = event.target
       if (!(target instanceof Element)) return
+
+      const actionToggle = target.closest<HTMLButtonElement>('[data-code-actions-toggle="true"]')
+      if (actionToggle && root.contains(actionToggle)) {
+        event.preventDefault()
+        event.stopPropagation()
+        const toolbar = actionToggle.closest<HTMLElement>('.editor-code-block__toolbar')
+        const menu = toolbar?.querySelector<HTMLElement>('[data-code-actions-menu="true"]')
+        if (!menu) return
+        const opening = menu.hidden
+        root.querySelectorAll<HTMLElement>('[data-code-actions-menu="true"]').forEach((candidate) => { candidate.hidden = true })
+        root.querySelectorAll<HTMLButtonElement>('[data-code-actions-toggle="true"]').forEach((candidate) => candidate.setAttribute('aria-expanded', 'false'))
+        menu.hidden = !opening
+        actionToggle.setAttribute('aria-expanded', String(opening))
+        return
+      }
+
+      const clickedCodeAction = target.closest('[data-code-copy="true"], [data-code-convert="true"], [data-code-delete="true"], [data-code-expand="true"]')
+      if (clickedCodeAction) {
+        const toolbar = clickedCodeAction.closest<HTMLElement>('.editor-code-block__toolbar')
+        const menu = toolbar?.querySelector<HTMLElement>('[data-code-actions-menu="true"]')
+        const toggle = toolbar?.querySelector<HTMLButtonElement>('[data-code-actions-toggle="true"]')
+        if (menu) menu.hidden = true
+        toggle?.setAttribute('aria-expanded', 'false')
+      }
 
       const convertButton = target.closest<HTMLElement>('[data-code-convert="true"]')
       if (convertButton && root.contains(convertButton)) {
