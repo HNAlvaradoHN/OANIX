@@ -89,7 +89,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
   const [folderBusyId, setFolderBusyId] = useState<string | null>(null)
   const [creatingFolder, setCreatingFolder] = useState(false)
   const [moveNoteId, setMoveNoteId] = useState<string | null>(null)
-  const [folderScrollHint, setFolderScrollHint] = useState<'left' | 'right' | null>(null)
+  const [folderScrollEdges, setFolderScrollEdges] = useState({ left: false, right: false })
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [draftTitle, setDraftTitle] = useState('')
   const [loading, setLoading] = useState(true)
@@ -224,11 +224,13 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
       if (!tabs) return
       const overflow = tabs.scrollWidth > tabs.clientWidth + 4
       if (!overflow) {
-        setFolderScrollHint(null)
+        setFolderScrollEdges({ left: false, right: false })
         return
       }
-      const hasRight = tabs.scrollLeft + tabs.clientWidth < tabs.scrollWidth - 4
-      setFolderScrollHint(hasRight ? 'right' : tabs.scrollLeft > 4 ? 'left' : null)
+      setFolderScrollEdges({
+        left: tabs.scrollLeft > 4,
+        right: tabs.scrollLeft + tabs.clientWidth < tabs.scrollWidth - 4,
+      })
     }
 
     const frame = window.requestAnimationFrame(updateHint)
@@ -673,6 +675,16 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     setNoteMenuId(noteId)
   }
 
+  function scrollFolderTabs(direction: 'left' | 'right') {
+    const tabs = folderTabsRef.current
+    if (!tabs) return
+    const distance = Math.max(160, Math.round(tabs.clientWidth * 0.72))
+    tabs.scrollBy({
+      left: direction === 'right' ? distance : -distance,
+      behavior: 'smooth',
+    })
+  }
+
   return (
     <main className={`notes-shell${selectedNote ? ' notes-shell--open' : ''}`}>
       <aside className="notes-sidebar" aria-label="Lista de notas">
@@ -734,7 +746,17 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
           </div>
         </header>
 
-        <div className={`notes-tabs-shell${folderScrollHint ? ` notes-tabs-shell--hint-${folderScrollHint}` : ''}`}>
+        <div className="notes-tabs-shell">
+          <button
+            className="notes-tabs-scroll-button notes-tabs-scroll-button--left"
+            type="button"
+            onClick={() => scrollFolderTabs('left')}
+            disabled={!folderScrollEdges.left}
+            aria-label="Ver carpetas anteriores"
+            title="Carpetas anteriores"
+          >
+            «
+          </button>
           <nav
             className="notes-tabs"
             aria-label="Carpetas de notas"
@@ -742,8 +764,11 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
             onScroll={() => {
               const tabs = folderTabsRef.current
               if (!tabs) return
-              const hasRight = tabs.scrollLeft + tabs.clientWidth < tabs.scrollWidth - 4
-              setFolderScrollHint(hasRight ? 'right' : tabs.scrollLeft > 4 ? 'left' : null)
+              const overflow = tabs.scrollWidth > tabs.clientWidth + 4
+              setFolderScrollEdges({
+                left: overflow && tabs.scrollLeft > 4,
+                right: overflow && tabs.scrollLeft + tabs.clientWidth < tabs.scrollWidth - 4,
+              })
             }}
           >
             <button
@@ -776,11 +801,16 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
               ＋
             </button>
           </nav>
-          {folderScrollHint && (
-            <span className="notes-tabs-scroll-hint" aria-hidden="true">
-              {folderScrollHint === 'right' ? 'Desliza →' : '← Desliza'}
-            </span>
-          )}
+          <button
+            className="notes-tabs-scroll-button notes-tabs-scroll-button--right"
+            type="button"
+            onClick={() => scrollFolderTabs('right')}
+            disabled={!folderScrollEdges.right}
+            aria-label="Ver carpetas siguientes"
+            title="Carpetas siguientes"
+          >
+            »
+          </button>
         </div>
 
         {error && <p className="notes-error" role="alert">{error}</p>}
