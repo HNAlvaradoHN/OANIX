@@ -8,4 +8,5 @@ test('PWA updates never auto-reload the vault password screen', () => {
   assert.match(viteConfig, /registerType:\s*'prompt'/)
   assert.doesNotMatch(viteConfig, /registerType:\s*'autoUpdate'/)
   assert.match(main, /registerSW\(\{ immediate: false \}\)/)
+  assert.doesNotMatch(main, /registerSW\(\{ immediate: true \}\)/)
 })
