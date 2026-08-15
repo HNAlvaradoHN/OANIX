@@ -1,0 +1,31 @@
+name: Apply V1 private contact cards
+
+on:
+  push:
+    branches:
+      - agent/v1-private-contact-cards
+    paths:
+      - .github/apply_private_contacts.py
+      - .github/workflows/apply-private-contacts.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/v1-private-contact-cards
+      - name: Apply implementation
+        run: python .github/apply_private_contacts.py
+      - name: Remove temporary patch files
+        run: rm .github/apply_private_contacts.py .github/workflows/apply-private-contacts.yml
+      - name: Commit implementation
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "V1: add private contact cards"
+          git push origin HEAD:agent/v1-private-contact-cards
