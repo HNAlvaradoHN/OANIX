@@ -1,4 +1,11 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type MouseEvent as ReactMouseEvent,
+} from 'react'
 import { deleteEncryptedImage } from '../images/imageService'
 import { ImageNoteEditor } from '../images/ImageNoteEditor'
 import { createEmptyNote, deleteNote, loadNotes, renameNote, replaceNoteContent } from './noteService'
@@ -59,6 +66,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
   const [creating, setCreating] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [noteMenuId, setNoteMenuId] = useState<string | null>(null)
+  const [noteMenuDirection, setNoteMenuDirection] = useState<'down' | 'up'>('down')
   const [savingTitle, setSavingTitle] = useState(false)
   const [saveState, setSaveState] = useState<SaveState>('idle')
   const [error, setError] = useState('')
@@ -335,6 +343,26 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     }
   }
 
+  function toggleNoteMenu(noteId: string, event: ReactMouseEvent<HTMLButtonElement>) {
+    if (noteMenuId === noteId) {
+      setNoteMenuId(null)
+      return
+    }
+
+    const buttonRect = event.currentTarget.getBoundingClientRect()
+    const listRect = event.currentTarget.closest('.notes-list')?.getBoundingClientRect()
+    const topBoundary = listRect?.top ?? 0
+    const bottomBoundary = listRect?.bottom ?? window.innerHeight
+    const estimatedMenuHeight = 58
+    const spaceBelow = bottomBoundary - buttonRect.bottom
+    const spaceAbove = buttonRect.top - topBoundary
+
+    setNoteMenuDirection(
+      spaceBelow < estimatedMenuHeight && spaceAbove > spaceBelow ? 'up' : 'down',
+    )
+    setNoteMenuId(noteId)
+  }
+
   return (
     <main className={`notes-shell${selectedNote ? ' notes-shell--open' : ''}`}>
       <aside className="notes-sidebar" aria-label="Lista de notas">
@@ -392,7 +420,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
               </button>
             </div>
           ) : (
-            notes.map((note, index) => (
+            notes.map((note) => (
               <div
                 className={`note-row${selectedId === note.id ? ' note-row--selected' : ''}${noteMenuId === note.id ? ' note-row--menu-open' : ''}`}
                 key={note.id}
@@ -421,14 +449,14 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
                     aria-haspopup="menu"
                     aria-expanded={noteMenuId === note.id}
                     title="Acciones de la nota"
-                    onClick={() => setNoteMenuId((current) => current === note.id ? null : note.id)}
+                    onClick={(event) => toggleNoteMenu(note.id, event)}
                   >
                     ⋮
                   </button>
 
                   {noteMenuId === note.id && (
                     <div
-                      className={`note-row__menu${index >= notes.length - 2 ? ' note-row__menu--up' : ''}`}
+                      className={`note-row__menu${noteMenuDirection === 'up' ? ' note-row__menu--up' : ''}`}
                       role="menu"
                       aria-label={`Acciones de ${note.title}`}
                     >

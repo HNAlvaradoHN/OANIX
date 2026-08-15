@@ -367,24 +367,37 @@ function insertAfterBlock(editor: HTMLElement, block: HTMLElement, afterId: stri
   }
 }
 
-function ensureTrailingParagraph(editor: HTMLElement, after: HTMLElement): void {
-  const next = after.nextElementSibling
-
-  if (next instanceof HTMLParagraphElement) {
-    if ((next.textContent ?? '').trim() === '') {
-      next.dataset.oanixTrailingCaret = 'true'
-    } else {
-      delete next.dataset.oanixTrailingCaret
-    }
-  }
-
-  if (next) return
-
+function createEmptyEditorParagraph(): HTMLParagraphElement {
   const paragraph = document.createElement('p')
   paragraph.dataset.blockId = createBlockId()
-  paragraph.dataset.oanixTrailingCaret = 'true'
   paragraph.append(document.createElement('br'))
-  editor.append(paragraph)
+  return paragraph
+}
+
+function ensureTrailingParagraph(editor: HTMLElement): void {
+  const last = editor.lastElementChild
+
+  if (last instanceof HTMLParagraphElement && last.dataset.oanixTrailingCaret === 'true') {
+    return
+  }
+
+  if (last instanceof HTMLParagraphElement && (last.textContent ?? '').trim() === '') {
+    const previous = last.previousElementSibling
+    if (previous instanceof HTMLElement && previous.dataset.imageBlock === 'true') {
+      last.before(createEmptyEditorParagraph())
+    }
+
+    last.dataset.oanixTrailingCaret = 'true'
+    return
+  }
+
+  if (last instanceof HTMLElement && last.dataset.imageBlock === 'true') {
+    editor.append(createEmptyEditorParagraph())
+  }
+
+  const trailing = createEmptyEditorParagraph()
+  trailing.dataset.oanixTrailingCaret = 'true'
+  editor.append(trailing)
 }
 
 function clampImageWidth(editorWidth: number, widthPercent: number): number {
@@ -637,7 +650,7 @@ export function ImageNoteEditor({
         void hydrateImageElement(root, block, element)
       }
 
-      ensureTrailingParagraph(editor, element)
+      ensureTrailingParagraph(editor)
     }
 
     if (imagesRef.current.size > 0) editor.dataset.empty = 'false'
@@ -673,7 +686,7 @@ export function ImageNoteEditor({
         const element = createImageElement(block, url)
         insertAfterBlock(editor, element, afterId)
         void hydrateImageElement(root, block, element)
-        ensureTrailingParagraph(editor, element)
+        ensureTrailingParagraph(editor)
         afterId = block.id
         lastElement = element
       } catch (error) {
