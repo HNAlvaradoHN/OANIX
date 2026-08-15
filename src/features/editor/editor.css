@@ -1,16 +1,18 @@
 .editor-frame {
   margin-top: 1.5rem;
+  display: grid;
+  grid-template-rows: auto minmax(430px, auto);
   border: 1px solid #d9e0e7;
   border-radius: 18px;
   overflow: hidden;
+  isolation: isolate;
   background: #fff;
   box-shadow: 0 10px 30px rgba(30, 41, 59, 0.05);
 }
 
 .editor-toolbar {
-  position: sticky;
-  top: 76px;
-  z-index: 3;
+  position: relative;
+  z-index: 2;
   display: flex;
   align-items: center;
   gap: 0.35rem;
@@ -58,7 +60,7 @@
 .editor-surface {
   position: relative;
   min-height: 430px;
-  padding: clamp(1.15rem, 3vw, 2rem);
+  padding: 1.75rem clamp(1.15rem, 3vw, 2rem) 2rem;
   outline: none;
   color: #202b38;
   caret-color: #202b38;
@@ -72,10 +74,14 @@
   -webkit-text-fill-color: currentColor;
 }
 
+.editor-surface > :first-child {
+  margin-top: 0;
+}
+
 .editor-surface[data-empty='true']::before {
   content: attr(data-placeholder);
   position: absolute;
-  top: clamp(1.15rem, 3vw, 2rem);
+  top: 1.75rem;
   left: clamp(1.15rem, 3vw, 2rem);
   color: #a0a9b5;
   pointer-events: none;
@@ -135,9 +141,9 @@
   .editor-frame {
     margin-right: -0.1rem;
     margin-left: -0.1rem;
+    grid-template-rows: auto minmax(calc(100vh - 300px), auto);
     border-radius: 16px;
   }
 
-  .editor-toolbar { top: 76px; }
   .editor-surface { min-height: calc(100vh - 300px); }
 }
