@@ -208,6 +208,17 @@ function setEditorEmptyState(editor: HTMLElement, blocks: NoteBlock[]): void {
   editor.dataset.empty = isEditorEmpty(blocks) ? 'true' : 'false'
 }
 
+function placeCaretAtEnd(editor: HTMLElement): void {
+  const selection = window.getSelection()
+  if (!selection) return
+
+  const range = document.createRange()
+  range.selectNodeContents(editor)
+  range.collapse(false)
+  selection.removeAllRanges()
+  selection.addRange(range)
+}
+
 function RichTextEditorComponent({
   noteId,
   initialBlocks,
@@ -215,24 +226,44 @@ function RichTextEditorComponent({
   onBlur,
 }: RichTextEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null)
+  const initialHtml = blocksToHtml(initialBlocks)
+  const lastHtmlRef = useRef(initialHtml)
+  const restoringRef = useRef(false)
 
   useEffect(() => {
     const editor = editorRef.current
     if (!editor) return
 
-    editor.innerHTML = blocksToHtml(initialBlocks)
-    setEditorEmptyState(editor, initialBlocks)
+    lastHtmlRef.current = editor.innerHTML
 
-    // The editable DOM owns the live typing session. Rebuilding it while autosave or
-    // parent state updates are happening would destroy the browser selection/content.
-    // A different note remounts the component through its key and receives fresh blocks.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const observer = new MutationObserver(() => {
+      if (restoringRef.current || editor.innerHTML !== '' || lastHtmlRef.current === '') return
+
+      const wasFocused = document.activeElement === editor
+      restoringRef.current = true
+      editor.innerHTML = lastHtmlRef.current
+      setEditorEmptyState(editor, parseEditorBlocks(editor))
+      if (wasFocused) placeCaretAtEnd(editor)
+
+      queueMicrotask(() => {
+        restoringRef.current = false
+      })
+    })
+
+    observer.observe(editor, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    })
+
+    return () => observer.disconnect()
   }, [noteId])
 
   function emitChange() {
     const editor = editorRef.current
     if (!editor) return
 
+    lastHtmlRef.current = editor.innerHTML
     const blocks = parseEditorBlocks(editor)
     setEditorEmptyState(editor, blocks)
     onChange(blocks)
@@ -330,6 +361,7 @@ function RichTextEditorComponent({
         aria-label="Contenido de la nota"
         data-empty={isEditorEmpty(initialBlocks) ? 'true' : 'false'}
         data-placeholder="Escribe algo…"
+        dangerouslySetInnerHTML={{ __html: initialHtml }}
         onInput={emitChange}
         onBlur={onBlur}
         onPaste={handlePaste}
