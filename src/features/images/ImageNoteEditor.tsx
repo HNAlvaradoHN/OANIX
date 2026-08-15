@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { CodeBlockEditor } from '../editor/CodeBlockEditor'
 import {
   type ImageBlock,
@@ -13,6 +13,7 @@ interface ImageNoteEditorProps {
   initialBlocks: StoredNoteBlock[]
   onChange: (blocks: StoredNoteBlock[]) => void
   onBlur: () => void
+  onRemoveImage: (imageId: string) => Promise<void>
 }
 
 interface PreviewState {
@@ -151,6 +152,7 @@ export function ImageNoteEditor({
   initialBlocks,
   onChange,
   onBlur,
+  onRemoveImage,
 }: ImageNoteEditorProps) {
   const rootRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -354,6 +356,7 @@ export function ImageNoteEditor({
         imagesRef.current.delete(blockId)
         figure.remove()
         emitEditorInput(root)
+        if (imageBlock) void onRemoveImage(imageBlock.imageId)
         return
       }
 
@@ -418,7 +421,7 @@ export function ImageNoteEditor({
     }
   }, [noteId])
 
-  async function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+  async function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.currentTarget.files ?? [])
     event.currentTarget.value = ''
     await insertFiles(files)
