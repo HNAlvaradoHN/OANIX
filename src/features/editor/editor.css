@@ -61,9 +61,15 @@
   padding: clamp(1.15rem, 3vw, 2rem);
   outline: none;
   color: #202b38;
+  caret-color: #202b38;
+  -webkit-text-fill-color: currentColor;
   font-size: 1.04rem;
   line-height: 1.72;
   overflow-wrap: anywhere;
+}
+
+.editor-surface * {
+  -webkit-text-fill-color: currentColor;
 }
 
 .editor-surface[data-empty='true']::before {
