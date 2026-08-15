@@ -1,0 +1,34 @@
+name: Apply note deletion implementation
+
+on:
+  push:
+    branches:
+      - agent/v1-delete-notes
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/v1-delete-notes
+
+      - name: Apply implementation
+        run: python .github/apply_delete_notes.py
+
+      - name: Remove temporary patch files
+        run: |
+          rm .github/apply_delete_notes.py
+          rm .github/workflows/apply-delete-notes.yml
+
+      - name: Commit implementation
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "V1: add confirmed permanent note deletion"
+          git push origin agent/v1-delete-notes
