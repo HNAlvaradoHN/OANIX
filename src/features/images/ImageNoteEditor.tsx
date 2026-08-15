@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { CodeBlockEditor } from '../editor/CodeBlockEditor'
 import {
+  type ImageAlignment,
   type ImageBlock,
   type NoteBlock,
   type StoredNoteBlock,
@@ -21,6 +22,23 @@ interface PreviewState {
   name: string
 }
 
+interface ResizeState {
+  pointerId: number
+  blockId: string
+  figure: HTMLElement
+  startX: number
+  startWidthPercent: number
+  editorWidth: number
+  direction: string
+}
+
+const DEFAULT_IMAGE_WIDTH = 100
+const MIN_IMAGE_WIDTH_PERCENT = 35
+const MIN_IMAGE_WIDTH_PIXELS = 220
+const COMPACT_IMAGE_PERCENT = 55
+const MAX_PREVIEW_ZOOM = 4
+const MIN_PREVIEW_ZOOM = 1
+
 function createBlockId(): string {
   if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID()
 
@@ -31,6 +49,22 @@ function createBlockId(): string {
   return Array.from(globalThis.crypto.getRandomValues(new Uint8Array(16)))
     .map((byte) => byte.toString(16).padStart(2, '0'))
     .join('')
+}
+
+function imageWidthPercent(block: ImageBlock): number {
+  return block.widthPercent ?? DEFAULT_IMAGE_WIDTH
+}
+
+function imageAlignment(block: ImageBlock): ImageAlignment {
+  return block.alignment ?? 'center'
+}
+
+function imageLocked(block: ImageBlock): boolean {
+  return block.locked ?? false
+}
+
+function imageShowsName(block: ImageBlock): boolean {
+  return block.showName ?? true
 }
 
 function toEditorBlocks(blocks: StoredNoteBlock[]): NoteBlock[] {
@@ -70,19 +104,107 @@ function formatImageSize(byteLength: number): string {
   return `${(byteLength / (1024 * 1024)).toFixed(1)} MB`
 }
 
+function clearImageSelection(root: HTMLElement): void {
+  root.querySelectorAll<HTMLElement>('[data-image-block="true"]').forEach((figure) => {
+    figure.dataset.imageSelected = 'false'
+  })
+}
+
+function selectImageFigure(root: HTMLElement, figure: HTMLElement): void {
+  clearImageSelection(root)
+  if (figure.dataset.imageLocked !== 'true') {
+    figure.dataset.imageSelected = 'true'
+  }
+}
+
+function applyImageElementState(figure: HTMLElement, block: ImageBlock): void {
+  const widthPercent = imageWidthPercent(block)
+  const alignment = imageAlignment(block)
+  const locked = imageLocked(block)
+  const showName = imageShowsName(block)
+
+  figure.style.width = `${widthPercent}%`
+  figure.dataset.imageAlignment = alignment
+  figure.dataset.imageLocked = String(locked)
+  figure.dataset.imageCompact = String(widthPercent <= COMPACT_IMAGE_PERCENT)
+  figure.dataset.imageShowName = String(showName)
+
+  const preview = figure.querySelector<HTMLButtonElement>('[data-image-preview="true"]')
+  if (preview) {
+    preview.title = locked
+      ? 'Abrir imagen'
+      : 'Seleccionar imagen para ajustar tamaño o posición'
+    preview.setAttribute(
+      'aria-label',
+      locked ? `Abrir imagen ${block.name}` : `Seleccionar imagen ${block.name}`,
+    )
+  }
+
+  const lock = figure.querySelector<HTMLButtonElement>('[data-image-lock="true"]')
+  if (lock) {
+    lock.textContent = locked ? '🔒' : '🔓'
+    lock.title = locked ? 'Desbloquear tamaño y posición' : 'Bloquear tamaño y posición'
+    lock.setAttribute(
+      'aria-label',
+      locked ? 'Desbloquear tamaño y posición de la imagen' : 'Bloquear tamaño y posición de la imagen',
+    )
+    lock.setAttribute('aria-pressed', String(locked))
+  }
+
+  figure.querySelectorAll<HTMLButtonElement>('[data-image-resize]').forEach((handle) => {
+    handle.disabled = locked
+  })
+
+  figure.querySelectorAll<HTMLButtonElement>('[data-image-align]').forEach((button) => {
+    const active = button.dataset.imageAlign === alignment
+    button.disabled = locked
+    button.setAttribute('aria-pressed', String(active))
+  })
+
+  const name = figure.querySelector<HTMLElement>('[data-image-name="true"]')
+  if (name) name.hidden = !showName
+
+  const nameToggle = figure.querySelector<HTMLButtonElement>('[data-image-name-toggle="true"]')
+  if (nameToggle) {
+    nameToggle.textContent = showName ? 'Ocultar nombre' : 'Mostrar nombre'
+    nameToggle.setAttribute('aria-pressed', String(!showName))
+  }
+}
+
+function setImageInfoOpen(figure: HTMLElement, open: boolean): void {
+  figure.dataset.imageInfoOpen = String(open)
+  const button = figure.querySelector<HTMLButtonElement>('[data-image-info="true"]')
+  if (button) {
+    button.textContent = open ? '−' : '+'
+    button.setAttribute('aria-expanded', String(open))
+    button.title = open ? 'Ocultar información' : 'Mostrar información y descripción'
+  }
+}
+
+function createResizeHandle(direction: string, label: string): HTMLButtonElement {
+  const handle = document.createElement('button')
+  handle.type = 'button'
+  handle.className = `editor-image-block__resize editor-image-block__resize--${direction}`
+  handle.dataset.imageResize = direction
+  handle.setAttribute('aria-label', label)
+  handle.title = label
+  return handle
+}
+
 function createImageElement(block: ImageBlock, objectUrl?: string): HTMLElement {
   const figure = document.createElement('div')
   figure.className = 'editor-image-block'
   figure.dataset.imageBlock = 'true'
   figure.dataset.imageId = block.imageId
   figure.dataset.blockId = block.id
+  figure.dataset.imageSelected = 'false'
+  figure.dataset.imageInfoOpen = 'false'
   figure.contentEditable = 'false'
 
   const preview = document.createElement('button')
   preview.className = 'editor-image-block__preview'
   preview.type = 'button'
-  preview.dataset.imageOpen = 'true'
-  preview.setAttribute('aria-label', `Abrir imagen ${block.name}`)
+  preview.dataset.imagePreview = 'true'
 
   const image = document.createElement('img')
   image.alt = block.alt?.trim() || block.name
@@ -97,12 +219,78 @@ function createImageElement(block: ImageBlock, objectUrl?: string): HTMLElement 
 
   preview.append(image, loading)
 
+  const northWest = createResizeHandle('nw', 'Redimensionar imagen desde la esquina superior izquierda')
+  const northEast = createResizeHandle('ne', 'Redimensionar imagen desde la esquina superior derecha')
+  const southWest = createResizeHandle('sw', 'Redimensionar imagen desde la esquina inferior izquierda')
+  const southEast = createResizeHandle('se', 'Redimensionar imagen desde la esquina inferior derecha')
+
   const footer = document.createElement('div')
   footer.className = 'editor-image-block__footer'
+
+  const actions = document.createElement('div')
+  actions.className = 'editor-image-block__actions'
+
+  const lock = document.createElement('button')
+  lock.type = 'button'
+  lock.className = 'editor-image-block__lock'
+  lock.dataset.imageLock = 'true'
+
+  const info = document.createElement('button')
+  info.type = 'button'
+  info.className = 'editor-image-block__info'
+  info.dataset.imageInfo = 'true'
+  info.textContent = '+'
+  info.title = 'Mostrar información y descripción'
+  info.setAttribute('aria-label', 'Mostrar información y descripción de la imagen')
+  info.setAttribute('aria-expanded', 'false')
+
+  const open = document.createElement('button')
+  open.type = 'button'
+  open.className = 'editor-image-block__open'
+  open.dataset.imageOpenAction = 'true'
+  open.textContent = 'Abrir'
+  open.title = 'Abrir imagen en grande'
+
+  const alignment = document.createElement('div')
+  alignment.className = 'editor-image-block__alignment editor-image-block__secondary'
+  alignment.setAttribute('role', 'group')
+  alignment.setAttribute('aria-label', 'Posición horizontal de la imagen')
+
+  const alignments: Array<{ value: ImageAlignment; label: string }> = [
+    { value: 'left', label: 'Izq.' },
+    { value: 'center', label: 'Centro' },
+    { value: 'right', label: 'Der.' },
+  ]
+
+  for (const option of alignments) {
+    const button = document.createElement('button')
+    button.type = 'button'
+    button.dataset.imageAlign = option.value
+    button.textContent = option.label
+    button.title = `Alinear imagen: ${option.label}`
+    alignment.append(button)
+  }
+
+  const nameToggle = document.createElement('button')
+  nameToggle.type = 'button'
+  nameToggle.className = 'editor-image-block__name-toggle editor-image-block__secondary'
+  nameToggle.dataset.imageNameToggle = 'true'
+
+  const remove = document.createElement('button')
+  remove.className = 'editor-image-block__remove editor-image-block__secondary'
+  remove.type = 'button'
+  remove.dataset.imageRemove = 'true'
+  remove.textContent = 'Quitar imagen'
+
+  actions.append(lock, info, open, alignment, nameToggle, remove)
+
+  const details = document.createElement('div')
+  details.className = 'editor-image-block__details'
 
   const meta = document.createElement('div')
   meta.className = 'editor-image-block__meta'
   const name = document.createElement('strong')
+  name.dataset.imageName = 'true'
   name.textContent = block.name
   const size = document.createElement('span')
   size.textContent = formatImageSize(block.byteLength)
@@ -117,14 +305,11 @@ function createImageElement(block: ImageBlock, objectUrl?: string): HTMLElement 
   alt.dataset.imageAlt = 'true'
   alt.setAttribute('aria-label', 'Descripción de la imagen')
 
-  const remove = document.createElement('button')
-  remove.className = 'editor-image-block__remove'
-  remove.type = 'button'
-  remove.dataset.imageRemove = 'true'
-  remove.textContent = 'Quitar imagen'
+  details.append(meta, alt)
+  footer.append(actions, details)
+  figure.append(preview, northWest, northEast, southWest, southEast, footer)
 
-  footer.append(meta, alt, remove)
-  figure.append(preview, footer)
+  applyImageElementState(figure, block)
   return figure
 }
 
@@ -147,6 +332,12 @@ function ensureTrailingParagraph(editor: HTMLElement, after: HTMLElement): void 
   editor.append(paragraph)
 }
 
+function clampImageWidth(editorWidth: number, widthPercent: number): number {
+  const pixelMinimum = editorWidth > 0 ? (MIN_IMAGE_WIDTH_PIXELS / editorWidth) * 100 : 100
+  const minimum = Math.min(100, Math.max(MIN_IMAGE_WIDTH_PERCENT, Math.ceil(pixelMinimum)))
+  return Math.min(100, Math.max(minimum, Math.round(widthPercent)))
+}
+
 export function ImageNoteEditor({
   noteId,
   initialBlocks,
@@ -167,6 +358,7 @@ export function ImageNoteEditor({
   const objectUrlsRef = useRef(new Map<string, string>())
   const insertionAfterIdRef = useRef<string | null>(null)
   const [preview, setPreview] = useState<PreviewState | null>(null)
+  const [previewZoom, setPreviewZoom] = useState(1)
   const [imageError, setImageError] = useState('')
 
   function mergedBlocks(editorBlocks: NoteBlock[]): StoredNoteBlock[] {
@@ -182,6 +374,28 @@ export function ImageNoteEditor({
     if (!editor) return
     editor.dataset.empty = 'false'
     editor.dispatchEvent(new Event('input', { bubbles: true }))
+  }
+
+  function updateImageBlock(
+    root: HTMLElement,
+    blockId: string,
+    update: (block: ImageBlock) => ImageBlock,
+    save = true,
+  ): ImageBlock | null {
+    const current = imagesRef.current.get(blockId)
+    if (!current) return null
+
+    const next = update(current)
+    imagesRef.current.set(blockId, next)
+
+    const editor = root.querySelector<HTMLElement>('.editor-surface')
+    const figure = editor ? directBlockById(editor, blockId) : null
+    if (figure?.dataset.imageBlock === 'true') {
+      applyImageElementState(figure, next)
+    }
+
+    if (save) emitEditorInput(root)
+    return next
   }
 
   async function ensureObjectUrl(block: ImageBlock): Promise<string | null> {
@@ -243,6 +457,8 @@ export function ImageNoteEditor({
         const imageElement = createImageElement(block, objectUrlsRef.current.get(block.imageId))
         element.replaceWith(imageElement)
         element = imageElement
+      } else {
+        applyImageElementState(element, block)
       }
 
       if (!objectUrlsRef.current.has(block.imageId)) {
@@ -260,6 +476,7 @@ export function ImageNoteEditor({
 
     setImageError('')
     let afterId = insertionAfterIdRef.current
+    let lastElement: HTMLElement | null = null
 
     for (const file of files) {
       try {
@@ -268,6 +485,10 @@ export function ImageNoteEditor({
           id: createBlockId(),
           type: 'image',
           ...stored,
+          widthPercent: DEFAULT_IMAGE_WIDTH,
+          alignment: 'center',
+          locked: false,
+          showName: true,
         }
 
         const url = URL.createObjectURL(file)
@@ -278,12 +499,14 @@ export function ImageNoteEditor({
         insertAfterBlock(editor, element, afterId)
         ensureTrailingParagraph(editor, element)
         afterId = block.id
+        lastElement = element
       } catch (error) {
         setImageError(error instanceof Error ? error.message : 'No se pudo guardar la imagen cifrada.')
       }
     }
 
     insertionAfterIdRef.current = afterId
+    if (lastElement) selectImageFigure(root, lastElement)
     emitEditorInput(root)
   }
 
@@ -294,7 +517,12 @@ export function ImageNoteEditor({
         setImageError('La imagen cifrada no está disponible en este dispositivo.')
         return
       }
-      setPreview({ url, name: block.alt?.trim() || block.name })
+
+      setPreviewZoom(1)
+      setPreview({
+        url,
+        name: block.alt?.trim() || (imageShowsName(block) ? block.name : 'Imagen'),
+      })
     } catch {
       setImageError('No se pudo abrir la imagen cifrada.')
     }
@@ -304,6 +532,7 @@ export function ImageNoteEditor({
     const currentRoot = rootRef.current
     if (!currentRoot) return
     const root: HTMLDivElement = currentRoot
+    let resizeState: ResizeState | null = null
 
     decorateToolbar(root)
     hydrateStoredImages(root)
@@ -323,6 +552,62 @@ export function ImageNoteEditor({
       event.preventDefault()
     }
 
+    function handlePointerDown(event: PointerEvent) {
+      const target = event.target
+      if (!(target instanceof Element)) return
+
+      const handle = target.closest<HTMLButtonElement>('[data-image-resize]')
+      if (!handle || !root.contains(handle)) return
+
+      const figure = handle.closest<HTMLElement>('[data-image-block="true"]')
+      const blockId = figure?.dataset.blockId
+      const block = blockId ? imagesRef.current.get(blockId) : null
+      const editor = root.querySelector<HTMLElement>('.editor-surface')
+      if (!figure || !blockId || !block || !editor || imageLocked(block)) return
+
+      event.preventDefault()
+      event.stopPropagation()
+      selectImageFigure(root, figure)
+
+      resizeState = {
+        pointerId: event.pointerId,
+        blockId,
+        figure,
+        startX: event.clientX,
+        startWidthPercent: imageWidthPercent(block),
+        editorWidth: editor.getBoundingClientRect().width,
+        direction: handle.dataset.imageResize ?? 'se',
+      }
+    }
+
+    function handlePointerMove(event: PointerEvent) {
+      if (!resizeState || resizeState.pointerId !== event.pointerId) return
+
+      const directionMultiplier = resizeState.direction.includes('w') ? -1 : 1
+      const deltaPixels = (event.clientX - resizeState.startX) * directionMultiplier
+      const deltaPercent = resizeState.editorWidth > 0
+        ? (deltaPixels / resizeState.editorWidth) * 100
+        : 0
+      const nextWidth = clampImageWidth(
+        resizeState.editorWidth,
+        resizeState.startWidthPercent + deltaPercent,
+      )
+
+      updateImageBlock(
+        root,
+        resizeState.blockId,
+        (block) => ({ ...block, widthPercent: nextWidth }),
+        false,
+      )
+      resizeState.figure.dataset.imageSelected = 'true'
+    }
+
+    function handlePointerUp(event: PointerEvent) {
+      if (!resizeState || resizeState.pointerId !== event.pointerId) return
+      resizeState = null
+      emitEditorInput(root)
+    }
+
     function handleClick(event: MouseEvent) {
       const target = event.target
       if (!(target instanceof Element)) return
@@ -335,11 +620,69 @@ export function ImageNoteEditor({
         return
       }
 
+      const figure = target.closest<HTMLElement>('[data-image-block="true"]')
+
+      const lockButton = target.closest<HTMLButtonElement>('[data-image-lock="true"]')
+      if (lockButton && figure && root.contains(lockButton)) {
+        const blockId = figure.dataset.blockId
+        const block = blockId ? imagesRef.current.get(blockId) : null
+        if (!blockId || !block) return
+
+        event.preventDefault()
+        event.stopPropagation()
+        const next = updateImageBlock(root, blockId, (current) => ({
+          ...current,
+          locked: !imageLocked(current),
+        }))
+
+        if (next && imageLocked(next)) {
+          figure.dataset.imageSelected = 'false'
+        } else {
+          selectImageFigure(root, figure)
+        }
+        return
+      }
+
+      const infoButton = target.closest<HTMLButtonElement>('[data-image-info="true"]')
+      if (infoButton && figure && root.contains(infoButton)) {
+        event.preventDefault()
+        event.stopPropagation()
+        setImageInfoOpen(figure, figure.dataset.imageInfoOpen !== 'true')
+        return
+      }
+
+      const alignmentButton = target.closest<HTMLButtonElement>('[data-image-align]')
+      if (alignmentButton && figure && root.contains(alignmentButton)) {
+        const blockId = figure.dataset.blockId
+        const block = blockId ? imagesRef.current.get(blockId) : null
+        const alignment = alignmentButton.dataset.imageAlign as ImageAlignment | undefined
+        if (!blockId || !block || !alignment || imageLocked(block)) return
+
+        event.preventDefault()
+        event.stopPropagation()
+        updateImageBlock(root, blockId, (current) => ({ ...current, alignment }))
+        selectImageFigure(root, figure)
+        return
+      }
+
+      const nameToggle = target.closest<HTMLButtonElement>('[data-image-name-toggle="true"]')
+      if (nameToggle && figure && root.contains(nameToggle)) {
+        const blockId = figure.dataset.blockId
+        if (!blockId) return
+
+        event.preventDefault()
+        event.stopPropagation()
+        updateImageBlock(root, blockId, (current) => ({
+          ...current,
+          showName: !imageShowsName(current),
+        }))
+        return
+      }
+
       const remove = target.closest<HTMLElement>('[data-image-remove="true"]')
-      if (remove && root.contains(remove)) {
-        const figure = remove.closest<HTMLElement>('[data-image-block="true"]')
-        const blockId = figure?.dataset.blockId
-        if (!figure || !blockId) return
+      if (remove && figure && root.contains(remove)) {
+        const blockId = figure.dataset.blockId
+        if (!blockId) return
 
         event.preventDefault()
         event.stopPropagation()
@@ -360,17 +703,42 @@ export function ImageNoteEditor({
         return
       }
 
-      const open = target.closest<HTMLElement>('[data-image-open="true"]')
-      if (open && root.contains(open)) {
-        const figure = open.closest<HTMLElement>('[data-image-block="true"]')
-        const blockId = figure?.dataset.blockId
+      const openAction = target.closest<HTMLElement>('[data-image-open-action="true"]')
+      if (openAction && figure && root.contains(openAction)) {
+        const blockId = figure.dataset.blockId
         const block = blockId ? imagesRef.current.get(blockId) : null
         if (!block) return
 
         event.preventDefault()
         event.stopPropagation()
         void openImage(block)
+        return
       }
+
+      const previewButton = target.closest<HTMLElement>('[data-image-preview="true"]')
+      if (previewButton && figure && root.contains(previewButton)) {
+        const blockId = figure.dataset.blockId
+        const block = blockId ? imagesRef.current.get(blockId) : null
+        if (!block) return
+
+        event.preventDefault()
+        event.stopPropagation()
+        if (imageLocked(block)) {
+          void openImage(block)
+        } else {
+          selectImageFigure(root, figure)
+        }
+        return
+      }
+
+      if (figure && root.contains(figure)) {
+        const blockId = figure.dataset.blockId
+        const block = blockId ? imagesRef.current.get(blockId) : null
+        if (block && !imageLocked(block)) selectImageFigure(root, figure)
+        return
+      }
+
+      clearImageSelection(root)
     }
 
     function handleImageInput(event: Event) {
@@ -380,12 +748,12 @@ export function ImageNoteEditor({
       const figure = target.closest<HTMLElement>('[data-image-block="true"]')
       const blockId = figure?.dataset.blockId
       const block = blockId ? imagesRef.current.get(blockId) : null
-      if (!block) return
+      if (!blockId || !block) return
 
-      const next: ImageBlock = { ...block, alt: target.value }
-      imagesRef.current.set(block.id, next)
+      updateImageBlock(root, blockId, (current) => ({ ...current, alt: target.value }), false)
       const image = figure?.querySelector<HTMLImageElement>('[data-image-element="true"]')
       if (image) image.alt = target.value.trim() || block.name
+      emitEditorInput(root)
     }
 
     function handlePaste(event: ClipboardEvent) {
@@ -399,21 +767,32 @@ export function ImageNoteEditor({
     }
 
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') setPreview(null)
+      if (event.key === 'Escape') {
+        setPreview(null)
+        setPreviewZoom(1)
+      }
     }
 
     root.addEventListener('mousedown', handleMouseDown, true)
+    root.addEventListener('pointerdown', handlePointerDown, true)
     root.addEventListener('click', handleClick, true)
     root.addEventListener('input', handleImageInput, true)
     root.addEventListener('paste', handlePaste, true)
+    document.addEventListener('pointermove', handlePointerMove, true)
+    document.addEventListener('pointerup', handlePointerUp, true)
+    document.addEventListener('pointercancel', handlePointerUp, true)
     document.addEventListener('keydown', handleKeyDown)
 
     return () => {
       observer.disconnect()
       root.removeEventListener('mousedown', handleMouseDown, true)
+      root.removeEventListener('pointerdown', handlePointerDown, true)
       root.removeEventListener('click', handleClick, true)
       root.removeEventListener('input', handleImageInput, true)
       root.removeEventListener('paste', handlePaste, true)
+      document.removeEventListener('pointermove', handlePointerMove, true)
+      document.removeEventListener('pointerup', handlePointerUp, true)
+      document.removeEventListener('pointercancel', handlePointerUp, true)
       document.removeEventListener('keydown', handleKeyDown)
 
       for (const url of objectUrlsRef.current.values()) URL.revokeObjectURL(url)
@@ -425,6 +804,17 @@ export function ImageNoteEditor({
     const files = Array.from(event.currentTarget.files ?? [])
     event.currentTarget.value = ''
     await insertFiles(files)
+  }
+
+  function closePreview() {
+    setPreview(null)
+    setPreviewZoom(1)
+  }
+
+  function changePreviewZoom(delta: number) {
+    setPreviewZoom((current) =>
+      Math.min(MAX_PREVIEW_ZOOM, Math.max(MIN_PREVIEW_ZOOM, Number((current + delta).toFixed(2)))),
+    )
   }
 
   return (
@@ -450,10 +840,43 @@ export function ImageNoteEditor({
       {imageError && <p className="image-note-editor__error" role="alert">{imageError}</p>}
 
       {preview && (
-        <div className="image-lightbox" role="dialog" aria-modal="true" aria-label={preview.name} onClick={() => setPreview(null)}>
+        <div className="image-lightbox" role="dialog" aria-modal="true" aria-label={preview.name} onClick={closePreview}>
           <div className="image-lightbox__content" onClick={(event) => event.stopPropagation()}>
-            <button className="image-lightbox__close" type="button" onClick={() => setPreview(null)} aria-label="Cerrar imagen">×</button>
-            <img src={preview.url} alt={preview.name} />
+            <div className="image-lightbox__toolbar">
+              <button
+                type="button"
+                onClick={() => changePreviewZoom(-0.25)}
+                disabled={previewZoom <= MIN_PREVIEW_ZOOM}
+                aria-label="Alejar imagen"
+              >
+                −
+              </button>
+              <button
+                className="image-lightbox__zoom-label"
+                type="button"
+                onClick={() => setPreviewZoom(1)}
+                title="Restablecer zoom"
+              >
+                {Math.round(previewZoom * 100)}%
+              </button>
+              <button
+                type="button"
+                onClick={() => changePreviewZoom(0.25)}
+                disabled={previewZoom >= MAX_PREVIEW_ZOOM}
+                aria-label="Acercar imagen"
+              >
+                +
+              </button>
+              <button className="image-lightbox__close" type="button" onClick={closePreview} aria-label="Cerrar imagen">×</button>
+            </div>
+            <div className="image-lightbox__viewport">
+              <img
+                src={preview.url}
+                alt={preview.name}
+                style={{ transform: `scale(${previewZoom})` }}
+                onDoubleClick={() => setPreviewZoom((current) => current > 1 ? 1 : 2)}
+              />
+            </div>
           </div>
         </div>
       )}
