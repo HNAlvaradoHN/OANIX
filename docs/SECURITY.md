@@ -136,6 +136,12 @@ La interfaz admite selección de archivos/galería, varias imágenes, pegado des
 
 Al quitar una imagen, OANIX conserva temporalmente sus registros cifrados mientras la acción todavía puede deshacerse en la sesión actual. Al abandonar la nota o bloquear la bóveda, después de guardar la nota sin la referencia, intenta eliminar tanto el original como su preview cifrada. Si esa limpieza falla, puede quedar un blob cifrado huérfano ocupando espacio, pero no se destruye una imagen que todavía esté referenciada por una nota persistida.
 
+### Búsqueda local
+
+La búsqueda de V1 se ejecuta únicamente sobre las notas que ya fueron descifradas en memoria después de desbloquear la bóveda. OANIX no crea ni persiste un índice de búsqueda en texto plano, no envía consultas ni contenido a servicios externos y descarta el estado de búsqueda al cerrar o recargar la sesión.
+
+El buscador reutiliza la representación de texto plano en memoria del modelo `blocks-v1`, por lo que puede localizar título, texto enriquecido, código, checklists, contactos, títulos de entradas por día y metadatos textuales de imágenes que ya forman parte del registro cifrado de la nota.
+
 ### Comprobación de almacenamiento cifrado
 
 Después de crear o desbloquear la bóveda, OANIX puede realizar una comprobación de ida y vuelta con un registro técnico aleatorio:
