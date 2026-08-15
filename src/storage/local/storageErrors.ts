@@ -25,7 +25,7 @@ export function storageSaveErrorMessage(error: unknown): string {
     return 'No hay espacio local suficiente para guardar esta nota. Libera almacenamiento del dispositivo y vuelve a intentarlo.'
   }
 
-  if (message.includes('vault is locked') || message.includes('bóveda') && message.includes('bloque')) {
+  if (message.includes('vault is locked') || (message.includes('bóveda') && message.includes('bloque'))) {
     return 'La bóveda ya no está desbloqueada. Vuelve a desbloquear OANIX antes de continuar.'
   }
 
@@ -54,7 +54,7 @@ export async function retryTransientStorageOperation<T>(
       lastError = error
       if (attempt >= attempts || !isTransientStorageError(error)) throw error
       if (retryDelayMs > 0) {
-        await new Promise((resolve) => window.setTimeout(resolve, retryDelayMs))
+        await new Promise((resolve) => globalThis.setTimeout(resolve, retryDelayMs))
       }
     }
   }
