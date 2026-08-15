@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
-import { RichTextEditor } from '../editor/RichTextEditor'
+import { CodeBlockEditor } from '../editor/CodeBlockEditor'
 import { createEmptyNote, loadNotes, renameNote, replaceNoteContent } from './noteService'
 import { noteBlocksToPlainText, type NoteBlock, type NoteRecord } from './noteTypes'
 import './notes.css'
@@ -355,7 +355,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
                 />
               </label>
 
-              <RichTextEditor
+              <CodeBlockEditor
                 key={selectedNote.id}
                 noteId={selectedNote.id}
                 initialBlocks={selectedNote.content.blocks}
