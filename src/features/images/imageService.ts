@@ -1,4 +1,8 @@
-import { readEncryptedBlob, writeEncryptedBlob } from '../../storage/repositories/encryptedBlobRepository'
+import {
+  deleteEncryptedBlob,
+  readEncryptedBlob,
+  writeEncryptedBlob,
+} from '../../storage/repositories/encryptedBlobRepository'
 import {
   normalizeImageMimeType,
   type ImageMimeType,
@@ -62,4 +66,8 @@ export async function loadEncryptedImage(imageId: string, mimeType: ImageMimeTyp
   const bytes = await readEncryptedBlob(IMAGE_RECORD_TYPE, imageId)
   if (!bytes) return null
   return new Blob([Uint8Array.from(bytes)], { type: mimeType })
+}
+
+export async function deleteEncryptedImage(imageId: string): Promise<void> {
+  await deleteEncryptedBlob(IMAGE_RECORD_TYPE, imageId)
 }
