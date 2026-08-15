@@ -9,7 +9,7 @@ import {
   type StoredNoteBlock,
 } from '../notes/noteTypes'
 import { loadEncryptedImage, loadEncryptedImagePreview, storeEncryptedImage } from './imageService'
-import { defaultImageWidthPercent, isMobileImageViewport, resizeImageWidthPercent } from './imageLayout'
+import { defaultImageWidthPercent, imageAlignmentFromCenterRatio, isMobileImageViewport, resizeImageWidthPercent } from './imageLayout'
 import './images.css'
 
 interface ImageNoteEditorProps {
@@ -37,6 +37,20 @@ interface ResizeState {
   previewWidth: number
   previewHeight: number
   direction: string
+}
+
+interface ImageDragState {
+  pointerId: number
+  blockId: string
+  figure: HTMLElement
+  preview: HTMLElement
+  startX: number
+  startY: number
+  startLeft: number
+  figureWidth: number
+  editorLeft: number
+  editorWidth: number
+  dragging: boolean
 }
 
 const DEFAULT_IMAGE_WIDTH = 100
@@ -774,6 +788,7 @@ export function ImageNoteEditor({
     if (!currentRoot) return
     const root: HTMLDivElement = currentRoot
     let resizeState: ResizeState | null = null
+    let imageDragState: ImageDragState | null = null
 
     function syncVisualViewportMetrics() {
       const visualViewport = window.visualViewport
@@ -827,7 +842,32 @@ export function ImageNoteEditor({
       if (!(target instanceof Element)) return
 
       const handle = target.closest<HTMLButtonElement>('[data-image-resize]')
-      if (!handle || !root.contains(handle)) return
+      if (!handle || !root.contains(handle)) {
+        const preview = target.closest<HTMLElement>('[data-image-preview="true"]')
+        const figure = preview?.closest<HTMLElement>('[data-image-block="true"]')
+        const blockId = figure?.dataset.blockId
+        const block = blockId ? imagesRef.current.get(blockId) : null
+        const editor = root.querySelector<HTMLElement>('.editor-surface')
+
+        if (preview && figure && blockId && block && editor && !imageLocked(block) && event.isPrimary) {
+          const figureRect = figure.getBoundingClientRect()
+          const editorRect = editor.getBoundingClientRect()
+          imageDragState = {
+            pointerId: event.pointerId,
+            blockId,
+            figure,
+            preview,
+            startX: event.clientX,
+            startY: event.clientY,
+            startLeft: figureRect.left,
+            figureWidth: figureRect.width,
+            editorLeft: editorRect.left,
+            editorWidth: editorRect.width,
+            dragging: false,
+          }
+        }
+        return
+      }
 
       const figure = handle.closest<HTMLElement>('[data-image-block="true"]')
       const blockId = figure?.dataset.blockId
@@ -859,6 +899,27 @@ export function ImageNoteEditor({
     }
 
     function handlePointerMove(event: PointerEvent) {
+      if (imageDragState && imageDragState.pointerId === event.pointerId) {
+        const deltaX = event.clientX - imageDragState.startX
+        const deltaY = event.clientY - imageDragState.startY
+
+        if (!imageDragState.dragging) {
+          if (Math.abs(deltaX) < 7 || Math.abs(deltaX) <= Math.abs(deltaY)) return
+          imageDragState.dragging = true
+          imageDragState.preview.setPointerCapture?.(event.pointerId)
+          imageDragState.figure.dataset.imageDragging = 'true'
+          forceHistoryBoundaryRef.current = true
+        }
+
+        event.preventDefault()
+        const minLeft = imageDragState.editorLeft
+        const maxLeft = imageDragState.editorLeft + imageDragState.editorWidth - imageDragState.figureWidth
+        const desiredLeft = imageDragState.startLeft + deltaX
+        const clampedLeft = Math.min(maxLeft, Math.max(minLeft, desiredLeft))
+        imageDragState.figure.style.translate = `${Math.round(clampedLeft - imageDragState.startLeft)}px 0`
+        return
+      }
+
       if (!resizeState || resizeState.pointerId !== event.pointerId) return
 
       const nextWidth = resizeImageWidthPercent({
@@ -882,6 +943,30 @@ export function ImageNoteEditor({
     }
 
     function handlePointerUp(event: PointerEvent) {
+      if (imageDragState && imageDragState.pointerId === event.pointerId) {
+        const drag = imageDragState
+        imageDragState = null
+
+        if (drag.dragging) {
+          const deltaX = event.clientX - drag.startX
+          const minLeft = drag.editorLeft
+          const maxLeft = drag.editorLeft + drag.editorWidth - drag.figureWidth
+          const desiredLeft = Math.min(maxLeft, Math.max(minLeft, drag.startLeft + deltaX))
+          const centerRatio = drag.editorWidth > 0
+            ? ((desiredLeft - drag.editorLeft) + drag.figureWidth / 2) / drag.editorWidth
+            : 0.5
+          const alignment = imageAlignmentFromCenterRatio(centerRatio)
+
+          drag.figure.style.translate = ''
+          delete drag.figure.dataset.imageDragging
+          drag.figure.dataset.imageJustDragged = 'true'
+          window.setTimeout(() => delete drag.figure.dataset.imageJustDragged, 0)
+          updateImageBlock(root, drag.blockId, (current) => ({ ...current, alignment }))
+          selectImageFigure(root, drag.figure)
+        }
+        return
+      }
+
       if (!resizeState || resizeState.pointerId !== event.pointerId) return
       resizeState = null
       emitEditorInput(root)
@@ -1012,6 +1097,11 @@ export function ImageNoteEditor({
 
       const previewButton = target.closest<HTMLElement>('[data-image-preview="true"]')
       if (previewButton && figure && root.contains(previewButton)) {
+        if (figure.dataset.imageJustDragged === 'true') {
+          event.preventDefault()
+          event.stopPropagation()
+          return
+        }
         const blockId = figure.dataset.blockId
         const block = blockId ? imagesRef.current.get(blockId) : null
         if (!block) return

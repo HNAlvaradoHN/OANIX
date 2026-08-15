@@ -4,6 +4,7 @@ import test from 'node:test'
 import {
   clampImageWidthPercent,
   defaultImageWidthPercent,
+  imageAlignmentFromCenterRatio,
   isMobileImageViewport,
   resizeImageWidthPercent,
 } from '../src/features/images/imageLayout.ts'
@@ -57,4 +58,11 @@ test('resizes proportionally from vertical corner movement', () => {
     direction: 'se',
     mobile: true,
   }), 60)
+})
+
+test('snaps horizontal image drag to responsive alignment zones', () => {
+  assert.equal(imageAlignmentFromCenterRatio(0.1), 'left')
+  assert.equal(imageAlignmentFromCenterRatio(0.5), 'center')
+  assert.equal(imageAlignmentFromCenterRatio(0.9), 'right')
+  assert.equal(imageAlignmentFromCenterRatio(Number.NaN), 'center')
 })
