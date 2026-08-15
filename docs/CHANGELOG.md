@@ -21,7 +21,7 @@ Todos los cambios relevantes del proyecto se registran aquí por versión.
 - Cifrado autenticado de contenido local mediante AES-256-GCM con IV único por escritura y AAD ligado al tipo e identificador del registro.
 - Repositorio genérico de registros cifrados para impedir que el contenido privado llegue a IndexedDB en texto plano.
 - Comprobación de ida y vuelta de almacenamiento cifrado al desbloquear la bóveda.
-- Sistema inicial de notas cifradas con creación, listado, apertura y cambio de título.
+- Sistema inicial de notas cifradas con creación, listado, apertura, cambio de título y eliminación permanente confirmada con limpieza de imágenes asociadas.
 - Navegación principal inspirada en una lista de conversaciones, adaptada a notas y responsive en móvil, tablet y PC.
 - Editor de texto enriquecido sobre `blocks-v1` con párrafos, encabezados, negrita, cursiva, listas, citas, enlaces validados y separadores.
 - Bloques de código inertes con selector de lenguaje, indentación, copia, conversión a texto y eliminación confirmada.
