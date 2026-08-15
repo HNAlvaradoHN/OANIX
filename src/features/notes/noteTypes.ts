@@ -24,9 +24,15 @@ export interface QuoteBlock {
   runs: RichTextRun[]
 }
 
-export interface ListBlock {
+export interface BulletListBlock {
   id: string
-  type: 'bulletList' | 'orderedList'
+  type: 'bulletList'
+  items: RichTextRun[][]
+}
+
+export interface OrderedListBlock {
+  id: string
+  type: 'orderedList'
   items: RichTextRun[][]
 }
 
@@ -35,7 +41,13 @@ export interface DividerBlock {
   type: 'divider'
 }
 
-export type NoteBlock = ParagraphBlock | HeadingBlock | QuoteBlock | ListBlock | DividerBlock
+export type NoteBlock =
+  | ParagraphBlock
+  | HeadingBlock
+  | QuoteBlock
+  | BulletListBlock
+  | OrderedListBlock
+  | DividerBlock
 
 export interface NoteRecord {
   version: 1
@@ -85,7 +97,7 @@ function isRunArray(value: unknown): value is RichTextRun[] {
 function isNoteBlock(value: unknown): value is NoteBlock {
   if (!value || typeof value !== 'object') return false
 
-  const block = value as Partial<NoteBlock> & {
+  const block = value as {
     id?: unknown
     type?: unknown
     runs?: unknown

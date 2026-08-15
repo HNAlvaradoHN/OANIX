@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ClipboardEvent } from 'react'
+import { useEffect, useRef, useState, type ClipboardEvent, type MouseEvent } from 'react'
 import {
   normalizeNoteLink,
   noteBlocksToPlainText,
@@ -237,9 +237,10 @@ export function RichTextEditor({ noteId, initialBlocks, onChange, onBlur }: Rich
   function handleLink() {
     const editor = editorRef.current
     const selection = document.getSelection()
-    if (!editor || !selection || selection.isCollapsed || !editor.contains(selection.commonAncestorContainer)) {
-      return
-    }
+    if (!editor || !selection || selection.isCollapsed || selection.rangeCount === 0) return
+
+    const range = selection.getRangeAt(0)
+    if (!editor.contains(range.commonAncestorContainer)) return
 
     const rawValue = window.prompt('Escribe el enlace. Déjalo vacío para quitar un enlace existente.')
     if (rawValue === null) return
@@ -267,7 +268,7 @@ export function RichTextEditor({ noteId, initialBlocks, onChange, onBlur }: Rich
     emitChange()
   }
 
-  const keepSelection = (event: React.MouseEvent<HTMLButtonElement>) => event.preventDefault()
+  const keepSelection = (event: MouseEvent<HTMLButtonElement>) => event.preventDefault()
 
   return (
     <div className="editor-frame">
