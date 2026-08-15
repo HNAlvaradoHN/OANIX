@@ -112,6 +112,30 @@ function codeBlockToHtml(block: Extract<NoteBlock, { type: 'code' }>): string {
   return `<div class="editor-code-block" data-code-block="true" data-block-id="${id}" data-language="${language}" contenteditable="false"><div class="editor-code-block__toolbar"><select class="editor-code-block__language" data-code-language="true" aria-label="Lenguaje del bloque de código">${codeLanguageOptions(language)}</select><button class="editor-code-block__copy" data-code-copy="true" type="button">Copiar</button></div><div class="editor-code-block__content" data-code-content="true" contenteditable="true" spellcheck="false" autocapitalize="off" tabindex="0">${text}</div></div>`
 }
 
+type ChecklistItemModel = Extract<NoteBlock, { type: 'checklist' }>['items'][number]
+
+function checklistItemToHtml(item: ChecklistItemModel): string {
+  const checked = item.checked ? 'true' : 'false'
+  const mark = item.checked ? '✓' : ''
+  const label = item.checked ? 'Marcar tarea como pendiente' : 'Marcar tarea como completada'
+  const text = escapeHtml(item.text).replaceAll('\n', '<br>') || '<br>'
+  return `<div class="editor-checklist__item" data-checklist-item="true" data-checked="${checked}"><button class="editor-checklist__toggle" data-checklist-toggle="true" type="button" aria-pressed="${checked}" aria-label="${label}">${mark}</button><div class="editor-checklist__text" data-checklist-text="true" contenteditable="true" role="textbox" aria-label="Tarea de checklist" spellcheck="true">${text}</div></div>`
+}
+
+function checklistBlockToHtml(block: Extract<NoteBlock, { type: 'checklist' }>): string {
+  const id = escapeHtml(block.id)
+  const items = block.items.length > 0 ? block.items : [{ text: '', checked: false }]
+  return `<div class="editor-checklist" data-checklist-block="true" data-block-id="${id}" contenteditable="false">${items.map(checklistItemToHtml).join('')}</div>`
+}
+
+function createChecklistItemElement(item: ChecklistItemModel): HTMLElement {
+  const template = document.createElement('template')
+  template.innerHTML = checklistItemToHtml(item)
+  const element = template.content.firstElementChild
+  if (!(element instanceof HTMLElement)) throw new Error('Checklist item could not be created.')
+  return element
+}
+
 function blocksToHtml(blocks: NoteBlock[]): string {
   if (blocks.length === 0) {
     return `<p data-block-id="${createBlockId()}"><br></p>`
@@ -123,6 +147,7 @@ function blocksToHtml(blocks: NoteBlock[]): string {
 
       if (block.type === 'divider') return `<hr data-block-id="${id}">`
       if (block.type === 'code') return codeBlockToHtml(block)
+      if (block.type === 'checklist') return checklistBlockToHtml(block)
       if (block.type === 'heading') {
         return `<h${block.level} data-block-id="${id}">${runsToHtml(block.runs)}</h${block.level}>`
       }
@@ -226,6 +251,28 @@ function parseEditorBlocks(root: HTMLElement): NoteBlock[] {
         type: 'code',
         language: normalizeCodeLanguage(node.dataset.language),
         text: codeTextFromElement(node.querySelector<HTMLElement>('[data-code-content="true"]')),
+      })
+      continue
+    }
+
+    if (node.dataset.checklistBlock === 'true') {
+      const items = Array.from(node.children)
+        .filter((child): child is HTMLElement =>
+          child instanceof HTMLElement && child.dataset.checklistItem === 'true',
+        )
+        .map((item) => {
+          const textElement = item.querySelector<HTMLElement>('[data-checklist-text="true"]')
+          const rawText = codeTextFromElement(textElement)
+          return {
+            text: /^\n*$/.test(rawText) ? '' : rawText,
+            checked: item.dataset.checked === 'true',
+          }
+        })
+
+      blocks.push({
+        id,
+        type: 'checklist',
+        items: items.length > 0 ? items : [{ text: '', checked: false }],
       })
       continue
     }
@@ -427,6 +474,12 @@ function selectionIsInsideCodeBlock(editor: HTMLElement, selection: Selection | 
   return !!element?.closest('[data-code-content="true"]')
 }
 
+function selectionIsInsideChecklist(editor: HTMLElement, selection: Selection | null): boolean {
+  if (!selectionIsInsideEditor(editor, selection)) return false
+  const element = elementFromSelectionNode(selection.anchorNode)
+  return !!element?.closest('[data-checklist-text="true"]')
+}
+
 function selectionHasLink(editor: HTMLElement, selection: Selection): boolean {
   let current: HTMLElement | null =
     selection.anchorNode instanceof HTMLElement
@@ -568,8 +621,15 @@ function RichTextEditorComponent({
 
     const selection = document.getSelection()
     const code = selectionIsInsideCodeBlock(editor, selection)
+    const checklist = selectionIsInsideChecklist(editor, selection)
 
     if (!selectionIsInsideEditor(editor, selection)) {
+      ;(['bold', 'italic', 'paragraph', 'heading2', 'heading3', 'bulletList', 'orderedList', 'quote', 'link', 'code'] as ToolbarFormat[])
+        .forEach((format) => setToolbarButtonState(toolbar, format, false))
+      return
+    }
+
+    if (checklist) {
       ;(['bold', 'italic', 'paragraph', 'heading2', 'heading3', 'bulletList', 'orderedList', 'quote', 'link', 'code'] as ToolbarFormat[])
         .forEach((format) => setToolbarButtonState(toolbar, format, false))
       return
@@ -711,12 +771,55 @@ function RichTextEditorComponent({
     if (!editor) return
 
     const selection = document.getSelection()
-    if (selectionIsInsideCodeBlock(editor, selection)) return
+    if (selectionIsInsideCodeBlock(editor, selection) || selectionIsInsideChecklist(editor, selection)) return
 
     editor.focus()
     document.execCommand(command, false, value)
     emitChange()
     syncToolbarState()
+  }
+
+  function insertChecklistBlock() {
+    const editor = editorRef.current
+    if (!editor) return
+
+    const selection = document.getSelection()
+    const selectedText = selectionIsInsideEditor(editor, selection) &&
+      !selection.isCollapsed &&
+      !selectionIsInsideCodeBlock(editor, selection) &&
+      !selectionIsInsideChecklist(editor, selection)
+      ? selection.toString()
+      : ''
+    const id = createBlockId()
+    const nextParagraphId = createBlockId()
+    const block: Extract<NoteBlock, { type: 'checklist' }> = {
+      id,
+      type: 'checklist',
+      items: [{ text: selectedText, checked: false }],
+    }
+    const html = `${checklistBlockToHtml(block)}<p data-block-id="${nextParagraphId}"><br></p>`
+
+    const anchorElement = elementFromSelectionNode(selection?.anchorNode ?? null)
+    const atomicHost = anchorElement?.closest<HTMLElement>(
+      '[data-code-block="true"], [data-checklist-block="true"]',
+    )
+
+    if (atomicHost && atomicHost.parentElement === editor) {
+      atomicHost.insertAdjacentHTML('afterend', html)
+    } else {
+      editor.focus()
+      document.execCommand('insertHTML', false, html)
+    }
+    emitChange()
+
+    const itemText = editor.querySelector<HTMLElement>(
+      `[data-block-id="${id}"] [data-checklist-text="true"]`,
+    )
+    if (itemText) {
+      itemText.focus()
+      placeCaretAtEnd(itemText)
+      syncToolbarState()
+    }
   }
 
   function insertCodeBlock() {
@@ -758,7 +861,7 @@ function RichTextEditorComponent({
     const editor = editorRef.current
     const selection = document.getSelection()
     if (!editor || !selection || selection.isCollapsed || selection.rangeCount === 0) return
-    if (selectionIsInsideCodeBlock(editor, selection)) return
+    if (selectionIsInsideCodeBlock(editor, selection) || selectionIsInsideChecklist(editor, selection)) return
 
     const range = selection.getRangeAt(0)
     if (!editor.contains(range.commonAncestorContainer)) return
@@ -806,6 +909,24 @@ function RichTextEditorComponent({
     if (!editor) return
 
     const target = event.target instanceof Element ? event.target : null
+    const checklistToggle = target?.closest<HTMLButtonElement>('[data-checklist-toggle="true"]')
+    if (checklistToggle && editor.contains(checklistToggle)) {
+      event.preventDefault()
+      event.stopPropagation()
+      const item = checklistToggle.closest<HTMLElement>('[data-checklist-item="true"]')
+      if (!item) return
+      const checked = item.dataset.checked !== 'true'
+      item.dataset.checked = String(checked)
+      checklistToggle.setAttribute('aria-pressed', String(checked))
+      checklistToggle.setAttribute(
+        'aria-label',
+        checked ? 'Marcar tarea como pendiente' : 'Marcar tarea como completada',
+      )
+      checklistToggle.textContent = checked ? '✓' : ''
+      emitChange()
+      return
+    }
+
     const copyButton = target?.closest<HTMLButtonElement>('[data-code-copy="true"]')
     if (copyButton && editor.contains(copyButton)) {
       event.preventDefault()
@@ -939,9 +1060,52 @@ function RichTextEditorComponent({
   }
 
   function handleEditorKeyDown(event: ReactKeyboardEvent<HTMLDivElement>) {
-    if (event.key !== 'Tab') return
     const target = event.target
-    if (!(target instanceof Element) || !target.closest('[data-code-content="true"]')) return
+    if (!(target instanceof Element)) return
+
+    const checklistText = target.closest<HTMLElement>('[data-checklist-text="true"]')
+    if (checklistText) {
+      const item = checklistText.closest<HTMLElement>('[data-checklist-item="true"]')
+      const checklist = checklistText.closest<HTMLElement>('[data-checklist-block="true"]')
+      if (!item || !checklist) return
+
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault()
+        const nextItem = createChecklistItemElement({ text: '', checked: false })
+        item.after(nextItem)
+        emitChange()
+        const nextText = nextItem.querySelector<HTMLElement>('[data-checklist-text="true"]')
+        if (nextText) {
+          nextText.focus()
+          placeCaretAtStart(nextText)
+        }
+        return
+      }
+
+      if (event.key === 'Backspace' && /^\n*$/.test(codeTextFromElement(checklistText))) {
+        const items = Array.from(checklist.children).filter(
+          (child): child is HTMLElement =>
+            child instanceof HTMLElement && child.dataset.checklistItem === 'true',
+        )
+        if (items.length > 1) {
+          event.preventDefault()
+          const index = items.indexOf(item)
+          const focusItem = items[index - 1] ?? items[index + 1]
+          item.remove()
+          emitChange()
+          const focusText = focusItem?.querySelector<HTMLElement>('[data-checklist-text="true"]')
+          if (focusText) {
+            focusText.focus()
+            placeCaretAtEnd(focusText)
+          }
+        }
+        return
+      }
+
+      return
+    }
+
+    if (event.key !== 'Tab' || !target.closest('[data-code-content="true"]')) return
 
     event.preventDefault()
     document.execCommand('insertText', false, '\t')
@@ -984,6 +1148,9 @@ function RichTextEditorComponent({
         </button>
         <button className="editor-tool" data-format="code" aria-pressed="false" type="button" onMouseDown={keepSelection} onClick={insertCodeBlock} title="Bloque de código">
           Código
+        </button>
+        <button className="editor-tool" data-insert="checklist" type="button" onMouseDown={keepSelection} onClick={insertChecklistBlock} title="Checklist">
+          ☑ Checklist
         </button>
         <button className="editor-tool" type="button" onMouseDown={keepSelection} onClick={() => runCommand('insertHorizontalRule')} title="Separador">
           —

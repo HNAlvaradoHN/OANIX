@@ -56,3 +56,5 @@ OANIX utilizará versiones claras y progresivas. No se publicará una versión c
 
 - Arrastre horizontal de imágenes desbloqueadas con ajuste responsive a izquierda, centro o derecha; alineación estable también en contenedores tipo tablet.
 - Cierre `×` de opciones de imagen sin marco visual, conservando accesibilidad táctil.
+
+- Checklists V1 como bloque nativo cifrado: tareas marcables, edición directa, Enter para añadir tarea, Backspace sobre una tarea vacía para retirarla y diseño responsive por contenedor.
