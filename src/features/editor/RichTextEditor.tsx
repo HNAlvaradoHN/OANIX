@@ -57,7 +57,7 @@ function runToHtml(run: RichTextRun): string {
 
   if (run.bold) html = `<strong>${html}</strong>`
   if (run.italic) html = `<em>${html}</em>`
-  if (run.href) html = `<a href="${escapeHtml(run.href)}">${html}</a>`
+  if (run.href) html = `<a href="${escapeHtml(run.href)}" rel="noopener noreferrer">${html}</a>`
 
   return html
 }
@@ -261,14 +261,37 @@ function setToolbarButtonState(toolbar: HTMLElement, format: ToolbarFormat, acti
   button.setAttribute('aria-pressed', active ? 'true' : 'false')
 }
 
+function linkFromTarget(editor: HTMLElement, target: EventTarget | null): HTMLAnchorElement | null {
+  if (!(target instanceof Element)) return null
+
+  const link = target.closest('a')
+  return link instanceof HTMLAnchorElement && editor.contains(link) ? link : null
+}
+
+function openSafeLink(rawHref: string): void {
+  const href = normalizeNoteLink(rawHref)
+  if (!href) return
+
+  if (href.startsWith('http://') || href.startsWith('https://')) {
+    window.open(href, '_blank', 'noopener,noreferrer')
+    return
+  }
+
+  window.location.href = href
+}
+
 function RichTextEditorComponent({
   noteId,
   initialBlocks,
   onChange,
   onBlur,
 }: RichTextEditorProps) {
+  const frameRef = useRef<HTMLDivElement>(null)
   const editorRef = useRef<HTMLDivElement>(null)
   const toolbarRef = useRef<HTMLDivElement>(null)
+  const linkPopoverRef = useRef<HTMLDivElement>(null)
+  const linkHrefRef = useRef<HTMLSpanElement>(null)
+  const activeLinkRef = useRef<HTMLAnchorElement | null>(null)
   const initialHtmlRef = useRef(blocksToHtml(initialBlocks))
   const lastHtmlRef = useRef(initialHtmlRef.current)
   const restoringRef = useRef(false)
@@ -284,6 +307,42 @@ function RichTextEditorComponent({
     },
     [noteId],
   )
+
+  const hideLinkPopover = useCallback(() => {
+    activeLinkRef.current = null
+
+    const popover = linkPopoverRef.current
+    if (!popover) return
+
+    popover.hidden = true
+    popover.style.left = ''
+    popover.style.top = ''
+  }, [])
+
+  const showLinkPopover = useCallback((link: HTMLAnchorElement) => {
+    const frame = frameRef.current
+    const popover = linkPopoverRef.current
+    const hrefLabel = linkHrefRef.current
+    const href = normalizeNoteLink(link.getAttribute('href') ?? '')
+    if (!frame || !popover || !hrefLabel || !href) return
+
+    activeLinkRef.current = link
+    hrefLabel.textContent = href
+    popover.hidden = false
+
+    const frameRect = frame.getBoundingClientRect()
+    const linkRect = link.getBoundingClientRect()
+    const popoverRect = popover.getBoundingClientRect()
+    const padding = 10
+    const maximumLeft = Math.max(padding, frameRect.width - popoverRect.width - padding)
+    const left = Math.min(Math.max(linkRect.left - frameRect.left, padding), maximumLeft)
+    const below = linkRect.bottom - frameRect.top + 8
+    const above = linkRect.top - frameRect.top - popoverRect.height - 8
+    const top = below + popoverRect.height <= frameRect.height - padding ? below : Math.max(padding, above)
+
+    popover.style.left = `${left}px`
+    popover.style.top = `${top}px`
+  }, [])
 
   const syncToolbarState = useCallback(() => {
     const editor = editorRef.current
@@ -354,6 +413,35 @@ function RichTextEditorComponent({
     return () => document.removeEventListener('selectionchange', syncToolbarState)
   }, [syncToolbarState])
 
+  useEffect(() => {
+    function handlePointerDown(event: PointerEvent) {
+      const target = event.target
+      if (!(target instanceof Node)) return
+
+      const popover = linkPopoverRef.current
+      const activeLink = activeLinkRef.current
+      if (popover?.contains(target) || activeLink?.contains(target)) return
+
+      hideLinkPopover()
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') hideLinkPopover()
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+    document.addEventListener('scroll', hideLinkPopover, true)
+    window.addEventListener('resize', hideLinkPopover)
+
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+      document.removeEventListener('scroll', hideLinkPopover, true)
+      window.removeEventListener('resize', hideLinkPopover)
+    }
+  }, [hideLinkPopover])
+
   function emitChange() {
     const editor = editorRef.current
     if (!editor) return
@@ -400,6 +488,81 @@ function RichTextEditorComponent({
     runCommand('createLink', href)
   }
 
+  function handleEditorClick(event: MouseEvent<HTMLDivElement>) {
+    const editor = editorRef.current
+    if (!editor) return
+
+    const link = linkFromTarget(editor, event.target)
+    if (!link) {
+      hideLinkPopover()
+      return
+    }
+
+    const href = normalizeNoteLink(link.getAttribute('href') ?? '')
+    event.preventDefault()
+    if (!href) {
+      hideLinkPopover()
+      return
+    }
+
+    if (event.ctrlKey || event.metaKey) {
+      hideLinkPopover()
+      openSafeLink(href)
+      return
+    }
+
+    showLinkPopover(link)
+  }
+
+  function handleOpenActiveLink() {
+    const link = activeLinkRef.current
+    if (!link) return
+
+    openSafeLink(link.getAttribute('href') ?? '')
+    hideLinkPopover()
+  }
+
+  function handleEditActiveLink() {
+    const link = activeLinkRef.current
+    if (!link) return
+
+    const currentHref = normalizeNoteLink(link.getAttribute('href') ?? '') ?? ''
+    const rawValue = window.prompt('Editar enlace. Déjalo vacío para quitarlo.', currentHref)
+    if (rawValue === null) return
+
+    if (!rawValue.trim()) {
+      handleRemoveActiveLink()
+      return
+    }
+
+    const href = normalizeNoteLink(rawValue)
+    if (!href) {
+      window.alert('El enlace debe usar http, https, mailto o tel.')
+      return
+    }
+
+    link.setAttribute('href', href)
+    link.setAttribute('rel', 'noopener noreferrer')
+    emitChange()
+    showLinkPopover(link)
+  }
+
+  function handleRemoveActiveLink() {
+    const link = activeLinkRef.current
+    const editor = editorRef.current
+    const parent = link?.parentNode
+    if (!link || !editor || !parent) return
+
+    while (link.firstChild) {
+      parent.insertBefore(link.firstChild, link)
+    }
+    parent.removeChild(link)
+
+    hideLinkPopover()
+    emitChange()
+    editor.focus()
+  }
+
   function handlePaste(event: ClipboardEvent<HTMLDivElement>) {
     const plainText = event.clipboardData.getData('text/plain')
     if (!plainText) return
@@ -412,7 +575,7 @@ function RichTextEditorComponent({
   const keepSelection = (event: MouseEvent<HTMLButtonElement>) => event.preventDefault()
 
   return (
-    <div className="editor-frame">
+    <div ref={frameRef} className="editor-frame">
       <div ref={toolbarRef} className="editor-toolbar" role="toolbar" aria-label="Formato de texto">
         <button className="editor-tool editor-tool--strong" data-format="bold" aria-pressed="false" type="button" onMouseDown={keepSelection} onClick={() => runCommand('bold')} title="Negrita">
           B
@@ -457,6 +620,7 @@ function RichTextEditorComponent({
         aria-multiline="true"
         aria-label="Contenido de la nota"
         data-placeholder="Escribe algo…"
+        onClick={handleEditorClick}
         onInput={emitChange}
         onFocus={syncToolbarState}
         onKeyUp={syncToolbarState}
@@ -465,6 +629,21 @@ function RichTextEditorComponent({
         onPaste={handlePaste}
         spellCheck
       />
+
+      <div
+        ref={linkPopoverRef}
+        className="editor-link-popover"
+        role="dialog"
+        aria-label="Acciones del enlace"
+        hidden
+      >
+        <span ref={linkHrefRef} className="editor-link-popover__href" />
+        <div className="editor-link-popover__actions">
+          <button type="button" onMouseDown={keepSelection} onClick={handleOpenActiveLink}>Abrir</button>
+          <button type="button" onMouseDown={keepSelection} onClick={handleEditActiveLink}>Editar</button>
+          <button type="button" onMouseDown={keepSelection} onClick={handleRemoveActiveLink}>Quitar</button>
+        </div>
+      </div>
     </div>
   )
 }
