@@ -11,6 +11,7 @@ import { storageSaveErrorMessage } from '../../storage/local/storageErrors'
 import { usesSinglePaneLayout } from '../../shared/responsiveLayout'
 import { ImageNoteEditor } from '../images/ImageNoteEditor'
 import { createEmptyNote, deleteNote, loadNotes, renameNote, replaceNoteContent } from './noteService'
+import { prepareDailyEntriesForEditing } from './dailyEntries'
 import { noteBlocksToPlainText, type NoteRecord, type StoredNoteBlock } from './noteTypes'
 import './notes.css'
 
@@ -707,7 +708,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
               <ImageNoteEditor
                 key={selectedNote.id}
                 noteId={selectedNote.id}
-                initialBlocks={selectedNote.content.blocks}
+                initialBlocks={prepareDailyEntriesForEditing(selectedNote)}
                 onChange={handleContentChange}
                 onBlur={() => void flushPendingContent()}
                 onRemoveImage={handleRemovedImage}

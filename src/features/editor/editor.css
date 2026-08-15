@@ -612,3 +612,75 @@
   .editor-contact-card__header { flex-wrap: wrap; }
   .editor-contact-card__remove { width: 100%; }
 }
+
+/* OANIX V1 daily entries */
+.editor-daily-entry {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  display: grid;
+  justify-items: center;
+  gap: clamp(.4rem, 1.5cqw, .65rem);
+  margin: clamp(1.15rem, 3cqw, 1.8rem) 0 clamp(.65rem, 1.8cqw, 1rem);
+  box-sizing: border-box;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.editor-daily-entry__date-row {
+  width: 100%;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(1rem, 1fr) auto minmax(1rem, 1fr);
+  align-items: center;
+  gap: clamp(.5rem, 2cqw, .85rem);
+}
+.editor-daily-entry__date-row::before,
+.editor-daily-entry__date-row::after {
+  content: '';
+  min-width: 0;
+  border-top: 1px solid #dbe3ec;
+}
+.editor-daily-entry__date {
+  max-width: min(100%, 32rem);
+  padding: .38rem .8rem;
+  border: 1px solid #d8e0ea;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: clamp(.72rem, 2.2cqw, .82rem);
+  font-weight: 800;
+  line-height: 1.2;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.editor-daily-entry__title {
+  width: min(100%, 32rem);
+  min-width: 0;
+  height: auto;
+  min-height: 2.45rem;
+  padding: .5rem .75rem;
+  border: 1px solid transparent;
+  border-radius: .75rem;
+  outline: none;
+  background: transparent;
+  color: #172033;
+  -webkit-text-fill-color: currentColor;
+  font: inherit;
+  font-size: clamp(.9rem, 2.6cqw, 1rem);
+  font-weight: 800;
+  text-align: center;
+  -webkit-user-select: text;
+  user-select: text;
+}
+.editor-daily-entry__title::placeholder { color: #9aa5b1; font-weight: 650; }
+.editor-daily-entry__title:hover,
+.editor-daily-entry__title:focus {
+  border-color: #cbd5e1;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(37,99,235,.08);
+}
+@container (max-width: 28rem) {
+  .editor-daily-entry__date-row { grid-template-columns: minmax(.5rem, 1fr) auto minmax(.5rem, 1fr); gap: .4rem; }
+  .editor-daily-entry__date { padding-inline: .6rem; }
+  .editor-daily-entry__title { width: 100%; }
+}

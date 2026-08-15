@@ -1281,6 +1281,7 @@ export function ImageNoteEditor({
         <div className="editor-command-panel editor-command-panel--insert" role="dialog" aria-label="Insertar contenido">
           <div className="editor-command-panel__heading"><strong>Insertar</strong><span>Contenido de la nota</span></div>
           <div className="editor-command-grid editor-command-grid--insert">
+            <button type="button" onPointerDown={keepEditorSelection} onClick={() => triggerToolbarAction('[data-insert="dailyEntry"]')}><strong>◷</strong><span>Nueva entrada</span></button>
             <button type="button" onPointerDown={keepEditorSelection} onClick={triggerImageInsert}><strong>▧</strong><span>Imagen</span></button>
             <button type="button" onPointerDown={keepEditorSelection} onClick={() => triggerToolbarAction('[data-format="code"]')}><strong>&lt;/&gt;</strong><span>Código</span></button>
             <button type="button" onPointerDown={keepEditorSelection} onClick={() => triggerToolbarAction('[data-insert="checklist"]')}><strong>☑</strong><span>Checklist</span></button>

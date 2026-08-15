@@ -17,6 +17,7 @@ import {
   type NoteBlock,
   type RichTextRun,
 } from '../notes/noteTypes'
+import { createDailyEntryBlocks, formatDailyEntryDate, localDateKey } from '../notes/dailyEntries'
 import './editor.css'
 
 interface RichTextEditorProps {
@@ -152,6 +153,14 @@ function contactFieldValue(block: HTMLElement, name: string): string {
   return field?.value ?? ''
 }
 
+function dailyEntryBlockToHtml(block: Extract<NoteBlock, { type: 'dailyEntry' }>): string {
+  const id = escapeHtml(block.id)
+  const date = escapeHtml(block.date)
+  const title = escapeHtml(block.title)
+  const label = escapeHtml(formatDailyEntryDate(block.date))
+  return `<div class="editor-daily-entry" data-daily-entry-block="true" data-daily-entry-date="${date}" data-block-id="${id}" contenteditable="false"><div class="editor-daily-entry__date-row"><span class="editor-daily-entry__date">${label}</span></div><input class="editor-daily-entry__title" data-daily-entry-title="true" type="text" value="${title}" maxlength="120" placeholder="Título de esta entrada (opcional)" autocomplete="off"></div>`
+}
+
 function blocksToHtml(blocks: NoteBlock[]): string {
   if (blocks.length === 0) {
     return `<p data-block-id="${createBlockId()}"><br></p>`
@@ -165,6 +174,7 @@ function blocksToHtml(blocks: NoteBlock[]): string {
       if (block.type === 'code') return codeBlockToHtml(block)
       if (block.type === 'checklist') return checklistBlockToHtml(block)
       if (block.type === 'contact') return contactBlockToHtml(block)
+      if (block.type === 'dailyEntry') return dailyEntryBlockToHtml(block)
       if (block.type === 'heading') {
         return `<h${block.level} data-block-id="${id}">${runsToHtml(block.runs)}</h${block.level}>`
       }
@@ -285,6 +295,17 @@ function parseEditorBlocks(root: HTMLElement): NoteBlock[] {
       continue
     }
 
+    if (node.dataset.dailyEntryBlock === 'true') {
+      const title = node.querySelector<HTMLInputElement>('[data-daily-entry-title="true"]')?.value ?? ''
+      blocks.push({
+        id,
+        type: 'dailyEntry',
+        date: node.dataset.dailyEntryDate ?? localDateKey(),
+        title,
+      })
+      continue
+    }
+
     if (node.dataset.checklistBlock === 'true') {
       const items = Array.from(node.children)
         .filter((child): child is HTMLElement =>
@@ -395,7 +416,11 @@ function isEmptyCaretParagraph(element: Element | null): element is HTMLParagrap
 }
 
 function isProtectedEditorBlock(element: HTMLElement): boolean {
-  return element.dataset.codeBlock === 'true' || element.dataset.imageBlock === 'true'
+  return (
+    element.dataset.codeBlock === 'true' ||
+    element.dataset.imageBlock === 'true' ||
+    element.dataset.dailyEntryBlock === 'true'
+  )
 }
 
 function directEditorBlocks(editor: HTMLElement): HTMLElement[] {
@@ -510,23 +535,27 @@ function selectionIsInsideChecklist(editor: HTMLElement, selection: Selection | 
   return !!element?.closest('[data-checklist-text="true"]')
 }
 
-function isEditingContact(editor: HTMLElement): boolean {
+function isEditingAtomicForm(editor: HTMLElement): boolean {
   const active = document.activeElement
-  return active instanceof Element && editor.contains(active) && !!active.closest('[data-contact-block="true"]')
+  return (
+    active instanceof Element &&
+    editor.contains(active) &&
+    !!active.closest('[data-contact-block="true"], [data-daily-entry-block="true"]')
+  )
 }
 
 function atomicHostForInsertion(editor: HTMLElement, selection: Selection | null): HTMLElement | null {
   const active = document.activeElement
   if (active instanceof Element && editor.contains(active)) {
     const activeHost = active.closest<HTMLElement>(
-      '[data-code-block="true"], [data-checklist-block="true"], [data-contact-block="true"]',
+      '[data-code-block="true"], [data-checklist-block="true"], [data-contact-block="true"], [data-daily-entry-block="true"]',
     )
     if (activeHost?.parentElement === editor) return activeHost
   }
 
   const anchorElement = elementFromSelectionNode(selection?.anchorNode ?? null)
   const selectionHost = anchorElement?.closest<HTMLElement>(
-    '[data-code-block="true"], [data-checklist-block="true"], [data-contact-block="true"]',
+    '[data-code-block="true"], [data-checklist-block="true"], [data-contact-block="true"], [data-daily-entry-block="true"]',
   )
   return selectionHost?.parentElement === editor ? selectionHost : null
 }
@@ -673,7 +702,7 @@ function RichTextEditorComponent({
     const selection = document.getSelection()
     const code = selectionIsInsideCodeBlock(editor, selection)
     const checklist = selectionIsInsideChecklist(editor, selection)
-    const contact = isEditingContact(editor)
+    const contact = isEditingAtomicForm(editor)
 
     if (contact) {
       ;(['bold', 'italic', 'paragraph', 'heading2', 'heading3', 'bulletList', 'orderedList', 'quote', 'link', 'code'] as ToolbarFormat[])
@@ -829,12 +858,50 @@ function RichTextEditorComponent({
     if (!editor) return
 
     const selection = document.getSelection()
-    if (selectionIsInsideCodeBlock(editor, selection) || selectionIsInsideChecklist(editor, selection) || isEditingContact(editor)) return
+    if (selectionIsInsideCodeBlock(editor, selection) || selectionIsInsideChecklist(editor, selection) || isEditingAtomicForm(editor)) return
 
     editor.focus()
     document.execCommand(command, false, value)
     emitChange()
     syncToolbarState()
+  }
+
+  function insertDailyEntryBlock() {
+    const editor = editorRef.current
+    if (!editor) return
+
+    const today = localDateKey()
+    const existing = Array.from(editor.querySelectorAll<HTMLElement>('[data-daily-entry-block="true"]'))
+      .find((entry) => entry.dataset.dailyEntryDate === today)
+
+    if (existing) {
+      const title = existing.querySelector<HTMLInputElement>('[data-daily-entry-title="true"]')
+      if (title && !title.value.trim()) {
+        title.focus()
+        return
+      }
+
+      let paragraph = editor.lastElementChild instanceof HTMLParagraphElement
+        ? editor.lastElementChild
+        : null
+      if (!paragraph) {
+        paragraph = createCaretParagraph()
+        editor.append(paragraph)
+        emitChange()
+      }
+      editor.focus()
+      placeCaretAtEnd(paragraph)
+      return
+    }
+
+    const [entry, paragraphBlock] = createDailyEntryBlocks()
+    editor.insertAdjacentHTML('beforeend', `${dailyEntryBlockToHtml(entry)}<p data-block-id="${escapeHtml(paragraphBlock.id)}"><br></p>`)
+    emitChange()
+
+    const title = editor.querySelector<HTMLInputElement>(
+      `[data-block-id="${entry.id}"] [data-daily-entry-title="true"]`,
+    )
+    title?.focus()
   }
 
   function insertChecklistBlock() {
@@ -916,7 +983,7 @@ function RichTextEditorComponent({
     if (!editor) return
 
     const selection = document.getSelection()
-    const selectedText = selectionIsInsideEditor(editor, selection) && !selection.isCollapsed && !isEditingContact(editor)
+    const selectedText = selectionIsInsideEditor(editor, selection) && !selection.isCollapsed && !isEditingAtomicForm(editor)
       ? selection.toString()
       : ''
     const id = createBlockId()
@@ -952,7 +1019,7 @@ function RichTextEditorComponent({
     const editor = editorRef.current
     const selection = document.getSelection()
     if (!editor || !selection || selection.isCollapsed || selection.rangeCount === 0) return
-    if (selectionIsInsideCodeBlock(editor, selection) || selectionIsInsideChecklist(editor, selection) || isEditingContact(editor)) return
+    if (selectionIsInsideCodeBlock(editor, selection) || selectionIsInsideChecklist(editor, selection) || isEditingAtomicForm(editor)) return
 
     const range = selection.getRangeAt(0)
     if (!editor.contains(range.commonAncestorContainer)) return
@@ -1155,7 +1222,9 @@ function RichTextEditorComponent({
 
   function handleEditorInput(event: ReactFormEvent<HTMLDivElement>) {
     const target = event.target
-    if (target instanceof HTMLInputElement && target.dataset.contactField) {
+    if (target instanceof HTMLInputElement && target.dataset.dailyEntryTitle === 'true') {
+      target.setAttribute('value', target.value)
+    } else if (target instanceof HTMLInputElement && target.dataset.contactField) {
       target.setAttribute('value', target.value)
       if (target.dataset.contactField === 'name') {
         const card = target.closest<HTMLElement>('[data-contact-block="true"]')
@@ -1170,7 +1239,7 @@ function RichTextEditorComponent({
 
   function handlePaste(event: ClipboardEvent<HTMLDivElement>) {
     const target = event.target
-    if (target instanceof Element && target.closest('[data-contact-field]')) return
+    if (target instanceof Element && target.closest('[data-contact-field], [data-daily-entry-title="true"]')) return
 
     const plainText = event.clipboardData.getData('text/plain')
     if (!plainText) return
@@ -1183,6 +1252,26 @@ function RichTextEditorComponent({
   function handleEditorKeyDown(event: ReactKeyboardEvent<HTMLDivElement>) {
     const target = event.target
     if (!(target instanceof Element)) return
+
+    const dailyTitle = target.closest<HTMLInputElement>('[data-daily-entry-title="true"]')
+    if (dailyTitle) {
+      if (event.key === 'Enter') {
+        event.preventDefault()
+        const entry = dailyTitle.closest<HTMLElement>('[data-daily-entry-block="true"]')
+        if (!entry) return
+        let paragraph = entry.nextElementSibling instanceof HTMLParagraphElement
+          ? entry.nextElementSibling
+          : null
+        if (!paragraph) {
+          paragraph = createCaretParagraph()
+          entry.after(paragraph)
+          emitChange()
+        }
+        editor.focus()
+        placeCaretAtStart(paragraph)
+      }
+      return
+    }
 
     const contactField = target.closest<HTMLInputElement | HTMLTextAreaElement>('[data-contact-field]')
     if (contactField) {
@@ -1283,6 +1372,9 @@ function RichTextEditorComponent({
         </button>
         <button className="editor-tool" data-format="code" aria-pressed="false" type="button" onMouseDown={keepSelection} onClick={insertCodeBlock} title="Bloque de código">
           Código
+        </button>
+        <button className="editor-tool" data-insert="dailyEntry" type="button" onMouseDown={keepSelection} onClick={insertDailyEntryBlock} title="Nueva entrada de hoy">
+          ◷ Entrada
         </button>
         <button className="editor-tool" data-insert="checklist" type="button" onMouseDown={keepSelection} onClick={insertChecklistBlock} title="Checklist">
           ☑ Checklist

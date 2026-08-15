@@ -15,7 +15,7 @@ function cloneBlock(block: StoredNoteBlock): StoredNoteBlock {
 }
 
 function isProtectedBlock(block: StoredNoteBlock): boolean {
-  return block.type === 'image' || block.type === 'code'
+  return block.type === 'image' || block.type === 'code' || block.type === 'dailyEntry'
 }
 
 function stableInsertionIndex(

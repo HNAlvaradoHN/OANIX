@@ -35,6 +35,7 @@ Objetivo: entregar una PWA útil, segura, offline-first y completamente funciona
 
 - [x] Checklists
 - [x] Fichas de contacto privadas
+- [x] Entradas por día dentro de una nota (fecha automática + título opcional)
 - [ ] Carpetas
 - [ ] Etiquetas
 - [ ] Búsqueda local
