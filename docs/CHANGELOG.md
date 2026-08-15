@@ -28,7 +28,8 @@ Todos los cambios relevantes del proyecto se registran aquí por versión.
 - Imágenes cifradas separadas del registro de la nota, con redimensionado, alineación, bloqueo, vista ampliada y zoom.
 - Previews cifradas ligeras para imágenes pesadas, conservando el original cifrado para la vista ampliada.
 - Flujo de texto alrededor de imágenes compactas alineadas a izquierda o derecha en pantallas amplias.
-- Historial de deshacer para cambios del contenido de la nota, accesible desde la barra del editor y Ctrl/Cmd+Z.
+- Historial bidireccional de Deshacer/Rehacer para cambios del contenido de la nota, con botones ↶/↷ y atajos Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z y Ctrl+Y.
+- Imágenes y bloques de código protegidos contra borrado accidental por selección global, Delete/Backspace, cortar, pegar o reemplazar texto; solo sus acciones explícitas pueden eliminarlos.
 - Autoguardado cifrado del contenido y serialización de mutaciones de una misma nota para evitar sobrescrituras entre título y contenido.
 - Vista previa de texto real de cada nota en la lista principal.
 

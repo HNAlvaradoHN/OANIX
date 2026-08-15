@@ -482,3 +482,15 @@
     content: '';
   }
 }
+
+
+/* Protected image selection */
+.image-note-editor-root .editor-surface > [data-image-block="true"] {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.image-note-editor-root .editor-image-block__alt {
+  -webkit-user-select: text;
+  user-select: text;
+}

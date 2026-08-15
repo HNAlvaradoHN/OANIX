@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { CodeBlockEditor } from '../editor/CodeBlockEditor'
+import { reconcileProtectedBlocks } from '../editor/protectedBlocks'
 import {
   type ImageAlignment,
   type ImageBlock,
@@ -114,6 +115,33 @@ function currentDirectBlockId(root: HTMLElement): string | null {
   }
 
   return element instanceof HTMLElement ? element.dataset.blockId ?? null : null
+}
+
+function mutableCodeIdsFromEditor(root: HTMLElement): Set<string> {
+  const mutable = new Set<string>()
+  const editor = root.querySelector<HTMLElement>('.editor-surface')
+  if (!editor) return mutable
+
+  const active = document.activeElement
+  if (active instanceof Element && editor.contains(active) && active.matches('[data-code-language="true"]')) {
+    const block = active.closest<HTMLElement>('[data-code-block="true"]')
+    if (block?.dataset.blockId) mutable.add(block.dataset.blockId)
+  }
+
+  const selection = document.getSelection()
+  if (!selection || selection.rangeCount === 0) return mutable
+
+  const elementFor = (node: Node | null): Element | null =>
+    node instanceof Element ? node : node?.parentElement ?? null
+  const anchorContent = elementFor(selection.anchorNode)?.closest<HTMLElement>('[data-code-content="true"]') ?? null
+  const focusContent = elementFor(selection.focusNode)?.closest<HTMLElement>('[data-code-content="true"]') ?? null
+
+  if (anchorContent && anchorContent === focusContent && editor.contains(anchorContent)) {
+    const block = anchorContent.closest<HTMLElement>('[data-code-block="true"]')
+    if (block?.dataset.blockId) mutable.add(block.dataset.blockId)
+  }
+
+  return mutable
 }
 
 function formatImageSize(byteLength: number): string {
@@ -376,7 +404,9 @@ export function ImageNoteEditor({
   const objectUrlsRef = useRef(new Map<string, string>())
   const previewUrlsRef = useRef(new Map<string, string>())
   const insertionAfterIdRef = useRef<string | null>(null)
-  const historyRef = useRef<StoredNoteBlock[][]>([])
+  const undoHistoryRef = useRef<StoredNoteBlock[][]>([])
+  const redoHistoryRef = useRef<StoredNoteBlock[][]>([])
+  const authorizedProtectedRemovalsRef = useRef(new Set<string>())
   const currentBlocksRef = useRef(cloneStoredBlocks(initialBlocks))
   const lastHistoryAtRef = useRef(0)
   const forceHistoryBoundaryRef = useRef(true)
@@ -389,35 +419,67 @@ export function ImageNoteEditor({
     return editorBlocks.map((block) => imagesRef.current.get(block.id) ?? block)
   }
 
-  function updateUndoButton(root: HTMLElement | null = rootRef.current) {
-    const button = root?.querySelector<HTMLButtonElement>('[data-undo-tool="true"]')
-    if (button) button.disabled = historyRef.current.length === 0
+  function updateHistoryButtons(root: HTMLElement | null = rootRef.current) {
+    const undo = root?.querySelector<HTMLButtonElement>('[data-undo-tool="true"]')
+    const redo = root?.querySelector<HTMLButtonElement>('[data-redo-tool="true"]')
+    if (undo) undo.disabled = undoHistoryRef.current.length === 0
+    if (redo) redo.disabled = redoHistoryRef.current.length === 0
   }
 
   function rememberHistory(nextBlocks: StoredNoteBlock[]): boolean {
     const current = currentBlocksRef.current
     if (storedBlocksEqual(current, nextBlocks)) return false
 
+    redoHistoryRef.current = []
     const now = Date.now()
     if (
       forceHistoryBoundaryRef.current ||
-      historyRef.current.length === 0 ||
+      undoHistoryRef.current.length === 0 ||
       now - lastHistoryAtRef.current > HISTORY_GROUP_MS
     ) {
-      historyRef.current.push(cloneStoredBlocks(current))
-      if (historyRef.current.length > MAX_HISTORY_ENTRIES) historyRef.current.shift()
+      undoHistoryRef.current.push(cloneStoredBlocks(current))
+      if (undoHistoryRef.current.length > MAX_HISTORY_ENTRIES) undoHistoryRef.current.shift()
     }
 
     currentBlocksRef.current = cloneStoredBlocks(nextBlocks)
     lastHistoryAtRef.current = now
     forceHistoryBoundaryRef.current = false
-    updateUndoButton()
+    updateHistoryButtons()
     return true
   }
 
+  function restoreEditorModel(blocks: StoredNoteBlock[]) {
+    imagesRef.current = new Map(
+      blocks
+        .filter((block): block is ImageBlock => block.type === 'image')
+        .map((block) => [block.id, block]),
+    )
+    initialEditorBlocksRef.current = toEditorBlocks(blocks)
+    setEditorEpoch((currentEpoch) => currentEpoch + 1)
+  }
+
   function handleEditorChange(editorBlocks: NoteBlock[]) {
-    const nextBlocks = mergedBlocks(editorBlocks)
-    if (!rememberHistory(nextBlocks)) return
+    const root = rootRef.current
+    const editor = root?.querySelector<HTMLElement>('.editor-surface') ?? null
+    const allowedRemovedIds = new Set(authorizedProtectedRemovalsRef.current)
+    authorizedProtectedRemovalsRef.current.clear()
+
+    const domAuthorizedRemoval = editor?.dataset.oanixAuthorizedProtectedRemoval
+    if (domAuthorizedRemoval) {
+      allowedRemovedIds.add(domAuthorizedRemoval)
+      delete editor.dataset.oanixAuthorizedProtectedRemoval
+    }
+
+    const rawBlocks = mergedBlocks(editorBlocks)
+    const reconciliation = reconcileProtectedBlocks(currentBlocksRef.current, rawBlocks, {
+      allowedRemovedIds,
+      mutableCodeIds: root ? mutableCodeIdsFromEditor(root) : new Set<string>(),
+    })
+    const nextBlocks = reconciliation.blocks
+    const changed = rememberHistory(nextBlocks)
+
+    if (reconciliation.repaired) restoreEditorModel(nextBlocks)
+    if (!changed) return
     onChange(nextBlocks)
   }
 
@@ -526,12 +588,23 @@ export function ImageNoteEditor({
       undo.className = 'editor-tool'
       undo.dataset.undoTool = 'true'
       undo.textContent = '↶'
-      undo.title = 'Deshacer último cambio'
+      undo.title = 'Deshacer último cambio (Ctrl/Cmd+Z)'
       undo.setAttribute('aria-label', 'Deshacer último cambio')
       toolbar.append(undo)
     }
 
-    updateUndoButton(root)
+    if (!toolbar.querySelector('[data-redo-tool="true"]')) {
+      const redo = document.createElement('button')
+      redo.type = 'button'
+      redo.className = 'editor-tool'
+      redo.dataset.redoTool = 'true'
+      redo.textContent = '↷'
+      redo.title = 'Rehacer último cambio (Ctrl/Cmd+Shift+Z o Ctrl+Y)'
+      redo.setAttribute('aria-label', 'Rehacer último cambio')
+      toolbar.append(redo)
+    }
+
+    updateHistoryButtons(root)
   }
 
   function hydrateStoredImages(root: HTMLElement) {
@@ -601,39 +674,47 @@ export function ImageNoteEditor({
     emitEditorInput(root)
   }
 
-  function undoLastChange(root: HTMLElement) {
-    const previous = historyRef.current.pop()
-    if (!previous) {
-      updateUndoButton(root)
+  function applyHistoryState(
+    root: HTMLElement,
+    source: { current: StoredNoteBlock[][] },
+    destination: { current: StoredNoteBlock[][] },
+  ) {
+    const target = source.current.pop()
+    if (!target) {
+      updateHistoryButtons(root)
       return
     }
 
-    const current = currentBlocksRef.current
-    const currentImageIds = imageIdsFromBlocks(current)
-    const previousImageIds = imageIdsFromBlocks(previous)
+    const current = cloneStoredBlocks(currentBlocksRef.current)
+    destination.current.push(current)
+    if (destination.current.length > MAX_HISTORY_ENTRIES) destination.current.shift()
 
+    const currentImageIds = imageIdsFromBlocks(current)
+    const targetImageIds = imageIdsFromBlocks(target)
     for (const imageId of currentImageIds) {
-      if (!previousImageIds.has(imageId)) {
+      if (!targetImageIds.has(imageId)) {
         revokeImageUrls(imageId)
         void onRemoveImage(imageId)
       }
     }
-    for (const imageId of previousImageIds) {
+    for (const imageId of targetImageIds) {
       if (!currentImageIds.has(imageId)) onRestoreImage(imageId)
     }
 
-    imagesRef.current = new Map(
-      previous
-        .filter((block): block is ImageBlock => block.type === 'image')
-        .map((block) => [block.id, block]),
-    )
-    initialEditorBlocksRef.current = toEditorBlocks(previous)
-    currentBlocksRef.current = cloneStoredBlocks(previous)
+    currentBlocksRef.current = cloneStoredBlocks(target)
     lastHistoryAtRef.current = 0
     forceHistoryBoundaryRef.current = true
-    onChange(cloneStoredBlocks(previous))
-    setEditorEpoch((currentEpoch) => currentEpoch + 1)
-    updateUndoButton(root)
+    onChange(cloneStoredBlocks(target))
+    restoreEditorModel(target)
+    updateHistoryButtons(root)
+  }
+
+  function undoLastChange(root: HTMLElement) {
+    applyHistoryState(root, undoHistoryRef, redoHistoryRef)
+  }
+
+  function redoLastChange(root: HTMLElement) {
+    applyHistoryState(root, redoHistoryRef, undoHistoryRef)
   }
 
   async function openImage(block: ImageBlock) {
@@ -758,6 +839,14 @@ export function ImageNoteEditor({
         return
       }
 
+      const redoTool = target.closest<HTMLElement>('[data-redo-tool="true"]')
+      if (redoTool && root.contains(redoTool)) {
+        event.preventDefault()
+        event.stopPropagation()
+        redoLastChange(root)
+        return
+      }
+
       const imageTool = target.closest<HTMLElement>('[data-image-tool="true"]')
       if (imageTool && root.contains(imageTool)) {
         event.preventDefault()
@@ -835,6 +924,7 @@ export function ImageNoteEditor({
 
         const imageBlock = imagesRef.current.get(blockId)
         forceHistoryBoundaryRef.current = true
+        authorizedProtectedRemovalsRef.current.add(blockId)
         if (imageBlock) revokeImageUrls(imageBlock.imageId)
 
         imagesRef.current.delete(blockId)
@@ -908,12 +998,22 @@ export function ImageNoteEditor({
     }
 
     function handleKeyDown(event: KeyboardEvent) {
-      if ((event.ctrlKey || event.metaKey) && !event.shiftKey && event.key.toLowerCase() === 'z') {
+      if (event.ctrlKey || event.metaKey) {
         const target = event.target
+        const key = event.key.toLowerCase()
         if (target instanceof Node && root.contains(target)) {
-          event.preventDefault()
-          undoLastChange(root)
-          return
+          if (key === 'z') {
+            event.preventDefault()
+            if (event.shiftKey) redoLastChange(root)
+            else undoLastChange(root)
+            return
+          }
+
+          if (!event.shiftKey && key === 'y') {
+            event.preventDefault()
+            redoLastChange(root)
+            return
+          }
         }
       }
 
