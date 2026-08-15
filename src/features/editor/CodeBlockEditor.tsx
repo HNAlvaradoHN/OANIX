@@ -109,28 +109,144 @@ function deleteCodeBlock(root: HTMLElement, block: HTMLElement): void {
 
 function decorateCodeBlocks(root: HTMLElement): void {
   root.querySelectorAll<HTMLElement>('.editor-code-block__toolbar').forEach((toolbar) => {
-    if (toolbar.querySelector('[data-code-convert="true"]')) return
-
-    const convert = document.createElement('button')
-    convert.type = 'button'
-    convert.className = 'editor-code-block__convert'
-    convert.dataset.codeConvert = 'true'
-    convert.textContent = 'Convertir a texto'
-    convert.title = 'Quitar el formato de código y conservar todo el contenido'
-    convert.setAttribute('aria-label', 'Convertir bloque de código a texto conservando el contenido')
-
-    const remove = document.createElement('button')
-    remove.type = 'button'
-    remove.className = 'editor-code-block__delete'
-    remove.dataset.codeDelete = 'true'
-    remove.textContent = 'Eliminar bloque'
-    remove.title = 'Eliminar el bloque y todo su contenido'
-    remove.setAttribute('aria-label', 'Eliminar bloque de código y su contenido')
-
     const copyButton = toolbar.querySelector('[data-code-copy="true"]')
-    toolbar.insertBefore(convert, copyButton)
-    toolbar.insertBefore(remove, copyButton)
+
+    if (!toolbar.querySelector('[data-code-convert="true"]')) {
+      const convert = document.createElement('button')
+      convert.type = 'button'
+      convert.className = 'editor-code-block__convert'
+      convert.dataset.codeConvert = 'true'
+      convert.textContent = 'Convertir a texto'
+      convert.title = 'Quitar el formato de código y conservar todo el contenido'
+      convert.setAttribute('aria-label', 'Convertir bloque de código a texto conservando el contenido')
+
+      const remove = document.createElement('button')
+      remove.type = 'button'
+      remove.className = 'editor-code-block__delete'
+      remove.dataset.codeDelete = 'true'
+      remove.textContent = 'Eliminar bloque'
+      remove.title = 'Eliminar el bloque y todo su contenido'
+      remove.setAttribute('aria-label', 'Eliminar bloque de código y su contenido')
+
+      toolbar.insertBefore(convert, copyButton)
+      toolbar.insertBefore(remove, copyButton)
+    }
+
+    if (!toolbar.querySelector('[data-code-expand="true"]')) {
+      const expand = document.createElement('button')
+      expand.type = 'button'
+      expand.className = 'editor-code-block__expand'
+      expand.dataset.codeExpand = 'true'
+      expand.textContent = 'Ver completo'
+      expand.title = 'Ver y editar código en pantalla completa'
+      expand.setAttribute('aria-label', 'Ver código completo y editarlo en pantalla completa')
+      toolbar.insertBefore(expand, copyButton)
+    }
   })
+}
+
+interface CodeFullscreenDialog {
+  element: HTMLElement
+  close: () => void
+}
+
+function createCodeFullscreenDialog(
+  root: HTMLElement,
+  block: HTMLElement,
+  onClose: () => void,
+): CodeFullscreenDialog | null {
+  const editor = root.querySelector<HTMLElement>('.editor-surface')
+  const sourceContent = block.querySelector<HTMLElement>('[data-code-content="true"]')
+  const sourceLanguage = block.querySelector<HTMLSelectElement>('[data-code-language="true"]')
+  if (!editor || !sourceContent || !sourceLanguage) return null
+  const sourceContentElement: HTMLElement = sourceContent
+  const sourceLanguageElement: HTMLSelectElement = sourceLanguage
+
+  const backdrop = document.createElement('div')
+  backdrop.className = 'code-fullscreen-dialog'
+  backdrop.setAttribute('role', 'presentation')
+
+  const panel = document.createElement('div')
+  panel.className = 'code-fullscreen-dialog__panel'
+  panel.setAttribute('role', 'dialog')
+  panel.setAttribute('aria-modal', 'true')
+  panel.setAttribute('aria-label', 'Editor de código completo')
+
+  const header = document.createElement('div')
+  header.className = 'code-fullscreen-dialog__header'
+
+  const title = document.createElement('strong')
+  title.textContent = 'Código completo'
+
+  const done = document.createElement('button')
+  done.type = 'button'
+  done.className = 'code-fullscreen-dialog__done'
+  done.textContent = 'Listo'
+  done.setAttribute('aria-label', 'Guardar cambios del código y cerrar')
+
+  header.append(title, done)
+
+  const language = sourceLanguageElement.cloneNode(true) as HTMLSelectElement
+  language.className = 'code-fullscreen-dialog__language'
+  language.removeAttribute('data-code-language')
+  language.value = sourceLanguageElement.value
+  language.setAttribute('aria-label', 'Lenguaje del código completo')
+
+  const textarea = document.createElement('textarea')
+  textarea.className = 'code-fullscreen-dialog__editor'
+  textarea.value = codeText(block)
+  textarea.spellcheck = false
+  textarea.autocapitalize = 'off'
+  textarea.autocomplete = 'off'
+  textarea.setAttribute('aria-label', 'Contenido completo del bloque de código')
+  textarea.setAttribute('wrap', 'soft')
+
+  const hint = document.createElement('p')
+  hint.className = 'code-fullscreen-dialog__hint'
+  hint.textContent = 'Las líneas largas se ajustan solo en pantalla; OANIX no agrega saltos al código.'
+
+  panel.append(header, language, textarea, hint)
+  backdrop.append(panel)
+
+  const previousBodyOverflow = document.body.style.overflow
+  document.body.style.overflow = 'hidden'
+  document.body.append(backdrop)
+  textarea.focus()
+  textarea.setSelectionRange(textarea.value.length, textarea.value.length)
+
+  let closed = false
+  function close() {
+    if (closed) return
+    closed = true
+
+    if (block.isConnected && root.contains(block)) {
+      sourceContentElement.textContent = textarea.value
+      sourceLanguageElement.value = language.value
+      block.dataset.language = language.value
+      Array.from(sourceLanguageElement.options).forEach((option) => {
+        option.toggleAttribute('selected', option.value === language.value)
+      })
+
+      sourceContentElement.focus()
+      placeCaretAtEnd(sourceContentElement)
+      sourceContentElement.dispatchEvent(new Event('input', { bubbles: true }))
+    }
+
+    document.body.style.overflow = previousBodyOverflow
+    backdrop.remove()
+    onClose()
+  }
+
+  done.addEventListener('click', close)
+  textarea.addEventListener('keydown', (event) => {
+    if (event.key !== 'Tab') return
+    event.preventDefault()
+    const start = textarea.selectionStart
+    const end = textarea.selectionEnd
+    textarea.setRangeText('	', start, end, 'end')
+  })
+
+  return { element: backdrop, close }
 }
 
 function createDeleteDialog(
@@ -204,6 +320,7 @@ export function CodeBlockEditor(props: CodeBlockEditorProps) {
     if (!currentRoot) return
     const root: HTMLDivElement = currentRoot
     let activeDialog: HTMLElement | null = null
+    let activeFullscreenDialog: CodeFullscreenDialog | null = null
 
     decorateCodeBlocks(root)
 
@@ -213,6 +330,12 @@ export function CodeBlockEditor(props: CodeBlockEditorProps) {
     function closeActiveDialog() {
       activeDialog?.remove()
       activeDialog = null
+    }
+
+    function closeFullscreenDialog() {
+      const dialog = activeFullscreenDialog
+      activeFullscreenDialog = null
+      dialog?.close()
     }
 
     function handleClick(event: MouseEvent) {
@@ -227,6 +350,21 @@ export function CodeBlockEditor(props: CodeBlockEditorProps) {
         event.preventDefault()
         event.stopPropagation()
         convertCodeBlockToText(root, block)
+        return
+      }
+
+      const expandButton = target.closest<HTMLElement>('[data-code-expand="true"]')
+      if (expandButton && root.contains(expandButton)) {
+        const block = expandButton.closest<HTMLElement>('[data-code-block="true"]')
+        if (!block) return
+
+        event.preventDefault()
+        event.stopPropagation()
+        closeActiveDialog()
+        closeFullscreenDialog()
+        activeFullscreenDialog = createCodeFullscreenDialog(root, block, () => {
+          activeFullscreenDialog = null
+        })
         return
       }
 
@@ -276,7 +414,15 @@ export function CodeBlockEditor(props: CodeBlockEditorProps) {
     }
 
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape' && activeDialog) {
+      if (event.key !== 'Escape') return
+
+      if (activeFullscreenDialog) {
+        event.preventDefault()
+        closeFullscreenDialog()
+        return
+      }
+
+      if (activeDialog) {
         event.preventDefault()
         closeActiveDialog()
       }
@@ -293,6 +439,7 @@ export function CodeBlockEditor(props: CodeBlockEditorProps) {
       document.removeEventListener('keydown', handleKeyDown)
       document.removeEventListener('selectionchange', syncCodeSelectionMode)
       closeActiveDialog()
+      closeFullscreenDialog()
     }
   }, [props.noteId])
 

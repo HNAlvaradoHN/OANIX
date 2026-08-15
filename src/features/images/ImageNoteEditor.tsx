@@ -8,7 +8,7 @@ import {
   type StoredNoteBlock,
 } from '../notes/noteTypes'
 import { loadEncryptedImage, loadEncryptedImagePreview, storeEncryptedImage } from './imageService'
-import { clampImageWidthPercent, defaultImageWidthPercent, isMobileImageViewport } from './imageLayout'
+import { defaultImageWidthPercent, isMobileImageViewport, resizeImageWidthPercent } from './imageLayout'
 import './images.css'
 
 interface ImageNoteEditorProps {
@@ -30,8 +30,11 @@ interface ResizeState {
   blockId: string
   figure: HTMLElement
   startX: number
+  startY: number
   startWidthPercent: number
   editorWidth: number
+  previewWidth: number
+  previewHeight: number
   direction: string
 }
 
@@ -402,10 +405,6 @@ function ensureTrailingParagraph(editor: HTMLElement): void {
 function usesMobileImageLayout(): boolean {
   const viewportWidth = window.visualViewport?.width ?? window.innerWidth
   return isMobileImageViewport(viewportWidth)
-}
-
-function clampImageWidth(editorWidth: number, widthPercent: number): number {
-  return clampImageWidthPercent(editorWidth, widthPercent, usesMobileImageLayout())
 }
 
 export function ImageNoteEditor({
@@ -818,13 +817,20 @@ export function ImageNoteEditor({
       forceHistoryBoundaryRef.current = true
       selectImageFigure(root, figure)
 
+      const previewRect = figure
+        .querySelector<HTMLElement>('[data-image-preview="true"]')
+        ?.getBoundingClientRect()
+
       resizeState = {
         pointerId: event.pointerId,
         blockId,
         figure,
         startX: event.clientX,
+        startY: event.clientY,
         startWidthPercent: imageWidthPercent(block),
         editorWidth: editor.getBoundingClientRect().width,
+        previewWidth: previewRect?.width ?? figure.getBoundingClientRect().width,
+        previewHeight: previewRect?.height ?? figure.getBoundingClientRect().height,
         direction: handle.dataset.imageResize ?? 'se',
       }
     }
@@ -832,15 +838,16 @@ export function ImageNoteEditor({
     function handlePointerMove(event: PointerEvent) {
       if (!resizeState || resizeState.pointerId !== event.pointerId) return
 
-      const directionMultiplier = resizeState.direction.includes('w') ? -1 : 1
-      const deltaPixels = (event.clientX - resizeState.startX) * directionMultiplier
-      const deltaPercent = resizeState.editorWidth > 0
-        ? (deltaPixels / resizeState.editorWidth) * 100
-        : 0
-      const nextWidth = clampImageWidth(
-        resizeState.editorWidth,
-        resizeState.startWidthPercent + deltaPercent,
-      )
+      const nextWidth = resizeImageWidthPercent({
+        editorWidth: resizeState.editorWidth,
+        startWidthPercent: resizeState.startWidthPercent,
+        previewWidth: resizeState.previewWidth,
+        previewHeight: resizeState.previewHeight,
+        deltaX: event.clientX - resizeState.startX,
+        deltaY: event.clientY - resizeState.startY,
+        direction: resizeState.direction,
+        mobile: usesMobileImageLayout(),
+      })
 
       updateImageBlock(
         root,

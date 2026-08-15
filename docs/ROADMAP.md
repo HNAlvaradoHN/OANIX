@@ -27,6 +27,8 @@ Objetivo: entregar una PWA útil, segura, offline-first y completamente funciona
 - [ ] Sustituir en móvil la barra horizontal de formato por un botón flotante de herramientas que permanezca accesible durante el scroll y permita añadir más acciones en el futuro.
 - [ ] Mantener Deshacer y Rehacer como controles flotantes de acceso rápido en móvil.
 - [ ] Revisar el comportamiento con teclado virtual, scroll, selección de texto, imágenes y bloques especiales.
+- [ ] En móvil, tratar imágenes como bloques completos sin texto lateral y permitir escalarlas desde cualquier esquina sin salir del margen útil.
+- [ ] Mantener los bloques de código contenidos dentro de la nota y ofrecer una vista/editor de código a pantalla completa para líneas largas.
 - [ ] Auditar botones, menús, tarjetas y controles responsive para evitar textos cortados, desbordados o ilegibles; incluye acciones largas como `Convertir a texto` y `Eliminar bloque`.
 - [ ] Validar visualmente en móvil y pasar CI antes de continuar.
 
