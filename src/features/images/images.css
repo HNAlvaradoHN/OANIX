@@ -511,3 +511,13 @@
   background: #2563eb;
   color: #fff;
 }
+
+/* Dedicated final writing zone below floated media. */
+.image-note-editor-root .editor-surface > p[data-oanix-trailing-caret='true'] {
+  display: block;
+  clear: both;
+  min-height: 2.75rem;
+  margin: 0.4rem 0 0;
+  padding: 0.35rem 0 0.15rem;
+  cursor: text;
+}
