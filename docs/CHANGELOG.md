@@ -30,6 +30,7 @@ Todos los cambios relevantes del proyecto se registran aquí por versión.
 - Flujo de texto alrededor de imágenes compactas alineadas a izquierda o derecha en pantallas amplias.
 - Historial bidireccional de Deshacer/Rehacer para cambios del contenido de la nota, con botones ↶/↷ y atajos Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z y Ctrl+Y.
 - Imágenes y bloques de código protegidos contra borrado accidental por selección global, Delete/Backspace, cortar, pegar o reemplazar texto; solo sus acciones explícitas pueden eliminarlos.
+- Selección visual neutral para bloques protegidos y posicionamiento del cursor en espacios vacíos entre, al lado o después de imagen/código.
 - Autoguardado cifrado del contenido y serialización de mutaciones de una misma nota para evitar sobrescrituras entre título y contenido.
 - Vista previa de texto real de cada nota en la lista principal.
 

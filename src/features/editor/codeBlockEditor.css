@@ -127,7 +127,18 @@
   user-select: none;
 }
 
-.code-block-editor-root .editor-code-block:focus-within .editor-code-block__content {
+.code-block-editor-root .editor-surface > [data-code-block="true"]::selection,
+.code-block-editor-root .editor-surface > [data-code-block="true"] *::selection {
+  background: transparent;
+  color: inherit;
+}
+
+.code-block-editor-root .editor-code-block[data-code-selection-local="true"] .editor-code-block__content {
   -webkit-user-select: text;
   user-select: text;
+}
+
+.code-block-editor-root .editor-code-block[data-code-selection-local="true"] .editor-code-block__content::selection {
+  background: #2563eb;
+  color: #fff;
 }
