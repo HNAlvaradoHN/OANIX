@@ -825,6 +825,23 @@ function RichTextEditorComponent({
       return
     }
 
+    const emptyParagraph = target?.closest('p') ?? null
+    if (isEmptyCaretParagraph(emptyParagraph) && editor.contains(emptyParagraph)) {
+      hideLinkPopover()
+
+      const selection = document.getSelection()
+      if (pointerDraggedRef.current || (selection && !selection.isCollapsed)) {
+        syncToolbarState()
+        return
+      }
+
+      event.preventDefault()
+      editor.focus()
+      placeCaretAtStart(emptyParagraph)
+      syncToolbarState()
+      return
+    }
+
     if (event.target === editor) {
       hideLinkPopover()
 

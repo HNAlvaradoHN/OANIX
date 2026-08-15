@@ -369,10 +369,20 @@ function insertAfterBlock(editor: HTMLElement, block: HTMLElement, afterId: stri
 
 function ensureTrailingParagraph(editor: HTMLElement, after: HTMLElement): void {
   const next = after.nextElementSibling
+
+  if (next instanceof HTMLParagraphElement) {
+    if ((next.textContent ?? '').trim() === '') {
+      next.dataset.oanixTrailingCaret = 'true'
+    } else {
+      delete next.dataset.oanixTrailingCaret
+    }
+  }
+
   if (next) return
 
   const paragraph = document.createElement('p')
   paragraph.dataset.blockId = createBlockId()
+  paragraph.dataset.oanixTrailingCaret = 'true'
   paragraph.append(document.createElement('br'))
   editor.append(paragraph)
 }
@@ -626,6 +636,8 @@ export function ImageNoteEditor({
       if (!previewUrlsRef.current.has(block.imageId)) {
         void hydrateImageElement(root, block, element)
       }
+
+      ensureTrailingParagraph(editor, element)
     }
 
     if (imagesRef.current.size > 0) editor.dataset.empty = 'false'

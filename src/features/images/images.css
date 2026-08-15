@@ -21,6 +21,12 @@
   font-size: 0.82rem;
 }
 
+.image-note-editor-root .editor-surface > p[data-oanix-trailing-caret='true']:last-child {
+  min-height: 3.75rem;
+  margin-bottom: 0;
+  cursor: text;
+}
+
 .image-note-editor-root .editor-image-block {
   position: relative;
   width: 100%;

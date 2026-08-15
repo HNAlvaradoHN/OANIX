@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { deleteEncryptedImage } from '../images/imageService'
 import { ImageNoteEditor } from '../images/ImageNoteEditor'
 import { createEmptyNote, deleteNote, loadNotes, renameNote, replaceNoteContent } from './noteService'
@@ -57,7 +57,8 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
   const [draftTitle, setDraftTitle] = useState('')
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
-  const [deleting, setDeleting] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [noteMenuId, setNoteMenuId] = useState<string | null>(null)
   const [savingTitle, setSavingTitle] = useState(false)
   const [saveState, setSaveState] = useState<SaveState>('idle')
   const [error, setError] = useState('')
@@ -71,6 +72,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     () => notes.find((note) => note.id === selectedId) ?? null,
     [notes, selectedId],
   )
+  const deletingSelected = !!selectedNote && deletingId === selectedNote.id
 
   useEffect(() => {
     selectedIdRef.current = selectedId
@@ -106,6 +108,26 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
       if (saveTimerRef.current !== null) {
         window.clearTimeout(saveTimerRef.current)
       }
+    }
+  }, [])
+
+  useEffect(() => {
+    function closeNoteMenu(event: PointerEvent) {
+      const target = event.target
+      if (target instanceof Element && target.closest('[data-note-menu-root="true"]')) return
+      setNoteMenuId(null)
+    }
+
+    function closeNoteMenuWithKeyboard(event: KeyboardEvent) {
+      if (event.key === 'Escape') setNoteMenuId(null)
+    }
+
+    document.addEventListener('pointerdown', closeNoteMenu)
+    document.addEventListener('keydown', closeNoteMenuWithKeyboard)
+
+    return () => {
+      document.removeEventListener('pointerdown', closeNoteMenu)
+      document.removeEventListener('keydown', closeNoteMenuWithKeyboard)
     }
   }, [])
 
@@ -187,19 +209,28 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     await Promise.allSettled(imageIds.map((imageId) => deleteEncryptedImage(imageId)))
   }
 
-  async function handleDeleteNote() {
-    if (!selectedNote || deleting) return
+  async function handleDeleteNote(targetNote: NoteRecord) {
+    if (deletingId) return
 
     const confirmed = window.confirm(
-      `¿Eliminar esta nota de forma permanente?\n\n“${selectedNote.title}” se eliminará de este dispositivo junto con sus imágenes asociadas. Esta acción no se puede deshacer.`,
+      `¿Eliminar esta nota de forma permanente?\n\n“${targetNote.title}” se eliminará de este dispositivo junto con sus imágenes asociadas. Esta acción no se puede deshacer.`,
     )
     if (!confirmed) return
 
-    const noteId = selectedNote.id
     if (!(await flushPendingContent())) return
     await finalizeRemovedImages()
 
-    setDeleting(true)
+    const noteId = targetNote.id
+    const deletingSelectedNote = selectedIdRef.current === noteId
+    const deletedIndex = notes.findIndex((note) => note.id === noteId)
+    const remainingBeforeStateUpdate = notes.filter((note) => note.id !== noteId)
+    const nextIndex = remainingBeforeStateUpdate.length === 0
+      ? -1
+      : Math.min(Math.max(deletedIndex, 0), remainingBeforeStateUpdate.length - 1)
+    const nextId = nextIndex >= 0 ? remainingBeforeStateUpdate[nextIndex].id : null
+
+    setDeletingId(noteId)
+    setNoteMenuId(null)
     setError('')
 
     try {
@@ -210,23 +241,22 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
 
       await Promise.allSettled(imageIds.map((imageId) => deleteEncryptedImage(imageId)))
 
-      const deletedIndex = notes.findIndex((note) => note.id === noteId)
-      const remaining = notes.filter((note) => note.id !== noteId)
-      const nextIndex = remaining.length === 0 ? -1 : Math.min(Math.max(deletedIndex, 0), remaining.length - 1)
-      const nextId = nextIndex >= 0 ? remaining[nextIndex].id : null
+      setNotes((current) => current.filter((note) => note.id !== noteId))
 
-      clearSaveTimer()
-      pendingContentRef.current = null
-      selectedIdRef.current = nextId
-      setNotes(remaining)
-      setSelectedId(nextId)
-      setSaveState('idle')
+      if (deletingSelectedNote) {
+        clearSaveTimer()
+        pendingContentRef.current = null
+        selectedIdRef.current = nextId
+        setSelectedId(nextId)
+        setSaveState('idle')
+      }
+
       setError('')
     } catch {
-      setSaveState('error')
+      if (deletingSelectedNote) setSaveState('error')
       setError('No se pudo eliminar la nota cifrada.')
     } finally {
-      setDeleting(false)
+      setDeletingId(null)
     }
   }
 
@@ -277,6 +307,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
   }
 
   async function handleSelectNote(noteId: string) {
+    setNoteMenuId(null)
     if (noteId === selectedId) return
     if (!(await flushPendingContent())) return
     await finalizeRemovedImages()
@@ -298,7 +329,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     onLock()
   }
 
-  function handleTitleKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+  function handleTitleKeyDown(event: ReactKeyboardEvent<HTMLInputElement>) {
     if (event.key === 'Enter') {
       event.currentTarget.blur()
     }
@@ -361,22 +392,59 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
               </button>
             </div>
           ) : (
-            notes.map((note) => (
-              <button
-                className={`note-row${selectedId === note.id ? ' note-row--selected' : ''}`}
-                type="button"
+            notes.map((note, index) => (
+              <div
+                className={`note-row${selectedId === note.id ? ' note-row--selected' : ''}${noteMenuId === note.id ? ' note-row--menu-open' : ''}`}
                 key={note.id}
-                onClick={() => void handleSelectNote(note.id)}
+                data-note-menu-root="true"
               >
-                <span className="note-row__avatar" aria-hidden="true">{noteInitial(note.title)}</span>
-                <span className="note-row__body">
-                  <span className="note-row__topline">
-                    <strong>{note.title}</strong>
-                    <time dateTime={note.updatedAt}>{formatNoteTime(note.updatedAt)}</time>
+                <button
+                  className="note-row__open"
+                  type="button"
+                  onClick={() => void handleSelectNote(note.id)}
+                >
+                  <span className="note-row__avatar" aria-hidden="true">{noteInitial(note.title)}</span>
+                  <span className="note-row__body">
+                    <span className="note-row__topline">
+                      <strong>{note.title}</strong>
+                      <time dateTime={note.updatedAt}>{formatNoteTime(note.updatedAt)}</time>
+                    </span>
+                    <span className="note-row__preview">{notePreview(note)}</span>
                   </span>
-                  <span className="note-row__preview">{notePreview(note)}</span>
-                </span>
-              </button>
+                </button>
+
+                <div className="note-row__menu-wrap">
+                  <button
+                    className="note-row__menu-button"
+                    type="button"
+                    aria-label={`Acciones de ${note.title}`}
+                    aria-haspopup="menu"
+                    aria-expanded={noteMenuId === note.id}
+                    title="Acciones de la nota"
+                    onClick={() => setNoteMenuId((current) => current === note.id ? null : note.id)}
+                  >
+                    ⋮
+                  </button>
+
+                  {noteMenuId === note.id && (
+                    <div
+                      className={`note-row__menu${index >= notes.length - 2 ? ' note-row__menu--up' : ''}`}
+                      role="menu"
+                      aria-label={`Acciones de ${note.title}`}
+                    >
+                      <button
+                        className="note-row__menu-danger"
+                        type="button"
+                        role="menuitem"
+                        disabled={deletingId !== null}
+                        onClick={() => void handleDeleteNote(note)}
+                      >
+                        {deletingId === note.id ? 'Eliminando…' : 'Eliminar nota'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
             ))
           )}
         </div>
@@ -399,18 +467,10 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
                 <div>
                   <strong>{selectedNote.title}</strong>
                   <span className={saveState === 'error' ? 'save-status save-status--error' : 'save-status'}>
-                    {deleting ? 'Eliminando nota…' : saveStateLabel(saveState, savingTitle)}
+                    {deletingSelected ? 'Eliminando nota…' : saveStateLabel(saveState, savingTitle)}
                   </span>
                 </div>
               </div>
-              <button
-                className="delete-note-button"
-                type="button"
-                onClick={() => void handleDeleteNote()}
-                disabled={deleting}
-              >
-                {deleting ? 'Eliminando…' : 'Eliminar'}
-              </button>
             </header>
 
             <div className="note-canvas">

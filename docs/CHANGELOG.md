@@ -34,6 +34,8 @@ Todos los cambios relevantes del proyecto se registran aquí por versión.
 - Protección del cursor frente a arrastres de selección: un gesto de selección ya no puede activar el reposicionamiento de clic en espacio vacío.
 - Autoguardado cifrado del contenido y serialización de mutaciones de una misma nota para evitar sobrescrituras entre título y contenido.
 - Vista previa de texto real de cada nota en la lista principal.
+- Menú contextual `⋮` por nota en la lista, con eliminación permanente movida fuera de la cabecera de edición.
+- Zona final de escritura reforzada después de imágenes para poder colocar el cursor debajo de la última imagen de forma fiable.
 
 ## Versionado
 
