@@ -118,3 +118,16 @@
     width: 100%;
   }
 }
+
+
+/* Protected code-block selection */
+.code-block-editor-root .editor-surface > [data-code-block="true"],
+.code-block-editor-root .editor-code-block__content {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.code-block-editor-root .editor-code-block:focus-within .editor-code-block__content {
+  -webkit-user-select: text;
+  user-select: text;
+}

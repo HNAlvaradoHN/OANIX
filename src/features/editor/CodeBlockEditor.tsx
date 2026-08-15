@@ -49,6 +49,18 @@ function createEmptyParagraph(): HTMLParagraphElement {
   return paragraph
 }
 
+function authorizeProtectedRemoval(editor: HTMLElement, block: HTMLElement): string | null {
+  const blockId = block.dataset.blockId ?? null
+  if (blockId) editor.dataset.oanixAuthorizedProtectedRemoval = blockId
+  return blockId
+}
+
+function clearProtectedRemovalAuthorization(editor: HTMLElement, blockId: string | null): void {
+  if (blockId && editor.dataset.oanixAuthorizedProtectedRemoval === blockId) {
+    delete editor.dataset.oanixAuthorizedProtectedRemoval
+  }
+}
+
 function convertCodeBlockToText(root: HTMLElement, block: HTMLElement): void {
   const editor = root.querySelector<HTMLElement>('.editor-surface')
   if (!editor || !editor.contains(block)) return
@@ -63,9 +75,11 @@ function convertCodeBlockToText(root: HTMLElement, block: HTMLElement): void {
     paragraph.appendChild(document.createElement('br'))
   }
 
+  const authorizedBlockId = authorizeProtectedRemoval(editor, block)
   block.replaceWith(paragraph)
   placeCaretAtEnd(paragraph)
   editor.dispatchEvent(new Event('input', { bubbles: true }))
+  clearProtectedRemovalAuthorization(editor, authorizedBlockId)
   editor.focus()
 }
 
@@ -75,6 +89,7 @@ function deleteCodeBlock(root: HTMLElement, block: HTMLElement): void {
 
   const previous = block.previousElementSibling instanceof HTMLElement ? block.previousElementSibling : null
   const next = block.nextElementSibling instanceof HTMLElement ? block.nextElementSibling : null
+  const authorizedBlockId = authorizeProtectedRemoval(editor, block)
   block.remove()
 
   let focusTarget = next ?? previous
@@ -88,6 +103,7 @@ function deleteCodeBlock(root: HTMLElement, block: HTMLElement): void {
   const caretTarget = codeContent ?? focusTarget
   placeCaretAtEnd(caretTarget)
   editor.dispatchEvent(new Event('input', { bubbles: true }))
+  clearProtectedRemovalAuthorization(editor, authorizedBlockId)
   editor.focus()
 }
 
@@ -140,7 +156,7 @@ function createDeleteDialog(
   const description = document.createElement('p')
   description.id = 'oanix-code-delete-description'
   description.textContent =
-    'Se eliminará este bloque y todo el código que contiene. Esta acción no se puede deshacer.'
+    'Se eliminará este bloque y todo el código que contiene. Puedes recuperarlo con Deshacer mientras sigas en esta nota.'
 
   const actions = document.createElement('div')
   actions.className = 'code-delete-dialog__actions'
