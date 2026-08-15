@@ -868,6 +868,10 @@ export function ImageNoteEditor({
       const target = event.target
       if (!(target instanceof Element)) return
 
+      if (!target.closest('.editor-command-panel') && !target.closest('.mobile-editor-dock')) {
+        setActiveDockPanel(null)
+      }
+
       const undoTool = target.closest<HTMLElement>('[data-undo-tool="true"]')
       if (undoTool && root.contains(undoTool)) {
         event.preventDefault()

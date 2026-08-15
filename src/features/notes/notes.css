@@ -369,7 +369,7 @@
 .note-info-dialog dt { color: #64748b; font-size: .78rem; font-weight: 800; }
 .note-info-dialog dd { min-width: 0; margin: 0; color: #1e293b; font-size: .82rem; overflow-wrap: anywhere; }
 
-@media (max-width: 720px) {
+@media (max-width: 760px) {
   :root { --oanix-page-gap: clamp(.55rem, 3.2vw, .9rem); }
   .notes-shell { display: block; min-height: 100dvh; background: #fff; }
   .notes-sidebar { position: relative; height: 100dvh; border-right: 0; }
@@ -385,7 +385,7 @@
   .note-info-dialog dl > div { grid-template-columns: 1fr; gap: .2rem; }
 }
 
-@media (min-width: 721px) {
+@media (min-width: 761px) {
   .notes-create-fab span:last-child { display: none; }
   .notes-create-fab { width: 3.15rem; justify-content: center; padding: 0; }
 }
@@ -393,3 +393,5 @@
 @media (min-width: 1180px) {
   :root { --oanix-sidebar: clamp(19rem, 23vw, 25rem); }
 }
+
+.save-status--error { color: #b42318 !important; font-weight: 800; }
