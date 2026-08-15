@@ -5,6 +5,32 @@ export interface RichTextRun {
   href?: string
 }
 
+export const CODE_LANGUAGES = [
+  'plaintext',
+  'javascript',
+  'typescript',
+  'python',
+  'html',
+  'css',
+  'json',
+  'bash',
+  'sql',
+  'java',
+  'cpp',
+  'csharp',
+  'kotlin',
+  'swift',
+  'php',
+] as const
+
+export type CodeLanguage = (typeof CODE_LANGUAGES)[number]
+
+export function normalizeCodeLanguage(value: unknown): CodeLanguage {
+  return typeof value === 'string' && (CODE_LANGUAGES as readonly string[]).includes(value)
+    ? (value as CodeLanguage)
+    : 'plaintext'
+}
+
 export interface ParagraphBlock {
   id: string
   type: 'paragraph'
@@ -41,6 +67,13 @@ export interface DividerBlock {
   type: 'divider'
 }
 
+export interface CodeBlock {
+  id: string
+  type: 'code'
+  language: CodeLanguage
+  text: string
+}
+
 export type NoteBlock =
   | ParagraphBlock
   | HeadingBlock
@@ -48,6 +81,7 @@ export type NoteBlock =
   | BulletListBlock
   | OrderedListBlock
   | DividerBlock
+  | CodeBlock
 
 export interface NoteRecord {
   version: 1
@@ -103,6 +137,8 @@ function isNoteBlock(value: unknown): value is NoteBlock {
     runs?: unknown
     level?: unknown
     items?: unknown
+    language?: unknown
+    text?: unknown
   }
 
   if (typeof block.id !== 'string' || block.id.length === 0 || typeof block.type !== 'string') {
@@ -110,6 +146,14 @@ function isNoteBlock(value: unknown): value is NoteBlock {
   }
 
   if (block.type === 'divider') return true
+
+  if (block.type === 'code') {
+    return (
+      typeof block.text === 'string' &&
+      typeof block.language === 'string' &&
+      normalizeCodeLanguage(block.language) === block.language
+    )
+  }
 
   if (block.type === 'paragraph' || block.type === 'quote') {
     return isRunArray(block.runs)
@@ -154,6 +198,7 @@ export function noteBlocksToPlainText(blocks: NoteBlock[]): string {
   return blocks
     .flatMap((block) => {
       if (block.type === 'divider') return []
+      if (block.type === 'code') return [block.text]
       if (block.type === 'bulletList' || block.type === 'orderedList') {
         return block.items.map(runsToPlainText)
       }
