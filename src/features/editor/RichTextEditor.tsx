@@ -20,6 +20,17 @@ interface RunStyle {
   href?: string
 }
 
+type ToolbarFormat =
+  | 'bold'
+  | 'italic'
+  | 'paragraph'
+  | 'heading2'
+  | 'heading3'
+  | 'bulletList'
+  | 'orderedList'
+  | 'quote'
+  | 'link'
+
 function createBlockId(): string {
   if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID()
 
@@ -219,6 +230,37 @@ function placeCaretAtEnd(editor: HTMLElement): void {
   selection.addRange(range)
 }
 
+function selectionIsInsideEditor(editor: HTMLElement, selection: Selection | null): selection is Selection {
+  if (!selection || selection.rangeCount === 0) return false
+  return editor.contains(selection.getRangeAt(0).commonAncestorContainer)
+}
+
+function selectionHasLink(editor: HTMLElement, selection: Selection): boolean {
+  let current: HTMLElement | null =
+    selection.anchorNode instanceof HTMLElement
+      ? selection.anchorNode
+      : selection.anchorNode?.parentElement ?? null
+
+  while (current && current !== editor) {
+    if (current.tagName.toLowerCase() === 'a') return true
+    current = current.parentElement
+  }
+
+  return false
+}
+
+function normalizeFormatBlock(value: string): string {
+  return value.trim().toLowerCase().replace(/[<>]/g, '')
+}
+
+function setToolbarButtonState(toolbar: HTMLElement, format: ToolbarFormat, active: boolean): void {
+  const button = toolbar.querySelector<HTMLButtonElement>(`[data-format="${format}"]`)
+  if (!button) return
+
+  button.classList.toggle('editor-tool--active', active)
+  button.setAttribute('aria-pressed', active ? 'true' : 'false')
+}
+
 function RichTextEditorComponent({
   noteId,
   initialBlocks,
@@ -226,6 +268,7 @@ function RichTextEditorComponent({
   onBlur,
 }: RichTextEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null)
+  const toolbarRef = useRef<HTMLDivElement>(null)
   const initialHtmlRef = useRef(blocksToHtml(initialBlocks))
   const lastHtmlRef = useRef(initialHtmlRef.current)
   const restoringRef = useRef(false)
@@ -241,6 +284,43 @@ function RichTextEditorComponent({
     },
     [noteId],
   )
+
+  const syncToolbarState = useCallback(() => {
+    const editor = editorRef.current
+    const toolbar = toolbarRef.current
+    if (!editor || !toolbar) return
+
+    const selection = document.getSelection()
+    if (!selectionIsInsideEditor(editor, selection)) {
+      ;(['bold', 'italic', 'paragraph', 'heading2', 'heading3', 'bulletList', 'orderedList', 'quote', 'link'] as ToolbarFormat[])
+        .forEach((format) => setToolbarButtonState(toolbar, format, false))
+      return
+    }
+
+    const bulletList = document.queryCommandState('insertUnorderedList')
+    const orderedList = document.queryCommandState('insertOrderedList')
+    const block = normalizeFormatBlock(String(document.queryCommandValue('formatBlock') ?? ''))
+    const heading2 = block === 'h2'
+    const heading3 = block === 'h3'
+    const quote = block === 'blockquote'
+    const paragraph =
+      !bulletList &&
+      !orderedList &&
+      !heading2 &&
+      !heading3 &&
+      !quote &&
+      (block === 'p' || block === 'div' || block === '')
+
+    setToolbarButtonState(toolbar, 'bold', document.queryCommandState('bold'))
+    setToolbarButtonState(toolbar, 'italic', document.queryCommandState('italic'))
+    setToolbarButtonState(toolbar, 'paragraph', paragraph)
+    setToolbarButtonState(toolbar, 'heading2', heading2)
+    setToolbarButtonState(toolbar, 'heading3', heading3)
+    setToolbarButtonState(toolbar, 'bulletList', bulletList)
+    setToolbarButtonState(toolbar, 'orderedList', orderedList)
+    setToolbarButtonState(toolbar, 'quote', quote)
+    setToolbarButtonState(toolbar, 'link', selectionHasLink(editor, selection))
+  }, [])
 
   useEffect(() => {
     const editor = editorRef.current
@@ -269,6 +349,11 @@ function RichTextEditorComponent({
     return () => observer.disconnect()
   }, [noteId])
 
+  useEffect(() => {
+    document.addEventListener('selectionchange', syncToolbarState)
+    return () => document.removeEventListener('selectionchange', syncToolbarState)
+  }, [syncToolbarState])
+
   function emitChange() {
     const editor = editorRef.current
     if (!editor) return
@@ -277,6 +362,7 @@ function RichTextEditorComponent({
     const blocks = parseEditorBlocks(editor)
     setEditorEmptyState(editor, blocks)
     onChange(blocks)
+    syncToolbarState()
   }
 
   function runCommand(command: string, value?: string) {
@@ -286,6 +372,7 @@ function RichTextEditorComponent({
     editor.focus()
     document.execCommand(command, false, value)
     emitChange()
+    syncToolbarState()
   }
 
   function handleLink() {
@@ -326,34 +413,34 @@ function RichTextEditorComponent({
 
   return (
     <div className="editor-frame">
-      <div className="editor-toolbar" role="toolbar" aria-label="Formato de texto">
-        <button className="editor-tool editor-tool--strong" type="button" onMouseDown={keepSelection} onClick={() => runCommand('bold')} title="Negrita">
+      <div ref={toolbarRef} className="editor-toolbar" role="toolbar" aria-label="Formato de texto">
+        <button className="editor-tool editor-tool--strong" data-format="bold" aria-pressed="false" type="button" onMouseDown={keepSelection} onClick={() => runCommand('bold')} title="Negrita">
           B
         </button>
-        <button className="editor-tool editor-tool--italic" type="button" onMouseDown={keepSelection} onClick={() => runCommand('italic')} title="Cursiva">
+        <button className="editor-tool editor-tool--italic" data-format="italic" aria-pressed="false" type="button" onMouseDown={keepSelection} onClick={() => runCommand('italic')} title="Cursiva">
           I
         </button>
         <span className="editor-toolbar__separator" aria-hidden="true" />
-        <button className="editor-tool" type="button" onMouseDown={keepSelection} onClick={() => runCommand('formatBlock', 'p')} title="Párrafo">
+        <button className="editor-tool" data-format="paragraph" aria-pressed="false" type="button" onMouseDown={keepSelection} onClick={() => runCommand('formatBlock', 'p')} title="Párrafo">
           P
         </button>
-        <button className="editor-tool" type="button" onMouseDown={keepSelection} onClick={() => runCommand('formatBlock', 'h2')} title="Encabezado grande">
+        <button className="editor-tool" data-format="heading2" aria-pressed="false" type="button" onMouseDown={keepSelection} onClick={() => runCommand('formatBlock', 'h2')} title="Encabezado grande">
           H2
         </button>
-        <button className="editor-tool" type="button" onMouseDown={keepSelection} onClick={() => runCommand('formatBlock', 'h3')} title="Encabezado pequeño">
+        <button className="editor-tool" data-format="heading3" aria-pressed="false" type="button" onMouseDown={keepSelection} onClick={() => runCommand('formatBlock', 'h3')} title="Encabezado pequeño">
           H3
         </button>
         <span className="editor-toolbar__separator" aria-hidden="true" />
-        <button className="editor-tool" type="button" onMouseDown={keepSelection} onClick={() => runCommand('insertUnorderedList')} title="Lista con viñetas">
+        <button className="editor-tool" data-format="bulletList" aria-pressed="false" type="button" onMouseDown={keepSelection} onClick={() => runCommand('insertUnorderedList')} title="Lista con viñetas">
           • Lista
         </button>
-        <button className="editor-tool" type="button" onMouseDown={keepSelection} onClick={() => runCommand('insertOrderedList')} title="Lista numerada">
+        <button className="editor-tool" data-format="orderedList" aria-pressed="false" type="button" onMouseDown={keepSelection} onClick={() => runCommand('insertOrderedList')} title="Lista numerada">
           1. Lista
         </button>
-        <button className="editor-tool" type="button" onMouseDown={keepSelection} onClick={() => runCommand('formatBlock', 'blockquote')} title="Cita">
+        <button className="editor-tool" data-format="quote" aria-pressed="false" type="button" onMouseDown={keepSelection} onClick={() => runCommand('formatBlock', 'blockquote')} title="Cita">
           Cita
         </button>
-        <button className="editor-tool" type="button" onMouseDown={keepSelection} onClick={handleLink} title="Enlace">
+        <button className="editor-tool" data-format="link" aria-pressed="false" type="button" onMouseDown={keepSelection} onClick={handleLink} title="Enlace">
           Enlace
         </button>
         <button className="editor-tool" type="button" onMouseDown={keepSelection} onClick={() => runCommand('insertHorizontalRule')} title="Separador">
@@ -371,6 +458,9 @@ function RichTextEditorComponent({
         aria-label="Contenido de la nota"
         data-placeholder="Escribe algo…"
         onInput={emitChange}
+        onFocus={syncToolbarState}
+        onKeyUp={syncToolbarState}
+        onMouseUp={syncToolbarState}
         onBlur={onBlur}
         onPaste={handlePaste}
         spellCheck
