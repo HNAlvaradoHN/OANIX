@@ -153,3 +153,10 @@ Los checklists de V1 son bloques estructurados dentro de `blocks-v1`: cada eleme
 - Las notas antiguas se preparan en memoria con un primer marcador basado en su fecha de creación y se persistirán de forma natural en la siguiente edición.
 - Al abrir una nota en un día distinto al último marcador, el editor prepara una nueva entrada para la fecha local actual; el contenido solo se persiste cuando existe una edición real.
 - El marcador de día es estructural y no debe desaparecer por una selección global accidental.
+
+## Carpetas V1
+
+- Las carpetas son registros cifrados independientes de tipo `folder`; sus nombres no se almacenan en texto plano.
+- Cada nota guarda opcionalmente `folderId` dentro de su propio registro cifrado; notas antiguas sin este campo siguen siendo válidas.
+- Eliminar una carpeta nunca elimina notas: primero se desvinculan y vuelven al estado `Sin carpeta`.
+- La lista usa una única fila de pestañas fluida para `Todas` y las carpetas creadas; la misma estructura funciona en móvil, tablet y PC.
