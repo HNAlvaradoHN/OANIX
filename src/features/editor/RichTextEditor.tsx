@@ -1,7 +1,17 @@
-import { useCallback, useEffect, useRef, type ClipboardEvent, type MouseEvent } from 'react'
 import {
+  useCallback,
+  useEffect,
+  useRef,
+  type ClipboardEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type MouseEvent,
+} from 'react'
+import {
+  CODE_LANGUAGES,
+  normalizeCodeLanguage,
   normalizeNoteLink,
   noteBlocksToPlainText,
+  type CodeLanguage,
   type NoteBlock,
   type RichTextRun,
 } from '../notes/noteTypes'
@@ -30,6 +40,25 @@ type ToolbarFormat =
   | 'orderedList'
   | 'quote'
   | 'link'
+  | 'code'
+
+const CODE_LANGUAGE_LABELS: Record<CodeLanguage, string> = {
+  plaintext: 'Texto',
+  javascript: 'JavaScript',
+  typescript: 'TypeScript',
+  python: 'Python',
+  html: 'HTML',
+  css: 'CSS',
+  json: 'JSON',
+  bash: 'Bash',
+  sql: 'SQL',
+  java: 'Java',
+  cpp: 'C / C++',
+  csharp: 'C#',
+  kotlin: 'Kotlin',
+  swift: 'Swift',
+  php: 'PHP',
+}
 
 function createBlockId(): string {
   if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID()
@@ -67,6 +96,21 @@ function runsToHtml(runs: RichTextRun[]): string {
   return html || '<br>'
 }
 
+function codeLanguageOptions(selected: CodeLanguage): string {
+  return CODE_LANGUAGES.map((language) => {
+    const selectedAttribute = language === selected ? ' selected' : ''
+    return `<option value="${language}"${selectedAttribute}>${escapeHtml(CODE_LANGUAGE_LABELS[language])}</option>`
+  }).join('')
+}
+
+function codeBlockToHtml(block: Extract<NoteBlock, { type: 'code' }>): string {
+  const id = escapeHtml(block.id)
+  const language = normalizeCodeLanguage(block.language)
+  const text = escapeHtml(block.text)
+
+  return `<div class="editor-code-block" data-code-block="true" data-block-id="${id}" data-language="${language}" contenteditable="false"><div class="editor-code-block__toolbar"><select class="editor-code-block__language" data-code-language="true" aria-label="Lenguaje del bloque de código">${codeLanguageOptions(language)}</select><button class="editor-code-block__copy" data-code-copy="true" type="button">Copiar</button></div><div class="editor-code-block__content" data-code-content="true" contenteditable="true" spellcheck="false" autocapitalize="off" tabindex="0">${text}</div></div>`
+}
+
 function blocksToHtml(blocks: NoteBlock[]): string {
   if (blocks.length === 0) {
     return `<p data-block-id="${createBlockId()}"><br></p>`
@@ -77,6 +121,7 @@ function blocksToHtml(blocks: NoteBlock[]): string {
       const id = escapeHtml(block.id)
 
       if (block.type === 'divider') return `<hr data-block-id="${id}">`
+      if (block.type === 'code') return codeBlockToHtml(block)
       if (block.type === 'heading') {
         return `<h${block.level} data-block-id="${id}">${runsToHtml(block.runs)}</h${block.level}>`
       }
@@ -152,6 +197,11 @@ function parseBlockRuns(element: HTMLElement): RichTextRun[] {
   return mergeRuns(Array.from(element.childNodes).flatMap((child) => parseRuns(child)))
 }
 
+function codeTextFromElement(element: HTMLElement | null): string {
+  if (!element) return ''
+  return element.innerText.replace(/\r\n?/g, '\n').replaceAll('\u00a0', ' ')
+}
+
 function parseEditorBlocks(root: HTMLElement): NoteBlock[] {
   const blocks: NoteBlock[] = []
 
@@ -168,6 +218,16 @@ function parseEditorBlocks(root: HTMLElement): NoteBlock[] {
 
     const tag = node.tagName.toLowerCase()
     const id = blockIdFromElement(node)
+
+    if (node.dataset.codeBlock === 'true') {
+      blocks.push({
+        id,
+        type: 'code',
+        language: normalizeCodeLanguage(node.dataset.language),
+        text: codeTextFromElement(node.querySelector<HTMLElement>('[data-code-content="true"]')),
+      })
+      continue
+    }
 
     if (tag === 'hr') {
       blocks.push({ id, type: 'divider' })
@@ -235,6 +295,17 @@ function selectionIsInsideEditor(editor: HTMLElement, selection: Selection | nul
   return editor.contains(selection.getRangeAt(0).commonAncestorContainer)
 }
 
+function elementFromSelectionNode(node: Node | null): Element | null {
+  if (node instanceof Element) return node
+  return node?.parentElement ?? null
+}
+
+function selectionIsInsideCodeBlock(editor: HTMLElement, selection: Selection | null): boolean {
+  if (!selectionIsInsideEditor(editor, selection)) return false
+  const element = elementFromSelectionNode(selection.anchorNode)
+  return !!element?.closest('[data-code-content="true"]')
+}
+
 function selectionHasLink(editor: HTMLElement, selection: Selection): boolean {
   let current: HTMLElement | null =
     selection.anchorNode instanceof HTMLElement
@@ -268,6 +339,12 @@ function linkFromTarget(editor: HTMLElement, target: EventTarget | null): HTMLAn
   return link instanceof HTMLAnchorElement && editor.contains(link) ? link : null
 }
 
+function codeBlockFromTarget(editor: HTMLElement, target: EventTarget | null): HTMLElement | null {
+  if (!(target instanceof Element)) return null
+  const block = target.closest<HTMLElement>('[data-code-block="true"]')
+  return block && editor.contains(block) ? block : null
+}
+
 function openSafeLink(rawHref: string): void {
   const href = normalizeNoteLink(rawHref)
   if (!href) return
@@ -278,6 +355,23 @@ function openSafeLink(rawHref: string): void {
   }
 
   window.location.href = href
+}
+
+async function copyText(text: string): Promise<void> {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text)
+    return
+  }
+
+  const textarea = document.createElement('textarea')
+  textarea.value = text
+  textarea.setAttribute('readonly', '')
+  textarea.style.position = 'fixed'
+  textarea.style.opacity = '0'
+  document.body.appendChild(textarea)
+  textarea.select()
+  document.execCommand('copy')
+  textarea.remove()
 }
 
 function RichTextEditorComponent({
@@ -350,9 +444,18 @@ function RichTextEditorComponent({
     if (!editor || !toolbar) return
 
     const selection = document.getSelection()
+    const code = selectionIsInsideCodeBlock(editor, selection)
+
     if (!selectionIsInsideEditor(editor, selection)) {
+      ;(['bold', 'italic', 'paragraph', 'heading2', 'heading3', 'bulletList', 'orderedList', 'quote', 'link', 'code'] as ToolbarFormat[])
+        .forEach((format) => setToolbarButtonState(toolbar, format, false))
+      return
+    }
+
+    if (code) {
       ;(['bold', 'italic', 'paragraph', 'heading2', 'heading3', 'bulletList', 'orderedList', 'quote', 'link'] as ToolbarFormat[])
         .forEach((format) => setToolbarButtonState(toolbar, format, false))
+      setToolbarButtonState(toolbar, 'code', true)
       return
     }
 
@@ -379,6 +482,7 @@ function RichTextEditorComponent({
     setToolbarButtonState(toolbar, 'orderedList', orderedList)
     setToolbarButtonState(toolbar, 'quote', quote)
     setToolbarButtonState(toolbar, 'link', selectionHasLink(editor, selection))
+    setToolbarButtonState(toolbar, 'code', false)
   }, [])
 
   useEffect(() => {
@@ -406,6 +510,32 @@ function RichTextEditorComponent({
     })
 
     return () => observer.disconnect()
+  }, [noteId])
+
+  useEffect(() => {
+    const editor = editorRef.current
+    if (!editor) return
+
+    function handleCodeLanguageChange(event: Event) {
+      const select = event.target
+      if (!(select instanceof HTMLSelectElement) || !select.matches('[data-code-language="true"]')) {
+        return
+      }
+
+      const block = select.closest<HTMLElement>('[data-code-block="true"]')
+      if (!block) return
+
+      const language = normalizeCodeLanguage(select.value)
+      block.dataset.language = language
+      select.value = language
+      Array.from(select.options).forEach((option) => {
+        option.toggleAttribute('selected', option.value === language)
+      })
+      emitChange()
+    }
+
+    editor.addEventListener('change', handleCodeLanguageChange)
+    return () => editor.removeEventListener('change', handleCodeLanguageChange)
   }, [noteId])
 
   useEffect(() => {
@@ -457,16 +587,55 @@ function RichTextEditorComponent({
     const editor = editorRef.current
     if (!editor) return
 
+    const selection = document.getSelection()
+    if (selectionIsInsideCodeBlock(editor, selection)) return
+
     editor.focus()
     document.execCommand(command, false, value)
     emitChange()
     syncToolbarState()
   }
 
+  function insertCodeBlock() {
+    const editor = editorRef.current
+    if (!editor) return
+
+    const selection = document.getSelection()
+    const selectedText = selectionIsInsideEditor(editor, selection) && !selection.isCollapsed
+      ? selection.toString()
+      : ''
+    const id = createBlockId()
+    const nextParagraphId = createBlockId()
+    const block: Extract<NoteBlock, { type: 'code' }> = {
+      id,
+      type: 'code',
+      language: 'plaintext',
+      text: selectedText,
+    }
+
+    editor.focus()
+    document.execCommand(
+      'insertHTML',
+      false,
+      `${codeBlockToHtml(block)}<p data-block-id="${nextParagraphId}"><br></p>`,
+    )
+    emitChange()
+
+    const codeContent = editor.querySelector<HTMLElement>(
+      `[data-block-id="${id}"] [data-code-content="true"]`,
+    )
+    if (codeContent) {
+      codeContent.focus()
+      placeCaretAtEnd(codeContent)
+      syncToolbarState()
+    }
+  }
+
   function handleLink() {
     const editor = editorRef.current
     const selection = document.getSelection()
     if (!editor || !selection || selection.isCollapsed || selection.rangeCount === 0) return
+    if (selectionIsInsideCodeBlock(editor, selection)) return
 
     const range = selection.getRangeAt(0)
     if (!editor.contains(range.commonAncestorContainer)) return
@@ -488,9 +657,29 @@ function RichTextEditorComponent({
     runCommand('createLink', href)
   }
 
-  function handleEditorClick(event: MouseEvent<HTMLDivElement>) {
+  async function handleEditorClick(event: MouseEvent<HTMLDivElement>) {
     const editor = editorRef.current
     if (!editor) return
+
+    const target = event.target instanceof Element ? event.target : null
+    const copyButton = target?.closest<HTMLButtonElement>('[data-code-copy="true"]')
+    if (copyButton && editor.contains(copyButton)) {
+      event.preventDefault()
+      const block = codeBlockFromTarget(editor, copyButton)
+      const code = codeTextFromElement(block?.querySelector<HTMLElement>('[data-code-content="true"]') ?? null)
+
+      try {
+        await copyText(code)
+        const previous = copyButton.textContent
+        copyButton.textContent = 'Copiado'
+        window.setTimeout(() => {
+          if (copyButton.isConnected) copyButton.textContent = previous || 'Copiar'
+        }, 1200)
+      } catch {
+        window.alert('No se pudo copiar el código en este navegador.')
+      }
+      return
+    }
 
     const link = linkFromTarget(editor, event.target)
     if (!link) {
@@ -572,6 +761,16 @@ function RichTextEditorComponent({
     emitChange()
   }
 
+  function handleEditorKeyDown(event: ReactKeyboardEvent<HTMLDivElement>) {
+    if (event.key !== 'Tab') return
+    const target = event.target
+    if (!(target instanceof Element) || !target.closest('[data-code-content="true"]')) return
+
+    event.preventDefault()
+    document.execCommand('insertText', false, '\t')
+    emitChange()
+  }
+
   const keepSelection = (event: MouseEvent<HTMLButtonElement>) => event.preventDefault()
 
   return (
@@ -606,6 +805,9 @@ function RichTextEditorComponent({
         <button className="editor-tool" data-format="link" aria-pressed="false" type="button" onMouseDown={keepSelection} onClick={handleLink} title="Enlace">
           Enlace
         </button>
+        <button className="editor-tool" data-format="code" aria-pressed="false" type="button" onMouseDown={keepSelection} onClick={insertCodeBlock} title="Bloque de código">
+          Código
+        </button>
         <button className="editor-tool" type="button" onMouseDown={keepSelection} onClick={() => runCommand('insertHorizontalRule')} title="Separador">
           —
         </button>
@@ -622,6 +824,7 @@ function RichTextEditorComponent({
         data-placeholder="Escribe algo…"
         onClick={handleEditorClick}
         onInput={emitChange}
+        onKeyDown={handleEditorKeyDown}
         onFocus={syncToolbarState}
         onKeyUp={syncToolbarState}
         onMouseUp={syncToolbarState}
@@ -641,7 +844,7 @@ function RichTextEditorComponent({
         <div className="editor-link-popover__actions">
           <button type="button" onMouseDown={keepSelection} onClick={handleOpenActiveLink}>Abrir</button>
           <button type="button" onMouseDown={keepSelection} onClick={handleEditActiveLink}>Editar</button>
-          <button type="button" onMouseDown={keepSelection} onClick={handleRemoveActiveLink}>Quitar</button>
+          <button type="button" onMouseDown={keepSelection} onClick={handleRemoveActiveLink}>Quitar enlace</button>
         </div>
       </div>
     </div>
