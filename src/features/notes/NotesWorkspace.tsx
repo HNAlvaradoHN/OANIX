@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { deleteEncryptedImage } from '../images/imageService'
 import { ImageNoteEditor } from '../images/ImageNoteEditor'
-import { createEmptyNote, loadNotes, renameNote, replaceNoteContent } from './noteService'
+import { createEmptyNote, deleteNote, loadNotes, renameNote, replaceNoteContent } from './noteService'
 import { noteBlocksToPlainText, type NoteRecord, type StoredNoteBlock } from './noteTypes'
 import './notes.css'
 
@@ -57,6 +57,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
   const [draftTitle, setDraftTitle] = useState('')
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [savingTitle, setSavingTitle] = useState(false)
   const [saveState, setSaveState] = useState<SaveState>('idle')
   const [error, setError] = useState('')
@@ -184,6 +185,49 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     pendingImageDeletesRef.current.clear()
 
     await Promise.allSettled(imageIds.map((imageId) => deleteEncryptedImage(imageId)))
+  }
+
+  async function handleDeleteNote() {
+    if (!selectedNote || deleting) return
+
+    const confirmed = window.confirm(
+      `¿Eliminar esta nota de forma permanente?\n\n“${selectedNote.title}” se eliminará de este dispositivo junto con sus imágenes asociadas. Esta acción no se puede deshacer.`,
+    )
+    if (!confirmed) return
+
+    const noteId = selectedNote.id
+    if (!(await flushPendingContent())) return
+    await finalizeRemovedImages()
+
+    setDeleting(true)
+    setError('')
+
+    try {
+      const deleted = await deleteNote(noteId)
+      const imageIds = deleted.content.blocks.flatMap((block) =>
+        block.type === 'image' ? [block.imageId] : [],
+      )
+
+      await Promise.allSettled(imageIds.map((imageId) => deleteEncryptedImage(imageId)))
+
+      const deletedIndex = notes.findIndex((note) => note.id === noteId)
+      const remaining = notes.filter((note) => note.id !== noteId)
+      const nextIndex = remaining.length === 0 ? -1 : Math.min(Math.max(deletedIndex, 0), remaining.length - 1)
+      const nextId = nextIndex >= 0 ? remaining[nextIndex].id : null
+
+      clearSaveTimer()
+      pendingContentRef.current = null
+      selectedIdRef.current = nextId
+      setNotes(remaining)
+      setSelectedId(nextId)
+      setSaveState('idle')
+      setError('')
+    } catch {
+      setSaveState('error')
+      setError('No se pudo eliminar la nota cifrada.')
+    } finally {
+      setDeleting(false)
+    }
   }
 
   async function handleCreateNote() {
@@ -355,10 +399,18 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
                 <div>
                   <strong>{selectedNote.title}</strong>
                   <span className={saveState === 'error' ? 'save-status save-status--error' : 'save-status'}>
-                    {saveStateLabel(saveState, savingTitle)}
+                    {deleting ? 'Eliminando nota…' : saveStateLabel(saveState, savingTitle)}
                   </span>
                 </div>
               </div>
+              <button
+                className="delete-note-button"
+                type="button"
+                onClick={() => void handleDeleteNote()}
+                disabled={deleting}
+              >
+                {deleting ? 'Eliminando…' : 'Eliminar'}
+              </button>
             </header>
 
             <div className="note-canvas">

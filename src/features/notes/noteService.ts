@@ -1,4 +1,4 @@
-import { listNotes, readNote, saveNote } from '../../storage/repositories/noteRepository'
+import { deleteNoteRecord, listNotes, readNote, saveNote } from '../../storage/repositories/noteRepository'
 import type { NoteRecord, StoredNoteBlock } from './noteTypes'
 
 const DEFAULT_NOTE_TITLE = 'Nueva nota'
@@ -70,6 +70,32 @@ export async function createEmptyNote(): Promise<NoteRecord> {
 
   await saveNote(note)
   return note
+}
+
+export function deleteNote(noteId: string): Promise<NoteRecord> {
+  const previous = mutationQueues.get(noteId) ?? Promise.resolve()
+  const next = previous
+    .catch(() => undefined)
+    .then(async () => {
+      const existing = await readNote(noteId)
+
+      if (!existing) {
+        throw new Error('La nota ya no existe.')
+      }
+
+      await deleteNoteRecord(noteId)
+      return existing
+    })
+
+  mutationQueues.set(noteId, next)
+  const cleanup = () => {
+    if (mutationQueues.get(noteId) === next) {
+      mutationQueues.delete(noteId)
+    }
+  }
+  void next.then(cleanup, cleanup)
+
+  return next
 }
 
 export function renameNote(noteId: string, title: string): Promise<NoteRecord> {

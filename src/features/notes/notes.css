@@ -296,6 +296,28 @@
 
 .back-button:hover { background: #f1f4f7; }
 
+.delete-note-button {
+  flex: 0 0 auto;
+  margin-left: auto;
+  min-height: 2.35rem;
+  padding: 0 0.8rem;
+  border: 1px solid #fecaca;
+  border-radius: 999px;
+  background: #fff;
+  color: #b91c1c;
+  font-weight: 750;
+}
+
+.delete-note-button:hover:not(:disabled) {
+  border-color: #fca5a5;
+  background: #fef2f2;
+}
+
+.delete-note-button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
 .note-canvas {
   width: min(100% - 2rem, 880px);
   margin: 0 auto;
@@ -392,6 +414,7 @@
   .back-button { display: grid; }
   .notes-header { padding-top: max(0.9rem, env(safe-area-inset-top)); }
   .note-view__header { padding-top: max(0.85rem, env(safe-area-inset-top)); }
+  .delete-note-button { padding: 0 0.7rem; }
   .note-canvas { width: min(100% - 1.5rem, 880px); }
 }
 
