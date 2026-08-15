@@ -24,5 +24,8 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
+      - name: Test OANIX
+        run: npm test
+
       - name: Build OANIX
         run: npm run build
