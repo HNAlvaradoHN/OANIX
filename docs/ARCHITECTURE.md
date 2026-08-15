@@ -145,3 +145,11 @@ Los checklists de V1 son bloques estructurados dentro de `blocks-v1`: cada eleme
 - V1 no escribe en la agenda del sistema ni sincroniza contactos con servicios externos.
 - Los campos iniciales son nombre, teléfono, correo, organización y notas; todos permanecen opcionales para permitir fichas parciales.
 - La tarjeta usa una sola implementación fluida por contenedor para móvil, tablet y PC.
+
+## Entradas por día dentro de una nota
+
+- Cada cambio de día se representa con un bloque marcador `dailyEntry` dentro de `blocks-v1`; el contenido continúa siendo una lista plana de bloques y no se anidan documentos dentro de documentos.
+- El marcador guarda la fecha local `YYYY-MM-DD` y un título opcional de la entrada.
+- Las notas antiguas se preparan en memoria con un primer marcador basado en su fecha de creación y se persistirán de forma natural en la siguiente edición.
+- Al abrir una nota en un día distinto al último marcador, el editor prepara una nueva entrada para la fecha local actual; el contenido solo se persiste cuando existe una edición real.
+- El marcador de día es estructural y no debe desaparecer por una selección global accidental.

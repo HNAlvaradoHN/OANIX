@@ -101,6 +101,13 @@ export interface ContactBlock {
   notes: string
 }
 
+export interface DailyEntryBlock {
+  id: string
+  type: 'dailyEntry'
+  date: string
+  title: string
+}
+
 export interface DividerBlock {
   id: string
   type: 'divider'
@@ -135,6 +142,7 @@ export type NoteBlock =
   | OrderedListBlock
   | ChecklistBlock
   | ContactBlock
+  | DailyEntryBlock
   | DividerBlock
   | CodeBlock
 
@@ -215,6 +223,8 @@ function isStoredNoteBlock(value: unknown): value is StoredNoteBlock {
     email?: unknown
     organization?: unknown
     notes?: unknown
+    date?: unknown
+    title?: unknown
   }
 
   if (typeof block.id !== 'string' || block.id.length === 0 || typeof block.type !== 'string') {
@@ -263,6 +273,14 @@ function isStoredNoteBlock(value: unknown): value is StoredNoteBlock {
       typeof block.email === 'string' &&
       typeof block.organization === 'string' &&
       typeof block.notes === 'string'
+    )
+  }
+
+  if (block.type === 'dailyEntry') {
+    return (
+      typeof block.date === 'string' &&
+      /^\d{4}-\d{2}-\d{2}$/.test(block.date) &&
+      typeof block.title === 'string'
     )
   }
 
@@ -322,6 +340,9 @@ export function noteBlocksToPlainText(blocks: StoredNoteBlock[]): string {
         return [block.name, block.phone, block.email, block.organization, block.notes]
           .map((value) => value.trim())
           .filter(Boolean)
+      }
+      if (block.type === 'dailyEntry') {
+        return block.title.trim() ? [block.title.trim()] : []
       }
       if (block.type === 'bulletList' || block.type === 'orderedList') {
         return block.items.map(runsToPlainText)

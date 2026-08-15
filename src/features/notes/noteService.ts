@@ -1,4 +1,5 @@
 import { deleteNoteRecord, listNotes, readNote, saveNote } from '../../storage/repositories/noteRepository'
+import { createDailyEntryBlocks } from './dailyEntries'
 import type { NoteRecord, StoredNoteBlock } from './noteTypes'
 
 const DEFAULT_NOTE_TITLE = 'Nueva nota'
@@ -55,7 +56,8 @@ export async function loadNotes(): Promise<NoteRecord[]> {
 }
 
 export async function createEmptyNote(): Promise<NoteRecord> {
-  const now = new Date().toISOString()
+  const nowDate = new Date()
+  const now = nowDate.toISOString()
   const note: NoteRecord = {
     version: 1,
     id: createNoteId(),
@@ -64,7 +66,7 @@ export async function createEmptyNote(): Promise<NoteRecord> {
     updatedAt: now,
     content: {
       format: 'blocks-v1',
-      blocks: [],
+      blocks: createDailyEntryBlocks(nowDate),
     },
   }
 
