@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
+import { deleteEncryptedImage } from '../images/imageService'
 import { ImageNoteEditor } from '../images/ImageNoteEditor'
 import { createEmptyNote, loadNotes, renameNote, replaceNoteContent } from './noteService'
 import { noteBlocksToPlainText, type NoteRecord, type StoredNoteBlock } from './noteTypes'
@@ -167,6 +168,17 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     saveTimerRef.current = window.setTimeout(() => {
       void flushPendingContent()
     }, 550)
+  }
+
+  async function handleRemovedImage(imageId: string): Promise<void> {
+    if (!(await flushPendingContent())) return
+
+    try {
+      await deleteEncryptedImage(imageId)
+    } catch {
+      // The note is already safely saved without the image reference. A failed cleanup
+      // may leave encrypted orphan bytes, but never a broken note reference.
+    }
   }
 
   async function handleCreateNote() {
@@ -361,6 +373,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
                 initialBlocks={selectedNote.content.blocks}
                 onChange={handleContentChange}
                 onBlur={() => void flushPendingContent()}
+                onRemoveImage={handleRemovedImage}
               />
             </div>
           </>
