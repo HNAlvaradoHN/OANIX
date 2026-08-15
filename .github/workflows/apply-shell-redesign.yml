@@ -1,0 +1,34 @@
+name: Apply responsive shell redesign
+
+on:
+  push:
+    branches:
+      - agent/v1-responsive-shell-save-fix
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/v1-responsive-shell-save-fix
+
+      - name: Apply implementation
+        run: python .github/apply_shell_redesign.py
+
+      - name: Remove temporary patch files
+        run: |
+          rm .github/apply_shell_redesign.py
+          rm .github/workflows/apply-shell-redesign.yml
+
+      - name: Commit implementation
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "V1: rebuild responsive notes shell and editor controls"
+          git push origin agent/v1-responsive-shell-save-fix
