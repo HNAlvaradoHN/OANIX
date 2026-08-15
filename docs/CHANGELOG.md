@@ -3,6 +3,7 @@
 Todos los cambios relevantes del proyecto se registran aquí por versión.
 
 ## Unreleased
+- Etiquetas V1 cifradas: CRUD, asignación múltiple por nota, filtro combinado con carpetas, chips en la nota y eliminación sin borrar contenido.
 - La navegación horizontal de Carpetas usa controles « » reservados fuera del carril, compatibles con mouse y tacto, sin cubrir nombres de carpetas.
 - Corregida incompatibilidad de guardado: las imágenes reducidas en móvil ya son válidas para el modelo persistido y no invalidan la nota al releerla.
 - Shell fluido inspirado en la estrategia responsive de OAVIX: tamaños gobernados por contenedores, `clamp`, `minmax`, wrap y un único conjunto de componentes.

@@ -37,7 +37,7 @@ Objetivo: entregar una PWA útil, segura, offline-first y completamente funciona
 - [x] Fichas de contacto privadas
 - [x] Entradas por día dentro de una nota (fecha automática + título opcional)
 - [x] Carpetas
-- [ ] Etiquetas
+- [x] Etiquetas
 - [ ] Búsqueda local
 - [ ] Backup/exportación cifrada
 - [ ] Funcionamiento offline
@@ -84,6 +84,6 @@ Objetivo: empaquetar la misma base de código como aplicación Android.
 
 **Versión activa: V1 — Núcleo local**
 
-**Siguiente bloque de trabajo:** Etiquetas.
+**Siguiente bloque de trabajo:** Búsqueda local.
 
 No se implementan funciones de V2, V3 o V4 mientras V1 no esté cerrada, salvo preparación arquitectónica explícitamente documentada.
