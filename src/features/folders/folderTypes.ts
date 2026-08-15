@@ -32,3 +32,30 @@ export function isFolderRecord(value: unknown): value is FolderRecord {
     typeof folder.updatedAt === 'string'
   )
 }
+
+export function applyFolderOrder(folders: FolderRecord[], orderedIds: string[]): FolderRecord[] {
+  const rank = new Map(orderedIds.map((id, index) => [id, index]))
+  return [...folders].sort((left, right) => {
+    const leftRank = rank.get(left.id)
+    const rightRank = rank.get(right.id)
+    if (leftRank !== undefined && rightRank !== undefined) return leftRank - rightRank
+    if (leftRank !== undefined) return -1
+    if (rightRank !== undefined) return 1
+    return left.name.localeCompare(right.name, 'es', { sensitivity: 'base' })
+  })
+}
+
+export function moveFolderId(
+  orderedIds: string[],
+  folderId: string,
+  direction: 'up' | 'down',
+): string[] {
+  const currentIndex = orderedIds.indexOf(folderId)
+  if (currentIndex < 0) return [...orderedIds]
+  const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1
+  if (targetIndex < 0 || targetIndex >= orderedIds.length) return [...orderedIds]
+
+  const next = [...orderedIds]
+  ;[next[currentIndex], next[targetIndex]] = [next[targetIndex], next[currentIndex]]
+  return next
+}

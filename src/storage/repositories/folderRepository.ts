@@ -7,6 +7,8 @@ import {
 import { isFolderRecord, type FolderRecord } from '../../features/folders/folderTypes'
 
 const FOLDER_RECORD_TYPE = 'folder'
+const FOLDER_ORDER_RECORD_TYPE = 'folder-order'
+const FOLDER_ORDER_RECORD_ID = 'primary'
 
 export function saveFolder(folder: FolderRecord): Promise<void> {
   return writeEncryptedRecord(FOLDER_RECORD_TYPE, folder.id, folder)
@@ -33,4 +35,17 @@ export async function listFolders(): Promise<FolderRecord[]> {
     }
     return value
   })
+}
+
+export async function readFolderOrder(): Promise<string[]> {
+  const value = await readEncryptedRecord<unknown>(FOLDER_ORDER_RECORD_TYPE, FOLDER_ORDER_RECORD_ID)
+  if (value === null) return []
+  if (!Array.isArray(value) || !value.every((id) => typeof id === 'string')) {
+    throw new Error('Stored folder order is invalid.')
+  }
+  return [...new Set(value)]
+}
+
+export function saveFolderOrder(folderIds: string[]): Promise<void> {
+  return writeEncryptedRecord(FOLDER_ORDER_RECORD_TYPE, FOLDER_ORDER_RECORD_ID, [...new Set(folderIds)])
 }

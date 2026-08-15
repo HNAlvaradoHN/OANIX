@@ -7,7 +7,7 @@ import {
   type MouseEvent as ReactMouseEvent,
 } from 'react'
 import { deleteEncryptedImage } from '../images/imageService'
-import { createFolder, deleteFolder, loadFolders, renameFolder } from '../folders/folderService'
+import { createFolder, deleteFolder, loadFolders, renameFolder, reorderFolder } from '../folders/folderService'
 import type { FolderRecord } from '../folders/folderTypes'
 import { storageSaveErrorMessage } from '../../storage/local/storageErrors'
 import { usesSinglePaneLayout } from '../../shared/responsiveLayout'
@@ -89,6 +89,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
   const [folderBusyId, setFolderBusyId] = useState<string | null>(null)
   const [creatingFolder, setCreatingFolder] = useState(false)
   const [moveNoteId, setMoveNoteId] = useState<string | null>(null)
+  const [folderScrollHint, setFolderScrollHint] = useState<'left' | 'right' | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [draftTitle, setDraftTitle] = useState('')
   const [loading, setLoading] = useState(true)
@@ -102,6 +103,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
   const [savingTitle, setSavingTitle] = useState(false)
   const [saveState, setSaveState] = useState<SaveState>('idle')
   const [error, setError] = useState('')
+  const folderTabsRef = useRef<HTMLElement | null>(null)
   const pendingContentRef = useRef<PendingContent | null>(null)
   const activeSaveRef = useRef<Promise<boolean> | null>(null)
   const saveTimerRef = useRef<number | null>(null)
@@ -214,6 +216,31 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
   }, [selectedNote?.id, selectedNote?.title])
 
   useEffect(() => {
+    const tabs = folderTabsRef.current
+    if (!tabs) return
+
+    function updateHint() {
+      const overflow = tabs.scrollWidth > tabs.clientWidth + 4
+      if (!overflow) {
+        setFolderScrollHint(null)
+        return
+      }
+      const hasRight = tabs.scrollLeft + tabs.clientWidth < tabs.scrollWidth - 4
+      setFolderScrollHint(hasRight ? 'right' : tabs.scrollLeft > 4 ? 'left' : null)
+    }
+
+    const frame = window.requestAnimationFrame(updateHint)
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(updateHint)
+    observer?.observe(tabs)
+    window.addEventListener('resize', updateHint)
+    return () => {
+      window.cancelAnimationFrame(frame)
+      observer?.disconnect()
+      window.removeEventListener('resize', updateHint)
+    }
+  }, [folders.length])
+
+  useEffect(() => {
     return () => {
       if (saveTimerRef.current !== null) {
         window.clearTimeout(saveTimerRef.current)
@@ -255,12 +282,6 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
       current
         .map((note) => (note.id === updated.id ? updated : note))
         .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt)),
-    )
-  }
-
-  function sortFolderState(nextFolders: FolderRecord[]): FolderRecord[] {
-    return [...nextFolders].sort((left, right) =>
-      left.name.localeCompare(right.name, 'es', { sensitivity: 'base' }),
     )
   }
 
@@ -399,6 +420,24 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     )
   }
 
+  async function handleSelectFolder(folderId: string | 'all') {
+    if (folderId === activeFolderId) return
+    if (!(await flushPendingContent())) return
+    await finalizeRemovedImages()
+
+    setActiveFolderId(folderId)
+    selectedIdRef.current = null
+    setSelectedId(null)
+    setSaveState('idle')
+    setNoteMenuId(null)
+    setActiveNoteMenuOpen(false)
+    setNoteInfoOpen(false)
+
+    if (mobileSinglePane()) {
+      window.history.replaceState({ ...currentHistoryState(), oanixView: 'list' }, '')
+    }
+  }
+
   async function handleCreateNote() {
     if (!(await flushPendingContent())) return
     await finalizeRemovedImages()
@@ -442,9 +481,9 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     setError('')
     try {
       const folder = await createFolder(name)
-      setFolders((current) => sortFolderState([...current, folder]))
+      setFolders((current) => [...current, folder])
       setNewFolderName('')
-      setActiveFolderId(folder.id)
+      await handleSelectFolder(folder.id)
     } catch (folderError) {
       setError(folderError instanceof Error ? folderError.message : 'No se pudo crear la carpeta cifrada.')
     } finally {
@@ -473,13 +512,24 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     setError('')
     try {
       const updated = await renameFolder(folder.id, name)
-      setFolders((current) => sortFolderState(
-        current.map((item) => item.id === updated.id ? updated : item),
-      ))
+      setFolders((current) => current.map((item) => item.id === updated.id ? updated : item))
       setEditingFolderId(null)
       setEditingFolderName('')
     } catch (folderError) {
       setError(folderError instanceof Error ? folderError.message : 'No se pudo renombrar la carpeta.')
+    } finally {
+      setFolderBusyId(null)
+    }
+  }
+
+  async function handleReorderFolder(folder: FolderRecord, direction: 'up' | 'down') {
+    setFolderBusyId(folder.id)
+    setError('')
+    try {
+      const reordered = await reorderFolder(folder.id, direction)
+      setFolders(reordered)
+    } catch {
+      setError('No se pudo guardar el nuevo orden de las carpetas.')
     } finally {
       setFolderBusyId(null)
     }
@@ -521,7 +571,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
       }
       await deleteFolder(folder.id)
       setFolders((current) => current.filter((item) => item.id !== folder.id))
-      if (activeFolderId === folder.id) setActiveFolderId('all')
+      if (activeFolderId === folder.id) await handleSelectFolder('all')
       if (editingFolderId === folder.id) {
         setEditingFolderId(null)
         setEditingFolderName('')
@@ -682,37 +732,54 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
           </div>
         </header>
 
-        <nav className="notes-tabs" aria-label="Carpetas de notas">
-          <button
-            className={`notes-tab${activeFolderId === 'all' ? ' notes-tab--active' : ''}`}
-            type="button"
-            aria-current={activeFolderId === 'all' ? 'page' : undefined}
-            onClick={() => setActiveFolderId('all')}
+        <div className={`notes-tabs-shell${folderScrollHint ? ` notes-tabs-shell--hint-${folderScrollHint}` : ''}`}>
+          <nav
+            className="notes-tabs"
+            aria-label="Carpetas de notas"
+            ref={folderTabsRef}
+            onScroll={() => {
+              const tabs = folderTabsRef.current
+              if (!tabs) return
+              const hasRight = tabs.scrollLeft + tabs.clientWidth < tabs.scrollWidth - 4
+              setFolderScrollHint(hasRight ? 'right' : tabs.scrollLeft > 4 ? 'left' : null)
+            }}
           >
-            Todas
-          </button>
-          {folders.map((folder) => (
             <button
-              className={`notes-tab${activeFolderId === folder.id ? ' notes-tab--active' : ''}`}
+              className={`notes-tab${activeFolderId === 'all' ? ' notes-tab--active' : ''}`}
               type="button"
-              key={folder.id}
-              aria-current={activeFolderId === folder.id ? 'page' : undefined}
-              title={folder.name}
-              onClick={() => setActiveFolderId(folder.id)}
+              aria-current={activeFolderId === 'all' ? 'page' : undefined}
+              onClick={() => void handleSelectFolder('all')}
             >
-              {folder.name}
+              Todas
             </button>
-          ))}
-          <button
-            className="notes-tab notes-tab--add"
-            type="button"
-            aria-label="Crear o administrar carpetas"
-            title="Carpetas"
-            onClick={() => setFolderManagerOpen(true)}
-          >
-            ＋
-          </button>
-        </nav>
+            {folders.map((folder) => (
+              <button
+                className={`notes-tab${activeFolderId === folder.id ? ' notes-tab--active' : ''}`}
+                type="button"
+                key={folder.id}
+                aria-current={activeFolderId === folder.id ? 'page' : undefined}
+                title={folder.name}
+                onClick={() => void handleSelectFolder(folder.id)}
+              >
+                {folder.name}
+              </button>
+            ))}
+            <button
+              className="notes-tab notes-tab--add"
+              type="button"
+              aria-label="Crear o administrar carpetas"
+              title="Carpetas"
+              onClick={() => setFolderManagerOpen(true)}
+            >
+              ＋
+            </button>
+          </nav>
+          {folderScrollHint && (
+            <span className="notes-tabs-scroll-hint" aria-hidden="true">
+              {folderScrollHint === 'right' ? 'Desliza →' : '← Desliza'}
+            </span>
+          )}
+        </div>
 
         {error && <p className="notes-error" role="alert">{error}</p>}
 
@@ -986,7 +1053,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
             <div className="folder-list">
               {folders.length === 0 ? (
                 <p className="folder-list__empty">Aún no has creado carpetas.</p>
-              ) : folders.map((folder) => (
+              ) : folders.map((folder, folderIndex) => (
                 <div className="folder-list__row" key={folder.id}>
                   {editingFolderId === folder.id ? (
                     <>
@@ -1014,6 +1081,10 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
                         <div><strong>{folder.name}</strong><small>{notes.filter((note) => note.folderId === folder.id).length} notas</small></div>
                       </div>
                       <div className="folder-list__actions">
+                        <span className="folder-list__order" aria-label={`Orden de ${folder.name}`}>
+                          <button type="button" title="Mover arriba" aria-label={`Mover ${folder.name} arriba`} onClick={() => void handleReorderFolder(folder, 'up')} disabled={folderBusyId === folder.id || folderIndex === 0}>↑</button>
+                          <button type="button" title="Mover abajo" aria-label={`Mover ${folder.name} abajo`} onClick={() => void handleReorderFolder(folder, 'down')} disabled={folderBusyId === folder.id || folderIndex === folders.length - 1}>↓</button>
+                        </span>
                         <button type="button" onClick={() => beginFolderRename(folder)}>Renombrar</button>
                         <button className="folder-list__delete" type="button" onClick={() => void handleDeleteFolder(folder)} disabled={folderBusyId === folder.id}>Eliminar</button>
                       </div>

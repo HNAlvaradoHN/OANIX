@@ -14,17 +14,6 @@ interface VaultGateProps {
   renderUnlocked: (lockVault: () => void) => ReactNode
 }
 
-const foundationItems = [
-  'React + TypeScript',
-  'PWA instalable',
-  'Diseño adaptable',
-  'Bóveda local',
-  'Contraseña maestra',
-  'Cifrado local',
-  'Notas cifradas',
-  'Validación automática',
-]
-
 export function VaultGate({ renderUnlocked }: VaultGateProps) {
   const [state, setState] = useState<GateState>('checking')
   const [password, setPassword] = useState('')
@@ -124,22 +113,23 @@ export function VaultGate({ renderUnlocked }: VaultGateProps) {
     return <>{renderUnlocked(handleLock)}</>
   }
 
-  let gateContent: ReactNode
+  const isSetup = state === 'setup'
 
+  let gateContent: ReactNode
   if (state === 'checking') {
     gateContent = (
-      <div className="vault-panel" aria-live="polite">
-        <span className="status-dot status-dot--checking" aria-hidden="true" />
+      <div className="vault-state" aria-live="polite">
+        <span className="vault-loader" aria-hidden="true" />
         <div>
-          <strong>Comprobando bóveda local</strong>
-          <p>OANIX está revisando el estado de seguridad de este dispositivo.</p>
+          <strong>Preparando tu bóveda</strong>
+          <p>Comprobando el almacenamiento cifrado de este dispositivo.</p>
         </div>
       </div>
     )
   } else if (state === 'error') {
     gateContent = (
-      <div className="vault-panel vault-panel--error" role="alert">
-        <span className="status-dot status-dot--error" aria-hidden="true" />
+      <div className="vault-state vault-state--error" role="alert">
+        <span className="vault-state__icon" aria-hidden="true">!</span>
         <div>
           <strong>No se pudo abrir la bóveda local</strong>
           <p>{message || 'El navegador no pudo preparar el almacenamiento local de OANIX.'}</p>
@@ -147,18 +137,18 @@ export function VaultGate({ renderUnlocked }: VaultGateProps) {
       </div>
     )
   } else {
-    const isSetup = state === 'setup'
-
     gateContent = (
       <div className="vault-access">
         <div className="vault-access__heading">
-          <span className="status-dot status-dot--checking" aria-hidden="true" />
+          <span className="vault-access__lock" aria-hidden="true">
+            <span />
+          </span>
           <div>
-            <strong>{isSetup ? 'Protege tu bóveda' : 'Desbloquear OANIX'}</strong>
+            <strong>{isSetup ? 'Crea tu llave maestra' : 'Bienvenido de vuelta'}</strong>
             <p>
               {isSetup
-                ? `Crea una contraseña maestra de al menos ${MASTER_PASSWORD_MIN_CHARACTERS} caracteres.`
-                : 'Introduce tu contraseña maestra para abrir las notas cifradas de este dispositivo.'}
+                ? `Protege tu bóveda con al menos ${MASTER_PASSWORD_MIN_CHARACTERS} caracteres.`
+                : 'Introduce tu contraseña maestra para descifrar tus notas en este dispositivo.'}
             </p>
           </div>
         </div>
@@ -216,19 +206,14 @@ export function VaultGate({ renderUnlocked }: VaultGateProps) {
           {message && <p className="form-message" role="alert">{message}</p>}
 
           <button className="primary-button" type="submit" disabled={busy}>
-            {busy
-              ? isSetup
-                ? 'Protegiendo y comprobando…'
-                : 'Desbloqueando y comprobando…'
-              : isSetup
-                ? 'Crear contraseña maestra'
-                : 'Desbloquear bóveda'}
+            <span>{busy ? 'Procesando…' : isSetup ? 'Crear bóveda segura' : 'Entrar a OANIX'}</span>
+            {!busy && <span aria-hidden="true">→</span>}
           </button>
         </form>
 
         {isSetup && (
           <p className="security-note">
-            OANIX no guarda tu contraseña. En V1 no existe recuperación: si la olvidas, una bóveda cifrada no podrá abrirse.
+            OANIX no guarda tu contraseña. En V1 no existe recuperación si la olvidas.
           </p>
         )}
       </div>
@@ -236,22 +221,67 @@ export function VaultGate({ renderUnlocked }: VaultGateProps) {
   }
 
   return (
-    <main className="app-shell">
-      <section className="hero" aria-labelledby="oanix-title">
-        <div className="brand-mark" aria-hidden="true">O</div>
-        <p className="eyebrow">OANIX · V1</p>
-        <h1 id="oanix-title">Tus notas. Tu dispositivo. Tu privacidad.</h1>
-        <p className="hero-copy">
-          OANIX guarda su núcleo en este dispositivo. Desbloquea la bóveda para entrar a tus notas cifradas.
-        </p>
+    <main className="vault-shell">
+      <div className="vault-atmosphere" aria-hidden="true">
+        <span className="vault-glow vault-glow--one" />
+        <span className="vault-glow vault-glow--two" />
+        <span className="vault-glow vault-glow--three" />
+      </div>
 
-        {gateContent}
+      <section className="vault-landing" aria-labelledby="oanix-title">
+        <div className="vault-intro">
+          <div className="vault-brandline">
+            <div className="vault-logo" aria-hidden="true">O</div>
+            <div>
+              <strong>OANIX</strong>
+              <span>Secure private notes</span>
+            </div>
+          </div>
 
-        <ul className="foundation-list" aria-label="Base técnica preparada">
-          {foundationItems.map((item) => (
-            <li key={item}>{item}</li>
-          ))}
-        </ul>
+          <div className="vault-copy">
+            <p className="vault-kicker"><span aria-hidden="true" /> OFFLINE-FIRST · CIFRADO LOCAL</p>
+            <h1 className="vault-title" id="oanix-title">
+              Tu espacio privado, <em>siempre contigo.</em>
+            </h1>
+            <p className="vault-lead">
+              Escribe, organiza y conserva lo importante en una bóveda diseñada para funcionar primero en tu dispositivo.
+            </p>
+          </div>
+
+          <div className="vault-core" aria-hidden="true">
+            <span className="vault-core__ring vault-core__ring--outer" />
+            <span className="vault-core__ring vault-core__ring--middle" />
+            <span className="vault-core__ring vault-core__ring--inner" />
+            <span className="vault-core__scan" />
+            <strong>O</strong>
+            <i className="vault-core__node vault-core__node--one" />
+            <i className="vault-core__node vault-core__node--two" />
+            <i className="vault-core__node vault-core__node--three" />
+          </div>
+
+          <div className="vault-assurances" aria-label="Características de privacidad">
+            <div><span className="vault-assurance__mark" aria-hidden="true" /><strong>Local</strong><small>Tus datos viven primero aquí</small></div>
+            <div><span className="vault-assurance__mark" aria-hidden="true" /><strong>Cifrado</strong><small>Contenido protegido en reposo</small></div>
+            <div><span className="vault-assurance__mark" aria-hidden="true" /><strong>Offline</strong><small>Disponible sin depender de la nube</small></div>
+          </div>
+        </div>
+
+        <div className="vault-card">
+          <header className="vault-card__header">
+            <div>
+              <span className="vault-card__pulse" aria-hidden="true" />
+              <strong>Bóveda local</strong>
+            </div>
+            <span className="vault-card__version">V1</span>
+          </header>
+
+          <div className="vault-card__body">{gateContent}</div>
+
+          <footer className="vault-card__footer">
+            <span><i aria-hidden="true" /> Privacidad por diseño</span>
+            <span>OANIX</span>
+          </footer>
+        </div>
       </section>
     </main>
   )
