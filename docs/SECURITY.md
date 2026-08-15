@@ -114,9 +114,11 @@ La misma capa criptográfica admite bytes y JSON para que imágenes y otros tipo
 
 Las notas se almacenan como registros cifrados de tipo `note`. El contenido usa un modelo estructurado `blocks-v1`; no se persiste el `innerHTML` de `contentEditable`.
 
-El editor solo transforma a datos persistentes los elementos que OANIX reconoce actualmente: párrafos, encabezados, listas, citas, separadores y segmentos de texto con negrita, cursiva o enlaces permitidos. Cualquier estructura del DOM fuera de ese modelo se aplana a texto o se descarta como formato.
+El editor solo transforma a datos persistentes los elementos que OANIX reconoce actualmente: párrafos, encabezados, listas, citas, separadores, bloques de código y segmentos de texto con negrita, cursiva o enlaces permitidos. Cualquier estructura del DOM fuera de ese modelo se aplana a texto o se descarta como formato.
 
 Los enlaces se normalizan y solo se conservan con protocolos `http`, `https`, `mailto` o `tel`. El pegado en esta etapa introduce texto plano, evitando que estilos, scripts o marcado externo entren directamente al modelo persistido.
+
+Los bloques de código almacenan únicamente texto y un identificador de lenguaje permitido. El selector de lenguaje es metadato de presentación: OANIX no evalúa, interpreta ni ejecuta el contenido del bloque. La acción de copiar solo entrega ese texto al portapapeles del dispositivo.
 
 El autoguardado cifra el modelo completo antes de cada escritura. Las mutaciones de una misma nota se serializan para impedir que dos actualizaciones concurrentes, por ejemplo título y contenido, se sobrescriban entre sí.
 
