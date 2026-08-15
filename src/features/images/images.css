@@ -946,4 +946,19 @@
     float: none !important;
     clear: both;
   }
+
+  .image-note-editor-root .editor-surface > .editor-image-block[data-image-compact='true'][data-image-alignment='left'] {
+    margin-left: 0;
+    margin-right: auto;
+  }
+
+  .image-note-editor-root .editor-surface > .editor-image-block[data-image-compact='true'][data-image-alignment='center'] {
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .image-note-editor-root .editor-surface > .editor-image-block[data-image-compact='true'][data-image-alignment='right'] {
+    margin-left: auto;
+    margin-right: 0;
+  }
 }
