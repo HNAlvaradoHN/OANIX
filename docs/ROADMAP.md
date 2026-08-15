@@ -62,6 +62,7 @@ Objetivo: empaquetar la misma base de código como aplicación Android.
 - [ ] OCR
 - [ ] Compartir notas
 - [ ] Temas y personalización avanzada
+- [ ] Avatar o foto opcional por nota, almacenada de forma privada
 - [ ] IA opcional con modelo de privacidad definido
 
 ## Estado actual
