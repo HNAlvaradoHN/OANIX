@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef, type ClipboardEvent, type MouseEvent } from 'react'
+import { useCallback, useEffect, useRef, type ClipboardEvent, type MouseEvent } from 'react'
 import {
   normalizeNoteLink,
   noteBlocksToPlainText,
@@ -226,15 +226,25 @@ function RichTextEditorComponent({
   onBlur,
 }: RichTextEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null)
-  const initialHtml = blocksToHtml(initialBlocks)
-  const lastHtmlRef = useRef(initialHtml)
+  const initialHtmlRef = useRef(blocksToHtml(initialBlocks))
+  const lastHtmlRef = useRef(initialHtmlRef.current)
   const restoringRef = useRef(false)
+
+  const attachEditor = useCallback(
+    (editor: HTMLDivElement | null) => {
+      editorRef.current = editor
+      if (!editor) return
+
+      editor.innerHTML = initialHtmlRef.current
+      lastHtmlRef.current = editor.innerHTML
+      setEditorEmptyState(editor, parseEditorBlocks(editor))
+    },
+    [noteId],
+  )
 
   useEffect(() => {
     const editor = editorRef.current
     if (!editor) return
-
-    lastHtmlRef.current = editor.innerHTML
 
     const observer = new MutationObserver(() => {
       if (restoringRef.current || editor.innerHTML !== '' || lastHtmlRef.current === '') return
@@ -352,16 +362,14 @@ function RichTextEditorComponent({
       </div>
 
       <div
-        ref={editorRef}
+        ref={attachEditor}
         className="editor-surface"
         contentEditable
         suppressContentEditableWarning
         role="textbox"
         aria-multiline="true"
         aria-label="Contenido de la nota"
-        data-empty={isEditorEmpty(initialBlocks) ? 'true' : 'false'}
         data-placeholder="Escribe algo…"
-        dangerouslySetInnerHTML={{ __html: initialHtml }}
         onInput={emitChange}
         onBlur={onBlur}
         onPaste={handlePaste}
@@ -371,7 +379,4 @@ function RichTextEditorComponent({
   )
 }
 
-export const RichTextEditor = memo(
-  RichTextEditorComponent,
-  (previous, next) => previous.noteId === next.noteId,
-)
+export const RichTextEditor = RichTextEditorComponent
