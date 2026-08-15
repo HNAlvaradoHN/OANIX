@@ -1,7 +1,8 @@
 import { readEncryptedBlob, writeEncryptedBlob } from '../../storage/repositories/encryptedBlobRepository'
-
-export const IMAGE_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'] as const
-export type ImageMimeType = (typeof IMAGE_MIME_TYPES)[number]
+import {
+  normalizeImageMimeType,
+  type ImageMimeType,
+} from '../notes/noteTypes'
 
 const IMAGE_RECORD_TYPE = 'image'
 const MAX_IMAGE_BYTES = 15 * 1024 * 1024
@@ -23,10 +24,6 @@ function createImageId(): string {
   return Array.from(globalThis.crypto.getRandomValues(new Uint8Array(16)))
     .map((byte) => byte.toString(16).padStart(2, '0'))
     .join('')
-}
-
-export function normalizeImageMimeType(value: string): ImageMimeType | null {
-  return (IMAGE_MIME_TYPES as readonly string[]).includes(value) ? (value as ImageMimeType) : null
 }
 
 export function validateImageFile(file: File): ImageMimeType {
