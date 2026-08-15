@@ -83,8 +83,9 @@ export function CodeBlockEditor(props: CodeBlockEditorProps) {
   const rootRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const root = rootRef.current
-    if (!root) return
+    const currentRoot = rootRef.current
+    if (!currentRoot) return
+    const root: HTMLDivElement = currentRoot
 
     decorateCodeBlocks(root)
 
