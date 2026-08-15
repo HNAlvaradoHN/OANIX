@@ -389,7 +389,7 @@ export function ImageNoteEditor({
     return editorBlocks.map((block) => imagesRef.current.get(block.id) ?? block)
   }
 
-  function updateUndoButton(root = rootRef.current) {
+  function updateUndoButton(root: HTMLElement | null = rootRef.current) {
     const button = root?.querySelector<HTMLButtonElement>('[data-undo-tool="true"]')
     if (button) button.disabled = historyRef.current.length === 0
   }
