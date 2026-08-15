@@ -37,6 +37,7 @@ Todos los cambios relevantes del proyecto se registran aquí por versión.
 - Menú contextual `⋮` por nota en la lista, con eliminación permanente movida fuera de la cabecera de edición.
 - Zona final de escritura reforzada después de imágenes para poder colocar el cursor debajo de la última imagen de forma fiable.
 - Menú `⋮` con dirección adaptativa según el espacio disponible y zona terminal independiente debajo de imágenes flotantes, sin perder el flujo de texto lateral.
+- Pulido móvil del editor preparado: imágenes con rango de tamaño más pequeño, herramientas flotantes, Deshacer/Rehacer persistentes y controles largos reorganizados para evitar recortes.
 
 ## Versionado
 

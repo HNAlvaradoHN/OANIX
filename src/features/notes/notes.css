@@ -492,3 +492,19 @@
   .new-note-button { width: 2.55rem; justify-content: center; padding: 0; }
   .notes-header { gap: 0.5rem; }
 }
+
+/* OANIX responsive control text safety */
+.note-row__menu button,
+.new-note-button,
+.empty-action,
+.notes-error,
+.note-editor-placeholder {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 760px) {
+  .note-row__menu button,
+  .empty-action {
+    white-space: normal;
+  }
+}
