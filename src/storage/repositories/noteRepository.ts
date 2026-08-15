@@ -1,4 +1,5 @@
 import {
+  deleteEncryptedRecord,
   listEncryptedRecords,
   readEncryptedRecord,
   writeEncryptedRecord,
@@ -9,6 +10,10 @@ const NOTE_RECORD_TYPE = 'note'
 
 export async function saveNote(note: NoteRecord): Promise<void> {
   await writeEncryptedRecord(NOTE_RECORD_TYPE, note.id, note)
+}
+
+export async function deleteNoteRecord(noteId: string): Promise<void> {
+  await deleteEncryptedRecord(NOTE_RECORD_TYPE, noteId)
 }
 
 export async function readNote(noteId: string): Promise<NoteRecord | null> {
