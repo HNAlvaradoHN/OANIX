@@ -51,3 +51,5 @@ Todos los cambios relevantes del proyecto se registran aquí por versión.
 ## Versionado
 
 OANIX utilizará versiones claras y progresivas. No se publicará una versión como cerrada hasta completar y validar su alcance definido en `ROADMAP.md`.
+
+- Pulido responsive transversal: dock sobre teclado virtual, menús de código sin recortes, cierre explícito de opciones de imagen y eliminación de acciones duplicadas.

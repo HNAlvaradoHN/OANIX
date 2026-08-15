@@ -507,9 +507,6 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
               </button>
               {workspaceMenuOpen && (
                 <div className="workspace-menu" role="menu" aria-label="Acciones de OANIX">
-                  <button type="button" role="menuitem" onClick={() => void handleLockWorkspace()}>
-                    <span aria-hidden="true">🔒</span> Bloquear OANIX
-                  </button>
                   <button
                     type="button"
                     role="menuitem"

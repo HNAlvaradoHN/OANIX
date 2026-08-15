@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ChangeEvent, type PointerEvent as ReactPointerEvent } from 'react'
 import { CodeBlockEditor } from '../editor/CodeBlockEditor'
+import { keyboardInsetFromViewport } from '../../shared/viewportMetrics'
 import { reconcileProtectedBlocks } from '../editor/protectedBlocks'
 import {
   type ImageAlignment,
@@ -222,9 +223,13 @@ function setImageInfoOpen(figure: HTMLElement, open: boolean): void {
   figure.dataset.imageInfoOpen = String(open)
   const button = figure.querySelector<HTMLButtonElement>('[data-image-info="true"]')
   if (button) {
-    button.textContent = open ? '−' : '+'
+    button.textContent = open ? '×' : '+'
     button.setAttribute('aria-expanded', String(open))
-    button.title = open ? 'Ocultar información' : 'Mostrar información y descripción'
+    button.title = open ? 'Cerrar opciones de imagen' : 'Mostrar información y descripción'
+    button.setAttribute(
+      'aria-label',
+      open ? 'Cerrar opciones de imagen' : 'Mostrar información y descripción de la imagen',
+    )
   }
 }
 
@@ -770,6 +775,24 @@ export function ImageNoteEditor({
     const root: HTMLDivElement = currentRoot
     let resizeState: ResizeState | null = null
 
+    function syncVisualViewportMetrics() {
+      const visualViewport = window.visualViewport
+      const visualHeight = visualViewport?.height ?? window.innerHeight
+      const inset = keyboardInsetFromViewport({
+        layoutHeight: window.innerHeight,
+        visualHeight,
+        visualOffsetTop: visualViewport?.offsetTop ?? 0,
+      })
+
+      root.style.setProperty('--oanix-keyboard-inset', `${inset}px`)
+      root.style.setProperty('--oanix-visual-height', `${Math.max(1, Math.round(visualHeight))}px`)
+    }
+
+    syncVisualViewportMetrics()
+    window.visualViewport?.addEventListener('resize', syncVisualViewportMetrics)
+    window.visualViewport?.addEventListener('scroll', syncVisualViewportMetrics)
+    window.addEventListener('resize', syncVisualViewportMetrics)
+
     decorateToolbar(root)
     hydrateStoredImages(root)
 
@@ -1086,6 +1109,9 @@ export function ImageNoteEditor({
       document.removeEventListener('pointerup', handlePointerUp, true)
       document.removeEventListener('pointercancel', handlePointerUp, true)
       document.removeEventListener('keydown', handleKeyDown)
+      window.visualViewport?.removeEventListener('resize', syncVisualViewportMetrics)
+      window.visualViewport?.removeEventListener('scroll', syncVisualViewportMetrics)
+      window.removeEventListener('resize', syncVisualViewportMetrics)
 
       const urls = new Set([...objectUrlsRef.current.values(), ...previewUrlsRef.current.values()])
       for (const url of urls) URL.revokeObjectURL(url)

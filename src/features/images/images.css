@@ -860,3 +860,54 @@
   .editor-command-panel { right: .5rem; left: .5rem; width: auto; }
   .editor-command-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
+
+/* OANIX visible-viewport responsive overlays v3 */
+.image-note-editor-root {
+  --oanix-keyboard-inset: 0px;
+  --oanix-visual-height: 100dvh;
+}
+
+.mobile-editor-dock {
+  bottom: calc(max(.7rem, env(safe-area-inset-bottom)) + var(--oanix-keyboard-inset, 0px)) !important;
+  transition: bottom 120ms ease;
+}
+
+.editor-command-panel {
+  bottom: calc(4.45rem + env(safe-area-inset-bottom) + var(--oanix-keyboard-inset, 0px)) !important;
+  max-height: min(62dvh, calc(var(--oanix-visual-height, 100dvh) - 6rem));
+}
+
+.image-note-editor-root .editor-image-block[data-image-info-open='true'] .editor-image-block__info {
+  min-width: 2.55rem !important;
+  width: 2.55rem !important;
+  min-height: 2.55rem !important;
+  height: 2.55rem !important;
+  padding: 0 !important;
+  display: grid !important;
+  place-items: center;
+  border-color: #cbd5e1 !important;
+  background: #f8fafc !important;
+  color: #334155 !important;
+  font-size: 1.4rem !important;
+  line-height: 1 !important;
+}
+
+@container (max-width: 34rem) {
+  .image-note-editor-root .editor-image-block[data-image-compact='true'][data-image-info-open='true'] .editor-image-block__footer {
+    bottom: calc(4.65rem + env(safe-area-inset-bottom) + var(--oanix-keyboard-inset, 0px)) !important;
+    max-height: min(58dvh, calc(var(--oanix-visual-height, 100dvh) - 6.25rem));
+    overflow-y: auto;
+    padding-top: 3.7rem !important;
+  }
+
+  .image-note-editor-root .editor-image-block[data-image-compact='true'][data-image-info-open='true'] .editor-image-block__info {
+    position: absolute;
+    z-index: 2;
+    top: .6rem;
+    right: .65rem;
+  }
+
+  .image-note-editor-root .editor-image-block[data-image-compact='true'][data-image-info-open='true'] .editor-image-block__actions {
+    padding-right: 0;
+  }
+}
