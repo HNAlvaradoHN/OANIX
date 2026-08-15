@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ChangeEvent } from 'react'
+import { useEffect, useRef, useState, type ChangeEvent, type PointerEvent as ReactPointerEvent } from 'react'
 import { CodeBlockEditor } from '../editor/CodeBlockEditor'
 import { reconcileProtectedBlocks } from '../editor/protectedBlocks'
 import {
@@ -438,7 +438,7 @@ export function ImageNoteEditor({
   const [preview, setPreview] = useState<PreviewState | null>(null)
   const [previewZoom, setPreviewZoom] = useState(1)
   const [imageError, setImageError] = useState('')
-  const [mobileToolsOpen, setMobileToolsOpen] = useState(false)
+  const [activeDockPanel, setActiveDockPanel] = useState<'format' | 'insert' | null>(null)
 
   function mergedBlocks(editorBlocks: NoteBlock[]): StoredNoteBlock[] {
     return editorBlocks.map((block) => imagesRef.current.get(block.id) ?? block)
@@ -868,9 +868,8 @@ export function ImageNoteEditor({
       const target = event.target
       if (!(target instanceof Element)) return
 
-      const selectedToolbarTool = target.closest<HTMLButtonElement>('.editor-toolbar button')
-      if (selectedToolbarTool && root.contains(selectedToolbarTool)) {
-        queueMicrotask(() => setMobileToolsOpen(false))
+      if (!target.closest('.editor-command-panel') && !target.closest('.mobile-editor-dock')) {
+        setActiveDockPanel(null)
       }
 
       const undoTool = target.closest<HTMLElement>('[data-undo-tool="true"]')
@@ -1062,7 +1061,7 @@ export function ImageNoteEditor({
       if (event.key === 'Escape') {
         setPreview(null)
         setPreviewZoom(1)
-        setMobileToolsOpen(false)
+        setActiveDockPanel(null)
       }
     }
 
@@ -1101,6 +1100,26 @@ export function ImageNoteEditor({
     await insertFiles(files)
   }
 
+  function keepEditorSelection(event: ReactPointerEvent<HTMLButtonElement>) {
+    event.preventDefault()
+  }
+
+  function triggerToolbarAction(selector: string) {
+    const root = rootRef.current
+    const button = root?.querySelector<HTMLButtonElement>(`.editor-toolbar ${selector}`)
+    if (!button) return
+    button.click()
+    setActiveDockPanel(null)
+  }
+
+  function triggerImageInsert() {
+    const root = rootRef.current
+    if (!root) return
+    insertionAfterIdRef.current = currentDirectBlockId(root)
+    setActiveDockPanel(null)
+    inputRef.current?.click()
+  }
+
   function closePreview() {
     setPreview(null)
     setPreviewZoom(1)
@@ -1115,7 +1134,7 @@ export function ImageNoteEditor({
   return (
     <div
       ref={rootRef}
-      className={`image-note-editor-root${mobileToolsOpen ? ' image-note-editor-root--mobile-tools-open' : ''}`}
+      className={`image-note-editor-root${activeDockPanel ? ' image-note-editor-root--panel-open' : ''}`}
     >
       <CodeBlockEditor
         key={`${noteId}:${editorEpoch}`}
@@ -1125,6 +1144,34 @@ export function ImageNoteEditor({
         onBlur={onBlur}
       />
 
+      {activeDockPanel === 'format' && (
+        <div className="editor-command-panel editor-command-panel--format" role="dialog" aria-label="Formato de texto">
+          <div className="editor-command-panel__heading"><strong>Formato</strong><span>Texto y estructura</span></div>
+          <div className="editor-command-grid">
+            <button type="button" onPointerDown={keepEditorSelection} onClick={() => triggerToolbarAction('[data-format="bold"]')}><strong>B</strong><span>Negrita</span></button>
+            <button type="button" onPointerDown={keepEditorSelection} onClick={() => triggerToolbarAction('[data-format="italic"]')}><em>I</em><span>Cursiva</span></button>
+            <button type="button" onPointerDown={keepEditorSelection} onClick={() => triggerToolbarAction('[data-format="paragraph"]')}><strong>P</strong><span>Párrafo</span></button>
+            <button type="button" onPointerDown={keepEditorSelection} onClick={() => triggerToolbarAction('[data-format="heading2"]')}><strong>H2</strong><span>Título</span></button>
+            <button type="button" onPointerDown={keepEditorSelection} onClick={() => triggerToolbarAction('[data-format="heading3"]')}><strong>H3</strong><span>Subtítulo</span></button>
+            <button type="button" onPointerDown={keepEditorSelection} onClick={() => triggerToolbarAction('[data-format="bulletList"]')}><strong>•</strong><span>Lista</span></button>
+            <button type="button" onPointerDown={keepEditorSelection} onClick={() => triggerToolbarAction('[data-format="orderedList"]')}><strong>1.</strong><span>Numerada</span></button>
+            <button type="button" onPointerDown={keepEditorSelection} onClick={() => triggerToolbarAction('[data-format="quote"]')}><strong>❝</strong><span>Cita</span></button>
+            <button type="button" onPointerDown={keepEditorSelection} onClick={() => triggerToolbarAction('[data-format="link"]')}><strong>↗</strong><span>Enlace</span></button>
+          </div>
+        </div>
+      )}
+
+      {activeDockPanel === 'insert' && (
+        <div className="editor-command-panel editor-command-panel--insert" role="dialog" aria-label="Insertar contenido">
+          <div className="editor-command-panel__heading"><strong>Insertar</strong><span>Contenido de la nota</span></div>
+          <div className="editor-command-grid editor-command-grid--insert">
+            <button type="button" onPointerDown={keepEditorSelection} onClick={triggerImageInsert}><strong>▧</strong><span>Imagen</span></button>
+            <button type="button" onPointerDown={keepEditorSelection} onClick={() => triggerToolbarAction('[data-format="code"]')}><strong>&lt;/&gt;</strong><span>Código</span></button>
+            <button type="button" onPointerDown={keepEditorSelection} onClick={() => triggerToolbarAction('[title="Separador"]')}><strong>—</strong><span>Separador</span></button>
+          </div>
+        </div>
+      )}
+
       <div className="mobile-editor-dock" role="toolbar" aria-label="Acciones rápidas del editor">
         <button
           className="mobile-editor-dock__history"
@@ -1132,29 +1179,32 @@ export function ImageNoteEditor({
           data-undo-tool="true"
           aria-label="Deshacer último cambio"
           title="Deshacer"
-        >
-          ↶
-        </button>
+        >↶</button>
         <button
           className="mobile-editor-dock__history"
           type="button"
           data-redo-tool="true"
           aria-label="Rehacer último cambio"
           title="Rehacer"
-        >
-          ↷
-        </button>
+        >↷</button>
         <button
-          className="mobile-editor-dock__tools"
+          className="mobile-editor-dock__format"
           type="button"
-          data-mobile-tools-toggle="true"
-          aria-label={mobileToolsOpen ? 'Cerrar herramientas de edición' : 'Abrir herramientas de edición'}
-          aria-expanded={mobileToolsOpen}
-          title="Herramientas de edición"
-          onClick={() => setMobileToolsOpen((open) => !open)}
-        >
-          ☷
-        </button>
+          aria-label="Formato de texto"
+          aria-expanded={activeDockPanel === 'format'}
+          title="Formato"
+          onPointerDown={keepEditorSelection}
+          onClick={() => setActiveDockPanel((panel) => panel === 'format' ? null : 'format')}
+        >Aa</button>
+        <button
+          className="mobile-editor-dock__insert"
+          type="button"
+          aria-label="Insertar contenido"
+          aria-expanded={activeDockPanel === 'insert'}
+          title="Insertar"
+          onPointerDown={keepEditorSelection}
+          onClick={() => setActiveDockPanel((panel) => panel === 'insert' ? null : 'insert')}
+        >＋</button>
       </div>
 
       <input

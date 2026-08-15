@@ -84,6 +84,9 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [noteMenuId, setNoteMenuId] = useState<string | null>(null)
   const [noteMenuDirection, setNoteMenuDirection] = useState<'down' | 'up'>('down')
+  const [workspaceMenuOpen, setWorkspaceMenuOpen] = useState(false)
+  const [activeNoteMenuOpen, setActiveNoteMenuOpen] = useState(false)
+  const [noteInfoOpen, setNoteInfoOpen] = useState(false)
   const [savingTitle, setSavingTitle] = useState(false)
   const [saveState, setSaveState] = useState<SaveState>('idle')
   const [error, setError] = useState('')
@@ -200,10 +203,17 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
       const target = event.target
       if (target instanceof Element && target.closest('[data-note-menu-root="true"]')) return
       setNoteMenuId(null)
+      setWorkspaceMenuOpen(false)
+      setActiveNoteMenuOpen(false)
     }
 
     function closeNoteMenuWithKeyboard(event: KeyboardEvent) {
-      if (event.key === 'Escape') setNoteMenuId(null)
+      if (event.key === 'Escape') {
+        setNoteMenuId(null)
+        setWorkspaceMenuOpen(false)
+        setActiveNoteMenuOpen(false)
+        setNoteInfoOpen(false)
+      }
     }
 
     document.addEventListener('pointerdown', closeNoteMenu)
@@ -403,6 +413,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
 
   async function handleSelectNote(noteId: string) {
     setNoteMenuId(null)
+    setActiveNoteMenuOpen(false)
     if (noteId === selectedId) return
     if (!(await flushPendingContent())) return
     await finalizeRemovedImages()
@@ -472,7 +483,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
               <span>Notas privadas</span>
             </div>
           </div>
-          <div className="notes-header__actions">
+          <div className="notes-header__actions" data-note-menu-root="true">
             <button
               className="icon-button"
               type="button"
@@ -480,17 +491,38 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
               aria-label="Bloquear OANIX"
               title="Bloquear OANIX"
             >
-              ◼
+              🔒
             </button>
-            <button
-              className="new-note-button"
-              type="button"
-              onClick={() => void handleCreateNote()}
-              disabled={creating}
-            >
-              <span aria-hidden="true">＋</span>
-              <span>{creating ? 'Creando…' : 'Nueva'}</span>
-            </button>
+            <div className="workspace-menu-wrap">
+              <button
+                className="icon-button"
+                type="button"
+                aria-label="Menú de OANIX"
+                aria-haspopup="menu"
+                aria-expanded={workspaceMenuOpen}
+                title="Menú de OANIX"
+                onClick={() => setWorkspaceMenuOpen((open) => !open)}
+              >
+                ⋮
+              </button>
+              {workspaceMenuOpen && (
+                <div className="workspace-menu" role="menu" aria-label="Acciones de OANIX">
+                  <button type="button" role="menuitem" onClick={() => void handleLockWorkspace()}>
+                    <span aria-hidden="true">🔒</span> Bloquear OANIX
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setWorkspaceMenuOpen(false)
+                      window.alert('OANIX V1 · bóveda local cifrada · offline-first')
+                    }}
+                  >
+                    <span aria-hidden="true">ⓘ</span> Acerca de OANIX
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </header>
 
@@ -574,6 +606,18 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
             ))
           )}
         </div>
+
+        <button
+          className="notes-create-fab"
+          type="button"
+          onClick={() => void handleCreateNote()}
+          disabled={creating}
+          aria-label={creating ? 'Creando nota' : 'Crear nueva nota'}
+          title="Nueva nota"
+        >
+          <span aria-hidden="true">＋</span>
+          <span>{creating ? 'Creando…' : 'Nueva nota'}</span>
+        </button>
       </aside>
 
       <section className="note-view" aria-label="Nota abierta">
@@ -585,6 +629,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
                 type="button"
                 onClick={() => void handleBack()}
                 aria-label="Volver a la lista de notas"
+                title="Volver"
               >
                 ←
               </button>
@@ -596,6 +641,45 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
                     {deletingSelected ? 'Eliminando nota…' : saveStateLabel(saveState, savingTitle)}
                   </span>
                 </div>
+              </div>
+              <div className="note-view__actions" data-note-menu-root="true">
+                <button
+                  className="note-view__menu-button"
+                  type="button"
+                  aria-label="Acciones de la nota"
+                  aria-haspopup="menu"
+                  aria-expanded={activeNoteMenuOpen}
+                  title="Acciones de la nota"
+                  onClick={() => setActiveNoteMenuOpen((open) => !open)}
+                >
+                  ⋮
+                </button>
+                {activeNoteMenuOpen && (
+                  <div className="note-view__menu" role="menu" aria-label="Acciones de la nota">
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setActiveNoteMenuOpen(false)
+                        setNoteInfoOpen(true)
+                      }}
+                    >
+                      <span aria-hidden="true">ⓘ</span> Información
+                    </button>
+                    <button
+                      className="note-view__menu-danger"
+                      type="button"
+                      role="menuitem"
+                      disabled={deletingId !== null}
+                      onClick={() => {
+                        setActiveNoteMenuOpen(false)
+                        void handleDeleteNote(selectedNote)
+                      }}
+                    >
+                      <span aria-hidden="true">🗑</span> {deletingSelected ? 'Eliminando…' : 'Eliminar nota'}
+                    </button>
+                  </div>
+                )}
               </div>
             </header>
 
@@ -639,6 +723,30 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
             <div className="note-view__empty-mark" aria-hidden="true">O</div>
             <strong>Selecciona una nota</strong>
             <p>La experiencia se organiza como una lista de conversaciones, pero cada elemento es una nota privada.</p>
+          </div>
+        )}
+
+        {selectedNote && noteInfoOpen && (
+          <div className="note-info-dialog" role="presentation" onClick={() => setNoteInfoOpen(false)}>
+            <div
+              className="note-info-dialog__panel"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Información de la nota"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="note-info-dialog__header">
+                <strong>Información de la nota</strong>
+                <button type="button" onClick={() => setNoteInfoOpen(false)} aria-label="Cerrar">×</button>
+              </div>
+              <dl>
+                <div><dt>Título</dt><dd>{selectedNote.title}</dd></div>
+                <div><dt>Creada</dt><dd>{new Date(selectedNote.createdAt).toLocaleString('es-HN')}</dd></div>
+                <div><dt>Modificada</dt><dd>{new Date(selectedNote.updatedAt).toLocaleString('es-HN')}</dd></div>
+                <div><dt>Bloques</dt><dd>{selectedNote.content.blocks.length}</dd></div>
+                <div><dt>Protección</dt><dd>Cifrada localmente</dd></div>
+              </dl>
+            </div>
           </div>
         )}
       </section>

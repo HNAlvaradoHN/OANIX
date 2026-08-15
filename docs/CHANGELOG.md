@@ -3,6 +3,12 @@
 Todos los cambios relevantes del proyecto se registran aquí por versión.
 
 ## Unreleased
+- Corregida incompatibilidad de guardado: las imágenes reducidas en móvil ya son válidas para el modelo persistido y no invalidan la nota al releerla.
+- Shell fluido inspirado en la estrategia responsive de OAVIX: tamaños gobernados por contenedores, `clamp`, `minmax`, wrap y un único conjunto de componentes.
+- Navegación y cambio estructural a una sola columna alineados en el mismo límite de 760 px para evitar estados inconsistentes entre CSS e historial.
+- Nueva cabecera de nota con menú `⋮`, información y eliminación; creación de nota mediante botón flotante.
+- Dock persistente `↶ ↷ Aa ＋`: formato e inserción separados en paneles adaptativos.
+- Bloques de código simplificados a lenguaje + pantalla completa + menú `⋮` para copiar/convertir/eliminar.
 
 - Refuerzo de guardado local móvil con reintento de IndexedDB, error visible/reintentable, navegación Atrás integrada al historial, cierre automático de herramientas y breakpoints explícitos móvil/tablet/PC.
 - Refinamiento móvil de imágenes y código: imágenes sin flujo lateral, escalado proporcional por ambos ejes, panel de acciones legible, código contenido y editor de código a pantalla completa.
