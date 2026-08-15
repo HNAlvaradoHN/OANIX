@@ -42,6 +42,13 @@ function placeCaretAtEnd(element: HTMLElement): void {
   selection.addRange(range)
 }
 
+function createEmptyParagraph(): HTMLParagraphElement {
+  const paragraph = document.createElement('p')
+  paragraph.dataset.blockId = createBlockId()
+  paragraph.appendChild(document.createElement('br'))
+  return paragraph
+}
+
 function convertCodeBlockToText(root: HTMLElement, block: HTMLElement): void {
   const editor = root.querySelector<HTMLElement>('.editor-surface')
   if (!editor || !editor.contains(block)) return
@@ -62,21 +69,115 @@ function convertCodeBlockToText(root: HTMLElement, block: HTMLElement): void {
   editor.focus()
 }
 
+function deleteCodeBlock(root: HTMLElement, block: HTMLElement): void {
+  const editor = root.querySelector<HTMLElement>('.editor-surface')
+  if (!editor || !editor.contains(block)) return
+
+  const previous = block.previousElementSibling instanceof HTMLElement ? block.previousElementSibling : null
+  const next = block.nextElementSibling instanceof HTMLElement ? block.nextElementSibling : null
+  block.remove()
+
+  let focusTarget = next ?? previous
+  if (!focusTarget) {
+    const paragraph = createEmptyParagraph()
+    editor.appendChild(paragraph)
+    focusTarget = paragraph
+  }
+
+  const codeContent = focusTarget.querySelector<HTMLElement>('[data-code-content="true"]')
+  const caretTarget = codeContent ?? focusTarget
+  placeCaretAtEnd(caretTarget)
+  editor.dispatchEvent(new Event('input', { bubbles: true }))
+  editor.focus()
+}
+
 function decorateCodeBlocks(root: HTMLElement): void {
   root.querySelectorAll<HTMLElement>('.editor-code-block__toolbar').forEach((toolbar) => {
-    if (toolbar.querySelector('[data-code-remove="true"]')) return
+    if (toolbar.querySelector('[data-code-convert="true"]')) return
 
-    const button = document.createElement('button')
-    button.type = 'button'
-    button.className = 'editor-code-block__remove'
-    button.dataset.codeRemove = 'true'
-    button.textContent = 'Quitar bloque'
-    button.title = 'Quitar el formato de código y conservar el texto'
-    button.setAttribute('aria-label', 'Quitar bloque de código y conservar el texto')
+    const convert = document.createElement('button')
+    convert.type = 'button'
+    convert.className = 'editor-code-block__convert'
+    convert.dataset.codeConvert = 'true'
+    convert.textContent = 'Convertir a texto'
+    convert.title = 'Quitar el formato de código y conservar todo el contenido'
+    convert.setAttribute('aria-label', 'Convertir bloque de código a texto conservando el contenido')
+
+    const remove = document.createElement('button')
+    remove.type = 'button'
+    remove.className = 'editor-code-block__delete'
+    remove.dataset.codeDelete = 'true'
+    remove.textContent = 'Eliminar bloque'
+    remove.title = 'Eliminar el bloque y todo su contenido'
+    remove.setAttribute('aria-label', 'Eliminar bloque de código y su contenido')
 
     const copyButton = toolbar.querySelector('[data-code-copy="true"]')
-    toolbar.insertBefore(button, copyButton)
+    toolbar.insertBefore(convert, copyButton)
+    toolbar.insertBefore(remove, copyButton)
   })
+}
+
+function createDeleteDialog(
+  root: HTMLElement,
+  block: HTMLElement,
+  onClose: () => void,
+): HTMLElement {
+  const backdrop = document.createElement('div')
+  backdrop.className = 'code-delete-dialog'
+  backdrop.setAttribute('role', 'presentation')
+
+  const dialog = document.createElement('div')
+  dialog.className = 'code-delete-dialog__panel'
+  dialog.setAttribute('role', 'dialog')
+  dialog.setAttribute('aria-modal', 'true')
+  dialog.setAttribute('aria-labelledby', 'oanix-code-delete-title')
+  dialog.setAttribute('aria-describedby', 'oanix-code-delete-description')
+
+  const title = document.createElement('h3')
+  title.id = 'oanix-code-delete-title'
+  title.textContent = 'Eliminar bloque de código'
+
+  const description = document.createElement('p')
+  description.id = 'oanix-code-delete-description'
+  description.textContent =
+    'Se eliminará este bloque y todo el código que contiene. Esta acción no se puede deshacer.'
+
+  const actions = document.createElement('div')
+  actions.className = 'code-delete-dialog__actions'
+
+  const cancel = document.createElement('button')
+  cancel.type = 'button'
+  cancel.className = 'code-delete-dialog__cancel'
+  cancel.textContent = 'Cancelar'
+
+  const confirm = document.createElement('button')
+  confirm.type = 'button'
+  confirm.className = 'code-delete-dialog__confirm'
+  confirm.textContent = 'Eliminar bloque'
+
+  actions.append(cancel, confirm)
+  dialog.append(title, description, actions)
+  backdrop.append(dialog)
+
+  function close() {
+    backdrop.remove()
+    onClose()
+  }
+
+  cancel.addEventListener('click', close)
+  confirm.addEventListener('click', () => {
+    if (block.isConnected && root.contains(block)) {
+      deleteCodeBlock(root, block)
+    }
+    close()
+  })
+  backdrop.addEventListener('click', (event) => {
+    if (event.target === backdrop) close()
+  })
+
+  document.body.append(backdrop)
+  cancel.focus()
+  return backdrop
 }
 
 export function CodeBlockEditor(props: CodeBlockEditorProps) {
@@ -86,24 +187,44 @@ export function CodeBlockEditor(props: CodeBlockEditorProps) {
     const currentRoot = rootRef.current
     if (!currentRoot) return
     const root: HTMLDivElement = currentRoot
+    let activeDialog: HTMLElement | null = null
 
     decorateCodeBlocks(root)
 
     const observer = new MutationObserver(() => decorateCodeBlocks(root))
     observer.observe(root, { childList: true, subtree: true })
 
+    function closeActiveDialog() {
+      activeDialog?.remove()
+      activeDialog = null
+    }
+
     function handleClick(event: MouseEvent) {
       const target = event.target
       if (!(target instanceof Element)) return
 
-      const removeButton = target.closest<HTMLElement>('[data-code-remove="true"]')
-      if (removeButton && root.contains(removeButton)) {
-        const block = removeButton.closest<HTMLElement>('[data-code-block="true"]')
+      const convertButton = target.closest<HTMLElement>('[data-code-convert="true"]')
+      if (convertButton && root.contains(convertButton)) {
+        const block = convertButton.closest<HTMLElement>('[data-code-block="true"]')
         if (!block) return
 
         event.preventDefault()
         event.stopPropagation()
         convertCodeBlockToText(root, block)
+        return
+      }
+
+      const deleteButton = target.closest<HTMLElement>('[data-code-delete="true"]')
+      if (deleteButton && root.contains(deleteButton)) {
+        const block = deleteButton.closest<HTMLElement>('[data-code-block="true"]')
+        if (!block) return
+
+        event.preventDefault()
+        event.stopPropagation()
+        closeActiveDialog()
+        activeDialog = createDeleteDialog(root, block, () => {
+          activeDialog = null
+        })
         return
       }
 
@@ -120,11 +241,21 @@ export function CodeBlockEditor(props: CodeBlockEditorProps) {
       convertCodeBlockToText(root, block)
     }
 
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape' && activeDialog) {
+        event.preventDefault()
+        closeActiveDialog()
+      }
+    }
+
     root.addEventListener('click', handleClick, true)
+    document.addEventListener('keydown', handleKeyDown)
 
     return () => {
       observer.disconnect()
       root.removeEventListener('click', handleClick, true)
+      document.removeEventListener('keydown', handleKeyDown)
+      closeActiveDialog()
     }
   }, [props.noteId])
 
