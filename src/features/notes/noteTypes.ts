@@ -91,6 +91,16 @@ export interface ChecklistBlock {
   items: ChecklistItem[]
 }
 
+export interface ContactBlock {
+  id: string
+  type: 'contact'
+  name: string
+  phone: string
+  email: string
+  organization: string
+  notes: string
+}
+
 export interface DividerBlock {
   id: string
   type: 'divider'
@@ -124,6 +134,7 @@ export type NoteBlock =
   | BulletListBlock
   | OrderedListBlock
   | ChecklistBlock
+  | ContactBlock
   | DividerBlock
   | CodeBlock
 
@@ -200,6 +211,10 @@ function isStoredNoteBlock(value: unknown): value is StoredNoteBlock {
     alignment?: unknown
     locked?: unknown
     showName?: unknown
+    phone?: unknown
+    email?: unknown
+    organization?: unknown
+    notes?: unknown
   }
 
   if (typeof block.id !== 'string' || block.id.length === 0 || typeof block.type !== 'string') {
@@ -239,6 +254,16 @@ function isStoredNoteBlock(value: unknown): value is StoredNoteBlock {
 
   if (block.type === 'checklist') {
     return Array.isArray(block.items) && block.items.every(isChecklistItem)
+  }
+
+  if (block.type === 'contact') {
+    return (
+      typeof block.name === 'string' &&
+      typeof block.phone === 'string' &&
+      typeof block.email === 'string' &&
+      typeof block.organization === 'string' &&
+      typeof block.notes === 'string'
+    )
   }
 
   if (block.type === 'paragraph' || block.type === 'quote') {
@@ -292,6 +317,11 @@ export function noteBlocksToPlainText(blocks: StoredNoteBlock[]): string {
       }
       if (block.type === 'checklist') {
         return block.items.map((item) => `${item.checked ? '☑' : '☐'} ${item.text}`.trimEnd())
+      }
+      if (block.type === 'contact') {
+        return [block.name, block.phone, block.email, block.organization, block.notes]
+          .map((value) => value.trim())
+          .filter(Boolean)
       }
       if (block.type === 'bulletList' || block.type === 'orderedList') {
         return block.items.map(runsToPlainText)

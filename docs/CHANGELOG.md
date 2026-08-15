@@ -60,3 +60,5 @@ OANIX utilizará versiones claras y progresivas. No se publicará una versión c
 - Checklists V1 como bloque nativo cifrado: tareas marcables, edición directa, Enter para añadir tarea, Backspace sobre una tarea vacía para retirarla y diseño responsive por contenedor.
 
 - Corregida la alineación derecha de imágenes compactas cuando una tablet pasa a un contenedor vertical estrecho; al desactivar `float` se restauran márgenes de Izq./Centro/Der. de forma determinista.
+
+- Fichas de contacto privadas V1 como bloque cifrado nativo con nombre, teléfono, correo, organización y notas; inserción desde `＋`, edición directa y layout fluido por contenedor.

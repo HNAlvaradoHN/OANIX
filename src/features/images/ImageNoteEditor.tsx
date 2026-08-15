@@ -1284,6 +1284,7 @@ export function ImageNoteEditor({
             <button type="button" onPointerDown={keepEditorSelection} onClick={triggerImageInsert}><strong>▧</strong><span>Imagen</span></button>
             <button type="button" onPointerDown={keepEditorSelection} onClick={() => triggerToolbarAction('[data-format="code"]')}><strong>&lt;/&gt;</strong><span>Código</span></button>
             <button type="button" onPointerDown={keepEditorSelection} onClick={() => triggerToolbarAction('[data-insert="checklist"]')}><strong>☑</strong><span>Checklist</span></button>
+            <button type="button" onPointerDown={keepEditorSelection} onClick={() => triggerToolbarAction('[data-insert="contact"]')}><strong>◉</strong><span>Contacto</span></button>
             <button type="button" onPointerDown={keepEditorSelection} onClick={() => triggerToolbarAction('[title="Separador"]')}><strong>—</strong><span>Separador</span></button>
           </div>
         </div>

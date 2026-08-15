@@ -3,6 +3,7 @@ import {
   useEffect,
   useRef,
   type ClipboardEvent,
+  type FormEvent as ReactFormEvent,
   type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent,
   type PointerEvent as ReactPointerEvent,
@@ -136,6 +137,21 @@ function createChecklistItemElement(item: ChecklistItemModel): HTMLElement {
   return element
 }
 
+function contactInitial(name: string): string {
+  return name.trim().charAt(0).toLocaleUpperCase() || 'C'
+}
+
+function contactBlockToHtml(block: Extract<NoteBlock, { type: 'contact' }>): string {
+  const id = escapeHtml(block.id)
+  const initial = escapeHtml(contactInitial(block.name))
+  return `<div class="editor-contact-card" data-contact-block="true" data-block-id="${id}" contenteditable="false"><div class="editor-contact-card__header"><div class="editor-contact-card__avatar" data-contact-avatar="true" aria-hidden="true">${initial}</div><div class="editor-contact-card__title"><strong>Contacto privado</strong><span>Cifrado dentro de esta nota</span></div><button class="editor-contact-card__remove" data-contact-remove="true" type="button">Eliminar</button></div><div class="editor-contact-card__fields"><label class="editor-contact-card__field"><span>Nombre</span><input data-contact-field="name" type="text" value="${escapeHtml(block.name)}" autocomplete="off"></label><label class="editor-contact-card__field"><span>Teléfono</span><input data-contact-field="phone" type="tel" value="${escapeHtml(block.phone)}" autocomplete="off" inputmode="tel"></label><label class="editor-contact-card__field"><span>Correo</span><input data-contact-field="email" type="email" value="${escapeHtml(block.email)}" autocomplete="off" autocapitalize="none" spellcheck="false"></label><label class="editor-contact-card__field"><span>Organización</span><input data-contact-field="organization" type="text" value="${escapeHtml(block.organization)}" autocomplete="off"></label><label class="editor-contact-card__field editor-contact-card__field--notes"><span>Notas</span><textarea data-contact-field="notes" rows="3" autocomplete="off">${escapeHtml(block.notes)}</textarea></label></div></div>`
+}
+
+function contactFieldValue(block: HTMLElement, name: string): string {
+  const field = block.querySelector<HTMLInputElement | HTMLTextAreaElement>(`[data-contact-field="${name}"]`)
+  return field?.value ?? ''
+}
+
 function blocksToHtml(blocks: NoteBlock[]): string {
   if (blocks.length === 0) {
     return `<p data-block-id="${createBlockId()}"><br></p>`
@@ -148,6 +164,7 @@ function blocksToHtml(blocks: NoteBlock[]): string {
       if (block.type === 'divider') return `<hr data-block-id="${id}">`
       if (block.type === 'code') return codeBlockToHtml(block)
       if (block.type === 'checklist') return checklistBlockToHtml(block)
+      if (block.type === 'contact') return contactBlockToHtml(block)
       if (block.type === 'heading') {
         return `<h${block.level} data-block-id="${id}">${runsToHtml(block.runs)}</h${block.level}>`
       }
@@ -251,6 +268,19 @@ function parseEditorBlocks(root: HTMLElement): NoteBlock[] {
         type: 'code',
         language: normalizeCodeLanguage(node.dataset.language),
         text: codeTextFromElement(node.querySelector<HTMLElement>('[data-code-content="true"]')),
+      })
+      continue
+    }
+
+    if (node.dataset.contactBlock === 'true') {
+      blocks.push({
+        id,
+        type: 'contact',
+        name: contactFieldValue(node, 'name'),
+        phone: contactFieldValue(node, 'phone'),
+        email: contactFieldValue(node, 'email'),
+        organization: contactFieldValue(node, 'organization'),
+        notes: contactFieldValue(node, 'notes'),
       })
       continue
     }
@@ -480,6 +510,27 @@ function selectionIsInsideChecklist(editor: HTMLElement, selection: Selection | 
   return !!element?.closest('[data-checklist-text="true"]')
 }
 
+function isEditingContact(editor: HTMLElement): boolean {
+  const active = document.activeElement
+  return active instanceof Element && editor.contains(active) && !!active.closest('[data-contact-block="true"]')
+}
+
+function atomicHostForInsertion(editor: HTMLElement, selection: Selection | null): HTMLElement | null {
+  const active = document.activeElement
+  if (active instanceof Element && editor.contains(active)) {
+    const activeHost = active.closest<HTMLElement>(
+      '[data-code-block="true"], [data-checklist-block="true"], [data-contact-block="true"]',
+    )
+    if (activeHost?.parentElement === editor) return activeHost
+  }
+
+  const anchorElement = elementFromSelectionNode(selection?.anchorNode ?? null)
+  const selectionHost = anchorElement?.closest<HTMLElement>(
+    '[data-code-block="true"], [data-checklist-block="true"], [data-contact-block="true"]',
+  )
+  return selectionHost?.parentElement === editor ? selectionHost : null
+}
+
 function selectionHasLink(editor: HTMLElement, selection: Selection): boolean {
   let current: HTMLElement | null =
     selection.anchorNode instanceof HTMLElement
@@ -622,6 +673,13 @@ function RichTextEditorComponent({
     const selection = document.getSelection()
     const code = selectionIsInsideCodeBlock(editor, selection)
     const checklist = selectionIsInsideChecklist(editor, selection)
+    const contact = isEditingContact(editor)
+
+    if (contact) {
+      ;(['bold', 'italic', 'paragraph', 'heading2', 'heading3', 'bulletList', 'orderedList', 'quote', 'link', 'code'] as ToolbarFormat[])
+        .forEach((format) => setToolbarButtonState(toolbar, format, false))
+      return
+    }
 
     if (!selectionIsInsideEditor(editor, selection)) {
       ;(['bold', 'italic', 'paragraph', 'heading2', 'heading3', 'bulletList', 'orderedList', 'quote', 'link', 'code'] as ToolbarFormat[])
@@ -771,7 +829,7 @@ function RichTextEditorComponent({
     if (!editor) return
 
     const selection = document.getSelection()
-    if (selectionIsInsideCodeBlock(editor, selection) || selectionIsInsideChecklist(editor, selection)) return
+    if (selectionIsInsideCodeBlock(editor, selection) || selectionIsInsideChecklist(editor, selection) || isEditingContact(editor)) return
 
     editor.focus()
     document.execCommand(command, false, value)
@@ -799,12 +857,9 @@ function RichTextEditorComponent({
     }
     const html = `${checklistBlockToHtml(block)}<p data-block-id="${nextParagraphId}"><br></p>`
 
-    const anchorElement = elementFromSelectionNode(selection?.anchorNode ?? null)
-    const atomicHost = anchorElement?.closest<HTMLElement>(
-      '[data-code-block="true"], [data-checklist-block="true"]',
-    )
+    const atomicHost = atomicHostForInsertion(editor, selection)
 
-    if (atomicHost && atomicHost.parentElement === editor) {
+    if (atomicHost) {
       atomicHost.insertAdjacentHTML('afterend', html)
     } else {
       editor.focus()
@@ -822,12 +877,46 @@ function RichTextEditorComponent({
     }
   }
 
+  function insertContactBlock() {
+    const editor = editorRef.current
+    if (!editor) return
+
+    const selection = document.getSelection()
+    const id = createBlockId()
+    const nextParagraphId = createBlockId()
+    const block: Extract<NoteBlock, { type: 'contact' }> = {
+      id,
+      type: 'contact',
+      name: '',
+      phone: '',
+      email: '',
+      organization: '',
+      notes: '',
+    }
+    const html = `${contactBlockToHtml(block)}<p data-block-id="${nextParagraphId}"><br></p>`
+    const atomicHost = atomicHostForInsertion(editor, selection)
+
+    if (atomicHost) {
+      atomicHost.insertAdjacentHTML('afterend', html)
+    } else {
+      editor.focus()
+      document.execCommand('insertHTML', false, html)
+    }
+    emitChange()
+
+    const nameField = editor.querySelector<HTMLInputElement>(
+      `[data-block-id="${id}"] [data-contact-field="name"]`,
+    )
+    nameField?.focus()
+    syncToolbarState()
+  }
+
   function insertCodeBlock() {
     const editor = editorRef.current
     if (!editor) return
 
     const selection = document.getSelection()
-    const selectedText = selectionIsInsideEditor(editor, selection) && !selection.isCollapsed
+    const selectedText = selectionIsInsideEditor(editor, selection) && !selection.isCollapsed && !isEditingContact(editor)
       ? selection.toString()
       : ''
     const id = createBlockId()
@@ -838,13 +927,15 @@ function RichTextEditorComponent({
       language: 'plaintext',
       text: selectedText,
     }
+    const html = `${codeBlockToHtml(block)}<p data-block-id="${nextParagraphId}"><br></p>`
+    const atomicHost = atomicHostForInsertion(editor, selection)
 
-    editor.focus()
-    document.execCommand(
-      'insertHTML',
-      false,
-      `${codeBlockToHtml(block)}<p data-block-id="${nextParagraphId}"><br></p>`,
-    )
+    if (atomicHost) {
+      atomicHost.insertAdjacentHTML('afterend', html)
+    } else {
+      editor.focus()
+      document.execCommand('insertHTML', false, html)
+    }
     emitChange()
 
     const codeContent = editor.querySelector<HTMLElement>(
@@ -861,7 +952,7 @@ function RichTextEditorComponent({
     const editor = editorRef.current
     const selection = document.getSelection()
     if (!editor || !selection || selection.isCollapsed || selection.rangeCount === 0) return
-    if (selectionIsInsideCodeBlock(editor, selection) || selectionIsInsideChecklist(editor, selection)) return
+    if (selectionIsInsideCodeBlock(editor, selection) || selectionIsInsideChecklist(editor, selection) || isEditingContact(editor)) return
 
     const range = selection.getRangeAt(0)
     if (!editor.contains(range.commonAncestorContainer)) return
@@ -909,6 +1000,18 @@ function RichTextEditorComponent({
     if (!editor) return
 
     const target = event.target instanceof Element ? event.target : null
+    const contactRemove = target?.closest<HTMLButtonElement>('[data-contact-remove="true"]')
+    if (contactRemove && editor.contains(contactRemove)) {
+      event.preventDefault()
+      event.stopPropagation()
+      const contact = contactRemove.closest<HTMLElement>('[data-contact-block="true"]')
+      if (!contact) return
+      if (!window.confirm('¿Eliminar esta ficha de contacto privada?')) return
+      contact.remove()
+      emitChange()
+      return
+    }
+
     const checklistToggle = target?.closest<HTMLButtonElement>('[data-checklist-toggle="true"]')
     if (checklistToggle && editor.contains(checklistToggle)) {
       event.preventDefault()
@@ -1050,7 +1153,25 @@ function RichTextEditorComponent({
     editor.focus()
   }
 
+  function handleEditorInput(event: ReactFormEvent<HTMLDivElement>) {
+    const target = event.target
+    if (target instanceof HTMLInputElement && target.dataset.contactField) {
+      target.setAttribute('value', target.value)
+      if (target.dataset.contactField === 'name') {
+        const card = target.closest<HTMLElement>('[data-contact-block="true"]')
+        const avatar = card?.querySelector<HTMLElement>('[data-contact-avatar="true"]')
+        if (avatar) avatar.textContent = contactInitial(target.value)
+      }
+    } else if (target instanceof HTMLTextAreaElement && target.dataset.contactField) {
+      target.defaultValue = target.value
+    }
+    emitChange()
+  }
+
   function handlePaste(event: ClipboardEvent<HTMLDivElement>) {
+    const target = event.target
+    if (target instanceof Element && target.closest('[data-contact-field]')) return
+
     const plainText = event.clipboardData.getData('text/plain')
     if (!plainText) return
 
@@ -1062,6 +1183,20 @@ function RichTextEditorComponent({
   function handleEditorKeyDown(event: ReactKeyboardEvent<HTMLDivElement>) {
     const target = event.target
     if (!(target instanceof Element)) return
+
+    const contactField = target.closest<HTMLInputElement | HTMLTextAreaElement>('[data-contact-field]')
+    if (contactField) {
+      if (event.key === 'Enter' && contactField instanceof HTMLInputElement) {
+        event.preventDefault()
+        const card = contactField.closest<HTMLElement>('[data-contact-block="true"]')
+        const fields = card
+          ? Array.from(card.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('[data-contact-field]'))
+          : []
+        const next = fields[fields.indexOf(contactField) + 1]
+        next?.focus()
+      }
+      return
+    }
 
     const checklistText = target.closest<HTMLElement>('[data-checklist-text="true"]')
     if (checklistText) {
@@ -1152,6 +1287,9 @@ function RichTextEditorComponent({
         <button className="editor-tool" data-insert="checklist" type="button" onMouseDown={keepSelection} onClick={insertChecklistBlock} title="Checklist">
           ☑ Checklist
         </button>
+        <button className="editor-tool" data-insert="contact" type="button" onMouseDown={keepSelection} onClick={insertContactBlock} title="Contacto privado">
+          ◉ Contacto
+        </button>
         <button className="editor-tool" type="button" onMouseDown={keepSelection} onClick={() => runCommand('insertHorizontalRule')} title="Separador">
           —
         </button>
@@ -1170,7 +1308,7 @@ function RichTextEditorComponent({
         onPointerMove={handleEditorPointerMove}
         onPointerUp={handleEditorPointerUp}
         onClick={handleEditorClick}
-        onInput={emitChange}
+        onInput={handleEditorInput}
         onKeyDown={handleEditorKeyDown}
         onFocus={syncToolbarState}
         onKeyUp={syncToolbarState}
