@@ -1,0 +1,36 @@
+name: Fix undo root typing
+
+on:
+  push:
+    branches:
+      - agent/v1-image-flow-history
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/v1-image-flow-history
+      - name: Fix type and self-remove
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('src/features/images/ImageNoteEditor.tsx')
+          text = p.read_text(encoding='utf-8')
+          old = '  function updateUndoButton(root = rootRef.current) {'
+          new = '  function updateUndoButton(root: HTMLElement | null = rootRef.current) {'
+          if old not in text:
+              raise SystemExit('Expected updateUndoButton signature not found')
+          p.write_text(text.replace(old, new, 1), encoding='utf-8')
+          Path('.github/workflows/fix-undo-root-type.yml').unlink()
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "fix: widen undo toolbar root type"
+          git push origin HEAD:agent/v1-image-flow-history
