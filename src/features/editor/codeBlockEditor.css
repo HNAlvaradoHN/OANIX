@@ -1,0 +1,24 @@
+.code-block-editor-root .editor-surface p {
+  white-space: pre-wrap;
+}
+
+.code-block-editor-root .editor-code-block__remove {
+  margin-left: auto;
+  padding: 0.42rem 0.7rem;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #cbd5e1;
+  -webkit-text-fill-color: currentColor;
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.code-block-editor-root .editor-code-block__remove:hover,
+.code-block-editor-root .editor-code-block__remove:focus-visible {
+  outline: none;
+  background: #3a2430;
+  color: #fecaca;
+}
