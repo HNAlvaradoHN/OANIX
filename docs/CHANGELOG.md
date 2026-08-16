@@ -3,6 +3,7 @@
 Todos los cambios relevantes del proyecto se registran aquí por versión.
 
 ## Unreleased
+- Búsqueda local global: ignora la carpeta/etiqueta activa mientras se busca y muestra carpeta, ubicación, fragmento y cantidad de coincidencias antes de abrir una nota.
 - Búsqueda local V1 sobre contenido ya descifrado en memoria, insensible a mayúsculas/acentos, con términos múltiples y combinable con Carpetas + Etiquetas, sin persistir un índice en texto plano.
 - Etiquetas V1 cifradas: CRUD, asignación múltiple por nota, filtro combinado con carpetas, chips en la nota y eliminación sin borrar contenido.
 - La navegación horizontal de Carpetas usa controles « » reservados fuera del carril, compatibles con mouse y tacto, sin cubrir nombres de carpetas.

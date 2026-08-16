@@ -15,7 +15,7 @@ import { storageSaveErrorMessage } from '../../storage/local/storageErrors'
 import { usesSinglePaneLayout } from '../../shared/responsiveLayout'
 import { ImageNoteEditor } from '../images/ImageNoteEditor'
 import { createEmptyNote, deleteNote, loadNotes, moveNoteToFolder, renameNote, replaceNoteContent, setNoteTags } from './noteService'
-import { filterByLocalSearch } from '../search/localSearch'
+import { searchItemsByLocalFields, type LocalSearchField } from '../search/localSearch'
 import { prepareDailyEntriesForEditing } from './dailyEntries'
 import { noteBlocksToPlainText, type NoteRecord, type StoredNoteBlock } from './noteTypes'
 import './notes.css'
@@ -70,6 +70,76 @@ function noteInitial(title: string): string {
 
 function notePreview(note: NoteRecord): string {
   return noteBlocksToPlainText(note.content.blocks) || 'Nota vacía · empieza a escribir'
+}
+
+function richRunsText(runs: Array<{ text: string }>): string {
+  return runs.map((run) => run.text).join('')
+}
+
+function noteLocalSearchFields(note: NoteRecord): LocalSearchField[] {
+  const fields: LocalSearchField[] = [
+    { key: `${note.id}:title`, label: 'Título', text: note.title },
+  ]
+
+  note.content.blocks.forEach((block, blockIndex) => {
+    const key = `${note.id}:${block.id || blockIndex}`
+
+    if (block.type === 'paragraph') {
+      fields.push({ key, label: 'Texto', text: richRunsText(block.runs) })
+      return
+    }
+    if (block.type === 'heading') {
+      fields.push({ key, label: 'Encabezado', text: richRunsText(block.runs) })
+      return
+    }
+    if (block.type === 'quote') {
+      fields.push({ key, label: 'Cita', text: richRunsText(block.runs) })
+      return
+    }
+    if (block.type === 'bulletList' || block.type === 'orderedList') {
+      block.items.forEach((item, itemIndex) => {
+        fields.push({ key: `${key}:item:${itemIndex}`, label: 'Lista', text: richRunsText(item) })
+      })
+      return
+    }
+    if (block.type === 'checklist') {
+      block.items.forEach((item, itemIndex) => {
+        fields.push({ key: `${key}:check:${itemIndex}`, label: 'Checklist', text: item.text })
+      })
+      return
+    }
+    if (block.type === 'contact') {
+      const contactFields = [
+        ['Nombre de contacto', block.name],
+        ['Teléfono de contacto', block.phone],
+        ['Correo de contacto', block.email],
+        ['Organización', block.organization],
+        ['Notas de contacto', block.notes],
+      ] as const
+      contactFields.forEach(([label, value], fieldIndex) => {
+        if (value.trim()) fields.push({ key: `${key}:contact:${fieldIndex}`, label, text: value })
+      })
+      return
+    }
+    if (block.type === 'dailyEntry') {
+      if (block.title.trim()) fields.push({ key, label: 'Entrada del día', text: block.title })
+      return
+    }
+    if (block.type === 'code') {
+      fields.push({ key, label: `Código · ${block.language}`, text: block.text })
+      return
+    }
+    if (block.type === 'image') {
+      if (block.alt?.trim()) {
+        fields.push({ key: `${key}:description`, label: 'Imagen · descripción', text: block.alt })
+      }
+      if (block.showName !== false && block.name.trim()) {
+        fields.push({ key: `${key}:name`, label: 'Imagen · nombre', text: block.name })
+      }
+    }
+  })
+
+  return fields.filter((field) => field.text.trim().length > 0)
 }
 
 function saveStateLabel(saveState: SaveState, savingTitle: boolean): string {
@@ -139,14 +209,31 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     () => activeTagId === 'all' ? null : tags.find((tag) => tag.id === activeTagId) ?? null,
     [tags, activeTagId],
   )
-  const visibleNotes = useMemo(() => {
-    const organized = notes.filter((note) =>
+  const hasSearchQuery = searchQuery.trim().length > 0
+  const organizedNotes = useMemo(
+    () => notes.filter((note) =>
       (activeFolderId === 'all' || note.folderId === activeFolderId) &&
       (activeTagId === 'all' || (note.tagIds ?? []).includes(activeTagId)),
-    )
-    return filterByLocalSearch(organized, searchQuery, (note) => `${note.title}\n${noteBlocksToPlainText(note.content.blocks)}`)
-  }, [notes, activeFolderId, activeTagId, searchQuery])
-  const hasSearchQuery = searchQuery.trim().length > 0
+    ),
+    [notes, activeFolderId, activeTagId],
+  )
+  const searchResults = useMemo(
+    () => hasSearchQuery
+      ? searchItemsByLocalFields(notes, searchQuery, noteLocalSearchFields)
+      : [],
+    [notes, searchQuery, hasSearchQuery],
+  )
+  const searchResultByNoteId = useMemo(
+    () => new Map(searchResults.map((result) => [result.item.id, result])),
+    [searchResults],
+  )
+  const searchOccurrenceCount = useMemo(
+    () => searchResults.reduce((total, result) => total + result.totalOccurrences, 0),
+    [searchResults],
+  )
+  const visibleNotes = hasSearchQuery
+    ? searchResults.map((result) => result.item)
+    : organizedNotes
   const moveTargetNote = useMemo(
     () => notes.find((note) => note.id === moveNoteId) ?? null,
     [notes, moveNoteId],
@@ -858,6 +945,15 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
 
   async function handleToggleSearch() {
     if (searchOpen) {
+      const openNote = selectedIdRef.current
+        ? notesRef.current.find((note) => note.id === selectedIdRef.current) ?? null
+        : null
+      if (openNote) {
+        setActiveFolderId(openNote.folderId ?? 'all')
+        if (activeTagId !== 'all' && !(openNote.tagIds ?? []).includes(activeTagId)) {
+          setActiveTagId('all')
+        }
+      }
       setSearchOpen(false)
       setSearchQuery('')
       return
@@ -919,7 +1015,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
   }
 
   return (
-    <main className={`notes-shell${selectedNote ? ' notes-shell--open' : ''}`}>
+    <main className={`notes-shell${selectedNote ? ' notes-shell--open' : ''}${hasSearchQuery ? ' notes-shell--searching' : ''}`}>
       <aside className="notes-sidebar" aria-label="Lista de notas">
         <header className="notes-header">
           <div className="notes-brand">
@@ -1008,7 +1104,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
                 type="search"
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder="Buscar en tus notas"
+                placeholder="Buscar en toda la bóveda"
                 autoComplete="off"
                 spellCheck={false}
                 aria-label="Buscar en títulos y contenido de notas"
@@ -1029,8 +1125,8 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
             </div>
             <div className="notes-search__meta" aria-live="polite">
               {hasSearchQuery
-                ? `${visibleNotes.length} resultado${visibleNotes.length === 1 ? '' : 's'}`
-                : 'Solo busca en el contenido descifrado de este dispositivo'}
+                ? `${searchResults.length} nota${searchResults.length === 1 ? '' : 's'} · ${searchOccurrenceCount} coincidencia${searchOccurrenceCount === 1 ? '' : 's'} · búsqueda global`
+                : 'Busca en todas las carpetas y etiquetas · solo contenido descifrado localmente'}
             </div>
           </div>
         )}
@@ -1147,7 +1243,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
               <div className="notes-empty">
                 <div className="notes-empty__icon" aria-hidden="true">🔍</div>
                 <strong>Sin resultados</strong>
-                <p>No encontramos “{searchQuery.trim()}” dentro de las notas de los filtros actuales.</p>
+                <p>No encontramos “{searchQuery.trim()}” en ninguna nota de la bóveda.</p>
                 <button
                   className="empty-action"
                   type="button"
@@ -1191,7 +1287,28 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
                       <strong>{note.title}</strong>
                       <time dateTime={note.updatedAt}>{formatNoteTime(note.updatedAt)}</time>
                     </span>
-                    <span className="note-row__preview">{notePreview(note)}</span>
+                    <span className="note-row__preview">
+                      {hasSearchQuery
+                        ? `📁 ${folderName(note.folderId)} · ${searchResultByNoteId.get(note.id)?.totalOccurrences ?? 0} coincidencia${(searchResultByNoteId.get(note.id)?.totalOccurrences ?? 0) === 1 ? '' : 's'}`
+                        : notePreview(note)}
+                    </span>
+                    {hasSearchQuery && searchResultByNoteId.get(note.id) && (
+                      <span className="search-result-locations" aria-label="Ubicaciones de las coincidencias">
+                        {searchResultByNoteId.get(note.id)?.matches.slice(0, 4).map((match) => (
+                          <span className="search-result-location" key={match.key}>
+                            <span className="search-result-location__label">
+                              {match.label}{match.occurrences > 1 ? ` · ${match.occurrences}×` : ''}
+                            </span>
+                            <span className="search-result-location__snippet">{match.snippet}</span>
+                          </span>
+                        ))}
+                        {(searchResultByNoteId.get(note.id)?.matches.length ?? 0) > 4 && (
+                          <span className="search-result-location__more">
+                            +{(searchResultByNoteId.get(note.id)?.matches.length ?? 0) - 4} ubicaciones más
+                          </span>
+                        )}
+                      </span>
+                    )}
                   </span>
                 </button>
 
