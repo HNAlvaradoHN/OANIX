@@ -94,9 +94,9 @@ Objetivo: sincronización cifrada entre dispositivos sin que el servidor pueda l
 - El estado de sincronización se conserva como registros pequeños cifrados bajo el tipo general `system.sync-state` dentro de `encrypted_records`; no se crea otro store, base local, caché ni cola independiente.
 - Las escrituras remotas usan versión esperada para evitar sobrescribir silenciosamente una modificación concurrente.
 - Si ambos dispositivos modificaron de forma incompatible el mismo registro desde la última base común, OANIX conserva ambos lados sin sobrescribir y lo entrega al siguiente punto oficial: Resolución de conflictos.
-- `image` e `image-preview` forman parte del autosync E2EE: su ciphertext ya cifrado se divide en fragmentos de 8 MiB y se guarda como `application/octet-stream` en el bucket privado.
+- `image` e `image-preview` forman parte del autosync E2EE: su ciphertext ya cifrado se procesa y transfiere en fragmentos de 6 MiB como `application/octet-stream` en el bucket privado para limitar el pico de memoria en móvil.
 - El nombre, ID y tipo local de una imagen no forman parte de la ruta remota; la ruta usa únicamente el UID requerido por RLS y un identificador aleatorio.
-- El manifiesto que relaciona una imagen local con sus fragmentos permanece cifrado dentro de `sync_records` y se verifica mediante SHA-256 antes de reconstruir el payload cifrado local.
+- El manifiesto que relaciona una imagen local con sus fragmentos permanece cifrado dentro de `sync_records`; cada fragmento se verifica con SHA-256 antes de reconstruir el payload cifrado local.
 - Al reemplazar o eliminar un binario, OANIX limpia los fragmentos que dejan de ser necesarios; una cola mínima de limpieza queda cifrada dentro del mismo estado de sincronización para reintentar sin crear almacenamiento paralelo.
 
 ## V3 — Android con Capacitor
