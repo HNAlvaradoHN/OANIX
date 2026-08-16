@@ -50,8 +50,8 @@ Objetivo: sincronización cifrada entre dispositivos sin que el servidor pueda l
 - [x] Cuenta de usuario
 - [x] Autenticación
 - [x] Backend de sincronización
-- [ ] Sincronización E2EE ← implementación técnica, validación real pendiente
-- [ ] Varios dispositivos
+- [x] Sincronización E2EE
+- [ ] Varios dispositivos ← en implementación y validación real
 - [ ] Resolución de conflictos
 - [ ] Historial de versiones
 - [ ] Recuperación de acceso
@@ -72,18 +72,27 @@ Objetivo: sincronización cifrada entre dispositivos sin que el servidor pueda l
 - El cliente autenticado solo puede modificar `ciphertext`, `version` y `deleted`; propietario, clave opaca y timestamp del servidor no son modificables por esa vía.
 - El backend no interpreta el contenido privado; únicamente almacena los sobres producidos por el cliente E2EE.
 
-### Sincronización E2EE — primera fase
+### Sincronización E2EE — validada
 
-- El envío es manual desde Cuenta mientras se valida el protocolo; no se ejecuta una sincronización silenciosa en segundo plano.
+- El primer transporte cifrado fue validado en uso real desde OANIX y se verificaron filas opacas activas en Supabase.
 - Cada registro local elegible conserva su payload ya cifrado y se encapsula nuevamente en un sobre AES-GCM usando la clave activa de la bóveda, que permanece en memoria.
 - `record_key` remoto es un identificador aleatorio generado criptográficamente y no deriva de título, tipo, identificador local ni otros metadatos predecibles.
-- Para reconocer filas ya existentes, OANIX descifra sus sobres únicamente en memoria y reconstruye de forma temporal la relación con la clave local; no persiste un mapa paralelo.
+- Para reconocer filas ya existentes, OANIX descifra sus sobres únicamente en memoria; no expone al servidor la clave local del registro.
 - Si un sobre remoto no puede descifrarse con la bóveda activa, OANIX se detiene y no lo sobrescribe.
 - Los registros cuyo payload cifrado no cambió se verifican localmente pero no se reescriben ni incrementan artificialmente su versión.
-- Después de escribir en Supabase, OANIX lee la fila devuelta, descifra el sobre en memoria y verifica que coincida con el registro local antes de contarla como validada.
-- `image` e `image-preview` quedan fuera de esta primera fase para no cargar ni duplicar binarios grandes antes de definir su estrategia específica.
-- Todavía no se descargan registros hacia otro dispositivo, no se comparte la clave de bóveda entre dispositivos y no se resuelven conflictos; esos alcances pertenecen a los siguientes puntos de V2.
-- No se crea un segundo IndexedDB, store, caché, cola persistente ni copia local de los registros remotos.
+- No se crea un segundo IndexedDB, store o caché para E2EE.
+
+### Varios dispositivos — regla oficial de producto
+
+- El guardado local continúa siendo automático y offline-first.
+- Con una cuenta conectada, la sincronización E2EE debe ser automática: el usuario no debe depender de un botón manual para subir o bajar cambios.
+- Al entrar con la misma cuenta en un dispositivo nuevo, OANIX debe poder traer la misma bóveda cifrada; el usuario sigue necesitando conocer su contraseña maestra para abrir la clave de bóveda localmente.
+- La contraseña maestra y la clave de bóveda sin cifrar nunca se envían a Supabase.
+- Al volver a una instancia anterior de OANIX, los cambios hechos en otro dispositivo deben reflejarse automáticamente cuando haya conexión.
+- La primera implementación usa un único registro local cifrado `system.sync-state` dentro del store general existente para recordar versión/fingerprint y detectar cambios o eliminaciones; no crea otro store, base local, caché ni cola persistente.
+- Las escrituras remotas usan versión esperada para evitar sobrescribir silenciosamente una modificación concurrente.
+- Si ambos dispositivos modificaron de forma incompatible el mismo registro desde la última base común, OANIX conserva ambos lados sin sobrescribir y lo entrega al siguiente punto oficial: Resolución de conflictos.
+- `image` e `image-preview` continúan pendientes dentro de este mismo bloque de Varios dispositivos; deben incorporarse a autosync cifrado antes de marcar este punto como completado.
 
 ## V3 — Android con Capacitor
 
@@ -115,6 +124,6 @@ Objetivo: empaquetar la misma base de código como aplicación Android.
 
 **Versión activa: V2 — Cuenta y sincronización**
 
-**Siguiente bloque de trabajo:** Sincronización E2EE — validación real del primer transporte cifrado.
+**Siguiente bloque de trabajo:** Varios dispositivos — autosync E2EE, incorporación de binarios y validación real en un segundo dispositivo.
 
 La cuenta online es opcional y debe permanecer separada de la contraseña maestra y de la bóveda local. No se implementan funciones de V3 o V4 mientras V2 no esté cerrada, salvo preparación arquitectónica explícitamente documentada.

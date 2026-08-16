@@ -8,6 +8,15 @@ import {
   verifyLocalEncryption,
 } from '../security/vault/vaultService'
 import { restoreEncryptedBackupFromFile } from '../features/backup/backupService'
+import { AccountPanel } from '../features/account/AccountPanel'
+import {
+  getOnlineAccountSession,
+  type OnlineAccountSession,
+} from '../features/account/accountService'
+import {
+  hasRemoteSyncedVault,
+  restoreSyncedVaultToThisDevice,
+} from '../features/sync/syncService'
 
 type GateState = 'checking' | 'setup' | 'locked' | 'unlocked' | 'error'
 
@@ -26,6 +35,12 @@ export function VaultGate({ renderUnlocked }: VaultGateProps) {
   const [restorePassword, setRestorePassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [showRestorePassword, setShowRestorePassword] = useState(false)
+  const [accountOpen, setAccountOpen] = useState(false)
+  const [onlineSession, setOnlineSession] = useState<OnlineAccountSession | null>(null)
+  const [remoteVaultAvailable, setRemoteVaultAvailable] = useState<boolean | null>(null)
+  const [cloudPassword, setCloudPassword] = useState('')
+  const [showCloudPassword, setShowCloudPassword] = useState(false)
+  const [cloudBusy, setCloudBusy] = useState(false)
 
   useEffect(() => {
     let active = true
@@ -47,10 +62,39 @@ export function VaultGate({ renderUnlocked }: VaultGateProps) {
     }
   }, [])
 
+  useEffect(() => {
+    if (state !== 'setup') return
+    let active = true
+
+    void getOnlineAccountSession()
+      .then(async (session) => {
+        if (!active) return
+        setOnlineSession(session)
+        if (!session) {
+          setRemoteVaultAvailable(null)
+          return
+        }
+        const available = await hasRemoteSyncedVault()
+        if (active) setRemoteVaultAvailable(available)
+      })
+      .catch(() => {
+        if (active) setRemoteVaultAvailable(null)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [state])
+
   function resetRestoreDraft() {
     setRestoreFile(null)
     setRestorePassword('')
     setShowRestorePassword(false)
+  }
+
+  function resetCloudDraft() {
+    setCloudPassword('')
+    setShowCloudPassword(false)
   }
 
   function handleLock() {
@@ -60,6 +104,7 @@ export function VaultGate({ renderUnlocked }: VaultGateProps) {
     setMessage('')
     setShowPassword(false)
     resetRestoreDraft()
+    resetCloudDraft()
     setState('locked')
   }
 
@@ -161,6 +206,47 @@ export function VaultGate({ renderUnlocked }: VaultGateProps) {
     }
   }
 
+  async function handleAccountSessionChange(session: OnlineAccountSession | null) {
+    setOnlineSession(session)
+    resetCloudDraft()
+    if (!session) {
+      setRemoteVaultAvailable(null)
+      return
+    }
+
+    try {
+      setRemoteVaultAvailable(await hasRemoteSyncedVault())
+    } catch (error) {
+      setRemoteVaultAvailable(false)
+      setMessage(error instanceof Error ? error.message : 'No se pudo comprobar la bóveda sincronizada.')
+    }
+  }
+
+  async function handleRestoreSyncedVault(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!cloudPassword || cloudBusy || state !== 'setup' || !onlineSession || remoteVaultAvailable !== true) return
+
+    setCloudBusy(true)
+    setMessage('')
+    try {
+      const result = await restoreSyncedVaultToThisDevice(cloudPassword)
+      const verification = await verifyLocalEncryption()
+      if (verification.status === 'error') {
+        lockLocalVault()
+        setMessage(verification.message)
+        return
+      }
+
+      resetCloudDraft()
+      setState('unlocked')
+      window.alert(`Bóveda sincronizada descargada correctamente.\n\n${result.recordCount} registros cifrados restaurados en este dispositivo.`)
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'No se pudo traer la bóveda sincronizada.')
+    } finally {
+      setCloudBusy(false)
+    }
+  }
+
   if (state === 'unlocked') {
     return <>{renderUnlocked(handleLock)}</>
   }
@@ -222,14 +308,14 @@ export function VaultGate({ renderUnlocked }: VaultGateProps) {
                 minLength={isSetup ? MASTER_PASSWORD_MIN_CHARACTERS : undefined}
                 maxLength={256}
                 required
-                disabled={busy || restoreBusy}
+                disabled={busy || restoreBusy || cloudBusy}
               />
               <button
                 className="input-action"
                 type="button"
                 onClick={() => setShowPassword((visible) => !visible)}
                 aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                disabled={busy || restoreBusy}
+                disabled={busy || restoreBusy || cloudBusy}
               >
                 {showPassword ? 'Ocultar' : 'Mostrar'}
               </button>
@@ -251,14 +337,14 @@ export function VaultGate({ renderUnlocked }: VaultGateProps) {
                 minLength={MASTER_PASSWORD_MIN_CHARACTERS}
                 maxLength={256}
                 required
-                disabled={busy || restoreBusy}
+                disabled={busy || restoreBusy || cloudBusy}
               />
             </label>
           )}
 
           {message && <p className="form-message" role="alert">{message}</p>}
 
-          <button className="primary-button" type="submit" disabled={busy || restoreBusy}>
+          <button className="primary-button" type="submit" disabled={busy || restoreBusy || cloudBusy}>
             <span>{busy ? 'Procesando…' : isSetup ? 'Crear bóveda segura' : 'Entrar a OANIX'}</span>
             {!busy && <span aria-hidden="true">→</span>}
           </button>
@@ -266,13 +352,76 @@ export function VaultGate({ renderUnlocked }: VaultGateProps) {
 
         {isSetup && (
           <p className="security-note">
-            OANIX no guarda tu contraseña. En V1 no existe recuperación si la olvidas.
+            OANIX no guarda tu contraseña maestra. Una bóveda sincronizada sigue necesitando esa misma contraseña en un dispositivo nuevo.
           </p>
+        )}
+
+        {isSetup && (
+          <div className="vault-restore">
+            <span>¿Ya usas OANIX en otro dispositivo?</span>
+            {!onlineSession ? (
+              <button
+                type="button"
+                className="vault-restore__button"
+                onClick={() => setAccountOpen(true)}
+                disabled={busy || restoreBusy || cloudBusy}
+              >
+                <span aria-hidden="true">☁</span>
+                <span>Conectar mi cuenta sincronizada</span>
+              </button>
+            ) : remoteVaultAvailable === true ? (
+              <form className="vault-form" onSubmit={(event) => void handleRestoreSyncedVault(event)}>
+                <small>Cuenta conectada: {onlineSession.email}</small>
+                <label className="field" htmlFor="cloud-master-password">
+                  <span>Contraseña maestra de tu bóveda</span>
+                  <div className="password-input">
+                    <input
+                      id="cloud-master-password"
+                      type={showCloudPassword ? 'text' : 'password'}
+                      value={cloudPassword}
+                      onChange={(event) => setCloudPassword(event.target.value)}
+                      autoComplete="current-password"
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      spellCheck={false}
+                      maxLength={256}
+                      required
+                      disabled={busy || restoreBusy || cloudBusy}
+                    />
+                    <button
+                      className="input-action"
+                      type="button"
+                      onClick={() => setShowCloudPassword((visible) => !visible)}
+                      aria-label={showCloudPassword ? 'Ocultar contraseña de la bóveda' : 'Mostrar contraseña de la bóveda'}
+                      disabled={busy || restoreBusy || cloudBusy}
+                    >
+                      {showCloudPassword ? 'Ocultar' : 'Mostrar'}
+                    </button>
+                  </div>
+                </label>
+                <button className="primary-button" type="submit" disabled={busy || restoreBusy || cloudBusy || !cloudPassword}>
+                  <span>{cloudBusy ? 'Descifrando y descargando…' : 'Traer mi bóveda a este dispositivo'}</span>
+                  {!cloudBusy && <span aria-hidden="true">→</span>}
+                </button>
+                <small>La clave de la bóveda permanece cifrada en Supabase; solo esta contraseña puede abrirla localmente.</small>
+              </form>
+            ) : remoteVaultAvailable === false ? (
+              <>
+                <small>La cuenta está conectada, pero todavía no tiene una bóveda sincronizada disponible.</small>
+                <button type="button" className="vault-restore__button" onClick={() => setAccountOpen(true)}>
+                  <span aria-hidden="true">👤</span>
+                  <span>Cambiar o revisar cuenta</span>
+                </button>
+              </>
+            ) : (
+              <small>Comprobando si esta cuenta ya tiene una bóveda sincronizada…</small>
+            )}
+          </div>
         )}
 
         {canRestore && (
           <div className="vault-restore">
-            <span>{isSetup ? '¿Ya tienes una bóveda de OANIX?' : '¿Necesitas recuperar una copia anterior?'}</span>
+            <span>{isSetup ? '¿Prefieres usar un archivo de backup?' : '¿Necesitas recuperar una copia anterior?'}</span>
             <label className={`vault-restore__button${restoreBusy ? ' vault-restore__button--busy' : ''}`}>
               <span aria-hidden="true">↥</span>
               <span>{restoreFile ? 'Cambiar archivo de backup' : 'Seleccionar backup cifrado'}</span>
@@ -280,7 +429,7 @@ export function VaultGate({ renderUnlocked }: VaultGateProps) {
                 type="file"
                 accept=".oanixbackup,application/json,application/vnd.oanix.encrypted-backup+json"
                 onChange={handleRestoreBackupSelection}
-                disabled={busy || restoreBusy}
+                disabled={busy || restoreBusy || cloudBusy}
               />
             </label>
 
@@ -301,20 +450,20 @@ export function VaultGate({ renderUnlocked }: VaultGateProps) {
                       spellCheck={false}
                       maxLength={256}
                       required
-                      disabled={busy || restoreBusy}
+                      disabled={busy || restoreBusy || cloudBusy}
                     />
                     <button
                       className="input-action"
                       type="button"
                       onClick={() => setShowRestorePassword((visible) => !visible)}
                       aria-label={showRestorePassword ? 'Ocultar contraseña del backup' : 'Mostrar contraseña del backup'}
-                      disabled={busy || restoreBusy}
+                      disabled={busy || restoreBusy || cloudBusy}
                     >
                       {showRestorePassword ? 'Ocultar' : 'Mostrar'}
                     </button>
                   </div>
                 </label>
-                <button className="primary-button" type="submit" disabled={busy || restoreBusy || !restorePassword}>
+                <button className="primary-button" type="submit" disabled={busy || restoreBusy || cloudBusy || !restorePassword}>
                   <span>{restoreBusy ? 'Verificando backup…' : state === 'locked' ? 'Verificar y reemplazar bóveda' : 'Verificar y restaurar'}</span>
                   {!restoreBusy && <span aria-hidden="true">→</span>}
                 </button>
@@ -334,68 +483,78 @@ export function VaultGate({ renderUnlocked }: VaultGateProps) {
   }
 
   return (
-    <main className="vault-shell">
-      <div className="vault-atmosphere" aria-hidden="true">
-        <span className="vault-glow vault-glow--one" />
-        <span className="vault-glow vault-glow--two" />
-        <span className="vault-glow vault-glow--three" />
-      </div>
+    <>
+      <main className="vault-shell">
+        <div className="vault-atmosphere" aria-hidden="true">
+          <span className="vault-glow vault-glow--one" />
+          <span className="vault-glow vault-glow--two" />
+          <span className="vault-glow vault-glow--three" />
+        </div>
 
-      <section className="vault-landing" aria-labelledby="oanix-title">
-        <div className="vault-intro">
-          <div className="vault-brandline">
-            <div className="vault-logo" aria-hidden="true">O</div>
-            <div>
-              <strong>OANIX</strong>
-              <span>Secure private notes</span>
+        <section className="vault-landing" aria-labelledby="oanix-title">
+          <div className="vault-intro">
+            <div className="vault-brandline">
+              <div className="vault-logo" aria-hidden="true">O</div>
+              <div>
+                <strong>OANIX</strong>
+                <span>Secure private notes</span>
+              </div>
+            </div>
+
+            <div className="vault-copy">
+              <p className="vault-kicker"><span aria-hidden="true" /> OFFLINE-FIRST · CIFRADO LOCAL</p>
+              <h1 className="vault-title" id="oanix-title">
+                Tu espacio privado, <em>siempre contigo.</em>
+              </h1>
+              <p className="vault-lead">
+                Escribe, organiza y conserva lo importante en una bóveda diseñada para funcionar primero en tu dispositivo.
+              </p>
+            </div>
+
+            <div className="vault-core" aria-hidden="true">
+              <span className="vault-core__ring vault-core__ring--outer" />
+              <span className="vault-core__ring vault-core__ring--middle" />
+              <span className="vault-core__ring vault-core__ring--inner" />
+              <span className="vault-core__scan" />
+              <strong>O</strong>
+              <i className="vault-core__node vault-core__node--one" />
+              <i className="vault-core__node vault-core__node--two" />
+              <i className="vault-core__node vault-core__node--three" />
+            </div>
+
+            <div className="vault-assurances" aria-label="Características de privacidad">
+              <div><span className="vault-assurance__mark" aria-hidden="true" /><strong>Local</strong><small>Tus datos viven primero aquí</small></div>
+              <div><span className="vault-assurance__mark" aria-hidden="true" /><strong>Cifrado</strong><small>Contenido protegido en reposo</small></div>
+              <div><span className="vault-assurance__mark" aria-hidden="true" /><strong>Offline</strong><small>Disponible sin depender de la nube</small></div>
             </div>
           </div>
 
-          <div className="vault-copy">
-            <p className="vault-kicker"><span aria-hidden="true" /> OFFLINE-FIRST · CIFRADO LOCAL</p>
-            <h1 className="vault-title" id="oanix-title">
-              Tu espacio privado, <em>siempre contigo.</em>
-            </h1>
-            <p className="vault-lead">
-              Escribe, organiza y conserva lo importante en una bóveda diseñada para funcionar primero en tu dispositivo.
-            </p>
+          <div className="vault-card">
+            <header className="vault-card__header">
+              <div>
+                <span className="vault-card__pulse" aria-hidden="true" />
+                <strong>Bóveda local</strong>
+              </div>
+              <span className="vault-card__version">V2</span>
+            </header>
+
+            <div className="vault-card__body">{gateContent}</div>
+
+            <footer className="vault-card__footer">
+              <span><i aria-hidden="true" /> Privacidad por diseño</span>
+              <span>OANIX</span>
+            </footer>
           </div>
+        </section>
+      </main>
 
-          <div className="vault-core" aria-hidden="true">
-            <span className="vault-core__ring vault-core__ring--outer" />
-            <span className="vault-core__ring vault-core__ring--middle" />
-            <span className="vault-core__ring vault-core__ring--inner" />
-            <span className="vault-core__scan" />
-            <strong>O</strong>
-            <i className="vault-core__node vault-core__node--one" />
-            <i className="vault-core__node vault-core__node--two" />
-            <i className="vault-core__node vault-core__node--three" />
-          </div>
-
-          <div className="vault-assurances" aria-label="Características de privacidad">
-            <div><span className="vault-assurance__mark" aria-hidden="true" /><strong>Local</strong><small>Tus datos viven primero aquí</small></div>
-            <div><span className="vault-assurance__mark" aria-hidden="true" /><strong>Cifrado</strong><small>Contenido protegido en reposo</small></div>
-            <div><span className="vault-assurance__mark" aria-hidden="true" /><strong>Offline</strong><small>Disponible sin depender de la nube</small></div>
-          </div>
-        </div>
-
-        <div className="vault-card">
-          <header className="vault-card__header">
-            <div>
-              <span className="vault-card__pulse" aria-hidden="true" />
-              <strong>Bóveda local</strong>
-            </div>
-            <span className="vault-card__version">V1</span>
-          </header>
-
-          <div className="vault-card__body">{gateContent}</div>
-
-          <footer className="vault-card__footer">
-            <span><i aria-hidden="true" /> Privacidad por diseño</span>
-            <span>OANIX</span>
-          </footer>
-        </div>
-      </section>
-    </main>
+      {accountOpen && (
+        <AccountPanel
+          context="vault-setup"
+          onClose={() => setAccountOpen(false)}
+          onSessionChange={(session) => void handleAccountSessionChange(session)}
+        />
+      )}
+    </>
   )
 }

@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { VaultGate } from './VaultGate'
 import { NotesWorkspace } from '../features/notes/NotesWorkspace'
 import { AccountPanel } from '../features/account/AccountPanel'
+import { AutoSyncRuntime } from '../features/sync/AutoSyncRuntime'
 
 type OanixUpdateWindow = Window & {
   __oanixApplyUpdate?: () => Promise<void>
@@ -33,14 +34,20 @@ async function prepareVisibleWorkspaceForUpdate() {
 function UnlockedApp({ lockVault }: { lockVault: () => void }) {
   const [accountOpen, setAccountOpen] = useState(false)
   const [accountHost, setAccountHost] = useState<HTMLElement | null>(null)
+  const [workspaceRevision, setWorkspaceRevision] = useState(0)
 
   useEffect(() => {
-    setAccountHost(document.querySelector<HTMLElement>('.notes-header__actions'))
-  }, [])
+    setAccountHost(null)
+    const frame = window.requestAnimationFrame(() => {
+      setAccountHost(document.querySelector<HTMLElement>('.notes-header__actions'))
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [workspaceRevision])
 
   return (
     <>
-      <NotesWorkspace onLock={lockVault} />
+      <AutoSyncRuntime onRemoteApplied={() => setWorkspaceRevision((value) => value + 1)} />
+      <NotesWorkspace key={workspaceRevision} onLock={lockVault} />
       {accountHost && createPortal(
         <button
           className="icon-button account-header-action"

@@ -3,7 +3,10 @@
 Todos los cambios relevantes del proyecto se registran aquí por versión.
 
 ## Unreleased
-- V2 Sincronización E2EE — primera fase endurecida: envío manual de registros no binarios mediante sobres AES-GCM, `record_key` remoto aleatorio generado criptográficamente, reconocimiento de filas existentes solo después de descifrarlas localmente y omisión de escrituras cuando el payload ya está al día; imágenes/binarios, descarga en otro dispositivo y conflictos permanecen fuera de este bloque.
+- V2 Varios dispositivos — primera fase: autosync E2EE bidireccional para registros no binarios, activado por cambios locales, reconexión, regreso a la app y comprobación periódica; los cambios remotos se aplican al IndexedDB existente y la interfaz se remonta sin recargar ni perder la clave de bóveda en memoria.
+- V2 Varios dispositivos — arranque de dispositivo nuevo: la cuenta guarda en la misma tabla un paquete de bootstrap con la clave de bóveda ya envuelta por la contraseña maestra existente; el dispositivo nuevo inicia sesión, introduce esa misma contraseña, descifra localmente la clave y restaura los sobres E2EE sin enviar la contraseña maestra a Supabase.
+- V2 E2EE validada en uso real: el envío cifrado funcionó correctamente y Supabase confirmó 21 filas activas con identificadores opacos aleatorios y ciphertext, sin exponer contenido privado.
+- V2 Sincronización E2EE — primera fase endurecida: registros no binarios mediante sobres AES-GCM, `record_key` remoto aleatorio generado criptográficamente, reconocimiento de filas existentes solo después de descifrarlas localmente y omisión de escrituras cuando el payload ya está al día.
 - Orden manual de notas refinado: el modo `↕` sustituye las flechas por un asa `⠿` con Pointer Events para sostener, arrastrar y soltar con mouse, lápiz o tacto, conservando `manualOrder` cifrado y el grupo de notas fijadas.
 - V2 Backend de sincronización implementado en Supabase: una sola tabla general `public.sync_records` para sobres cifrados, RLS habilitado, acceso exclusivo del propietario autenticado, privilegios mínimos y timestamp controlado por trigger; el backend no interpreta el contenido privado.
 - Organización de notas: fijar/desfijar desde `⋮` y orden manual mediante modo `↕`, guardando `pinned` y `manualOrder` dentro del registro cifrado existente sin crear stores ni cachés adicionales.

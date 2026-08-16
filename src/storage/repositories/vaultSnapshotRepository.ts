@@ -101,6 +101,32 @@ export async function readStoredEncryptedRecordsMatching(
   }
 }
 
+export async function applyStoredEncryptedRecordChanges(
+  upserts: StoredEncryptedSnapshotRecord[],
+  deletedKeys: string[],
+): Promise<void> {
+  requireActiveVaultKey()
+  if (upserts.length === 0 && deletedKeys.length === 0) return
+
+  const database = await openLocalDatabase()
+  try {
+    const transaction = database.transaction(ENCRYPTED_RECORDS_STORE, 'readwrite')
+    const completion = transactionCompleted(transaction)
+    const store = transaction.objectStore(ENCRYPTED_RECORDS_STORE)
+
+    for (const record of upserts) {
+      store.put(record)
+    }
+    for (const key of deletedKeys) {
+      store.delete(key)
+    }
+
+    await completion
+  } finally {
+    database.close()
+  }
+}
+
 export async function replaceLocalVaultSnapshot(snapshot: LocalVaultSnapshot): Promise<void> {
   const database = await openLocalDatabase()
 

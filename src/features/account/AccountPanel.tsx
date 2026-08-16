@@ -1,5 +1,4 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { sendEncryptedVaultRecords } from '../sync/syncService'
 import {
   ACCOUNT_PASSWORD_MIN_CHARACTERS,
   continueWithGoogle,
@@ -14,12 +13,22 @@ import './account.css'
 
 interface AccountPanelProps {
   onClose: () => void
+  context?: 'workspace' | 'vault-setup'
+  onSessionChange?: (session: OnlineAccountSession | null) => void
 }
 
 type AccountView = 'signin' | 'signup'
-type BusyAction = 'email' | 'google' | 'signout' | 'sync' | null
+type BusyAction = 'email' | 'google' | 'signout' | null
 
-export function AccountPanel({ onClose }: AccountPanelProps) {
+interface SyncStatusEventDetail {
+  message?: string
+}
+
+export function AccountPanel({
+  onClose,
+  context = 'workspace',
+  onSessionChange,
+}: AccountPanelProps) {
   const [view, setView] = useState<AccountView>('signin')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -29,25 +38,26 @@ export function AccountPanel({ onClose }: AccountPanelProps) {
   const [success, setSuccess] = useState(false)
   const [session, setSession] = useState<OnlineAccountSession | null>(null)
   const [loadingSession, setLoadingSession] = useState(true)
+  const [syncStatus, setSyncStatus] = useState('Sincronización automática preparada.')
 
   useEffect(() => {
     let active = true
-    const unsubscribe = subscribeOnlineAccountSession((nextSession) => {
+    const applySession = (nextSession: OnlineAccountSession | null) => {
       if (!active) return
       setSession(nextSession)
+      onSessionChange?.(nextSession)
       setLoadingSession(false)
       if (nextSession) {
         setMessage('')
         setPassword('')
         setConfirmation('')
       }
-    })
+    }
+
+    const unsubscribe = subscribeOnlineAccountSession(applySession)
 
     void getOnlineAccountSession()
-      .then((nextSession) => {
-        if (!active) return
-        setSession(nextSession)
-      })
+      .then(applySession)
       .catch((error) => {
         if (!active) return
         setMessage(error instanceof Error ? error.message : 'No se pudo comprobar la sesión online.')
@@ -60,7 +70,17 @@ export function AccountPanel({ onClose }: AccountPanelProps) {
       active = false
       unsubscribe()
     }
-  }, [])
+  }, [onSessionChange])
+
+  useEffect(() => {
+    if (context !== 'workspace') return
+    const handleStatus = (event: Event) => {
+      const detail = (event as CustomEvent<SyncStatusEventDetail>).detail
+      if (detail?.message) setSyncStatus(detail.message)
+    }
+    window.addEventListener('oanix:sync-status', handleStatus)
+    return () => window.removeEventListener('oanix:sync-status', handleStatus)
+  }, [context])
 
   function changeView(nextView: AccountView) {
     setView(nextView)
@@ -95,6 +115,7 @@ export function AccountPanel({ onClose }: AccountPanelProps) {
       } else {
         const nextSession = await signInOnlineAccount(email, password)
         setSession(nextSession)
+        onSessionChange?.(nextSession)
         setSuccess(true)
         setMessage('Sesión iniciada correctamente.')
         setPassword('')
@@ -113,28 +134,15 @@ export function AccountPanel({ onClose }: AccountPanelProps) {
     try {
       const nextSession = await continueWithGoogle()
       setSession(nextSession)
-      setSuccess(true)
-      setMessage('Sesión iniciada con Google. La bóveda permaneció abierta.')
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'No se pudo iniciar con Google.')
-    } finally {
-      setBusyAction(null)
-    }
-  }
-
-  async function handleEncryptedSync() {
-    setMessage('')
-    setSuccess(false)
-    setBusyAction('sync')
-    try {
-      const result = await sendEncryptedVaultRecords()
+      onSessionChange?.(nextSession)
       setSuccess(true)
       setMessage(
-        `${result.uploaded} registro${result.uploaded === 1 ? '' : 's'} cifrado${result.uploaded === 1 ? '' : 's'} enviado${result.uploaded === 1 ? '' : 's'} y ${result.verified} verificado${result.verified === 1 ? '' : 's'}. ` +
-        `${result.skippedBinary} imagen${result.skippedBinary === 1 ? '' : 'es'}/binario${result.skippedBinary === 1 ? '' : 's'} permanece${result.skippedBinary === 1 ? '' : 'n'} solo en este dispositivo por ahora.`,
+        context === 'workspace'
+          ? 'Sesión iniciada con Google. La bóveda permaneció abierta.'
+          : 'Cuenta conectada. Ahora puedes traer tu bóveda cifrada de otro dispositivo.',
       )
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'No se pudieron enviar los registros cifrados.')
+      setMessage(error instanceof Error ? error.message : 'No se pudo iniciar con Google.')
     } finally {
       setBusyAction(null)
     }
@@ -147,6 +155,7 @@ export function AccountPanel({ onClose }: AccountPanelProps) {
     try {
       await signOutOnlineAccount()
       setSession(null)
+      onSessionChange?.(null)
       setMessage('Sesión online cerrada. OANIX continúa en modo local.')
       setSuccess(true)
     } catch (error) {
@@ -200,8 +209,18 @@ export function AccountPanel({ onClose }: AccountPanelProps) {
             </div>
 
             <p className="account-session__privacy">
-              La contraseña maestra nunca se envía. Al usar el botón siguiente, OANIX crea sobres E2EE con la clave de la bóveda en memoria y Supabase recibe únicamente claves opacas, ciphertext y metadatos técnicos mínimos. Las imágenes/binarios todavía no se transportan en este paso.
+              {context === 'workspace'
+                ? 'La contraseña maestra nunca se envía. Los registros compatibles se guardan localmente y OANIX sincroniza automáticamente sobres E2EE con Supabase cuando hay conexión. Si llega un cambio remoto, se aplica sin cerrar la bóveda.'
+                : 'Esta cuenta solo identifica qué bóveda cifrada te pertenece. Para abrirla en este dispositivo todavía necesitarás la misma contraseña maestra; Supabase no la recibe.'}
             </p>
+
+            {context === 'workspace' && (
+              <div className="account-panel__notice" role="status" aria-live="polite">
+                <strong>☁ Sincronización automática</strong>
+                <p>{syncStatus}</p>
+                <p>Las imágenes/binarios continúan pendientes dentro del bloque Varios dispositivos; texto, carpetas, etiquetas y demás registros no binarios ya usan autosync E2EE.</p>
+              </div>
+            )}
 
             {message && (
               <p className={`account-form__message${success ? ' account-form__message--success' : ''}`} role={success ? 'status' : 'alert'}>
@@ -209,15 +228,19 @@ export function AccountPanel({ onClose }: AccountPanelProps) {
               </p>
             )}
 
-            <button type="button" className="account-form__submit" onClick={() => void handleEncryptedSync()} disabled={isBusy}>
-              {busyAction === 'sync' ? 'Cifrando, enviando y verificando…' : 'Enviar registros cifrados'}
-            </button>
+            {context === 'vault-setup' && (
+              <button type="button" className="account-form__submit" onClick={onClose} disabled={isBusy}>
+                Continuar con esta cuenta
+              </button>
+            )}
             <button type="button" className="account-secondary-action" onClick={() => void handleSignOut()} disabled={isBusy}>
               {busyAction === 'signout' ? 'Cerrando sesión…' : 'Cerrar sesión online'}
             </button>
-            <button type="button" className="account-local-action" onClick={onClose} disabled={isBusy}>
-              Volver a mis notas
-            </button>
+            {context === 'workspace' && (
+              <button type="button" className="account-local-action" onClick={onClose} disabled={isBusy}>
+                Volver a mis notas
+              </button>
+            )}
           </div>
         ) : (
           <>
@@ -312,18 +335,20 @@ export function AccountPanel({ onClose }: AccountPanelProps) {
               </button>
             </form>
 
-            <div className="account-local-zone">
-              <span>¿Prefieres no compartir correo?</span>
-              <button type="button" className="account-local-action" onClick={onClose} disabled={isBusy}>
-                Seguir en modo local
-              </button>
-            </div>
+            {context === 'workspace' && (
+              <div className="account-local-zone">
+                <span>¿Prefieres no compartir correo?</span>
+                <button type="button" className="account-local-action" onClick={onClose} disabled={isBusy}>
+                  Seguir en modo local
+                </button>
+              </div>
+            )}
           </>
         )}
 
         <footer className="account-panel__footer">
-          <span>E2EE en validación · binarios pendientes</span>
-          <span>V2 · Sincronización E2EE</span>
+          <span>{context === 'workspace' ? 'Autosync E2EE activo · binarios pendientes' : 'Acceso a bóveda sincronizada'}</span>
+          <span>V2 · Varios dispositivos</span>
         </footer>
       </section>
     </div>
