@@ -16,7 +16,8 @@ import {
 import { getOnlineAccountSession, getOnlineDataClient } from '../account/accountService'
 
 const STORAGE_BUCKET = 'oanix-encrypted-blobs'
-const CHUNK_BYTES = 8 * 1024 * 1024
+const CHUNK_BYTES = 6 * 1024 * 1024
+const BASE64_CHARS_PER_CHUNK = (CHUNK_BYTES / 3) * 4
 const MAX_ENCRYPTED_BINARY_BYTES = 50 * 1024 * 1024 + 64
 const SYNC_ENVELOPE_PROTOCOL = 'oanix-sync-envelope-v1' as const
 const SYNC_ENVELOPE_RECORD_TYPE = 'sync-envelope'
@@ -43,7 +44,7 @@ interface BinaryManifest {
   chunkCount: number
   chunkSize: number
   ciphertextByteLength: number
-  ciphertextSha256: string
+  chunkSha256: string[]
 }
 
 interface RemoteSyncRow {
@@ -59,6 +60,8 @@ interface RemoteBinaryRecord {
   manifest: BinaryManifest
 }
 
+type ExistingBinaryTarget = RemoteBinaryRecord | RemoteSyncRow | null
+
 interface BinaryStateEntry {
   remoteKey: string
   version: number
@@ -70,6 +73,12 @@ interface BinarySyncState {
   version: 1
   entries: Record<string, BinaryStateEntry>
   cleanupPaths: string[]
+}
+
+interface LocalBinaryInspection {
+  fingerprint: string
+  byteLength: number
+  chunkHashes: string[]
 }
 
 export interface BinarySyncResult {
@@ -152,6 +161,9 @@ function requireBinaryManifest(value: unknown): BinaryManifest {
     throw new Error('El manifiesto cifrado de imagen es inválido.')
   }
   const candidate = value as Partial<BinaryManifest>
+  const hashesValid = Array.isArray(candidate.chunkSha256)
+    && candidate.chunkSha256.every((hash) => typeof hash === 'string' && /^[A-Za-z0-9_-]{40,50}$/.test(hash))
+
   if (
     candidate.protocol !== BINARY_MANIFEST_PROTOCOL ||
     typeof candidate.localKey !== 'string' ||
@@ -163,7 +175,7 @@ function requireBinaryManifest(value: unknown): BinaryManifest {
     candidate.chunkSize !== CHUNK_BYTES ||
     typeof candidate.ciphertextByteLength !== 'number' || !Number.isSafeInteger(candidate.ciphertextByteLength) ||
     candidate.ciphertextByteLength < 1 || candidate.ciphertextByteLength > MAX_ENCRYPTED_BINARY_BYTES ||
-    typeof candidate.ciphertextSha256 !== 'string' || candidate.ciphertextSha256.length < 20
+    !hashesValid || candidate.chunkSha256?.length !== candidate.chunkCount
   ) {
     throw new Error('El manifiesto cifrado de imagen contiene datos inválidos.')
   }
@@ -179,7 +191,7 @@ function newOpaqueId(): string {
   return Array.from(bytes).map((byte) => byte.toString(16).padStart(2, '0')).join('')
 }
 
-function base64ToBytes(value: string): Uint8Array {
+function decodeBase64Chunk(value: string): Uint8Array {
   const binary = atob(value)
   const bytes = new Uint8Array(binary.length)
   for (let index = 0; index < binary.length; index += 1) {
@@ -197,6 +209,14 @@ function bytesToBase64(bytes: Uint8Array): string {
   return btoa(binary)
 }
 
+function base64DecodedLength(value: string): number {
+  if (value.length === 0 || value.length % 4 !== 0) {
+    throw new Error('El ciphertext binario local usa un Base64 inválido.')
+  }
+  const padding = value.endsWith('==') ? 2 : value.endsWith('=') ? 1 : 0
+  return (value.length / 4) * 3 - padding
+}
+
 async function sha256Base64Url(bytes: Uint8Array): Promise<string> {
   if (!globalThis.crypto?.subtle) {
     throw new Error('Web Crypto no está disponible para verificar imágenes sincronizadas.')
@@ -208,17 +228,27 @@ async function sha256Base64Url(bytes: Uint8Array): Promise<string> {
     .replace(/=+$/g, '')
 }
 
-async function localBinaryFingerprint(payload: EncryptedVaultPayload): Promise<string> {
-  const bytes = base64ToBytes(payload.ciphertext)
-  if (bytes.byteLength < 1 || bytes.byteLength > MAX_ENCRYPTED_BINARY_BYTES) {
+async function inspectLocalBinary(payload: EncryptedVaultPayload): Promise<LocalBinaryInspection> {
+  const byteLength = base64DecodedLength(payload.ciphertext)
+  if (byteLength < 1 || byteLength > MAX_ENCRYPTED_BINARY_BYTES) {
     throw new Error('Una imagen cifrada local supera el límite seguro de sincronización.')
   }
-  const hash = await sha256Base64Url(bytes)
-  return `${payload.scheme}:${payload.iv}:${bytes.byteLength}:${hash}`
+
+  const chunkHashes: string[] = []
+  for (let offset = 0; offset < payload.ciphertext.length; offset += BASE64_CHARS_PER_CHUNK) {
+    const chunk = decodeBase64Chunk(payload.ciphertext.slice(offset, offset + BASE64_CHARS_PER_CHUNK))
+    chunkHashes.push(await sha256Base64Url(chunk))
+  }
+
+  return {
+    byteLength,
+    chunkHashes,
+    fingerprint: `${payload.scheme}:${payload.iv}:${byteLength}:${chunkHashes.join('.')}`,
+  }
 }
 
 function manifestFingerprint(manifest: BinaryManifest): string {
-  return `${manifest.scheme}:${manifest.iv}:${manifest.ciphertextByteLength}:${manifest.ciphertextSha256}`
+  return `${manifest.scheme}:${manifest.iv}:${manifest.ciphertextByteLength}:${manifest.chunkSha256.join('.')}`
 }
 
 function objectPaths(userId: string, manifest: BinaryManifest): string[] {
@@ -339,19 +369,23 @@ async function encryptBinaryRow(
   return JSON.stringify(encryptedOuter)
 }
 
+function existingTargetRow(existing: ExistingBinaryTarget): RemoteSyncRow | null {
+  if (!existing) return null
+  return 'row' in existing ? existing.row : existing
+}
+
+function existingBinaryRecord(existing: ExistingBinaryTarget): RemoteBinaryRecord | null {
+  return existing && 'manifest' in existing ? existing : null
+}
+
 async function uploadBinaryChunks(
   userId: string,
   localKey: string,
   payload: EncryptedVaultPayload,
+  inspection: LocalBinaryInspection,
 ): Promise<{ manifest: BinaryManifest; paths: string[] }> {
-  const bytes = base64ToBytes(payload.ciphertext)
-  if (bytes.byteLength < 1 || bytes.byteLength > MAX_ENCRYPTED_BINARY_BYTES) {
-    throw new Error('Una imagen cifrada supera el límite permitido para sincronizarse.')
-  }
-
   const objectPrefix = newOpaqueId()
-  const chunkCount = Math.ceil(bytes.byteLength / CHUNK_BYTES)
-  const hash = await sha256Base64Url(bytes)
+  const chunkCount = inspection.chunkHashes.length
   const manifest: BinaryManifest = {
     protocol: BINARY_MANIFEST_PROTOCOL,
     localKey,
@@ -360,8 +394,8 @@ async function uploadBinaryChunks(
     objectPrefix,
     chunkCount,
     chunkSize: CHUNK_BYTES,
-    ciphertextByteLength: bytes.byteLength,
-    ciphertextSha256: hash,
+    ciphertextByteLength: inspection.byteLength,
+    chunkSha256: inspection.chunkHashes,
   }
   const paths = objectPaths(userId, manifest)
   const uploadedPaths: string[] = []
@@ -369,9 +403,9 @@ async function uploadBinaryChunks(
 
   try {
     for (let index = 0; index < chunkCount; index += 1) {
-      const start = index * CHUNK_BYTES
-      const end = Math.min(start + CHUNK_BYTES, bytes.byteLength)
-      const body = new Blob([Uint8Array.from(bytes.subarray(start, end))], { type: 'application/octet-stream' })
+      const base64Start = index * BASE64_CHARS_PER_CHUNK
+      const chunk = decodeBase64Chunk(payload.ciphertext.slice(base64Start, base64Start + BASE64_CHARS_PER_CHUNK))
+      const body = new Blob([Uint8Array.from(chunk)], { type: 'application/octet-stream' })
       const { error } = await storage.upload(paths[index], body, {
         contentType: 'application/octet-stream',
         cacheControl: '3600',
@@ -394,11 +428,11 @@ async function downloadBinaryPayload(
 ): Promise<EncryptedVaultPayload> {
   const storage = getOnlineDataClient().storage.from(STORAGE_BUCKET)
   const paths = objectPaths(userId, manifest)
-  const chunks: Uint8Array[] = []
+  const base64Parts: string[] = []
   let total = 0
 
-  for (const path of paths) {
-    const { data, error } = await storage.download(path)
+  for (let index = 0; index < paths.length; index += 1) {
+    const { data, error } = await storage.download(paths[index])
     if (error || !data) {
       throw new Error(`No se pudo descargar un fragmento cifrado de imagen: ${error?.message ?? 'respuesta vacía'}`)
     }
@@ -407,29 +441,22 @@ async function downloadBinaryPayload(
     if (total > manifest.ciphertextByteLength) {
       throw new Error('Los fragmentos cifrados de imagen exceden el tamaño esperado.')
     }
-    chunks.push(chunk)
+
+    const hash = await sha256Base64Url(chunk)
+    if (hash !== manifest.chunkSha256[index]) {
+      throw new Error('La verificación de integridad de un fragmento cifrado no coincide.')
+    }
+    base64Parts.push(bytesToBase64(chunk))
   }
 
   if (total !== manifest.ciphertextByteLength) {
     throw new Error('La imagen cifrada descargada está incompleta.')
   }
 
-  const bytes = new Uint8Array(total)
-  let offset = 0
-  for (const chunk of chunks) {
-    bytes.set(chunk, offset)
-    offset += chunk.byteLength
-  }
-
-  const hash = await sha256Base64Url(bytes)
-  if (hash !== manifest.ciphertextSha256) {
-    throw new Error('La verificación de integridad de la imagen cifrada no coincide.')
-  }
-
   return {
     scheme: manifest.scheme,
     iv: manifest.iv,
-    ciphertext: bytesToBase64(bytes),
+    ciphertext: base64Parts.join(''),
   }
 }
 
@@ -437,22 +464,25 @@ async function insertOrUpdateBinaryRemote(
   userId: string,
   vaultKey: CryptoKey,
   local: StoredEncryptedSnapshotRecord,
-  existing: RemoteBinaryRecord | null,
+  inspection: LocalBinaryInspection,
+  existing: ExistingBinaryTarget,
   state: BinarySyncState,
 ): Promise<RemoteBinaryRecord> {
-  const remoteKey = existing?.row.record_key ?? newOpaqueId()
-  const marker = existing?.marker ?? `${BINARY_MARKER_PREFIX}${newOpaqueId()}`
-  const uploaded = await uploadBinaryChunks(userId, local.key, local.payload)
+  const targetRow = existingTargetRow(existing)
+  const oldBinary = existingBinaryRecord(existing)
+  const remoteKey = targetRow?.record_key ?? newOpaqueId()
+  const marker = oldBinary?.marker ?? `${BINARY_MARKER_PREFIX}${newOpaqueId()}`
+  const uploaded = await uploadBinaryChunks(userId, local.key, local.payload, inspection)
   const ciphertext = await encryptBinaryRow(vaultKey, remoteKey, marker, uploaded.manifest)
   const client = getOnlineDataClient()
 
-  const query = existing
+  const query = targetRow
     ? client
         .from('sync_records')
-        .update({ ciphertext, version: existing.row.version + 1, deleted: false })
+        .update({ ciphertext, version: targetRow.version + 1, deleted: false })
         .eq('user_id', userId)
         .eq('record_key', remoteKey)
-        .eq('version', existing.row.version)
+        .eq('version', targetRow.version)
         .select('record_key, ciphertext, version, deleted')
         .single()
     : client
@@ -470,7 +500,7 @@ async function insertOrUpdateBinaryRemote(
   }
 
   const row = requireRemoteRow(data)
-  if (existing) await queueCleanup(state, objectPaths(userId, existing.manifest))
+  if (oldBinary) await queueCleanup(state, objectPaths(userId, oldBinary.manifest))
   return { row, marker, manifest: uploaded.manifest }
 }
 
@@ -507,13 +537,13 @@ export async function syncEncryptedBinariesBidirectional(): Promise<BinarySyncRe
 
   const localRecords = await readStoredEncryptedRecordsMatching((key) => Boolean(parseBinaryLocalKey(key)))
   const localByKey = new Map(localRecords.map((record) => [record.key, record]))
-  const localFingerprintCache = new Map<string, string>()
-  const getLocalFingerprint = async (record: StoredEncryptedSnapshotRecord) => {
-    const cached = localFingerprintCache.get(record.key)
+  const localInspectionCache = new Map<string, LocalBinaryInspection>()
+  const getLocalInspection = async (record: StoredEncryptedSnapshotRecord) => {
+    const cached = localInspectionCache.get(record.key)
     if (cached) return cached
-    const fingerprint = await localBinaryFingerprint(record.payload)
-    localFingerprintCache.set(record.key, fingerprint)
-    return fingerprint
+    const inspection = await inspectLocalBinary(record.payload)
+    localInspectionCache.set(record.key, inspection)
+    return inspection
   }
 
   const rows = await fetchRemoteRows(session.userId)
@@ -569,8 +599,8 @@ export async function syncEncryptedBinariesBidirectional(): Promise<BinarySyncRe
           continue
         }
 
-        const localFingerprint = await getLocalFingerprint(local)
-        if (localFingerprint !== remoteFingerprint) {
+        const localInspection = await getLocalInspection(local)
+        if (localInspection.fingerprint !== remoteFingerprint) {
           conflicts += 1
           continue
         }
@@ -578,20 +608,20 @@ export async function syncEncryptedBinariesBidirectional(): Promise<BinarySyncRe
         state.entries[localKey] = {
           remoteKey: activeRemote.row.record_key,
           version: activeRemote.row.version,
-          fingerprint: localFingerprint,
+          fingerprint: localInspection.fingerprint,
           deleted: false,
         }
         continue
       }
 
       if (local) {
-        const remote = await insertOrUpdateBinaryRemote(session.userId, vaultKey, local, null, state)
-        const fingerprint = await getLocalFingerprint(local)
+        const inspection = await getLocalInspection(local)
+        const remote = await insertOrUpdateBinaryRemote(session.userId, vaultKey, local, inspection, null, state)
         uploaded += 1
         state.entries[localKey] = {
           remoteKey: remote.row.record_key,
           version: remote.row.version,
-          fingerprint,
+          fingerprint: inspection.fingerprint,
           deleted: false,
         }
       }
@@ -611,8 +641,8 @@ export async function syncEncryptedBinariesBidirectional(): Promise<BinarySyncRe
         continue
       }
 
-      const localFingerprint = await getLocalFingerprint(local)
-      if (!baseline.deleted && localFingerprint === baseline.fingerprint) {
+      const localInspection = await getLocalInspection(local)
+      if (!baseline.deleted && localInspection.fingerprint === baseline.fingerprint) {
         await applyStoredEncryptedRecordChanges([], [localKey])
         deletedLocal += 1
         state.entries[localKey] = { ...baseline, version: remoteRow.version, deleted: true }
@@ -620,12 +650,12 @@ export async function syncEncryptedBinariesBidirectional(): Promise<BinarySyncRe
       }
 
       if (baseline.deleted) {
-        const remote = await insertOrUpdateBinaryRemote(session.userId, vaultKey, local, null, state)
+        const remote = await insertOrUpdateBinaryRemote(session.userId, vaultKey, local, localInspection, remoteRow, state)
         uploaded += 1
         state.entries[localKey] = {
           remoteKey: remote.row.record_key,
           version: remote.row.version,
-          fingerprint: localFingerprint,
+          fingerprint: localInspection.fingerprint,
           deleted: false,
         }
         continue
@@ -667,9 +697,9 @@ export async function syncEncryptedBinariesBidirectional(): Promise<BinarySyncRe
       continue
     }
 
-    const localFingerprint = await getLocalFingerprint(local)
+    const localInspection = await getLocalInspection(local)
     if (baseline.deleted) {
-      if (localFingerprint !== remoteFingerprint) {
+      if (localInspection.fingerprint !== remoteFingerprint) {
         conflicts += 1
         continue
       }
@@ -677,22 +707,22 @@ export async function syncEncryptedBinariesBidirectional(): Promise<BinarySyncRe
       state.entries[localKey] = {
         remoteKey: remote.row.record_key,
         version: remote.row.version,
-        fingerprint: localFingerprint,
+        fingerprint: localInspection.fingerprint,
         deleted: false,
       }
       continue
     }
 
-    const localChanged = localFingerprint !== baseline.fingerprint
+    const localChanged = localInspection.fingerprint !== baseline.fingerprint
     const remoteChanged = remoteFingerprint !== baseline.fingerprint
 
     if (localChanged && remoteChanged) {
-      if (localFingerprint === remoteFingerprint) {
+      if (localInspection.fingerprint === remoteFingerprint) {
         unchanged += 1
         state.entries[localKey] = {
           remoteKey: remote.row.record_key,
           version: remote.row.version,
-          fingerprint: localFingerprint,
+          fingerprint: localInspection.fingerprint,
           deleted: false,
         }
       } else {
@@ -702,12 +732,12 @@ export async function syncEncryptedBinariesBidirectional(): Promise<BinarySyncRe
     }
 
     if (localChanged) {
-      const updated = await insertOrUpdateBinaryRemote(session.userId, vaultKey, local, remote, state)
+      const updated = await insertOrUpdateBinaryRemote(session.userId, vaultKey, local, localInspection, remote, state)
       uploaded += 1
       state.entries[localKey] = {
         remoteKey: updated.row.record_key,
         version: updated.row.version,
-        fingerprint: localFingerprint,
+        fingerprint: localInspection.fingerprint,
         deleted: false,
       }
       continue
