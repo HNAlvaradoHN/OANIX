@@ -95,16 +95,21 @@ test('remote changes refresh the workspace without reloading or relocking the va
   assert.doesNotMatch(app, /location\.reload\(\)/)
 })
 
-test('multi-device sync detects divergence but does not implement conflict resolution early', () => {
+test('multi-device sync detects divergence and hands it to implemented conflict resolution without new stores', () => {
   const syncSource = readFileSync('src/features/sync/syncService.ts', 'utf8')
+  const conflictCenter = readFileSync('src/features/sync/ConflictCenter.tsx', 'utf8')
   const roadmap = readFileSync('docs/ROADMAP.md', 'utf8')
+  const memory = readFileSync('docs/PROJECT_MEMORY.md', 'utf8')
   const databaseSource = readFileSync('src/storage/local/database.ts', 'utf8')
 
   assert.match(syncSource, /localChanged && remoteChanged/)
   assert.match(syncSource, /conflicts \+= 1/)
   assert.match(syncSource, /\.eq\('version', existing\.version\)/)
-  assert.match(roadmap, /\[ \] Resolución de conflictos/)
+  assert.match(conflictCenter, /Conflicto|conflicto/)
+  assert.match(roadmap, /\[x\] Resolución de conflictos/)
   assert.match(roadmap, /system\.sync-state/)
+  assert.match(memory, /#69/)
+  assert.match(memory, /VALIDATION_DEBT/)
 
   const createStoreCalls = databaseSource.match(/\.createObjectStore\(/g) ?? []
   assert.equal(createStoreCalls.length, 2)
