@@ -3,6 +3,8 @@
 Todos los cambios relevantes del proyecto se registran aquí por versión.
 
 ## Unreleased
+- Funcionamiento offline V1 reforzado: el service worker precachea explícitamente el app shell ejecutable (`js`, `css`, `html` y futuros `wasm`), conserva `index.html` como fallback de navegación y limpia cachés obsoletos sin crear un sistema paralelo de almacenamiento.
+- En móvil, la tarjeta de acceso/restauración se prioriza y permanece dentro del viewport; si crece por la restauración de un backup, su contenido puede desplazarse internamente sin perder los campos de contraseña.
 - Backup/exportación/restauración cifrada V1: archivo `.oanixbackup` versionado con metadatos de protección y todos los registros ya cifrados; antes de restaurar OANIX verifica la contraseña maestra y autentica secuencialmente cada registro AES-GCM, y solo después reemplaza la bóveda en una transacción. El archivo se procesa en memoria sin crear copias persistentes auxiliares.
 - Búsqueda local global: ignora la carpeta/etiqueta activa mientras se busca y muestra carpeta, ubicación, fragmento y cantidad de coincidencias antes de abrir una nota.
 - Búsqueda local V1 sobre contenido ya descifrado en memoria, insensible a mayúsculas/acentos, con términos múltiples y combinable con Carpetas + Etiquetas, sin persistir un índice en texto plano.
