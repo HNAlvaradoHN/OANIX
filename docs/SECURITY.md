@@ -188,7 +188,52 @@ V1 no incorpora recuperación de contraseña. Si el usuario pierde la contraseñ
 
 ## V2
 
-La sincronización deberá transportar únicamente contenido cifrado y metadatos mínimos necesarios. La arquitectura exacta del backend y el protocolo de sincronización se definirán en V2.
+### Autenticación
+
+La identidad online y la bóveda local son dominios distintos:
+
+- Supabase Auth identifica al usuario mediante correo + contraseña o Google.
+- La sesión online no contiene ni deriva la clave de bóveda.
+- La contraseña maestra nunca se envía a Supabase ni a Google.
+- Cerrar la sesión online no elimina, bloquea ni modifica la bóveda local.
+- El acceso con Google solicita únicamente identidad básica necesaria para autenticación; no se piden permisos de Gmail, Drive ni Contactos.
+
+### Backend de sincronización — objetivo de seguridad
+
+El backend debe almacenar sobres cifrados y metadatos operativos mínimos. Una copia de la base de datos, un backup de Supabase o el acceso administrativo al proyecto no deben bastar para reconstruir el contenido privado.
+
+Toda tabla expuesta al cliente usa RLS. Las políticas de registros sincronizados se restringen al rol `authenticated` y verifican el propietario con `(select auth.uid()) = user_id`. La clave `service_role` y cualquier secreto equivalente que pueda saltarse RLS permanecen fuera del navegador y del repositorio público.
+
+### Información que el servidor puede conocer
+
+La primera versión del backend puede conocer únicamente lo necesario para operar:
+
+- identificador Supabase del propietario;
+- identificador opaco de cada registro;
+- tamaño aproximado del ciphertext por el tamaño de la fila/objeto;
+- versión del formato/protocolo;
+- contador de versión y/o marcas temporales necesarias para delta sync;
+- existencia de una eliminación lógica cuando haga falta propagar borrados.
+
+El servidor no necesita conocer título, contenido, nombre de carpeta, etiquetas, nombre de contacto, descripción de imagen ni el tipo semántico del registro si ese tipo puede permanecer dentro del sobre cifrado.
+
+### Modelo de amenazas inicial V2
+
+**Copia o fuga de la base de datos.** Debe revelar únicamente ciphertext y metadatos operativos. La confidencialidad del contenido depende de claves que no están almacenadas como secretos recuperables en el servidor.
+
+**Otro usuario autenticado.** RLS debe impedir que lea, inserte, modifique o borre filas cuyo `user_id` no coincida con su `auth.uid()`.
+
+**Exposición de la publishable key.** No se considera un secreto. Por sí sola no debe permitir leer datos de usuarios porque el acceso depende de sesión válida + RLS.
+
+**Robo de una sesión de cuenta.** Puede permitir actuar como ese usuario frente al backend mientras la sesión siga válida, pero no debe entregar automáticamente la clave de bóveda ni descifrar registros E2EE. Este riesgo exige más adelante controles de dispositivo, revocación y recuperación.
+
+**Servidor malicioso o comprometido.** Puede borrar, retener, duplicar, reordenar o devolver ciphertext antiguo. AES-GCM detecta manipulación del ciphertext ligado a su AAD, pero no resuelve por sí solo rollback, borrado o conflictos. Por eso versiones, historial y resolución de conflictos siguen siendo bloques explícitos de V2.
+
+**Pérdida de contraseña maestra.** La cuenta online no debe convertirse en una puerta trasera. Recuperación se diseñará aparte mediante material criptográfico protegido del lado del cliente.
+
+### Límites del backend base
+
+Crear la tabla y sus políticas no activa automáticamente la sincronización. Antes de transportar datos reales deben definirse el sobre E2EE, la relación de claves entre dispositivos y la semántica de versionado. Los binarios grandes también requieren una estrategia específica sin crear copias redundantes o dejar objetos huérfanos.
 
 ## Android
 
