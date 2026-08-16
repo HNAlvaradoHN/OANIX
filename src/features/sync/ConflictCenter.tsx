@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
+  isBinaryImageConflictSide,
+  loadImageConflictVisuals,
   resolveSyncConflict,
   scanSyncConflicts,
   type SyncConflictResolutionChoice,
   type SyncConflictSide,
   type SyncConflictView,
-} from './conflictService'
+} from './conflictCoordinator'
 import { isNoteRecord, noteBlocksToPlainText } from '../notes/noteTypes'
 import './conflictCenter.css'
 
@@ -15,6 +17,20 @@ interface ConflictCenterProps {
 
 interface SyncStatusDetail {
   kind?: string
+}
+
+interface ImageVisualState {
+  loading: boolean
+  localUrl: string | null
+  remoteUrl: string | null
+  error: string
+}
+
+const EMPTY_IMAGE_VISUALS: ImageVisualState = {
+  loading: false,
+  localUrl: null,
+  remoteUrl: null,
+  error: '',
 }
 
 function sidePreview(side: SyncConflictSide): { title: string; body: string } {
@@ -30,6 +46,13 @@ function sidePreview(side: SyncConflictSide): { title: string; body: string } {
     return {
       title: side.value.title || 'Nota sin título',
       body: body || 'Nota sin contenido de texto visible.',
+    }
+  }
+
+  if (isBinaryImageConflictSide(side.value)) {
+    return {
+      title: 'Imagen original',
+      body: 'Copia cifrada disponible. La vista se descifra únicamente en memoria para esta comparación.',
     }
   }
 
@@ -59,6 +82,7 @@ export function ConflictCenter({ onResolved }: ConflictCenterProps) {
   const [activeIndex, setActiveIndex] = useState(0)
   const [busyChoice, setBusyChoice] = useState<SyncConflictResolutionChoice | null>(null)
   const [message, setMessage] = useState('')
+  const [imageVisuals, setImageVisuals] = useState<ImageVisualState>(EMPTY_IMAGE_VISUALS)
 
   const refresh = useCallback(async (showErrors = false) => {
     try {
@@ -95,6 +119,41 @@ export function ConflictCenter({ onResolved }: ConflictCenterProps) {
   const remotePreview = useMemo(() => active ? sidePreview(active.remote) : null, [active])
   const localPreview = useMemo(() => active ? sidePreview(active.local) : null, [active])
 
+  useEffect(() => {
+    let disposed = false
+    const objectUrls: string[] = []
+
+    if (!open || !active || active.recordType !== 'image') {
+      setImageVisuals(EMPTY_IMAGE_VISUALS)
+      return () => undefined
+    }
+
+    setImageVisuals({ loading: true, localUrl: null, remoteUrl: null, error: '' })
+    void loadImageConflictVisuals(active.localKey, active.token)
+      .then((visuals) => {
+        if (disposed || !visuals) return
+        const localUrl = visuals.local ? URL.createObjectURL(visuals.local) : null
+        const remoteUrl = visuals.remote ? URL.createObjectURL(visuals.remote) : null
+        if (localUrl) objectUrls.push(localUrl)
+        if (remoteUrl) objectUrls.push(remoteUrl)
+        setImageVisuals({ loading: false, localUrl, remoteUrl, error: '' })
+      })
+      .catch((error) => {
+        if (disposed) return
+        setImageVisuals({
+          loading: false,
+          localUrl: null,
+          remoteUrl: null,
+          error: error instanceof Error ? error.message : 'No se pudieron descifrar las vistas de esta imagen.',
+        })
+      })
+
+    return () => {
+      disposed = true
+      for (const url of objectUrls) URL.revokeObjectURL(url)
+    }
+  }, [open, active?.localKey, active?.token, active?.recordType])
+
   async function handleResolve(choice: SyncConflictResolutionChoice) {
     if (!active || busyChoice || !active.resolvable) return
     if (choice === 'combine' && !active.canCombine) return
@@ -111,6 +170,28 @@ export function ConflictCenter({ onResolved }: ConflictCenterProps) {
     } finally {
       setBusyChoice(null)
     }
+  }
+
+  function renderConflictBody(side: 'remote' | 'local', preview: { title: string; body: string }) {
+    if (!active || active.recordType !== 'image') return <pre>{preview.body}</pre>
+    const conflictSide = side === 'remote' ? active.remote : active.local
+    if (conflictSide.deleted) return <pre>{preview.body}</pre>
+    if (imageVisuals.loading) {
+      return <div className="conflict-image-preview conflict-image-preview--status">Descifrando imagen en memoria…</div>
+    }
+    const url = side === 'remote' ? imageVisuals.remoteUrl : imageVisuals.localUrl
+    if (url) {
+      return (
+        <div className="conflict-image-preview">
+          <img src={url} alt={`Vista de la versión ${side === 'remote' ? 'sincronizada' : 'local'}`} />
+        </div>
+      )
+    }
+    return (
+      <div className="conflict-image-preview conflict-image-preview--status">
+        {imageVisuals.error || preview.body}
+      </div>
+    )
   }
 
   if (conflicts.length === 0) return null
@@ -177,7 +258,7 @@ export function ConflictCenter({ onResolved }: ConflictCenterProps) {
                   <small>Versión ya aceptada por la sincronización remota</small>
                 </div>
                 <h3>{remotePreview.title}</h3>
-                <pre>{remotePreview.body}</pre>
+                {renderConflictBody('remote', remotePreview)}
                 <button
                   type="button"
                   onClick={() => void handleResolve('remote')}
@@ -193,7 +274,7 @@ export function ConflictCenter({ onResolved }: ConflictCenterProps) {
                   <small>Versión local que todavía no reemplazó la remota</small>
                 </div>
                 <h3>{localPreview.title}</h3>
-                <pre>{localPreview.body}</pre>
+                {renderConflictBody('local', localPreview)}
                 <button
                   type="button"
                   onClick={() => void handleResolve('local')}
@@ -226,7 +307,9 @@ export function ConflictCenter({ onResolved }: ConflictCenterProps) {
                 ← Anterior
               </button>
               <span>
-                Al combinar, OANIX conserva primero la versión sincronizada y debajo la de este dispositivo.
+                {active.recordType === 'image'
+                  ? 'Las imágenes originales se eligen, no se mezclan. El preview se regenerará desde la imagen elegida.'
+                  : 'Al combinar, OANIX conserva primero la versión sincronizada y debajo la de este dispositivo.'}
               </span>
               <button
                 type="button"
