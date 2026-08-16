@@ -14,12 +14,14 @@ import {
   type OnlineAccountSession,
 } from '../features/account/accountService'
 import {
+  ensureRemoteVaultBootstrap,
   hasRemoteSyncedVault,
   restoreSyncedVaultToThisDevice,
 } from '../features/sync/syncService'
 import { syncEncryptedBinariesBidirectional } from '../features/sync/binarySyncService'
 
 type GateState = 'checking' | 'setup' | 'locked' | 'unlocked' | 'error'
+type AccessChoice = 'choose' | 'local' | 'synced'
 
 interface VaultGateProps {
   renderUnlocked: (lockVault: () => void) => ReactNode
@@ -27,6 +29,7 @@ interface VaultGateProps {
 
 export function VaultGate({ renderUnlocked }: VaultGateProps) {
   const [state, setState] = useState<GateState>('checking')
+  const [accessChoice, setAccessChoice] = useState<AccessChoice>('choose')
   const [password, setPassword] = useState('')
   const [confirmation, setConfirmation] = useState('')
   const [message, setMessage] = useState('')
@@ -100,6 +103,15 @@ export function VaultGate({ renderUnlocked }: VaultGateProps) {
     setCloudProgress('')
   }
 
+  function chooseAccess(choice: AccessChoice) {
+    setAccessChoice(choice)
+    setMessage('')
+    setPassword('')
+    setConfirmation('')
+    setShowPassword(false)
+    resetCloudDraft()
+  }
+
   function handleLock() {
     lockLocalVault()
     setPassword('')
@@ -108,6 +120,7 @@ export function VaultGate({ renderUnlocked }: VaultGateProps) {
     setShowPassword(false)
     resetRestoreDraft()
     resetCloudDraft()
+    setAccessChoice('choose')
     setState('locked')
   }
 
@@ -229,22 +242,50 @@ export function VaultGate({ renderUnlocked }: VaultGateProps) {
 
   async function handleRestoreSyncedVault(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const canReplaceFromCloud = state === 'setup' || state === 'locked'
-    if (!cloudPassword || cloudBusy || !canReplaceFromCloud || !onlineSession || remoteVaultAvailable !== true) return
-
-    if (
-      state === 'locked'
-      && !window.confirm(
-        'Este dispositivo ya tiene una bóveda local. La bóveda sincronizada de tu cuenta la reemplazará. Si quieres conservar la bóveda local actual, cancela y crea primero un backup cifrado. ¿Quieres continuar?',
-      )
-    ) {
-      return
-    }
+    const canUseCloud = state === 'setup' || state === 'locked'
+    if (!cloudPassword || cloudBusy || !canUseCloud || !onlineSession || remoteVaultAvailable !== true) return
 
     setCloudBusy(true)
-    setCloudProgress('Verificando contraseña y registros cifrados…')
+    setCloudProgress('Comprobando esta bóveda…')
     setMessage('')
+
     try {
+      if (state === 'locked') {
+        const localUnlock = await unlockLocalVault(cloudPassword)
+        if (localUnlock.status !== 'error') {
+          const verification = await verifyLocalEncryption()
+          if (verification.status === 'error') {
+            lockLocalVault()
+            setMessage(verification.message)
+            return
+          }
+
+          try {
+            await ensureRemoteVaultBootstrap()
+            setPassword('')
+            setConfirmation('')
+            setShowPassword(false)
+            resetCloudDraft()
+            setState('unlocked')
+            return
+          } catch (linkError) {
+            lockLocalVault()
+            const linkMessage = linkError instanceof Error ? linkError.message : ''
+            if (!linkMessage.includes('otra clave de bóveda')) {
+              setMessage(linkMessage || 'No se pudo comprobar si esta es la bóveda vinculada a tu cuenta.')
+              return
+            }
+          }
+        }
+
+        if (!window.confirm(
+          'Este dispositivo tiene una bóveda local diferente. La bóveda sincronizada de tu cuenta la reemplazará solo después de verificarla por completo. Si quieres conservar la bóveda local actual, cancela y crea primero un backup cifrado. ¿Quieres continuar?',
+        )) {
+          return
+        }
+      }
+
+      setCloudProgress('Verificando contraseña y registros cifrados…')
       const result = await restoreSyncedVaultToThisDevice(cloudPassword)
 
       setCloudProgress('Sincronizando imágenes cifradas…')
@@ -284,7 +325,7 @@ export function VaultGate({ renderUnlocked }: VaultGateProps) {
 
       void result
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'No se pudo traer la bóveda sincronizada.')
+      setMessage(error instanceof Error ? error.message : 'No se pudo abrir la bóveda sincronizada.')
     } finally {
       setCloudBusy(false)
       setCloudProgress('')
@@ -297,6 +338,223 @@ export function VaultGate({ renderUnlocked }: VaultGateProps) {
 
   const isSetup = state === 'setup'
   const canRestore = state === 'setup' || state === 'locked'
+
+  const accessChooser = (
+    <>
+      <div className="vault-access__heading">
+        <span className="vault-access__lock" aria-hidden="true"><span /></span>
+        <div>
+          <strong>Elige cómo entrar</strong>
+          <p>Tu cuenta sincronizada y el modo local siguen siendo independientes. Elige cuál quieres abrir en este dispositivo.</p>
+        </div>
+      </div>
+
+      <div className="vault-restore">
+        <span>Bóveda sincronizada</span>
+        <button
+          type="button"
+          className="vault-restore__button"
+          onClick={() => {
+            chooseAccess('synced')
+            if (!onlineSession) setAccountOpen(true)
+          }}
+          disabled={busy || restoreBusy || cloudBusy}
+        >
+          <span aria-hidden="true">G</span>
+          <span>
+            Bóveda sincronizada con Google
+            {onlineSession?.email ? ` · ${onlineSession.email}` : ''}
+          </span>
+        </button>
+      </div>
+
+      <div className="vault-restore">
+        <span>Sin cuenta</span>
+        <button
+          type="button"
+          className="vault-restore__button"
+          onClick={() => chooseAccess('local')}
+          disabled={busy || restoreBusy || cloudBusy}
+        >
+          <span aria-hidden="true">⌂</span>
+          <span>Modo local · usar solo esta bóveda del dispositivo</span>
+        </button>
+      </div>
+    </>
+  )
+
+  const localAccess = (
+    <>
+      <div className="vault-access__heading">
+        <span className="vault-access__lock" aria-hidden="true"><span /></span>
+        <div>
+          <strong>{isSetup ? 'Crear bóveda local' : 'Entrar en modo local'}</strong>
+          <p>
+            {isSetup
+              ? `Protege esta bóveda local con al menos ${MASTER_PASSWORD_MIN_CHARACTERS} caracteres.`
+              : 'Introduce la contraseña maestra de la bóveda guardada en este dispositivo.'}
+          </p>
+        </div>
+      </div>
+
+      <form className="vault-form" onSubmit={isSetup ? handleSetup : handleUnlock}>
+        <label className="field" htmlFor="master-password">
+          <span>Contraseña maestra</span>
+          <div className="password-input">
+            <input
+              id="master-password"
+              type={showPassword ? 'text' : 'password'}
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              autoComplete={isSetup ? 'new-password' : 'current-password'}
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              minLength={isSetup ? MASTER_PASSWORD_MIN_CHARACTERS : undefined}
+              maxLength={256}
+              required
+              disabled={busy || restoreBusy || cloudBusy}
+            />
+            <button
+              className="input-action"
+              type="button"
+              onClick={() => setShowPassword((visible) => !visible)}
+              aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+              disabled={busy || restoreBusy || cloudBusy}
+            >
+              {showPassword ? 'Ocultar' : 'Mostrar'}
+            </button>
+          </div>
+        </label>
+
+        {isSetup && (
+          <label className="field" htmlFor="master-password-confirmation">
+            <span>Repite la contraseña</span>
+            <input
+              id="master-password-confirmation"
+              type={showPassword ? 'text' : 'password'}
+              value={confirmation}
+              onChange={(event) => setConfirmation(event.target.value)}
+              autoComplete="new-password"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              minLength={MASTER_PASSWORD_MIN_CHARACTERS}
+              maxLength={256}
+              required
+              disabled={busy || restoreBusy || cloudBusy}
+            />
+          </label>
+        )}
+
+        {message && <p className="form-message" role="alert">{message}</p>}
+
+        <button className="primary-button" type="submit" disabled={busy || restoreBusy || cloudBusy}>
+          <span>{busy ? 'Procesando…' : isSetup ? 'Crear bóveda local segura' : 'Entrar a OANIX'}</span>
+          {!busy && <span aria-hidden="true">→</span>}
+        </button>
+      </form>
+
+      {isSetup && (
+        <p className="security-note">
+          OANIX no guarda tu contraseña maestra. El modo local funciona sin correo ni Google y permanece disponible offline.
+        </p>
+      )}
+
+      <div className="vault-restore">
+        <button type="button" className="vault-restore__button" onClick={() => chooseAccess('choose')}>
+          <span aria-hidden="true">←</span>
+          <span>Elegir otra forma de acceso</span>
+        </button>
+      </div>
+    </>
+  )
+
+  const syncedAccess = (
+    <>
+      <div className="vault-access__heading">
+        <span className="vault-access__lock" aria-hidden="true"><span /></span>
+        <div>
+          <strong>Bóveda sincronizada con Google</strong>
+          <p>Usa la contraseña maestra de tu bóveda. Google identifica la cuenta, pero nunca recibe esta contraseña.</p>
+        </div>
+      </div>
+
+      {!onlineSession ? (
+        <div className="vault-restore">
+          <span>Primero conecta tu cuenta</span>
+          <button
+            type="button"
+            className="vault-restore__button"
+            onClick={() => setAccountOpen(true)}
+            disabled={busy || restoreBusy || cloudBusy}
+          >
+            <span aria-hidden="true">G</span>
+            <span>Continuar con Google</span>
+          </button>
+        </div>
+      ) : remoteVaultAvailable === true ? (
+        <form className="vault-form" onSubmit={(event) => void handleRestoreSyncedVault(event)}>
+          <small>Cuenta conectada: {onlineSession.email}</small>
+          <label className="field" htmlFor="cloud-master-password">
+            <span>Contraseña maestra de tu bóveda</span>
+            <div className="password-input">
+              <input
+                id="cloud-master-password"
+                type={showCloudPassword ? 'text' : 'password'}
+                value={cloudPassword}
+                onChange={(event) => setCloudPassword(event.target.value)}
+                autoComplete="current-password"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                maxLength={256}
+                required
+                disabled={busy || restoreBusy || cloudBusy}
+              />
+              <button
+                className="input-action"
+                type="button"
+                onClick={() => setShowCloudPassword((visible) => !visible)}
+                aria-label={showCloudPassword ? 'Ocultar contraseña de la bóveda' : 'Mostrar contraseña de la bóveda'}
+                disabled={busy || restoreBusy || cloudBusy}
+              >
+                {showCloudPassword ? 'Ocultar' : 'Mostrar'}
+              </button>
+            </div>
+          </label>
+
+          {message && <p className="form-message" role="alert">{message}</p>}
+
+          <button className="primary-button" type="submit" disabled={busy || restoreBusy || cloudBusy || !cloudPassword}>
+            <span>{cloudBusy ? (cloudProgress || 'Preparando acceso…') : 'Entrar con mi bóveda sincronizada'}</span>
+            {!cloudBusy && <span aria-hidden="true">→</span>}
+          </button>
+          <small>Si esta ya es la misma bóveda del dispositivo, OANIX la abre directamente. Solo propone reemplazar cuando detecta otra bóveda local.</small>
+        </form>
+      ) : remoteVaultAvailable === false ? (
+        <div className="vault-restore">
+          <small>Esta cuenta todavía no tiene una bóveda sincronizada disponible.</small>
+          <button type="button" className="vault-restore__button" onClick={() => setAccountOpen(true)}>
+            <span aria-hidden="true">👤</span>
+            <span>Cambiar o revisar cuenta</span>
+          </button>
+        </div>
+      ) : (
+        <div className="vault-state" aria-live="polite">
+          <span className="vault-loader" aria-hidden="true" />
+          <div><strong>Comprobando tu cuenta</strong><p>Buscando la bóveda sincronizada disponible.</p></div>
+        </div>
+      )}
+
+      <div className="vault-restore">
+        <button type="button" className="vault-restore__button" onClick={() => chooseAccess('choose')} disabled={cloudBusy}>
+          <span aria-hidden="true">←</span>
+          <span>Elegir otra forma de acceso</span>
+        </button>
+      </div>
+    </>
+  )
 
   let gateContent: ReactNode
   if (state === 'checking') {
@@ -322,157 +580,9 @@ export function VaultGate({ renderUnlocked }: VaultGateProps) {
   } else {
     gateContent = (
       <div className="vault-access">
-        <div className="vault-access__heading">
-          <span className="vault-access__lock" aria-hidden="true">
-            <span />
-          </span>
-          <div>
-            <strong>{isSetup ? 'Crea tu llave maestra' : 'Bienvenido de vuelta'}</strong>
-            <p>
-              {isSetup
-                ? `Protege tu bóveda con al menos ${MASTER_PASSWORD_MIN_CHARACTERS} caracteres.`
-                : 'Introduce tu contraseña maestra para descifrar tus notas en este dispositivo.'}
-            </p>
-          </div>
-        </div>
+        {accessChoice === 'choose' ? accessChooser : accessChoice === 'local' ? localAccess : syncedAccess}
 
-        <form className="vault-form" onSubmit={isSetup ? handleSetup : handleUnlock}>
-          <label className="field" htmlFor="master-password">
-            <span>Contraseña maestra</span>
-            <div className="password-input">
-              <input
-                id="master-password"
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                autoComplete={isSetup ? 'new-password' : 'current-password'}
-                autoCapitalize="none"
-                autoCorrect="off"
-                spellCheck={false}
-                minLength={isSetup ? MASTER_PASSWORD_MIN_CHARACTERS : undefined}
-                maxLength={256}
-                required
-                disabled={busy || restoreBusy || cloudBusy}
-              />
-              <button
-                className="input-action"
-                type="button"
-                onClick={() => setShowPassword((visible) => !visible)}
-                aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                disabled={busy || restoreBusy || cloudBusy}
-              >
-                {showPassword ? 'Ocultar' : 'Mostrar'}
-              </button>
-            </div>
-          </label>
-
-          {isSetup && (
-            <label className="field" htmlFor="master-password-confirmation">
-              <span>Repite la contraseña</span>
-              <input
-                id="master-password-confirmation"
-                type={showPassword ? 'text' : 'password'}
-                value={confirmation}
-                onChange={(event) => setConfirmation(event.target.value)}
-                autoComplete="new-password"
-                autoCapitalize="none"
-                autoCorrect="off"
-                spellCheck={false}
-                minLength={MASTER_PASSWORD_MIN_CHARACTERS}
-                maxLength={256}
-                required
-                disabled={busy || restoreBusy || cloudBusy}
-              />
-            </label>
-          )}
-
-          {message && <p className="form-message" role="alert">{message}</p>}
-
-          <button className="primary-button" type="submit" disabled={busy || restoreBusy || cloudBusy}>
-            <span>{busy ? 'Procesando…' : isSetup ? 'Crear bóveda segura' : 'Entrar a OANIX'}</span>
-            {!busy && <span aria-hidden="true">→</span>}
-          </button>
-        </form>
-
-        {isSetup && (
-          <p className="security-note">
-            OANIX no guarda tu contraseña maestra. Una bóveda sincronizada sigue necesitando esa misma contraseña en un dispositivo nuevo.
-          </p>
-        )}
-
-        {canRestore && (
-          <div className="vault-restore">
-            <span>{isSetup ? '¿Ya usas OANIX en otro dispositivo?' : '¿Quieres usar aquí la bóveda sincronizada de tu cuenta?'}</span>
-            {!onlineSession ? (
-              <button
-                type="button"
-                className="vault-restore__button"
-                onClick={() => setAccountOpen(true)}
-                disabled={busy || restoreBusy || cloudBusy}
-              >
-                <span aria-hidden="true">☁</span>
-                <span>{isSetup ? 'Conectar mi cuenta sincronizada' : 'Conectar cuenta y elegir bóveda sincronizada'}</span>
-              </button>
-            ) : remoteVaultAvailable === true ? (
-              <form className="vault-form" onSubmit={(event) => void handleRestoreSyncedVault(event)}>
-                <small>Cuenta conectada: {onlineSession.email}</small>
-                {state === 'locked' && (
-                  <small>Este dispositivo ya tiene otra bóveda local. Si la necesitas, crea un backup cifrado antes de reemplazarla.</small>
-                )}
-                <label className="field" htmlFor="cloud-master-password">
-                  <span>Contraseña maestra de tu bóveda sincronizada</span>
-                  <div className="password-input">
-                    <input
-                      id="cloud-master-password"
-                      type={showCloudPassword ? 'text' : 'password'}
-                      value={cloudPassword}
-                      onChange={(event) => setCloudPassword(event.target.value)}
-                      autoComplete="current-password"
-                      autoCapitalize="none"
-                      autoCorrect="off"
-                      spellCheck={false}
-                      maxLength={256}
-                      required
-                      disabled={busy || restoreBusy || cloudBusy}
-                    />
-                    <button
-                      className="input-action"
-                      type="button"
-                      onClick={() => setShowCloudPassword((visible) => !visible)}
-                      aria-label={showCloudPassword ? 'Ocultar contraseña de la bóveda' : 'Mostrar contraseña de la bóveda'}
-                      disabled={busy || restoreBusy || cloudBusy}
-                    >
-                      {showCloudPassword ? 'Ocultar' : 'Mostrar'}
-                    </button>
-                  </div>
-                </label>
-                <button className="primary-button" type="submit" disabled={busy || restoreBusy || cloudBusy || !cloudPassword}>
-                  <span>
-                    {cloudBusy
-                      ? (cloudProgress || 'Preparando bóveda sincronizada…')
-                      : state === 'locked'
-                        ? 'Reemplazar por mi bóveda sincronizada'
-                        : 'Traer mi bóveda a este dispositivo'}
-                  </span>
-                  {!cloudBusy && <span aria-hidden="true">→</span>}
-                </button>
-                <small>La clave de la bóveda permanece cifrada en Supabase; solo esta contraseña puede abrirla localmente.</small>
-              </form>
-            ) : remoteVaultAvailable === false ? (
-              <>
-                <small>La cuenta está conectada, pero todavía no tiene una bóveda sincronizada disponible.</small>
-                <button type="button" className="vault-restore__button" onClick={() => setAccountOpen(true)}>
-                  <span aria-hidden="true">👤</span>
-                  <span>Cambiar o revisar cuenta</span>
-                </button>
-              </>
-            ) : (
-              <small>Comprobando si esta cuenta ya tiene una bóveda sincronizada…</small>
-            )}
-          </div>
-        )}
-
-        {canRestore && (
+        {canRestore && accessChoice === 'local' && (
           <div className="vault-restore">
             <span>{isSetup ? '¿Prefieres usar un archivo de backup?' : '¿Necesitas recuperar una copia anterior?'}</span>
             <label className={`vault-restore__button${restoreBusy ? ' vault-restore__button--busy' : ''}`}>
@@ -586,7 +696,7 @@ export function VaultGate({ renderUnlocked }: VaultGateProps) {
             <header className="vault-card__header">
               <div>
                 <span className="vault-card__pulse" aria-hidden="true" />
-                <strong>Bóveda local</strong>
+                <strong>Acceso seguro</strong>
               </div>
               <span className="vault-card__version">V2</span>
             </header>
