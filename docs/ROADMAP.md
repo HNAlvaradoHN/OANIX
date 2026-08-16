@@ -41,13 +41,13 @@ Objetivo: entregar una PWA útil, segura, offline-first y completamente funciona
 - [x] Búsqueda local
 - [x] Backup, exportación y restauración cifrada
 - [x] Funcionamiento offline
-- [ ] Pruebas de la V1
+- [x] Pruebas de la V1
 
 ## V2 — Cuenta y sincronización
 
 Objetivo: sincronización cifrada entre dispositivos sin que el servidor pueda leer el contenido.
 
-- [ ] Cuenta de usuario
+- [ ] Cuenta de usuario ← en implementación
 - [ ] Autenticación
 - [ ] Backend de sincronización
 - [ ] Sincronización E2EE
@@ -82,8 +82,10 @@ Objetivo: empaquetar la misma base de código como aplicación Android.
 
 ## Estado actual
 
-**Versión activa: V1 — Núcleo local**
+**V1 — Núcleo local: CERRADA ✅**
 
-**Siguiente bloque de trabajo:** Pruebas finales de V1.
+**Versión activa: V2 — Cuenta y sincronización**
 
-No se implementan funciones de V2, V3 o V4 mientras V1 no esté cerrada, salvo preparación arquitectónica explícitamente documentada.
+**Siguiente bloque de trabajo:** Cuenta de usuario.
+
+La cuenta online es opcional y debe permanecer separada de la contraseña maestra y de la bóveda local. No se implementan funciones de V3 o V4 mientras V2 no esté cerrada, salvo preparación arquitectónica explícitamente documentada.
