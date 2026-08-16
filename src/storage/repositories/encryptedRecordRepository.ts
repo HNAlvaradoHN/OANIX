@@ -44,6 +44,13 @@ function parseEncryptedRecordKey(key: string): { recordType: string; recordId: s
   return null
 }
 
+function notifyLocalEncryptedChange(recordType: string, recordId: string) {
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(new CustomEvent('oanix:local-data-changed', {
+    detail: { recordType, recordId },
+  }))
+}
+
 function transactionCompleted(transaction: IDBTransaction): Promise<void> {
   return new Promise((resolve, reject) => {
     transaction.oncomplete = () => resolve()
@@ -76,6 +83,7 @@ export async function writeEncryptedRecord<T>(
       database.close()
     }
   })
+  notifyLocalEncryptedChange(recordType, recordId)
 }
 
 export async function readEncryptedRecord<T>(
@@ -161,4 +169,5 @@ export async function deleteEncryptedRecord(recordType: string, recordId: string
   } finally {
     database.close()
   }
+  notifyLocalEncryptedChange(recordType, recordId)
 }
