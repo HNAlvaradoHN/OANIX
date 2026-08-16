@@ -29,7 +29,9 @@ Su propósito es permitir que otra IA o colaborador continúe OANIX sin reconstr
 - Realtime como aviso de cambios remotos, con comprobación periódica de respaldo.
 - Protección contra sobrescritura silenciosa cuando hay divergencia concurrente.
 
-**Siguiente bloque oficial:** Resolución de conflictos.
+**Bloque oficial activo:** Resolución de conflictos — `IN_PROGRESS`.
+
+**Primera fase implementada en PR #66:** resolución de conflictos para registros no binarios, con elección de cualquiera de las dos versiones y combinación conservadora de notas compatibles. El bloque no se considera cerrado hasta cubrir conflictos binarios de imágenes y validar el flujo completo en uso real.
 
 **Después del bloque actual:**
 
@@ -82,13 +84,13 @@ Si el usuario entrega el repositorio a otra IA y dice «continuemos con lo que e
 
 ### DEC-2026-08-16-001 — Resolución de conflictos multidispositivo
 
-**Estado:** DECIDED
+**Estado:** IN_PROGRESS
 
 **Versión / bloque:** V2 — Resolución de conflictos
 
 **Problema que resuelve:**
 
-La misma nota o registro puede modificarse en dos dispositivos partiendo de una misma base antes de que ambos cambios se sincronicen entre sí. OANIX ya evita sobrescribir silenciosamente una modificación concurrente; falta la interfaz y lógica final para que el usuario resuelva qué versión conservar.
+La misma nota o registro puede modificarse en dos dispositivos partiendo de una misma base antes de que ambos cambios se sincronicen entre sí. OANIX ya evita sobrescribir silenciosamente una modificación concurrente; este bloque añade la interfaz y lógica final para que el usuario decida qué versión conservar.
 
 **Decisión funcional acordada:**
 
@@ -111,7 +113,7 @@ Cuando exista un conflicto real, OANIX debe conservar ambas versiones y ofrecer 
 
 **Aclaración importante sobre el orden al combinar:**
 
-No usar «el dispositivo que primero tuvo Internet» como criterio, porque no es una señal suficientemente fiable ni necesariamente observable. El criterio acordado es cuál cambio fue **aceptado primero por el sistema de sincronización remoto**. Debe utilizarse información controlada por el servidor/protocolo de sincronización y no el reloj local del dispositivo cuando se implemente el detalle técnico.
+No usar «el dispositivo que primero tuvo Internet» como criterio, porque no es una señal suficientemente fiable ni necesariamente observable. El criterio acordado es cuál cambio fue **aceptado primero por el sistema de sincronización remoto**. Debe utilizarse información controlada por el servidor/protocolo de sincronización y no el reloj local del dispositivo.
 
 **Qué NO debe hacer OANIX al combinar:**
 
@@ -131,7 +133,27 @@ Checklists, fichas de contacto, imágenes u otros bloques estructurados deben co
 
 La combinación automática solo es aceptable cuando se pueda demostrar que no destruye ni altera de forma ambigua los cambios de ninguna de las partes.
 
-**Estado de implementación:** todavía pendiente. Este es el siguiente bloque oficial.
+**Implementación — primera fase (PR #66):**
+
+- El centro de conflictos vive dentro de `features/sync/` y no modifica el editor principal para mantener modularidad.
+- Los conflictos no binarios se reconstruyen usando la versión local cifrada, la fila remota y el `system.sync-state` cifrado existente; no se añadió IndexedDB, store, caché ni cola paralela.
+- La pantalla ofrece la versión **Primera en sincronizarse** y la versión **Este dispositivo**.
+- Elegir una versión aplica exactamente ese lado como resultado final.
+- Antes de aplicar cualquier decisión, OANIX vuelve a comprobar el payload local y la versión remota esperada. Si otro dispositivo cambió algo mientras el usuario decidía, la operación se rechaza y el conflicto debe revisarse de nuevo.
+- Las escrituras remotas continúan usando versión esperada para evitar sobrescrituras concurrentes.
+- `Combinar ambas` está habilitado únicamente cuando ambos lados son la misma nota y no difieren en título, carpeta, etiquetas, estado fijado u orden manual. Si esos metadatos también cambiaron, el usuario debe elegir una de las versiones.
+- Al combinar una nota compatible se conservan primero todos los bloques de la versión ya aceptada remotamente y después todos los bloques de la versión local.
+- Los bloques locales reciben identificadores de bloque nuevos al incorporarse a la combinación para evitar colisiones, conservando su tipo y contenido estructurado.
+- No se insertan rótulos permanentes dentro de la nota combinada.
+- Eliminación contra contenido no admite `Combinar`; el usuario elige cuál estado conservar.
+- Los conflictos anómalos que no pueden resolverse de forma segura se muestran/bloquean en lugar de adivinar.
+- CI de la primera fase: pruebas, build y auditoría offline completados correctamente.
+
+**Pendiente para cerrar este bloque:**
+
+- Extender la resolución explícita a conflictos binarios de `image` e `image-preview`, respetando manifiestos, fragmentos cifrados y limpieza segura.
+- Validar en uso real con dos dispositivos los tres caminos: elegir remoto, elegir local y combinar una nota compatible.
+- Solo después de esas validaciones se puede marcar `Resolución de conflictos` como completada en `ROADMAP.md` y avanzar a Historial de versiones.
 
 ---
 
@@ -204,7 +226,7 @@ No implementar todavía.
 
 Registrar aquí cualquier función implementada antes de su bloque oficial.
 
-**Estado actual:** no hay una excepción nueva registrada en esta memoria al momento de crearla.
+**Estado actual:** no hay una excepción nueva registrada en esta memoria.
 
 Formato para futuras entradas:
 
