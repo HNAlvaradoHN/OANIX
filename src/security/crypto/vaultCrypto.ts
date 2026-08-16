@@ -144,14 +144,17 @@ function validateProtectionMetadata(protection: VaultProtectionMetadata): void {
   }
 }
 
-export async function createVaultProtection(password: string): Promise<{
-  protection: VaultProtectionMetadata
-  vaultKey: CryptoKey
-}> {
+async function createProtectionForVaultKeyBytes(
+  password: string,
+  vaultKeyBytes: Uint8Array,
+): Promise<VaultProtectionMetadata> {
+  if (vaultKeyBytes.byteLength !== VAULT_KEY_LENGTH) {
+    throw new Error('Invalid vault key length.')
+  }
+
   const cryptoApi = requireWebCrypto()
   const salt = randomBytes(SALT_LENGTH)
   const iv = randomBytes(GCM_IV_LENGTH)
-  const vaultKeyBytes = randomBytes(VAULT_KEY_LENGTH)
   let wrappingKeyBytes: Uint8Array | null = null
 
   try {
@@ -173,38 +176,32 @@ export async function createVaultProtection(password: string): Promise<{
       Uint8Array.from(vaultKeyBytes).buffer,
     )
 
-    const vaultKey = await importAesKey(vaultKeyBytes, ['encrypt', 'decrypt'])
-
     return {
-      vaultKey,
-      protection: {
-        scheme: 'argon2id-aes-gcm-v1',
-        kdf: {
-          algorithm: 'argon2id',
-          version: 19,
-          memoryKiB: KDF_MEMORY_KIB,
-          iterations: KDF_ITERATIONS,
-          parallelism: KDF_PARALLELISM,
-          hashLength: KDF_HASH_LENGTH,
-          salt: bytesToBase64(salt),
-        },
-        keyWrap: {
-          algorithm: 'AES-GCM',
-          iv: bytesToBase64(iv),
-          wrappedKey: bytesToBase64(new Uint8Array(wrappedKeyBuffer)),
-        },
+      scheme: 'argon2id-aes-gcm-v1',
+      kdf: {
+        algorithm: 'argon2id',
+        version: 19,
+        memoryKiB: KDF_MEMORY_KIB,
+        iterations: KDF_ITERATIONS,
+        parallelism: KDF_PARALLELISM,
+        hashLength: KDF_HASH_LENGTH,
+        salt: bytesToBase64(salt),
+      },
+      keyWrap: {
+        algorithm: 'AES-GCM',
+        iv: bytesToBase64(iv),
+        wrappedKey: bytesToBase64(new Uint8Array(wrappedKeyBuffer)),
       },
     }
   } finally {
-    vaultKeyBytes.fill(0)
     wrappingKeyBytes?.fill(0)
   }
 }
 
-export async function openVaultProtection(
+async function openVaultProtectionBytes(
   password: string,
   protection: VaultProtectionMetadata | 'pending',
-): Promise<CryptoKey> {
+): Promise<Uint8Array> {
   if (protection === 'pending') {
     throw new Error('Vault protection is not configured yet.')
   }
@@ -229,7 +226,6 @@ export async function openVaultProtection(
   }
 
   let wrappingKeyBytes: Uint8Array | null = null
-  let vaultKeyBytes: Uint8Array | null = null
 
   try {
     wrappingKeyBytes = await deriveWrappingKeyMaterial(password, salt, {
@@ -250,15 +246,64 @@ export async function openVaultProtection(
       Uint8Array.from(wrappedKey).buffer,
     )
 
-    vaultKeyBytes = new Uint8Array(vaultKeyBuffer)
-
+    const vaultKeyBytes = new Uint8Array(vaultKeyBuffer)
     if (vaultKeyBytes.byteLength !== VAULT_KEY_LENGTH) {
+      vaultKeyBytes.fill(0)
       throw new Error('Invalid vault key length.')
     }
 
-    return await importAesKey(vaultKeyBytes, ['encrypt', 'decrypt'])
+    return vaultKeyBytes
   } finally {
     wrappingKeyBytes?.fill(0)
-    vaultKeyBytes?.fill(0)
+  }
+}
+
+export async function createVaultProtection(password: string): Promise<{
+  protection: VaultProtectionMetadata
+  vaultKey: CryptoKey
+}> {
+  const vaultKeyBytes = randomBytes(VAULT_KEY_LENGTH)
+
+  try {
+    const protection = await createProtectionForVaultKeyBytes(password, vaultKeyBytes)
+    const vaultKey = await importAesKey(vaultKeyBytes, ['encrypt', 'decrypt'])
+    return { protection, vaultKey }
+  } finally {
+    vaultKeyBytes.fill(0)
+  }
+}
+
+export async function openVaultProtection(
+  password: string,
+  protection: VaultProtectionMetadata | 'pending',
+): Promise<CryptoKey> {
+  const vaultKeyBytes = await openVaultProtectionBytes(password, protection)
+
+  try {
+    return await importAesKey(vaultKeyBytes, ['encrypt', 'decrypt'])
+  } finally {
+    vaultKeyBytes.fill(0)
+  }
+}
+
+export async function rewrapVaultProtection(
+  currentPassword: string,
+  newPassword: string,
+  protection: VaultProtectionMetadata | 'pending',
+): Promise<{
+  protection: VaultProtectionMetadata
+  vaultKey: CryptoKey
+}> {
+  const validationMessage = validateMasterPassword(newPassword)
+  if (validationMessage) throw new Error(validationMessage)
+
+  const vaultKeyBytes = await openVaultProtectionBytes(currentPassword, protection)
+
+  try {
+    const nextProtection = await createProtectionForVaultKeyBytes(newPassword, vaultKeyBytes)
+    const vaultKey = await importAesKey(vaultKeyBytes, ['encrypt', 'decrypt'])
+    return { protection: nextProtection, vaultKey }
+  } finally {
+    vaultKeyBytes.fill(0)
   }
 }
