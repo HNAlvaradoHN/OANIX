@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
-import { isNoteRecord, noteBlocksToPlainText } from '../src/features/notes/noteTypes.ts'
+import { compareNotesForList, isNoteRecord, noteBlocksToPlainText, type NoteRecord } from '../src/features/notes/noteTypes.ts'
 
 test('one V1 note can contain every supported block without invalidating the record', () => {
   const note = {
@@ -13,6 +13,8 @@ test('one V1 note can contain every supported block without invalidating the rec
     updatedAt: '2026-08-16T01:00:00.000Z',
     folderId: 'folder-work',
     tagIds: ['tag-important', 'tag-local'],
+    pinned: true,
+    manualOrder: 17,
     content: {
       format: 'blocks-v1',
       blocks: [
@@ -116,6 +118,51 @@ test('one V1 note can contain every supported block without invalidating the rec
   }
 })
 
+test('older notes remain valid without pin or manual order metadata', () => {
+  const legacyNote = {
+    version: 1,
+    id: 'legacy-note',
+    title: 'Nota anterior',
+    createdAt: '2026-08-14T00:00:00.000Z',
+    updatedAt: '2026-08-15T00:00:00.000Z',
+    content: { format: 'blocks-v1', blocks: [] },
+  }
+
+  assert.equal(isNoteRecord(legacyNote), true)
+  assert.equal(isNoteRecord({ ...legacyNote, manualOrder: -1 }), false)
+  assert.equal(isNoteRecord({ ...legacyNote, pinned: 'yes' }), false)
+})
+
+test('pinned notes stay first and manual order wins inside each pin group', () => {
+  const makeNote = (
+    id: string,
+    updatedAt: string,
+    options: Pick<NoteRecord, 'pinned' | 'manualOrder'> = {},
+  ): NoteRecord => ({
+    version: 1,
+    id,
+    title: id,
+    createdAt: updatedAt,
+    updatedAt,
+    ...options,
+    content: { format: 'blocks-v1', blocks: [] },
+  })
+
+  const notes = [
+    makeNote('normal-newer', '2026-08-16T03:00:00.000Z', { manualOrder: 8 }),
+    makeNote('pinned-lower', '2026-08-16T01:00:00.000Z', { pinned: true, manualOrder: 2 }),
+    makeNote('normal-higher', '2026-08-16T02:00:00.000Z', { manualOrder: 12 }),
+    makeNote('pinned-higher', '2026-08-16T00:00:00.000Z', { pinned: true, manualOrder: 9 }),
+  ].sort(compareNotesForList)
+
+  assert.deepEqual(notes.map((note) => note.id), [
+    'pinned-higher',
+    'pinned-lower',
+    'normal-higher',
+    'normal-newer',
+  ])
+})
+
 test('V1 keeps local storage compact instead of creating a store per feature', () => {
   const databaseSource = readFileSync('src/storage/local/database.ts', 'utf8')
   const createStoreCalls = databaseSource.match(/\.createObjectStore\(/g) ?? []
@@ -123,6 +170,20 @@ test('V1 keeps local storage compact instead of creating a store per feature', (
   assert.equal(createStoreCalls.length, 2)
   assert.match(databaseSource, /VAULT_METADATA_STORE = 'vault_metadata'/)
   assert.match(databaseSource, /ENCRYPTED_RECORDS_STORE = 'encrypted_records'/)
+})
+
+test('pinning and manual ordering reuse encrypted note records without another store', () => {
+  const serviceSource = readFileSync('src/features/notes/noteService.ts', 'utf8')
+  const workspaceSource = readFileSync('src/features/notes/NotesWorkspace.tsx', 'utf8')
+
+  assert.match(serviceSource, /setNotePinned/)
+  assert.match(serviceSource, /persistNoteOrder/)
+  assert.doesNotMatch(serviceSource, /createObjectStore|localStorage|sessionStorage/)
+  assert.match(workspaceSource, /Fijar nota/)
+  assert.match(workspaceSource, /Desfijar nota/)
+  assert.match(workspaceSource, /Ordenar notas manualmente/)
+  assert.match(workspaceSource, /Mover .* arriba/)
+  assert.match(workspaceSource, /Mover .* abajo/)
 })
 
 test('PWA updates stay prompt-based and reuse the existing service worker cache', () => {
