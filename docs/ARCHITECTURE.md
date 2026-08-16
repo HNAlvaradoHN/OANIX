@@ -14,6 +14,7 @@ Mantener OANIX modular, clara y fácil de modificar sin convertir el repositorio
 6. No se crea una carpeta por cada botón, componente pequeño o función trivial.
 7. Los cambios deben afectar el menor número razonable de módulos.
 8. Antes de modificar una función existente se revisa su implementación actual.
+9. Ninguna función debe dejar copias, cachés, blobs o registros persistentes auxiliares sin una necesidad explícita y una política de limpieza definida.
 
 ## Estructura prevista
 
@@ -128,6 +129,14 @@ Antes de modificar código existente:
 5. registrar el cambio mediante Git.
 
 No se reescriben archivos completos basándose en memoria o suposiciones cuando ya existe una implementación funcional.
+
+## Higiene de almacenamiento
+
+- Se reutilizan los repositorios y stores existentes antes de crear una nueva capa persistente.
+- Un recurso temporal debe permanecer en memoria siempre que sea razonable y debe liberarse al terminar su operación.
+- Si una función requiere persistencia auxiliar, debe justificarla, documentar su ciclo de vida y eliminar los datos cuando dejan de ser necesarios.
+- Backups, exportaciones y procesos de validación no crean por defecto una segunda copia permanente de la bóveda dentro de OANIX.
+- Antes de cerrar V1 se revisarán posibles registros o blobs huérfanos para evitar crecimiento innecesario del almacenamiento local.
 
 ## Regla responsive de OANIX
 

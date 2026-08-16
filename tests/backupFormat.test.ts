@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { readFile } from 'node:fs/promises'
 import test from 'node:test'
 
 import {
@@ -6,6 +7,8 @@ import {
   parseEncryptedBackup,
   serializeEncryptedBackup,
 } from '../src/features/backup/backupFormat.ts'
+import { decryptVaultBytes, encryptVaultBytes } from '../src/security/crypto/contentCrypto.ts'
+import { createVaultProtection, openVaultProtection } from '../src/security/crypto/vaultCrypto.ts'
 
 const snapshot = {
   metadata: {
@@ -65,4 +68,48 @@ test('uses a portable OANIX backup extension', () => {
     encryptedBackupFileName(new Date(2026, 7, 15, 21, 7)),
     'OANIX-backup-2026-08-15-2107.oanixbackup',
   )
+})
+
+test('backup cryptography rejects a wrong password and altered encrypted records', async () => {
+  const password = 'frase maestra segura para backup'
+  const { protection, vaultKey } = await createVaultProtection(password)
+  const context = { recordType: 'note', recordId: 'note-secure-1' }
+  const payload = await encryptVaultBytes(
+    vaultKey,
+    new TextEncoder().encode('contenido cifrado de prueba'),
+    context,
+  )
+
+  const reopenedKey = await openVaultProtection(password, protection)
+  const plaintext = await decryptVaultBytes(reopenedKey, payload, context)
+  assert.equal(new TextDecoder().decode(plaintext), 'contenido cifrado de prueba')
+  plaintext.fill(0)
+
+  await assert.rejects(
+    () => openVaultProtection('una contraseña equivocada', protection),
+  )
+
+  const corruptedPayload = { ...payload }
+  corruptedPayload.ciphertext = `${payload.ciphertext[0] === 'A' ? 'B' : 'A'}${payload.ciphertext.slice(1)}`
+  await assert.rejects(
+    () => decryptVaultBytes(vaultKey, corruptedPayload, context),
+  )
+})
+
+test('restore service verifies the complete snapshot before replacing local storage', async () => {
+  const source = await readFile(
+    new URL('../src/features/backup/backupService.ts', import.meta.url),
+    'utf8',
+  )
+  const restoreStart = source.indexOf('export async function restoreEncryptedBackupFromFile')
+  assert.ok(restoreStart >= 0)
+
+  const restoreSource = source.slice(restoreStart)
+  const validationPosition = restoreSource.indexOf('validateEncryptedBackupSnapshot(backup.vault, password)')
+  const replacementPosition = restoreSource.indexOf('replaceLocalVaultSnapshot(backup.vault)')
+
+  assert.ok(validationPosition >= 0)
+  assert.ok(replacementPosition > validationPosition)
+  assert.match(source, /for \(const record of snapshot\.records\)/)
+  assert.match(source, /plaintext\?\.fill\(0\)/)
 })

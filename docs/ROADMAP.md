@@ -39,7 +39,7 @@ Objetivo: entregar una PWA útil, segura, offline-first y completamente funciona
 - [x] Carpetas
 - [x] Etiquetas
 - [x] Búsqueda local
-- [x] Backup/exportación cifrada
+- [x] Backup, exportación y restauración cifrada
 - [ ] Funcionamiento offline
 - [ ] Pruebas de la V1
 
