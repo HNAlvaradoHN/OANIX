@@ -27,6 +27,6 @@ test('V2 account remains isolated from the local master password and sync payloa
   assert.match(panel, /Crear cuenta/)
   assert.match(panel, /Seguir en modo local/)
   assert.match(panel, /Cerrar sesión online/)
-  assert.match(panel, /independiente de tu contraseña maestra/)
+  assert.match(panel, /(separada de|independiente de) tu contraseña maestra/)
   assert.match(panel, /Sincronización todavía desactivada/)
 })
