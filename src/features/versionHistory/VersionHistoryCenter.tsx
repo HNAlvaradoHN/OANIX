@@ -10,6 +10,26 @@ interface VersionHistoryCenterProps {
   onRestored: () => void
 }
 
+function wait(milliseconds: number) {
+  return new Promise<void>((resolve) => window.setTimeout(resolve, milliseconds))
+}
+
+async function prepareWorkspaceForHistory(): Promise<boolean> {
+  const focused = document.activeElement
+  if (focused instanceof HTMLElement) focused.blur()
+
+  const deadline = Date.now() + 5000
+  while (Date.now() < deadline) {
+    const saveStatus = document.querySelector<HTMLElement>('.save-status')?.textContent?.trim() ?? ''
+    if (!saveStatus) return true
+    if (/no se pudo guardar/i.test(saveStatus)) return false
+    if (!/cambios pendientes|guardando/i.test(saveStatus)) return true
+    await wait(100)
+  }
+
+  return false
+}
+
 function formatDateTime(value: string): string {
   return new Intl.DateTimeFormat('es-HN', {
     dateStyle: 'medium',
@@ -125,6 +145,15 @@ export function VersionHistoryCenter({ onRestored }: VersionHistoryCenterProps) 
     [snapshots, selectedSnapshotId],
   )
 
+  async function handleOpen() {
+    const safeToOpen = await prepareWorkspaceForHistory()
+    if (!safeToOpen) {
+      window.alert('OANIX no pudo confirmar el guardado de la nota abierta. Revisa el estado de guardado antes de abrir el historial.')
+      return
+    }
+    setOpen(true)
+  }
+
   async function handleRestore() {
     if (!selectedSnapshot || restoring) return
 
@@ -158,7 +187,7 @@ export function VersionHistoryCenter({ onRestored }: VersionHistoryCenterProps) 
     <button
       className="icon-button version-history-launcher"
       type="button"
-      onClick={() => setOpen(true)}
+      onClick={() => void handleOpen()}
       aria-label="Historial de versiones"
       title="Historial de versiones"
     >
