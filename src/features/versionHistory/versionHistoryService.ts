@@ -3,6 +3,7 @@ import {
   listNoteHistorySnapshots,
   saveNoteHistorySnapshot,
 } from '../../storage/repositories/noteHistoryRepository'
+import { hasEncryptedImage } from '../images/imageService'
 import type { NoteRecord } from '../notes/noteTypes'
 import {
   NOTE_HISTORY_SCHEMA_VERSION,
@@ -26,6 +27,10 @@ function createSnapshotId(): string {
 
 function sameNoteState(left: NoteRecord, right: NoteRecord): boolean {
   return JSON.stringify(left) === JSON.stringify(right)
+}
+
+function imageIdsInNote(note: NoteRecord): string[] {
+  return [...new Set(note.content.blocks.flatMap((block) => block.type === 'image' ? [block.imageId] : []))]
 }
 
 export function sortNoteHistoryNewestFirst(snapshots: NoteHistorySnapshot[]): NoteHistorySnapshot[] {
@@ -88,4 +93,21 @@ export async function captureNoteVersion(
 
 export async function capturePreRestoreVersion(note: NoteRecord): Promise<NoteHistorySnapshot | null> {
   return captureNoteVersion(note, 'pre-restore')
+}
+
+export async function findMissingHistoricalImageIds(snapshot: NoteHistorySnapshot): Promise<string[]> {
+  const imageIds = imageIdsInNote(snapshot.note)
+  if (imageIds.length === 0) return []
+
+  const availability = await Promise.all(imageIds.map(async (imageId) => ({
+    imageId,
+    exists: await hasEncryptedImage(imageId),
+  })))
+
+  return availability.filter((item) => !item.exists).map((item) => item.imageId)
+}
+
+export async function deleteNoteVersionHistory(noteId: string): Promise<void> {
+  const snapshots = await listNoteVersionHistory(noteId)
+  await Promise.all(snapshots.map((snapshot) => deleteNoteHistorySnapshot(snapshot.id)))
 }
