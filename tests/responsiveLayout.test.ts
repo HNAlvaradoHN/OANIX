@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
 import { responsiveLayoutForWidth, usesSinglePaneLayout } from '../src/shared/responsiveLayout.ts'
@@ -17,4 +18,11 @@ test('only mobile uses the single-pane note navigation model', () => {
   assert.equal(usesSinglePaneLayout(412), true)
   assert.equal(usesSinglePaneLayout(800), false)
   assert.equal(usesSinglePaneLayout(1366), false)
+})
+
+test('mobile vault access stays ahead of the decorative landing content and within the viewport', () => {
+  const css = readFileSync('src/styles/global.css', 'utf8')
+  assert.match(css, /@media \(max-width: 560px\)[\s\S]*?\.vault-card\s*\{[\s\S]*?order:\s*-1;/)
+  assert.match(css, /\.vault-card\s*\{[\s\S]*?position:\s*sticky;/)
+  assert.match(css, /\.vault-card__body\s*\{[\s\S]*?overflow-y:\s*auto;/)
 })

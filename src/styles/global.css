@@ -182,3 +182,22 @@ button:disabled, input:disabled { cursor: not-allowed; opacity: .62; }
 .vault-restore__button--busy { opacity: 0.7; cursor: wait; }
 .vault-restore__button input { position: absolute; inline-size: 1px; block-size: 1px; opacity: 0; pointer-events: none; }
 .vault-restore small { color: var(--muted, #94a3b8); line-height: 1.45; }
+
+@media (max-width: 560px) {
+  .vault-landing { gap: 1rem; }
+  .vault-card {
+    order: -1;
+    position: sticky;
+    top: max(.55rem, env(safe-area-inset-top));
+    z-index: 5;
+    min-height: 0;
+    max-height: calc(100dvh - max(1.1rem, env(safe-area-inset-top)) - max(1rem, env(safe-area-inset-bottom)));
+  }
+  .vault-card__body {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    align-content: start;
+  }
+  .vault-intro { padding-top: .35rem; }
+}
