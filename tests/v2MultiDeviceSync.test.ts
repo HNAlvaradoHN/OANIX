@@ -16,6 +16,34 @@ test('multi-device bootstrap reuses the existing wrapped vault key protection', 
   assert.match(gateSource, /(misma|esa misma) contraseña/)
 })
 
+test('an existing local vault can be deliberately replaced by the synchronized vault', () => {
+  const gateSource = readFileSync('src/app/VaultGate.tsx', 'utf8')
+
+  assert.match(gateSource, /state !== 'setup' && state !== 'locked'/)
+  assert.match(gateSource, /Reemplazar por mi bóveda sincronizada/)
+  assert.match(gateSource, /Si quieres conservar la bóveda local actual, cancela y crea primero un backup cifrado/)
+  assert.match(gateSource, /state === 'locked'/)
+  assert.match(gateSource, /syncEncryptedBinariesBidirectional/)
+})
+
+test('cloud restore exposes meaningful stages instead of one indefinite busy label', () => {
+  const gateSource = readFileSync('src/app/VaultGate.tsx', 'utf8')
+
+  assert.match(gateSource, /Verificando contraseña y registros cifrados/)
+  assert.match(gateSource, /Sincronizando imágenes cifradas/)
+  assert.match(gateSource, /Comprobando almacenamiento local/)
+  assert.doesNotMatch(gateSource, /Descifrando y descargando…/)
+})
+
+test('vault account callback remains stable so auth session events do not create a request loop', () => {
+  const gateSource = readFileSync('src/app/VaultGate.tsx', 'utf8')
+
+  assert.match(gateSource, /useCallback/)
+  assert.match(gateSource, /const handleAccountSessionChange = useCallback/)
+  assert.match(gateSource, /onSessionChange=\{handleAccountSessionChange\}/)
+  assert.doesNotMatch(gateSource, /onSessionChange=\{\(session\) => void handleAccountSessionChange\(session\)\}/)
+})
+
 test('automatic sync runs after local changes and when the app returns online or visible', () => {
   const runtime = readFileSync('src/features/sync/AutoSyncRuntime.tsx', 'utf8')
   const recordRepo = readFileSync('src/storage/repositories/encryptedRecordRepository.ts', 'utf8')
