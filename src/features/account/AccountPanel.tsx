@@ -110,7 +110,10 @@ export function AccountPanel({ onClose }: AccountPanelProps) {
     setSuccess(false)
     setBusyAction('google')
     try {
-      await continueWithGoogle()
+      const nextSession = await continueWithGoogle()
+      setSession(nextSession)
+      setSuccess(true)
+      setMessage('Sesión iniciada con Google. La bóveda permaneció abierta.')
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'No se pudo iniciar con Google.')
     } finally {
@@ -199,7 +202,7 @@ export function AccountPanel({ onClose }: AccountPanelProps) {
             <div className="account-auth-options">
               <button type="button" className="account-google-action" onClick={() => void handleGoogle()} disabled={isBusy}>
                 <span className="account-google-action__mark" aria-hidden="true">G</span>
-                {busyAction === 'google' ? 'Abriendo Google…' : 'Continuar con Google'}
+                {busyAction === 'google' ? 'Esperando Google…' : 'Continuar con Google'}
               </button>
 
               <div className="account-divider"><span>o</span></div>

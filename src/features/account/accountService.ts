@@ -2,6 +2,7 @@ import { createClient, type Session } from '@supabase/supabase-js'
 
 const SUPABASE_URL = 'https://kpnhdtiscxckveqeyqfq.supabase.co'
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_WouuStU5HcKeGYOL60Eelw_kyzaPJLZ'
+const GOOGLE_POPUP_NAME = 'oanix-google-auth'
 
 export const ACCOUNT_PASSWORD_MIN_CHARACTERS = 12
 
@@ -85,6 +86,80 @@ function sessionInfo(session: Session | null): OnlineAccountSession | null {
   }
 }
 
+function googlePopupFeatures() {
+  const width = Math.min(520, Math.max(320, window.outerWidth - 48))
+  const height = Math.min(720, Math.max(520, window.outerHeight - 80))
+  const left = Math.max(0, Math.round(window.screenX + (window.outerWidth - width) / 2))
+  const top = Math.max(0, Math.round(window.screenY + (window.outerHeight - height) / 2))
+
+  return `popup=yes,width=${Math.round(width)},height=${Math.round(height)},left=${left},top=${top}`
+}
+
+function waitForGooglePopupSession(popup: Window): Promise<OnlineAccountSession> {
+  return new Promise((resolve, reject) => {
+    let settled = false
+    let intervalId = 0
+    let timeoutId = 0
+    let unsubscribe: () => void = () => undefined
+
+    const cleanup = () => {
+      window.clearInterval(intervalId)
+      window.clearTimeout(timeoutId)
+      unsubscribe()
+    }
+
+    const finish = (session: OnlineAccountSession) => {
+      if (settled) return
+      settled = true
+      cleanup()
+      try {
+        popup.close()
+      } catch {
+        // The session is already established; failing to close the auxiliary window is harmless.
+      }
+      resolve(session)
+    }
+
+    const fail = (message: string) => {
+      if (settled) return
+      settled = true
+      cleanup()
+      try {
+        popup.close()
+      } catch {
+        // Nothing else to clean up.
+      }
+      reject(new Error(message))
+    }
+
+    unsubscribe = subscribeOnlineAccountSession((nextSession) => {
+      if (nextSession) finish(nextSession)
+    })
+
+    intervalId = window.setInterval(() => {
+      void getOnlineAccountSession()
+        .then((nextSession) => {
+          if (nextSession) {
+            finish(nextSession)
+            return
+          }
+          if (popup.closed) {
+            fail('Se cerró la ventana de Google antes de completar el acceso.')
+          }
+        })
+        .catch(() => {
+          if (popup.closed) {
+            fail('No se pudo comprobar la sesión después de cerrar Google.')
+          }
+        })
+    }, 700)
+
+    timeoutId = window.setTimeout(() => {
+      fail('Google tardó demasiado en responder. Vuelve a intentarlo.')
+    }, 2 * 60 * 1000)
+  })
+}
+
 export async function createOnlineAccount(
   rawEmail: string,
   password: string,
@@ -131,20 +206,33 @@ export async function signInOnlineAccount(
   return info
 }
 
-export async function continueWithGoogle() {
-  const { error } = await supabase.auth.signInWithOAuth({
+export async function continueWithGoogle(): Promise<OnlineAccountSession> {
+  // Open synchronously from the user's click so popup blockers do not mistake it for an unsolicited window.
+  const popup = window.open('', GOOGLE_POPUP_NAME, googlePopupFeatures())
+  if (!popup) {
+    throw new Error('El navegador bloqueó la ventana de Google. Permite ventanas emergentes para OANIX e inténtalo otra vez.')
+  }
+
+  const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
       redirectTo: redirectUrl(),
+      skipBrowserRedirect: true,
       queryParams: {
         prompt: 'select_account',
       },
     },
   })
 
-  if (error) {
+  if (error || !data.url) {
+    popup.close()
     throw new Error(describeAuthError(error, 'No se pudo iniciar con Google.'))
   }
+
+  popup.location.replace(data.url)
+  popup.focus()
+
+  return await waitForGooglePopupSession(popup)
 }
 
 export async function getOnlineAccountSession(): Promise<OnlineAccountSession | null> {
