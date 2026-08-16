@@ -51,6 +51,10 @@ function normalizeEmail(rawEmail: string) {
   return rawEmail.trim().toLocaleLowerCase()
 }
 
+function getRecoveryRedirectUrl() {
+  return new URL(import.meta.env.BASE_URL, window.location.origin).toString()
+}
+
 function parseBootstrap(ciphertext: string | null): RemoteVaultBootstrap {
   if (!ciphertext) throw new Error('La bóveda sincronizada no tiene metadatos de acceso válidos.')
 
@@ -209,7 +213,10 @@ export async function requestEmailRecoveryCode(rawEmail: string): Promise<void> 
   const client = getOnlineDataClient()
   const { error } = await client.auth.signInWithOtp({
     email,
-    options: { shouldCreateUser: false },
+    options: {
+      shouldCreateUser: false,
+      emailRedirectTo: getRecoveryRedirectUrl(),
+    },
   })
 
   if (error) {
