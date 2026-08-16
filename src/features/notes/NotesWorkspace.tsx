@@ -15,6 +15,7 @@ import { storageSaveErrorMessage } from '../../storage/local/storageErrors'
 import { usesSinglePaneLayout } from '../../shared/responsiveLayout'
 import { ImageNoteEditor } from '../images/ImageNoteEditor'
 import { createEmptyNote, deleteNote, loadNotes, moveNoteToFolder, renameNote, replaceNoteContent, setNoteTags } from './noteService'
+import { filterByLocalSearch } from '../search/localSearch'
 import { prepareDailyEntriesForEditing } from './dailyEntries'
 import { noteBlocksToPlainText, type NoteRecord, type StoredNoteBlock } from './noteTypes'
 import './notes.css'
@@ -104,6 +105,8 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
   const [tagEditorNoteId, setTagEditorNoteId] = useState<string | null>(null)
   const [tagDraftIds, setTagDraftIds] = useState<string[]>([])
   const [savingNoteTags, setSavingNoteTags] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [draftTitle, setDraftTitle] = useState('')
   const [loading, setLoading] = useState(true)
@@ -118,6 +121,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
   const [saveState, setSaveState] = useState<SaveState>('idle')
   const [error, setError] = useState('')
   const folderTabsRef = useRef<HTMLElement | null>(null)
+  const searchInputRef = useRef<HTMLInputElement | null>(null)
   const pendingContentRef = useRef<PendingContent | null>(null)
   const activeSaveRef = useRef<Promise<boolean> | null>(null)
   const saveTimerRef = useRef<number | null>(null)
@@ -135,13 +139,14 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     () => activeTagId === 'all' ? null : tags.find((tag) => tag.id === activeTagId) ?? null,
     [tags, activeTagId],
   )
-  const visibleNotes = useMemo(
-    () => notes.filter((note) =>
+  const visibleNotes = useMemo(() => {
+    const organized = notes.filter((note) =>
       (activeFolderId === 'all' || note.folderId === activeFolderId) &&
       (activeTagId === 'all' || (note.tagIds ?? []).includes(activeTagId)),
-    ),
-    [notes, activeFolderId, activeTagId],
-  )
+    )
+    return filterByLocalSearch(organized, searchQuery, (note) => `${note.title}\n${noteBlocksToPlainText(note.content.blocks)}`)
+  }, [notes, activeFolderId, activeTagId, searchQuery])
+  const hasSearchQuery = searchQuery.trim().length > 0
   const moveTargetNote = useMemo(
     () => notes.find((note) => note.id === moveNoteId) ?? null,
     [notes, moveNoteId],
@@ -296,6 +301,8 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
         setTagFilterOpen(false)
         setTagManagerOpen(false)
         setTagEditorNoteId(null)
+        setSearchOpen(false)
+        setSearchQuery('')
       }
     }
 
@@ -849,6 +856,32 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     onLock()
   }
 
+  async function handleToggleSearch() {
+    if (searchOpen) {
+      setSearchOpen(false)
+      setSearchQuery('')
+      return
+    }
+
+    if (!(await flushPendingContent())) return
+    await finalizeRemovedImages()
+
+    selectedIdRef.current = null
+    setSelectedId(null)
+    setSaveState('idle')
+    setNoteMenuId(null)
+    setActiveNoteMenuOpen(false)
+    setNoteInfoOpen(false)
+    setWorkspaceMenuOpen(false)
+    setSearchOpen(true)
+
+    if (mobileSinglePane()) {
+      window.history.replaceState({ ...currentHistoryState(), oanixView: 'list' }, '')
+    }
+
+    window.requestAnimationFrame(() => searchInputRef.current?.focus())
+  }
+
   function handleTitleKeyDown(event: ReactKeyboardEvent<HTMLInputElement>) {
     if (event.key === 'Enter') {
       event.currentTarget.blur()
@@ -897,6 +930,16 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
             </div>
           </div>
           <div className="notes-header__actions" data-note-menu-root="true">
+            <button
+              className={`icon-button${searchOpen ? ' icon-button--active' : ''}`}
+              type="button"
+              onClick={() => void handleToggleSearch()}
+              aria-label={searchOpen ? 'Cerrar búsqueda' : 'Buscar en notas'}
+              aria-pressed={searchOpen}
+              title={searchOpen ? 'Cerrar búsqueda' : 'Buscar'}
+            >
+              🔍
+            </button>
             <button
               className="icon-button"
               type="button"
@@ -955,6 +998,42 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
             </div>
           </div>
         </header>
+
+        {searchOpen && (
+          <div className="notes-search" role="search" aria-label="Búsqueda local de notas">
+            <div className="notes-search__field">
+              <span aria-hidden="true">🔍</span>
+              <input
+                ref={searchInputRef}
+                type="search"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Buscar en tus notas"
+                autoComplete="off"
+                spellCheck={false}
+                aria-label="Buscar en títulos y contenido de notas"
+              />
+              {hasSearchQuery && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery('')
+                    searchInputRef.current?.focus()
+                  }}
+                  aria-label="Limpiar búsqueda"
+                  title="Limpiar"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+            <div className="notes-search__meta" aria-live="polite">
+              {hasSearchQuery
+                ? `${visibleNotes.length} resultado${visibleNotes.length === 1 ? '' : 's'}`
+                : 'Solo busca en el contenido descifrado de este dispositivo'}
+            </div>
+          </div>
+        )}
 
         <div className="notes-tabs-shell">
           <button
@@ -1064,18 +1143,36 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
               </button>
             </div>
           ) : visibleNotes.length === 0 ? (
-            <div className="notes-empty">
-              <div className="notes-empty__icon" aria-hidden="true">{activeTag ? '🏷' : '📁'}</div>
-              <strong>{activeTag ? 'No hay notas con esta etiqueta' : 'Esta carpeta está vacía'}</strong>
-              <p>
-                {activeTag
-                  ? `Las notas nuevas creadas con este filtro recibirán “${activeTag.name}”.`
-                  : 'Las notas que crees aquí quedarán organizadas en esta carpeta cifrada.'}
-              </p>
-              <button className="empty-action" type="button" onClick={() => void handleCreateNote()} disabled={creating}>
-                Crear nota aquí
-              </button>
-            </div>
+            hasSearchQuery ? (
+              <div className="notes-empty">
+                <div className="notes-empty__icon" aria-hidden="true">🔍</div>
+                <strong>Sin resultados</strong>
+                <p>No encontramos “{searchQuery.trim()}” dentro de las notas de los filtros actuales.</p>
+                <button
+                  className="empty-action"
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery('')
+                    searchInputRef.current?.focus()
+                  }}
+                >
+                  Limpiar búsqueda
+                </button>
+              </div>
+            ) : (
+              <div className="notes-empty">
+                <div className="notes-empty__icon" aria-hidden="true">{activeTag ? '🏷' : '📁'}</div>
+                <strong>{activeTag ? 'No hay notas con esta etiqueta' : 'Esta carpeta está vacía'}</strong>
+                <p>
+                  {activeTag
+                    ? `Las notas nuevas creadas con este filtro recibirán “${activeTag.name}”.`
+                    : 'Las notas que crees aquí quedarán organizadas en esta carpeta cifrada.'}
+                </p>
+                <button className="empty-action" type="button" onClick={() => void handleCreateNote()} disabled={creating}>
+                  Crear nota aquí
+                </button>
+              </div>
+            )
           ) : (
             visibleNotes.map((note) => (
               <div
@@ -1151,17 +1248,19 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
           )}
         </div>
 
-        <button
-          className="notes-create-fab"
-          type="button"
-          onClick={() => void handleCreateNote()}
-          disabled={creating}
-          aria-label={creating ? 'Creando nota' : 'Crear nueva nota'}
-          title="Nueva nota"
-        >
-          <span aria-hidden="true">＋</span>
-          <span>{creating ? 'Creando…' : 'Nueva nota'}</span>
-        </button>
+        {!hasSearchQuery && (
+          <button
+            className="notes-create-fab"
+            type="button"
+            onClick={() => void handleCreateNote()}
+            disabled={creating}
+            aria-label={creating ? 'Creando nota' : 'Crear nueva nota'}
+            title="Nueva nota"
+          >
+            <span aria-hidden="true">＋</span>
+            <span>{creating ? 'Creando…' : 'Nueva nota'}</span>
+          </button>
+        )}
       </aside>
 
       <section className="note-view" aria-label="Nota abierta">
