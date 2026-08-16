@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import test from 'node:test'
 import {
   NOTE_HISTORY_AUTOMATIC_WINDOW_MS,
+  NOTE_HISTORY_MAX_SNAPSHOTS_PER_NOTE,
   shouldCaptureAutomaticSnapshot,
 } from '../src/features/versionHistory/versionHistoryPolicy.ts'
 import type { NoteHistorySnapshot } from '../src/features/versionHistory/versionHistoryTypes.ts'
@@ -39,6 +40,7 @@ test('automatic history keeps the first state inside a five minute coalescing wi
   const changed = note('changed', '2026-08-16T20:01:00.000Z')
 
   assert.equal(NOTE_HISTORY_AUTOMATIC_WINDOW_MS, 5 * 60 * 1000)
+  assert.equal(NOTE_HISTORY_MAX_SNAPSHOTS_PER_NOTE, 5)
   assert.equal(shouldCaptureAutomaticSnapshot(changed, latest, Date.parse('2026-08-16T20:04:59.999Z')), false)
   assert.equal(shouldCaptureAutomaticSnapshot(changed, latest, Date.parse('2026-08-16T20:05:00.000Z')), true)
 })
@@ -89,6 +91,7 @@ test('version history is connected to the unlocked app with a responsive restora
   assert.match(app, /<VersionHistoryCenter onRestored=/)
   assert.match(center, /Historial de versiones/)
   assert.match(center, /Restaurar esta versión/)
+  assert.match(center, /NOTE_HISTORY_MAX_SNAPSHOTS_PER_NOTE/)
   assert.match(center, /loadNotes\(\)/)
   assert.match(css, /@media \(max-width: 760px\)/)
 })
