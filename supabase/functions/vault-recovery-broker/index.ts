@@ -5,11 +5,21 @@ const encoder = new TextEncoder();
 const RECOVERY_AAD_PREFIX = "OANIX:vault-recovery:v1:";
 const RECENT_OTP_SECONDS = 10 * 60;
 const VAULT_BOOTSTRAP_KEY = "vault-bootstrap-v1";
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Max-Age": "86400",
+};
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+    headers: {
+      ...corsHeaders,
+      "Content-Type": "application/json",
+      "Cache-Control": "no-store",
+    },
   });
 }
 
@@ -98,6 +108,12 @@ async function decryptVaultKey(root: CryptoKey, userId: string, envelopeText: st
 }
 
 Deno.serve(async (req: Request) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, {
+      status: 204,
+      headers: { ...corsHeaders, "Cache-Control": "no-store" },
+    });
+  }
   if (req.method !== "POST") return json({ error: "Método no permitido." }, 405);
 
   const authHeader = req.headers.get("Authorization") ?? "";
