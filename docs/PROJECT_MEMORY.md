@@ -67,7 +67,7 @@ Sí debe pedir decisión cuando haya alternativas reales que cambien seguridad, 
 ### DEC-2026-08-16-001 — Resolución de conflictos multidispositivo
 **Estado:** IMPLEMENTED / VALIDATION_DEBT
 
-Cuando existe divergencia real OANIX conserva ambos lados y el usuario decide. Para notas compatibles puede elegir la versión sincronizada, la local o combinar ambas. La combinación conserva completos ambos contenidos, primero el aceptado remotamente y luego el otro, sin merge semántico, sin rótulos permanentes y sin convertir bloques estructurados a texto plano. Principio: `detectar -> conservar -> mostrar -> usuario decide`.
+Cuando existe divergencia real OANIX conserva ambos lados y el usuario decide. Para notas compatibles puede elegir la versión sincronizada, la local o combinar ambas. La combinación conserva completos ambos contenidos: primero el cambio **aceptado primero por la sincronización remota** y luego el otro, sin merge semántico, sin rótulos permanentes y sin convertir bloques estructurados a texto plano. Principio: `detectar -> conservar -> mostrar -> usuario decide`.
 
 PR #66 cubre conflictos no binarios y PR #67 imágenes originales/previews. La detección real fue comprobada; deuda restante en #69.
 
