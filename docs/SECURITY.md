@@ -148,7 +148,11 @@ El backup V1 no exporta una representación descifrada de notas, imágenes, carp
 
 El archivo conserva el material necesario para volver a derivar y desenvolver la misma clave de bóveda, por lo que requiere la contraseña maestra original para abrirse después de restaurarlo. La contraseña y la clave de bóveda en texto plano no forman parte del archivo.
 
-La restauración de V1 se ofrece únicamente cuando OANIX está preparando una bóveda local nueva, evitando sobrescribir silenciosamente una bóveda existente. El reemplazo de metadatos y registros se realiza en una sola transacción de IndexedDB.
+Antes de restaurar, OANIX deriva la clave con la contraseña proporcionada y autentica secuencialmente cada registro del backup mediante AES-GCM y su AAD original. El contenido descifrado usado para esa comprobación solo existe temporalmente en memoria y los buffers controlados por OANIX se sobrescriben al terminar cada verificación. Una contraseña incorrecta, un registro manipulado o un archivo incompatible detienen el proceso antes de modificar la bóveda local.
+
+La restauración está disponible al preparar una bóveda nueva y también desde una bóveda bloqueada para permitir recuperación en un dispositivo existente. Cuando ya existe una bóveda, OANIX exige una confirmación adicional antes de reemplazarla. El borrado de los registros anteriores y la escritura del snapshot restaurado ocurren dentro de una sola transacción de IndexedDB; si la transacción aborta, la bóveda anterior permanece intacta.
+
+OANIX no crea una segunda bóveda persistente, una carpeta interna de backups ni una caché permanente para realizar la operación. El archivo seleccionado se procesa en memoria. Durante la exportación se crea una URL `blob:` temporal exclusivamente para iniciar la descarga y se revoca inmediatamente después.
 
 ### Comprobación de almacenamiento cifrado
 
