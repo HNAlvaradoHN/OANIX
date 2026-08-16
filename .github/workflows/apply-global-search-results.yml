@@ -1,0 +1,33 @@
+name: Apply global search results
+
+on:
+  push:
+    branches:
+      - agent/v1-global-search-results
+    paths:
+      - scripts/apply_global_search_results.py
+      - .github/workflows/apply-global-search-results.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/v1-global-search-results
+      - name: Apply implementation
+        run: python scripts/apply_global_search_results.py
+      - name: Remove temporary patch files
+        run: |
+          rm scripts/apply_global_search_results.py
+          rm .github/workflows/apply-global-search-results.yml
+      - name: Commit implementation
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "V1: make local search global with match locations"
+          git push origin HEAD:agent/v1-global-search-results
