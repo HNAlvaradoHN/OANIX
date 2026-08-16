@@ -210,7 +210,7 @@ export function AccountPanel({
 
             <p className="account-session__privacy">
               {context === 'workspace'
-                ? 'La contraseña maestra nunca se envía. Los registros compatibles se guardan localmente y OANIX sincroniza automáticamente sobres E2EE con Supabase cuando hay conexión. Si llega un cambio remoto, se aplica sin cerrar la bóveda.'
+                ? 'La contraseña maestra nunca se envía. OANIX guarda primero en este dispositivo y, cuando hay conexión, sincroniza automáticamente notas, organización e imágenes mediante E2EE. Los cambios remotos se aplican sin cerrar la bóveda.'
                 : 'Esta cuenta solo identifica qué bóveda cifrada te pertenece. Para abrirla en este dispositivo todavía necesitarás la misma contraseña maestra; Supabase no la recibe.'}
             </p>
 
@@ -218,7 +218,7 @@ export function AccountPanel({
               <div className="account-panel__notice" role="status" aria-live="polite">
                 <strong>☁ Sincronización automática</strong>
                 <p>{syncStatus}</p>
-                <p>Las imágenes/binarios continúan pendientes dentro del bloque Varios dispositivos; texto, carpetas, etiquetas y demás registros no binarios ya usan autosync E2EE.</p>
+                <p>Texto, carpetas, etiquetas, contactos, checklists e imágenes se sincronizan cifrados automáticamente. Si estás sin Internet, OANIX continúa guardando localmente y se pone al día al reconectarse.</p>
               </div>
             )}
 
@@ -347,7 +347,7 @@ export function AccountPanel({
         )}
 
         <footer className="account-panel__footer">
-          <span>{context === 'workspace' ? 'Autosync E2EE activo · binarios pendientes' : 'Acceso a bóveda sincronizada'}</span>
+          <span>{context === 'workspace' ? 'Autosync E2EE activo' : 'Acceso a bóveda sincronizada'}</span>
           <span>V2 · Varios dispositivos</span>
         </footer>
       </section>
