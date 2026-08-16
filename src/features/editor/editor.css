@@ -684,3 +684,8 @@
   .editor-daily-entry__date { padding-inline: .6rem; }
   .editor-daily-entry__title { width: 100%; }
 }
+
+/* A daily-entry block already occupies the surface; never paint the generic empty-note placeholder over it. */
+.editor-surface[data-empty='true']:has(> [data-daily-entry-block='true'])::before {
+  content: none;
+}
