@@ -26,3 +26,12 @@ test('mobile vault access stays ahead of the decorative landing content and with
   assert.match(css, /\.vault-card\s*\{[\s\S]*?position:\s*sticky;/)
   assert.match(css, /\.vault-card__body\s*\{[\s\S]*?overflow-y:\s*auto;/)
 })
+
+test('heavy headings reserve vertical space for descenders across browsers', () => {
+  const css = readFileSync('src/styles/global.css', 'utf8')
+
+  assert.match(css, /Cross-device typography safety/)
+  assert.match(css, /\.vault-title\s*\{[\s\S]*?line-height:\s*\.98;[\s\S]*?padding-bottom:\s*\.08em;/)
+  assert.match(css, /\.notes-brand strong,[\s\S]*?\.note-row__topline strong\s*\{[\s\S]*?line-height:\s*1\.28;[\s\S]*?padding-bottom:\s*\.06em;/)
+  assert.match(css, /\.note-title-field input\s*\{[\s\S]*?line-height:\s*1\.14 !important;[\s\S]*?padding-block:\s*\.06em \.16em !important;/)
+})
