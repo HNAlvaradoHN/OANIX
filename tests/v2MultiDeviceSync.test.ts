@@ -44,7 +44,7 @@ test('vault account callback remains stable so auth session events do not create
   assert.doesNotMatch(gateSource, /onSessionChange=\{\(session\) => void handleAccountSessionChange\(session\)\}/)
 })
 
-test('automatic sync runs after local changes and when the app returns online or visible', () => {
+test('automatic sync reacts quickly to local and remote changes with a polling fallback', () => {
   const runtime = readFileSync('src/features/sync/AutoSyncRuntime.tsx', 'utf8')
   const recordRepo = readFileSync('src/storage/repositories/encryptedRecordRepository.ts', 'utf8')
 
@@ -52,6 +52,12 @@ test('automatic sync runs after local changes and when the app returns online or
   assert.match(runtime, /addEventListener\('oanix:local-data-changed'/)
   assert.match(runtime, /addEventListener\('online'/)
   assert.match(runtime, /visibilitychange/)
+  assert.match(runtime, /delay = 250/)
+  assert.match(runtime, /getOnlineDataClient/)
+  assert.match(runtime, /postgres_changes/)
+  assert.match(runtime, /table: 'sync_records'/)
+  assert.match(runtime, /filter: `user_id=eq\.\$\{userId\}`/)
+  assert.match(runtime, /removeChannel\(channel\)/)
   assert.match(runtime, /30_000/)
   assert.match(runtime, /syncEncryptedVaultBidirectional/)
   assert.match(runtime, /onRemoteAppliedRef\.current\(\)/)
