@@ -15,10 +15,20 @@ import type { TagRecord } from '../tags/tagTypes'
 import { storageSaveErrorMessage } from '../../storage/local/storageErrors'
 import { usesSinglePaneLayout } from '../../shared/responsiveLayout'
 import { ImageNoteEditor } from '../images/ImageNoteEditor'
-import { createEmptyNote, deleteNote, loadNotes, moveNoteToFolder, renameNote, replaceNoteContent, setNoteTags } from './noteService'
+import {
+  createEmptyNote,
+  deleteNote,
+  loadNotes,
+  moveNoteToFolder,
+  persistNoteOrder,
+  renameNote,
+  replaceNoteContent,
+  setNotePinned,
+  setNoteTags,
+} from './noteService'
 import { searchItemsByLocalFields, type LocalSearchField } from '../search/localSearch'
 import { prepareDailyEntriesForEditing } from './dailyEntries'
-import { noteBlocksToPlainText, type NoteRecord, type StoredNoteBlock } from './noteTypes'
+import { compareNotesForList, noteBlocksToPlainText, type NoteRecord, type StoredNoteBlock } from './noteTypes'
 import './notes.css'
 
 interface NotesWorkspaceProps {
@@ -179,6 +189,8 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [backupBusy, setBackupBusy] = useState(false)
+  const [reorderMode, setReorderMode] = useState(false)
+  const [orderingBusy, setOrderingBusy] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [draftTitle, setDraftTitle] = useState('')
   const [loading, setLoading] = useState(true)
@@ -392,6 +404,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
         setTagEditorNoteId(null)
         setSearchOpen(false)
         setSearchQuery('')
+        setReorderMode(false)
       }
     }
 
@@ -408,7 +421,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     setNotes((current) =>
       current
         .map((note) => (note.id === updated.id ? updated : note))
-        .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt)),
+        .sort(compareNotesForList),
     )
   }
 
@@ -610,7 +623,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
         activeFolderId === 'all' ? null : activeFolderId,
         activeTagId === 'all' ? [] : [activeTagId],
       )
-      setNotes((current) => [note, ...current])
+      setNotes((current) => [...current, note].sort(compareNotesForList))
       selectedIdRef.current = note.id
       setSelectedId(note.id)
       pushMobileNoteHistory(note.id)
@@ -716,6 +729,60 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     }
   }
 
+  async function handleTogglePinned(targetNote: NoteRecord) {
+    if (targetNote.id === selectedIdRef.current && !(await flushPendingContent())) return
+
+    setNoteMenuId(null)
+    setActiveNoteMenuOpen(false)
+    setError('')
+    try {
+      const updated = await setNotePinned(targetNote.id, targetNote.pinned !== true)
+      replaceNoteInState(updated)
+      if (updated.id === selectedIdRef.current) setSaveState('saved')
+    } catch {
+      setError('No se pudo cambiar el estado fijado de la nota.')
+    }
+  }
+
+  function noteOrderPosition(targetNote: NoteRecord) {
+    const pinned = targetNote.pinned === true
+    const group = visibleNotes.filter((note) => (note.pinned === true) === pinned)
+    const index = group.findIndex((note) => note.id === targetNote.id)
+    return {
+      canMoveUp: index > 0,
+      canMoveDown: index >= 0 && index < group.length - 1,
+      group,
+      index,
+    }
+  }
+
+  async function handleMoveNoteOrder(targetNote: NoteRecord, direction: 'up' | 'down') {
+    if (orderingBusy || hasSearchQuery) return
+
+    const position = noteOrderPosition(targetNote)
+    const targetIndex = direction === 'up' ? position.index - 1 : position.index + 1
+    const neighbor = position.group[targetIndex]
+    if (!neighbor) return
+
+    const nextOrder = [...notes].sort(compareNotesForList)
+    const sourceIndex = nextOrder.findIndex((note) => note.id === targetNote.id)
+    const neighborIndex = nextOrder.findIndex((note) => note.id === neighbor.id)
+    if (sourceIndex < 0 || neighborIndex < 0) return
+
+    ;[nextOrder[sourceIndex], nextOrder[neighborIndex]] = [nextOrder[neighborIndex], nextOrder[sourceIndex]]
+
+    setOrderingBusy(true)
+    setError('')
+    try {
+      const persisted = await persistNoteOrder(nextOrder.map((note) => note.id))
+      setNotes([...persisted].sort(compareNotesForList))
+    } catch {
+      setError('No se pudo guardar el nuevo orden cifrado de las notas.')
+    } finally {
+      setOrderingBusy(false)
+    }
+  }
+
   async function handleDeleteFolder(folder: FolderRecord) {
     const affected = notes.filter((note) => note.folderId === folder.id)
     const detail = affected.length === 0
@@ -730,7 +797,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
       const movedNotes = await Promise.all(affected.map((note) => moveNoteToFolder(note.id, null)))
       if (movedNotes.length > 0) {
         const movedById = new Map(movedNotes.map((note) => [note.id, note]))
-        setNotes((current) => current.map((note) => movedById.get(note.id) ?? note))
+        setNotes((current) => current.map((note) => movedById.get(note.id) ?? note).sort(compareNotesForList))
       }
       await deleteFolder(folder.id)
       setFolders((current) => current.filter((item) => item.id !== folder.id))
@@ -861,7 +928,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
       )
       if (updatedNotes.length > 0) {
         const updatedById = new Map(updatedNotes.map((note) => [note.id, note]))
-        setNotes((current) => current.map((note) => updatedById.get(note.id) ?? note))
+        setNotes((current) => current.map((note) => updatedById.get(note.id) ?? note).sort(compareNotesForList))
       }
       await deleteTag(tag.id)
       setTags((current) => current.filter((item) => item.id !== tag.id))
@@ -911,6 +978,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
   }
 
   async function handleSelectNote(noteId: string) {
+    if (reorderMode) return
     setNoteMenuId(null)
     setActiveNoteMenuOpen(false)
     if (noteId === selectedId) return
@@ -989,6 +1057,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     setActiveNoteMenuOpen(false)
     setNoteInfoOpen(false)
     setWorkspaceMenuOpen(false)
+    setReorderMode(false)
     setSearchOpen(true)
 
     if (mobileSinglePane()) {
@@ -1014,7 +1083,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     const listRect = event.currentTarget.closest('.notes-list')?.getBoundingClientRect()
     const topBoundary = listRect?.top ?? 0
     const bottomBoundary = listRect?.bottom ?? window.innerHeight
-    const estimatedMenuHeight = 150
+    const estimatedMenuHeight = 190
     const spaceBelow = bottomBoundary - buttonRect.bottom
     const spaceAbove = buttonRect.top - topBoundary
 
@@ -1226,7 +1295,10 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
           </button>
         </div>
 
-        <div className="notes-tag-filter">
+        <div
+          className="notes-tag-filter"
+          style={{ gridTemplateColumns: 'minmax(0, 1fr) 2.7rem 2.7rem' }}
+        >
           <button
             className={`tag-filter-button${activeTag ? ' tag-filter-button--active' : ''}`}
             type="button"
@@ -1237,6 +1309,25 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
             <span aria-hidden="true">🏷</span>
             <span>{activeTag?.name ?? 'Todas las etiquetas'}</span>
             <span aria-hidden="true">⌄</span>
+          </button>
+          <button
+            className="tag-manage-button"
+            type="button"
+            onClick={() => {
+              setNoteMenuId(null)
+              setReorderMode((active) => !active)
+            }}
+            disabled={visibleNotes.length < 2 || orderingBusy}
+            aria-label={reorderMode ? 'Terminar de ordenar notas' : 'Ordenar notas manualmente'}
+            aria-pressed={reorderMode}
+            title={reorderMode ? 'Terminar de ordenar' : 'Ordenar notas'}
+            style={reorderMode ? {
+              borderColor: '#93b4ff',
+              background: '#eaf2ff',
+              color: '#1d4ed8',
+            } : undefined}
+          >
+            ↕
           </button>
           <button
             className="tag-manage-button"
@@ -1298,98 +1389,163 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
               </div>
             )
           ) : (
-            visibleNotes.map((note) => (
-              <div
-                className={`note-row${selectedId === note.id ? ' note-row--selected' : ''}${noteMenuId === note.id ? ' note-row--menu-open' : ''}`}
-                key={note.id}
-                data-note-menu-root="true"
-              >
-                <button
-                  className="note-row__open"
-                  type="button"
-                  onClick={() => void handleSelectNote(note.id)}
+            visibleNotes.map((note) => {
+              const position = noteOrderPosition(note)
+              return (
+                <div
+                  className={`note-row${selectedId === note.id ? ' note-row--selected' : ''}${noteMenuId === note.id ? ' note-row--menu-open' : ''}`}
+                  key={note.id}
+                  data-note-menu-root="true"
                 >
-                  <span className="note-row__avatar" aria-hidden="true">{noteInitial(note.title)}</span>
-                  <span className="note-row__body">
-                    <span className="note-row__topline">
-                      <strong>{note.title}</strong>
-                      <time dateTime={note.updatedAt}>{formatNoteTime(note.updatedAt)}</time>
-                    </span>
-                    <span className="note-row__preview">
-                      {hasSearchQuery
-                        ? `📁 ${folderName(note.folderId)} · ${searchResultByNoteId.get(note.id)?.totalOccurrences ?? 0} coincidencia${(searchResultByNoteId.get(note.id)?.totalOccurrences ?? 0) === 1 ? '' : 's'}`
-                        : notePreview(note)}
-                    </span>
-                    {hasSearchQuery && searchResultByNoteId.get(note.id) && (
-                      <span className="search-result-locations" aria-label="Ubicaciones de las coincidencias">
-                        {searchResultByNoteId.get(note.id)?.matches.slice(0, 4).map((match) => (
-                          <span className="search-result-location" key={match.key}>
-                            <span className="search-result-location__label">
-                              {match.label}{match.occurrences > 1 ? ` · ${match.occurrences}×` : ''}
-                            </span>
-                            <span className="search-result-location__snippet">{match.snippet}</span>
-                          </span>
-                        ))}
-                        {(searchResultByNoteId.get(note.id)?.matches.length ?? 0) > 4 && (
-                          <span className="search-result-location__more">
-                            +{(searchResultByNoteId.get(note.id)?.matches.length ?? 0) - 4} ubicaciones más
-                          </span>
-                        )}
-                      </span>
-                    )}
-                  </span>
-                </button>
-
-                <div className="note-row__menu-wrap">
                   <button
-                    className="note-row__menu-button"
+                    className="note-row__open"
                     type="button"
-                    aria-label={`Acciones de ${note.title}`}
-                    aria-haspopup="menu"
-                    aria-expanded={noteMenuId === note.id}
-                    title="Acciones de la nota"
-                    onClick={(event) => toggleNoteMenu(note.id, event)}
+                    onClick={() => void handleSelectNote(note.id)}
+                    aria-disabled={reorderMode}
+                    tabIndex={reorderMode ? -1 : undefined}
                   >
-                    ⋮
+                    <span className="note-row__avatar" aria-hidden="true">{noteInitial(note.title)}</span>
+                    <span className="note-row__body">
+                      <span className="note-row__topline">
+                        <strong>{note.pinned === true && <span aria-hidden="true">📌 </span>}{note.title}</strong>
+                        <time dateTime={note.updatedAt}>{formatNoteTime(note.updatedAt)}</time>
+                      </span>
+                      <span className="note-row__preview">
+                        {hasSearchQuery
+                          ? `📁 ${folderName(note.folderId)} · ${searchResultByNoteId.get(note.id)?.totalOccurrences ?? 0} coincidencia${(searchResultByNoteId.get(note.id)?.totalOccurrences ?? 0) === 1 ? '' : 's'}`
+                          : notePreview(note)}
+                      </span>
+                      {hasSearchQuery && searchResultByNoteId.get(note.id) && (
+                        <span className="search-result-locations" aria-label="Ubicaciones de las coincidencias">
+                          {searchResultByNoteId.get(note.id)?.matches.slice(0, 4).map((match) => (
+                            <span className="search-result-location" key={match.key}>
+                              <span className="search-result-location__label">
+                                {match.label}{match.occurrences > 1 ? ` · ${match.occurrences}×` : ''}
+                              </span>
+                              <span className="search-result-location__snippet">{match.snippet}</span>
+                            </span>
+                          ))}
+                          {(searchResultByNoteId.get(note.id)?.matches.length ?? 0) > 4 && (
+                            <span className="search-result-location__more">
+                              +{(searchResultByNoteId.get(note.id)?.matches.length ?? 0) - 4} ubicaciones más
+                            </span>
+                          )}
+                        </span>
+                      )}
+                    </span>
                   </button>
 
-                  {noteMenuId === note.id && (
+                  {reorderMode && !hasSearchQuery ? (
                     <div
-                      className={`note-row__menu${noteMenuDirection === 'up' ? ' note-row__menu--up' : ''}`}
-                      role="menu"
-                      aria-label={`Acciones de ${note.title}`}
+                      aria-label={`Orden manual de ${note.title}`}
+                      style={{
+                        flex: '0 0 auto',
+                        display: 'grid',
+                        gridTemplateColumns: '1.9rem 1.9rem',
+                        alignItems: 'center',
+                        gap: '.1rem',
+                        paddingRight: '.45rem',
+                      }}
                     >
                       <button
                         type="button"
-                        role="menuitem"
-                        onClick={() => openTagEditor(note)}
-                      >
-                        Etiquetas
-                      </button>
-                      <button
-                        type="button"
-                        role="menuitem"
-                        onClick={() => {
-                          setNoteMenuId(null)
-                          setMoveNoteId(note.id)
+                        onClick={() => void handleMoveNoteOrder(note, 'up')}
+                        disabled={orderingBusy || !position.canMoveUp}
+                        aria-label={`Mover ${note.title} arriba`}
+                        title="Mover arriba"
+                        style={{
+                          width: '1.9rem',
+                          height: '2.35rem',
+                          padding: 0,
+                          border: 0,
+                          borderRadius: '.55rem',
+                          background: position.canMoveUp ? '#eef4ff' : 'transparent',
+                          color: '#1d4ed8',
+                          fontWeight: 900,
                         }}
                       >
-                        Mover a carpeta
+                        ↑
                       </button>
                       <button
-                        className="note-row__menu-danger"
                         type="button"
-                        role="menuitem"
-                        disabled={deletingId !== null}
-                        onClick={() => void handleDeleteNote(note)}
+                        onClick={() => void handleMoveNoteOrder(note, 'down')}
+                        disabled={orderingBusy || !position.canMoveDown}
+                        aria-label={`Mover ${note.title} abajo`}
+                        title="Mover abajo"
+                        style={{
+                          width: '1.9rem',
+                          height: '2.35rem',
+                          padding: 0,
+                          border: 0,
+                          borderRadius: '.55rem',
+                          background: position.canMoveDown ? '#eef4ff' : 'transparent',
+                          color: '#1d4ed8',
+                          fontWeight: 900,
+                        }}
                       >
-                        {deletingId === note.id ? 'Eliminando…' : 'Eliminar nota'}
+                        ↓
                       </button>
+                    </div>
+                  ) : (
+                    <div className="note-row__menu-wrap">
+                      <button
+                        className="note-row__menu-button"
+                        type="button"
+                        aria-label={`Acciones de ${note.title}`}
+                        aria-haspopup="menu"
+                        aria-expanded={noteMenuId === note.id}
+                        title="Acciones de la nota"
+                        onClick={(event) => toggleNoteMenu(note.id, event)}
+                      >
+                        ⋮
+                      </button>
+
+                      {noteMenuId === note.id && (
+                        <div
+                          className={`note-row__menu${noteMenuDirection === 'up' ? ' note-row__menu--up' : ''}`}
+                          role="menu"
+                          aria-label={`Acciones de ${note.title}`}
+                        >
+                          <button
+                            type="button"
+                            role="menuitem"
+                            onClick={() => void handleTogglePinned(note)}
+                          >
+                            {note.pinned === true ? 'Desfijar nota' : 'Fijar nota'}
+                          </button>
+                          <button
+                            type="button"
+                            role="menuitem"
+                            onClick={() => openTagEditor(note)}
+                          >
+                            Etiquetas
+                          </button>
+                          <button
+                            type="button"
+                            role="menuitem"
+                            onClick={() => {
+                              setNoteMenuId(null)
+                              setMoveNoteId(note.id)
+                            }}
+                          >
+                            Mover a carpeta
+                          </button>
+                          <button
+                            className="note-row__menu-danger"
+                            type="button"
+                            role="menuitem"
+                            disabled={deletingId !== null}
+                            onClick={() => void handleDeleteNote(note)}
+                          >
+                            {deletingId === note.id ? 'Eliminando…' : 'Eliminar nota'}
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
-              </div>
-            ))
+              )
+            })
           )}
         </div>
 
@@ -1398,9 +1554,9 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
             className="notes-create-fab"
             type="button"
             onClick={() => void handleCreateNote()}
-            disabled={creating}
+            disabled={creating || reorderMode}
             aria-label={creating ? 'Creando nota' : 'Crear nueva nota'}
-            title="Nueva nota"
+            title={reorderMode ? 'Termina de ordenar para crear una nota' : 'Nueva nota'}
           >
             <span aria-hidden="true">＋</span>
             <span>{creating ? 'Creando…' : 'Nueva nota'}</span>
@@ -1424,7 +1580,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
               <div className="note-view__identity">
                 <span className="note-view__avatar" aria-hidden="true">{noteInitial(selectedNote.title)}</span>
                 <div>
-                  <strong>{selectedNote.title}</strong>
+                  <strong>{selectedNote.pinned === true && <span aria-hidden="true">📌 </span>}{selectedNote.title}</strong>
                   <span className={saveState === 'error' ? 'save-status save-status--error' : 'save-status'}>
                     {deletingSelected ? 'Eliminando nota…' : saveStateLabel(saveState, savingTitle)}
                   </span>
@@ -1444,6 +1600,13 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
                 </button>
                 {activeNoteMenuOpen && (
                   <div className="note-view__menu" role="menu" aria-label="Acciones de la nota">
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => void handleTogglePinned(selectedNote)}
+                    >
+                      <span aria-hidden="true">📌</span> {selectedNote.pinned === true ? 'Desfijar nota' : 'Fijar nota'}
+                    </button>
                     <button
                       type="button"
                       role="menuitem"
@@ -1557,6 +1720,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
                 <div><dt>Título</dt><dd>{selectedNote.title}</dd></div>
                 <div><dt>Creada</dt><dd>{new Date(selectedNote.createdAt).toLocaleString('es-HN')}</dd></div>
                 <div><dt>Modificada</dt><dd>{new Date(selectedNote.updatedAt).toLocaleString('es-HN')}</dd></div>
+                <div><dt>Fijada</dt><dd>{selectedNote.pinned === true ? 'Sí' : 'No'}</dd></div>
                 <div><dt>Carpeta</dt><dd>{folderName(selectedNote.folderId)}</dd></div>
                 <div><dt>Etiquetas</dt><dd>{tagRecordsFor(selectedNote).map((tag) => tag.name).join(', ') || 'Sin etiquetas'}</dd></div>
                 <div><dt>Bloques</dt><dd>{selectedNote.content.blocks.length}</dd></div>
