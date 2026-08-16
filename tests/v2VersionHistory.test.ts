@@ -4,7 +4,7 @@ import test from 'node:test'
 import {
   NOTE_HISTORY_AUTOMATIC_WINDOW_MS,
   shouldCaptureAutomaticSnapshot,
-} from '../src/features/versionHistory/versionHistoryService.ts'
+} from '../src/features/versionHistory/versionHistoryPolicy.ts'
 import type { NoteHistorySnapshot } from '../src/features/versionHistory/versionHistoryTypes.ts'
 import type { NoteRecord } from '../src/features/notes/noteTypes.ts'
 
@@ -67,4 +67,28 @@ test('history reuses encrypted_records and remains eligible for the existing non
   assert.doesNotMatch(repository, /indexedDB|localStorage|sessionStorage|caches\.open/)
   assert.match(sync, /LOCAL_ONLY_RECORD_TYPES/)
   assert.doesNotMatch(sync, /'note-history'/)
+})
+
+test('restoring a version creates a reversible checkpoint and refuses incomplete historical images', () => {
+  const noteService = readFileSync('src/features/notes/noteService.ts', 'utf8')
+  const historyService = readFileSync('src/features/versionHistory/versionHistoryService.ts', 'utf8')
+  const blobRepository = readFileSync('src/storage/repositories/encryptedBlobRepository.ts', 'utf8')
+
+  assert.match(noteService, /export async function restoreNoteVersion/)
+  assert.match(noteService, /findMissingHistoricalImageIds/)
+  assert.match(noteService, /'pre-restore'/)
+  assert.match(historyService, /hasEncryptedImage/)
+  assert.match(blobRepository, /getKey\(encryptedBlobKey/)
+})
+
+test('version history is connected to the unlocked app with a responsive restoration UI', () => {
+  const app = readFileSync('src/app/App.tsx', 'utf8')
+  const center = readFileSync('src/features/versionHistory/VersionHistoryCenter.tsx', 'utf8')
+  const css = readFileSync('src/features/versionHistory/versionHistory.css', 'utf8')
+
+  assert.match(app, /<VersionHistoryCenter onRestored=/)
+  assert.match(center, /Historial de versiones/)
+  assert.match(center, /Restaurar esta versión/)
+  assert.match(center, /loadNotes\(\)/)
+  assert.match(css, /@media \(max-width: 760px\)/)
 })
