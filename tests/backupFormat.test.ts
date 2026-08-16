@@ -1,0 +1,68 @@
+import assert from 'node:assert/strict'
+import test from 'node:test'
+
+import {
+  encryptedBackupFileName,
+  parseEncryptedBackup,
+  serializeEncryptedBackup,
+} from '../src/features/backup/backupFormat.ts'
+
+const snapshot = {
+  metadata: {
+    key: 'primary' as const,
+    schemaVersion: 1 as const,
+    createdAt: '2026-08-15T12:00:00.000Z',
+    protection: {
+      scheme: 'argon2id-aes-gcm-v1' as const,
+      kdf: {
+        algorithm: 'argon2id' as const,
+        version: 19 as const,
+        memoryKiB: 65536 as const,
+        iterations: 3 as const,
+        parallelism: 1 as const,
+        hashLength: 32 as const,
+        salt: 'QUJDREVGR0hJSktMTU5PUA==',
+      },
+      keyWrap: {
+        algorithm: 'AES-GCM' as const,
+        iv: 'QUJDREVGR0hJSktM',
+        wrappedKey: 'QUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVo=',
+      },
+    },
+  },
+  records: [
+    {
+      key: JSON.stringify(['note', 'note-1']),
+      payload: {
+        scheme: 'aes-gcm-v1' as const,
+        iv: 'QUJDREVGR0hJSktM',
+        ciphertext: 'QUJDREVGR0hJSktMTU5PUA==',
+      },
+    },
+  ],
+}
+
+test('round-trips an encrypted vault snapshot without plaintext transformation', () => {
+  const serialized = serializeEncryptedBackup(snapshot, new Date('2026-08-15T21:30:00.000Z'))
+  const parsed = parseEncryptedBackup(serialized)
+
+  assert.equal(parsed.format, 'oanix-encrypted-backup')
+  assert.equal(parsed.version, 1)
+  assert.deepEqual(parsed.vault, snapshot)
+})
+
+test('rejects malformed or duplicate encrypted records', () => {
+  const serialized = serializeEncryptedBackup(snapshot)
+  const parsed = JSON.parse(serialized)
+  parsed.vault.records.push(parsed.vault.records[0])
+
+  assert.throws(() => parseEncryptedBackup(JSON.stringify(parsed)), /duplicados/)
+  assert.throws(() => parseEncryptedBackup('{broken json'), /backup válido/)
+})
+
+test('uses a portable OANIX backup extension', () => {
+  assert.equal(
+    encryptedBackupFileName(new Date(2026, 7, 15, 21, 7)),
+    'OANIX-backup-2026-08-15-2107.oanixbackup',
+  )
+})
