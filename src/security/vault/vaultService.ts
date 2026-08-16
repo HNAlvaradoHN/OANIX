@@ -2,6 +2,7 @@ import {
   createVaultProtection,
   MASTER_PASSWORD_MIN_CHARACTERS,
   openVaultProtection,
+  rewrapVaultProtection,
   validateMasterPassword,
 } from '../crypto/vaultCrypto'
 import {
@@ -136,6 +137,43 @@ export async function unlockLocalVault(password: string): Promise<VaultActionRes
     return {
       status: 'error',
       message: 'Contraseña incorrecta o datos de la bóveda dañados.',
+    }
+  }
+}
+
+export async function changeLocalMasterPassword(
+  currentPassword: string,
+  newPassword: string,
+): Promise<VaultActionResult> {
+  const validationMessage = validateMasterPassword(newPassword)
+  if (validationMessage) return { status: 'error', message: validationMessage }
+
+  try {
+    const metadata = await readVaultMetadata()
+    if (!metadata) {
+      return { status: 'error', message: 'La bóveda local no existe.' }
+    }
+    if (metadata.protection === 'pending') {
+      return { status: 'error', message: 'Primero debes crear una contraseña maestra.' }
+    }
+
+    const rotated = await rewrapVaultProtection(
+      currentPassword,
+      newPassword,
+      metadata.protection,
+    )
+
+    await writeVaultMetadata({
+      ...metadata,
+      protection: rotated.protection,
+    })
+
+    setActiveVaultKey(rotated.vaultKey)
+    return { status: 'success' }
+  } catch {
+    return {
+      status: 'error',
+      message: 'No se pudo cambiar la contraseña. Verifica la contraseña actual y vuelve a intentarlo.',
     }
   }
 }

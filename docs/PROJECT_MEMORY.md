@@ -30,13 +30,15 @@ Su propósito es permitir que otra IA o colaborador continúe OANIX sin reconstr
 - Protección contra sobrescritura silenciosa cuando hay divergencia concurrente.
 - Resolución de conflictos no binarios integrada mediante PR #66.
 - Resolución de conflictos de imágenes originales y previews derivados integrada mediante PR #67.
-- Historial cifrado de versiones integrado mediante PR #71.
+- Historial cifrado de versiones integrado mediante PR #71 y retención reducida a 5 puntos mediante PR #72.
 
 **Resolución de conflictos:** implementación completa. La detección de divergencia fue validada en dos dispositivos; las pruebas reales restantes quedaron registradas como deuda visible en issue #69 por decisión explícita del usuario de continuar sin frenar el desarrollo.
 
-**Bloque oficial activo:** Historial de versiones — implementación publicada; validación funcional real pendiente en issue #70.
+**Historial de versiones:** implementación publicada. La validación funcional real restante está registrada en issue #70 y no bloquea el avance por decisión explícita del usuario.
 
-**Después del bloque actual:** Recuperación de acceso.
+**Bloque oficial activo:** Recuperación de acceso — diseño e implementación en issue #73.
+
+**Después del bloque actual:** cierre de V2 y, cuando corresponda, V3 — Android con Capacitor.
 
 **No avanzar todavía:** V3 — Android con Capacitor ni V4 — Funciones avanzadas, salvo preparación arquitectónica estrictamente necesaria y registrada.
 
@@ -77,6 +79,21 @@ Si el usuario entrega el repositorio a otra IA y dice «continuemos con lo que e
 6. no pedir al usuario que repita decisiones ya documentadas;
 7. no inventar detalles que no estén definidos;
 8. registrar cualquier nueva decisión, cambio, aplazamiento o excepción.
+
+### 2.5 Avance automático de ajustes pequeños
+
+Para no perder tiempo, un ajuste pequeño puede corregirse y continuarse automáticamente cuando todas estas condiciones se cumplen:
+
+- el cambio es de bajo riesgo y alcance local;
+- no cambia una decisión funcional importante;
+- no modifica el modelo de seguridad ni la privacidad;
+- no puede provocar pérdida, migración o sustitución de datos;
+- no adelanta una función de otra versión;
+- las pruebas aplicables pueden verificarlo.
+
+En esos casos, la IA debe arreglar, probar, documentar si corresponde y seguir al siguiente trabajo útil sin detener al usuario por cada detalle menor.
+
+Sí debe pedir decisión antes de continuar cuando el paso siguiente cambie seguridad, datos, alcance, experiencia importante o una decisión de producto con alternativas reales.
 
 ---
 
@@ -156,7 +173,7 @@ Esta documentación no forma parte de la lógica de ejecución de OANIX y no deb
 
 **Objetivo:** poder recuperar estados anteriores de una nota sin romper E2EE, offline-first ni crear almacenamiento paralelo.
 
-**Decisiones implementadas en PR #71:**
+**Decisiones implementadas en PR #71 y ajustadas en PR #72:**
 
 - Los snapshots se guardan bajo el tipo cifrado `note-history` dentro del mismo `encrypted_records` existente.
 - Cada snapshot conserva una copia completa de `NoteRecord`; no se modifica el schema `NoteRecord.version = 1` solo para añadir historial.
@@ -175,14 +192,48 @@ Esta documentación no forma parte de la lógica de ejecución de OANIX y no deb
 - Al eliminar una nota completa, también se elimina su historial para no dejar versiones huérfanas que no tienen una superficie de recuperación definida.
 - Las imágenes NO se duplican dentro de cada snapshot; los snapshots conservan `imageId`.
 
-**Limitación consciente de esta primera implementación:**
+**Limitación consciente:**
 
 Una imagen que el usuario eliminó de la nota puede haber sido eliminada también del almacenamiento binario actual. Por eso una versión antigua que todavía la referencia puede quedar no restaurable de forma completa; OANIX lo detecta y bloquea la restauración. No inventar que existe retención histórica de binarios hasta implementar explícitamente una política/GC de imágenes históricas.
 
 **Estado de validación:**
 
 - PR #71 fue integrado y publicado después de pasar pruebas automáticas, build y auditoría offline.
-- Falta prueba funcional real registrada en #70: editar una nota, generar al menos dos snapshots, abrir el centro, revisar una versión, restaurarla y confirmar que el checkpoint pre-restauración permite volver al estado previo.
+- PR #72 redujo la retención de 30 a 5, volvió a pasar CI y fue publicado.
+- Falta prueba funcional real registrada en #70: editar una nota, generar snapshots, abrir el centro, revisar una versión, restaurarla, confirmar el checkpoint pre-restauración y confirmar el límite real de 5.
+
+---
+
+### DEC-2026-08-16-005 — Recuperación de acceso sin romper E2EE
+
+**Estado:** IN_PROGRESS
+
+**Versión / bloque:** V2 — Recuperación de acceso
+
+**Referencia:** issue #73.
+
+**Principio criptográfico:**
+
+La contraseña maestra no cifra directamente las notas. Protege una clave aleatoria de bóveda. Por tanto, cambiar contraseña debe abrir el envoltorio actual y crear un envoltorio nuevo alrededor de los mismos bytes de clave de bóveda.
+
+**Base técnica iniciada:**
+
+- `rewrapVaultProtection` reutiliza la misma clave de bóveda y genera únicamente nuevo salt/IV/material de protección para la contraseña nueva.
+- Los bytes de clave solo existen temporalmente dentro del módulo criptográfico y se limpian después de usarlos.
+- La `CryptoKey` activa continúa siendo no extraíble; no se introduce `exportKey`.
+- `changeLocalMasterPassword` prepara el cambio local de metadatos usando ese reenvoltorio.
+- Esta acción NO se expone todavía en la UI mientras no exista propagación sincronizada segura.
+
+**Requisitos que siguen vigentes:**
+
+- En una bóveda sincronizada, la rotación debe converger en una única protección coherente para todos los dispositivos.
+- Google/Supabase no pueden recuperar por sí solos la clave si se olvidó la contraseña maestra.
+- La recuperación por olvido completo requiere un mecanismo preparado previamente bajo control del usuario.
+- Supabase nunca debe almacenar contraseña maestra ni clave de bóveda en texto plano.
+
+**Decisión pendiente que sí requiere al usuario:**
+
+Definir la experiencia del mecanismo preparado para olvido completo. La opción inicial recomendada a evaluar es una única clave/código de recuperación de alta entropía que el usuario guarde fuera de OANIX. No implementar silenciosamente una UX distinta antes de decidirla.
 
 ---
 
@@ -203,20 +254,6 @@ Decisiones ya tomadas:
 - La detección exacta de bloqueo físico del dispositivo y biometría/Keystore quedan para V3 Android si la integración nativa lo permite.
 
 No implementar antes de asignarlo formalmente a un bloque después de cerrar el alcance actual de V2.
-
-### DEFERRED — Recuperación de acceso
-
-**Versión:** V2
-
-**Orden:** después de Historial de versiones.
-
-**Requisitos ya definidos:**
-
-- cambiar la contraseña maestra debe reenvolver la misma clave de bóveda en lugar de volver a cifrar todas las notas;
-- una bóveda sincronizada debe propagar la rotación de forma coherente entre dispositivos;
-- Google/Supabase no pueden saltarse E2EE si se olvidó la contraseña maestra;
-- la recuperación por olvido requerirá un mecanismo preparado previamente, como código/clave de recuperación protegido por el usuario;
-- no almacenar contraseña maestra ni clave de bóveda en texto plano en Supabase.
 
 ### DEFERRED — V3 Android
 
@@ -241,6 +278,13 @@ No implementar todavía.
 - **Deuda creada:** issue #69.
 - **Regla:** no afirmar que las pruebas pendientes de #69 ocurrieron; si aparece una regresión de conflictos, corregirla antes de cerrar V2.
 - **Orden posterior:** no cambia; Historial de versiones sigue antes de Recuperación de acceso.
+
+### 2026-08-16 — Avance desde Historial de versiones con deuda de validación
+
+- **Función:** inicio de Recuperación de acceso con Historial de versiones ya implementado/publicado pero sin completar toda su prueba funcional real.
+- **Motivo:** decisión explícita del usuario de evitar detener el desarrollo por validaciones menores cuando la implementación y CI ya están completos.
+- **Deuda mantenida:** issue #70.
+- **Regla:** no afirmar que restauración/pre-restore/límite de 5 fueron validados en campo hasta realizar esa prueba; cualquier regresión encontrada se corrige antes de cerrar V2.
 
 ---
 

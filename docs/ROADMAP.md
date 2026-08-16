@@ -53,8 +53,8 @@ Objetivo: sincronización cifrada entre dispositivos sin que el servidor pueda l
 - [x] Sincronización E2EE
 - [x] Varios dispositivos
 - [x] Resolución de conflictos *(implementación completa; validación de campo restante registrada en #69)*
-- [ ] Historial de versiones *(implementación publicada; cerrar tras prueba funcional real registrada en #70)*
-- [ ] Recuperación de acceso
+- [x] Historial de versiones *(implementación publicada; validación funcional restante registrada en #70)*
+- [ ] Recuperación de acceso *(bloque activo; diseño e implementación en #73)*
 
 ### Reglas de acceso V2
 
@@ -112,12 +112,14 @@ Objetivo: sincronización cifrada entre dispositivos sin que el servidor pueda l
 - Los snapshots conservan referencias `imageId`; esta etapa no duplica binarios históricos.
 - Al eliminar permanentemente una nota se elimina también su historial para no dejar versiones huérfanas sin una superficie de recuperación definida.
 
-### Recuperación de acceso — requisitos obligatorios antes de implementar
+### Recuperación de acceso — bloque activo
 
 - Cambiar la contraseña maestra no debe volver a cifrar todas las notas ni generar una segunda bóveda: debe reenvolver la misma clave de bóveda con una protección nueva.
+- La primera base técnica reutiliza los mismos bytes de clave de bóveda y crea únicamente un nuevo envoltorio Argon2id + AES-GCM; no se exporta la `CryptoKey` activa.
 - En una bóveda sincronizada, la rotación de contraseña debe propagarse de forma coherente a todos los dispositivos; no se publicará una solución que deje contraseñas distintas activas en cada dispositivo.
+- El cambio local de contraseña no se expondrá en la interfaz hasta implementar la propagación sincronizada segura.
 - Si el usuario olvidó por completo la contraseña maestra, Google o la sesión Supabase no pueden saltarse E2EE ni entregar la clave descifrada.
-- La recuperación por olvido requerirá un mecanismo preparado previamente, por ejemplo una clave/código de recuperación protegido por el usuario, diseñado y validado dentro del bloque oficial Recuperación de acceso.
+- La recuperación por olvido requerirá un mecanismo preparado previamente, por ejemplo una clave/código de recuperación protegido por el usuario, diseñado y validado dentro de este bloque.
 - Supabase no almacenará una copia en texto plano de la contraseña maestra ni de la clave de bóveda como mecanismo de recuperación.
 
 ## V3 — Android con Capacitor
@@ -150,8 +152,8 @@ Objetivo: empaquetar la misma base de código como aplicación Android.
 
 **Versión activa: V2 — Cuenta y sincronización**
 
-**Bloque oficial activo:** Historial de versiones — implementación publicada; pendiente validación funcional real (#70).
+**Bloque oficial activo:** Recuperación de acceso — diseño e implementación en issue #73.
 
-**Deuda de validación visible:** Resolución de conflictos (#69). No bloquea el avance, pero no debe darse por probada hasta cerrar esos casos reales.
+**Deudas de validación visibles:** Resolución de conflictos (#69) e Historial de versiones (#70). No bloquean el avance por decisión explícita del usuario, pero no deben darse por probadas hasta cerrar sus casos reales.
 
 La cuenta online es opcional y debe permanecer separada de la contraseña maestra y de la bóveda local. No se implementan funciones de V3 o V4 mientras V2 no esté cerrada, salvo preparación arquitectónica explícitamente documentada.
