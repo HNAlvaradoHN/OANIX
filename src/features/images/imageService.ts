@@ -1,5 +1,6 @@
 import {
   deleteEncryptedBlob,
+  hasEncryptedBlob,
   readEncryptedBlob,
   writeEncryptedBlob,
 } from '../../storage/repositories/encryptedBlobRepository'
@@ -116,6 +117,10 @@ export async function storeEncryptedImage(file: File): Promise<StoredImageInfo> 
     name: file.name.trim() || 'Imagen',
     byteLength: bytes.byteLength,
   }
+}
+
+export function hasEncryptedImage(imageId: string): Promise<boolean> {
+  return hasEncryptedBlob(IMAGE_RECORD_TYPE, imageId)
 }
 
 export async function loadEncryptedImage(imageId: string, mimeType: ImageMimeType): Promise<Blob | null> {
