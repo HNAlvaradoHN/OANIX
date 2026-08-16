@@ -100,7 +100,7 @@ function waitForGooglePopupSession(popup: Window): Promise<OnlineAccountSession>
     let settled = false
     let intervalId = 0
     let timeoutId = 0
-    let unsubscribe = () => undefined
+    let unsubscribe: () => void = () => undefined
 
     const cleanup = () => {
       window.clearInterval(intervalId)
