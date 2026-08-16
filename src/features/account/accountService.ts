@@ -243,6 +243,10 @@ export async function getOnlineAccountSession(): Promise<OnlineAccountSession | 
   return sessionInfo(data.session)
 }
 
+export function getOnlineDataClient() {
+  return supabase
+}
+
 export function subscribeOnlineAccountSession(
   onChange: (session: OnlineAccountSession | null) => void,
 ) {
