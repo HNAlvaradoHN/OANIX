@@ -22,7 +22,10 @@ export function VaultGate({ renderUnlocked }: VaultGateProps) {
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
   const [restoreBusy, setRestoreBusy] = useState(false)
+  const [restoreFile, setRestoreFile] = useState<File | null>(null)
+  const [restorePassword, setRestorePassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [showRestorePassword, setShowRestorePassword] = useState(false)
 
   useEffect(() => {
     let active = true
@@ -44,12 +47,19 @@ export function VaultGate({ renderUnlocked }: VaultGateProps) {
     }
   }, [])
 
+  function resetRestoreDraft() {
+    setRestoreFile(null)
+    setRestorePassword('')
+    setShowRestorePassword(false)
+  }
+
   function handleLock() {
     lockLocalVault()
     setPassword('')
     setConfirmation('')
     setMessage('')
     setShowPassword(false)
+    resetRestoreDraft()
     setState('locked')
   }
 
@@ -111,22 +121,39 @@ export function VaultGate({ renderUnlocked }: VaultGateProps) {
     setBusy(false)
   }
 
-  async function handleRestoreBackup(event: ChangeEvent<HTMLInputElement>) {
+  function handleRestoreBackupSelection(event: ChangeEvent<HTMLInputElement>) {
     const input = event.currentTarget
     const file = input.files?.[0] ?? null
     input.value = ''
-    if (!file || state !== 'setup' || restoreBusy) return
+    if (!file || restoreBusy || (state !== 'setup' && state !== 'locked')) return
+
+    setMessage('')
+    setRestoreFile(file)
+    setRestorePassword('')
+    setShowRestorePassword(false)
+  }
+
+  async function handleRestoreBackup(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!restoreFile || !restorePassword || restoreBusy || (state !== 'setup' && state !== 'locked')) return
+
+    if (
+      state === 'locked'
+      && !window.confirm('La restauración reemplazará la bóveda local actual solo después de verificar por completo el backup. ¿Quieres continuar?')
+    ) {
+      return
+    }
 
     setRestoreBusy(true)
     setMessage('')
     try {
-      const result = await restoreEncryptedBackupFromFile(file)
-      lockLocalVault()
+      const result = await restoreEncryptedBackupFromFile(restoreFile, restorePassword)
       setPassword('')
       setConfirmation('')
       setShowPassword(false)
-      setState('locked')
-      setMessage(`Backup restaurado (${result.recordCount} registros cifrados). Ingresa la contraseña maestra original del backup.`)
+      resetRestoreDraft()
+      setState('unlocked')
+      window.alert(`Backup cifrado restaurado correctamente.\n\n${result.recordCount} registros verificados y restaurados.`)
     } catch (restoreError) {
       setMessage(restoreError instanceof Error ? restoreError.message : 'No se pudo restaurar el backup cifrado.')
     } finally {
@@ -139,6 +166,7 @@ export function VaultGate({ renderUnlocked }: VaultGateProps) {
   }
 
   const isSetup = state === 'setup'
+  const canRestore = state === 'setup' || state === 'locked'
 
   let gateContent: ReactNode
   if (state === 'checking') {
@@ -194,14 +222,14 @@ export function VaultGate({ renderUnlocked }: VaultGateProps) {
                 minLength={isSetup ? MASTER_PASSWORD_MIN_CHARACTERS : undefined}
                 maxLength={256}
                 required
-                disabled={busy}
+                disabled={busy || restoreBusy}
               />
               <button
                 className="input-action"
                 type="button"
                 onClick={() => setShowPassword((visible) => !visible)}
                 aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                disabled={busy}
+                disabled={busy || restoreBusy}
               >
                 {showPassword ? 'Ocultar' : 'Mostrar'}
               </button>
@@ -223,7 +251,7 @@ export function VaultGate({ renderUnlocked }: VaultGateProps) {
                 minLength={MASTER_PASSWORD_MIN_CHARACTERS}
                 maxLength={256}
                 required
-                disabled={busy}
+                disabled={busy || restoreBusy}
               />
             </label>
           )}
@@ -237,20 +265,69 @@ export function VaultGate({ renderUnlocked }: VaultGateProps) {
         </form>
 
         {isSetup && (
-          <>
-            <p className="security-note">
-              OANIX no guarda tu contraseña. En V1 no existe recuperación si la olvidas.
-            </p>
-            <div className="vault-restore">
-              <span>¿Ya tienes una bóveda de OANIX?</span>
-              <label className={`vault-restore__button${restoreBusy ? ' vault-restore__button--busy' : ''}`}>
-                <span aria-hidden="true">↥</span>
-                <span>{restoreBusy ? 'Restaurando backup…' : 'Restaurar backup cifrado'}</span>
-                <input type="file" accept=".oanixbackup,application/json,application/vnd.oanix.encrypted-backup+json" onChange={(event) => void handleRestoreBackup(event)} disabled={busy || restoreBusy} />
-              </label>
-              <small>Usarás la misma contraseña maestra con la que se creó esa copia.</small>
-            </div>
-          </>
+          <p className="security-note">
+            OANIX no guarda tu contraseña. En V1 no existe recuperación si la olvidas.
+          </p>
+        )}
+
+        {canRestore && (
+          <div className="vault-restore">
+            <span>{isSetup ? '¿Ya tienes una bóveda de OANIX?' : '¿Necesitas recuperar una copia anterior?'}</span>
+            <label className={`vault-restore__button${restoreBusy ? ' vault-restore__button--busy' : ''}`}>
+              <span aria-hidden="true">↥</span>
+              <span>{restoreFile ? 'Cambiar archivo de backup' : 'Seleccionar backup cifrado'}</span>
+              <input
+                type="file"
+                accept=".oanixbackup,application/json,application/vnd.oanix.encrypted-backup+json"
+                onChange={handleRestoreBackupSelection}
+                disabled={busy || restoreBusy}
+              />
+            </label>
+
+            {restoreFile ? (
+              <form className="vault-form" onSubmit={(event) => void handleRestoreBackup(event)}>
+                <small>Archivo seleccionado: {restoreFile.name}</small>
+                <label className="field" htmlFor="backup-master-password">
+                  <span>Contraseña maestra del backup</span>
+                  <div className="password-input">
+                    <input
+                      id="backup-master-password"
+                      type={showRestorePassword ? 'text' : 'password'}
+                      value={restorePassword}
+                      onChange={(event) => setRestorePassword(event.target.value)}
+                      autoComplete="current-password"
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      spellCheck={false}
+                      maxLength={256}
+                      required
+                      disabled={busy || restoreBusy}
+                    />
+                    <button
+                      className="input-action"
+                      type="button"
+                      onClick={() => setShowRestorePassword((visible) => !visible)}
+                      aria-label={showRestorePassword ? 'Ocultar contraseña del backup' : 'Mostrar contraseña del backup'}
+                      disabled={busy || restoreBusy}
+                    >
+                      {showRestorePassword ? 'Ocultar' : 'Mostrar'}
+                    </button>
+                  </div>
+                </label>
+                <button className="primary-button" type="submit" disabled={busy || restoreBusy || !restorePassword}>
+                  <span>{restoreBusy ? 'Verificando backup…' : state === 'locked' ? 'Verificar y reemplazar bóveda' : 'Verificar y restaurar'}</span>
+                  {!restoreBusy && <span aria-hidden="true">→</span>}
+                </button>
+                <small>
+                  {state === 'locked'
+                    ? 'La bóveda actual no se modifica hasta que contraseña y registros del backup hayan sido verificados.'
+                    : 'OANIX verificará la contraseña y todos los registros antes de restaurarlos.'}
+                </small>
+              </form>
+            ) : (
+              <small>El archivo se procesa en memoria y no se guarda otra copia dentro de OANIX.</small>
+            )}
+          </div>
         )}
       </div>
     )
