@@ -3,6 +3,7 @@
 Todos los cambios relevantes del proyecto se registran aquí por versión.
 
 ## Unreleased
+- V2 Varios dispositivos — imágenes en autosync E2EE: originales y previews cifrados se transfieren mediante un único bucket privado en fragmentos de 6 MiB con rutas aleatorias, manifiesto cifrado en `sync_records`, verificación SHA-256 por fragmento y limpieza cifrada/reintentable de objetos obsoletos sin crear otro store local.
 - V2 Varios dispositivos — primera fase: autosync E2EE bidireccional para registros no binarios, activado por cambios locales, reconexión, regreso a la app y comprobación periódica; los cambios remotos se aplican al IndexedDB existente y la interfaz se remonta sin recargar ni perder la clave de bóveda en memoria.
 - V2 Varios dispositivos — arranque de dispositivo nuevo: la cuenta guarda en la misma tabla un paquete de bootstrap con la clave de bóveda ya envuelta por la contraseña maestra existente; el dispositivo nuevo inicia sesión, introduce esa misma contraseña, descifra localmente la clave y restaura los sobres E2EE sin enviar la contraseña maestra a Supabase.
 - V2 E2EE validada en uso real: el envío cifrado funcionó correctamente y Supabase confirmó 21 filas activas con identificadores opacos aleatorios y ciphertext, sin exponer contenido privado.

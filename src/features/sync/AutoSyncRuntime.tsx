@@ -3,6 +3,7 @@ import {
   getOnlineAccountSession,
   subscribeOnlineAccountSession,
 } from '../account/accountService'
+import { syncEncryptedBinariesBidirectional } from './binarySyncService'
 import { syncEncryptedVaultBidirectional } from './syncService'
 
 interface AutoSyncRuntimeProps {
@@ -56,25 +57,33 @@ export function AutoSyncRuntime({ onRemoteApplied }: AutoSyncRuntimeProps) {
       }
 
       running = true
-      emitSyncStatus('syncing', 'Sincronizando cambios cifrados…')
+      emitSyncStatus('syncing', 'Sincronizando datos e imágenes cifradas…')
       try {
-        const result = await syncEncryptedVaultBidirectional()
-        if (result.downloaded > 0 || result.deletedLocal > 0) {
+        const records = await syncEncryptedVaultBidirectional()
+        if (records.downloaded > 0 || records.deletedLocal > 0) {
           onRemoteAppliedRef.current()
         }
 
-        if (result.conflicts > 0) {
+        const binaries = await syncEncryptedBinariesBidirectional()
+        if (binaries.downloaded > 0 || binaries.deletedLocal > 0) {
+          onRemoteAppliedRef.current()
+        }
+
+        const conflicts = records.conflicts + binaries.conflicts
+        if (conflicts > 0) {
           emitSyncStatus(
             'conflict',
-            `${result.conflicts} cambio${result.conflicts === 1 ? '' : 's'} requiere${result.conflicts === 1 ? '' : 'n'} resolución antes de sobrescribir datos.`,
+            `${conflicts} cambio${conflicts === 1 ? '' : 's'} requiere${conflicts === 1 ? '' : 'n'} resolución antes de sobrescribir datos.`,
           )
         } else {
-          const changed = result.uploaded + result.downloaded + result.deletedRemote + result.deletedLocal
+          const changed =
+            records.uploaded + records.downloaded + records.deletedRemote + records.deletedLocal +
+            binaries.uploaded + binaries.downloaded + binaries.deletedRemote + binaries.deletedLocal
           emitSyncStatus(
             'synced',
             changed > 0
-              ? `Sincronización E2EE al día · ${changed} cambio${changed === 1 ? '' : 's'} aplicado${changed === 1 ? '' : 's'}.`
-              : 'Sincronización E2EE al día.',
+              ? `Sincronización E2EE al día · ${changed} cambio${changed === 1 ? '' : 's'} aplicado${changed === 1 ? '' : 's'}, incluidas imágenes.`
+              : 'Sincronización E2EE al día · datos e imágenes protegidos.',
           )
         }
       } catch (error) {
