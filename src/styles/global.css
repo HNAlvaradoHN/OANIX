@@ -201,3 +201,26 @@ button:disabled, input:disabled { cursor: not-allowed; opacity: .62; }
   }
   .vault-intro { padding-top: .35rem; }
 }
+
+/* Cross-device typography safety: reserve real descender space for heavy headings. */
+.vault-title {
+  line-height: .98;
+  padding-bottom: .08em;
+}
+.vault-state strong,
+.vault-access__heading strong,
+.vault-card__header strong,
+.vault-restore > span {
+  line-height: 1.28;
+  padding-bottom: .04em;
+}
+.notes-brand strong,
+.note-view__identity strong,
+.note-row__topline strong {
+  line-height: 1.28;
+  padding-bottom: .06em;
+}
+.note-title-field input {
+  line-height: 1.14 !important;
+  padding-block: .06em .16em !important;
+}
