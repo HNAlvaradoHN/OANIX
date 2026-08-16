@@ -13,6 +13,8 @@ import {
   getOnlineAccountSession,
   type OnlineAccountSession,
 } from '../features/account/accountService'
+import { EmailRecoveryPanel } from '../features/recovery/EmailRecoveryPanel'
+import { prepareEmailRecoveryForCurrentVault } from '../features/recovery/recoveryService'
 import {
   ensureRemoteVaultBootstrap,
   hasRemoteSyncedVault,
@@ -240,6 +242,14 @@ export function VaultGate({ renderUnlocked }: VaultGateProps) {
     }
   }, [])
 
+  async function prepareRecoveryWithoutBlockingEntry(masterPassword: string) {
+    try {
+      await prepareEmailRecoveryForCurrentVault(masterPassword)
+    } catch (error) {
+      console.warn('OANIX could not prepare email recovery for this vault.', error)
+    }
+  }
+
   async function handleRestoreSyncedVault(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const canUseCloud = state === 'setup' || state === 'locked'
@@ -262,6 +272,7 @@ export function VaultGate({ renderUnlocked }: VaultGateProps) {
 
           try {
             await ensureRemoteVaultBootstrap()
+            await prepareRecoveryWithoutBlockingEntry(cloudPassword)
             setPassword('')
             setConfirmation('')
             setShowPassword(false)
@@ -287,6 +298,7 @@ export function VaultGate({ renderUnlocked }: VaultGateProps) {
 
       setCloudProgress('Verificando contraseña y registros cifrados…')
       const result = await restoreSyncedVaultToThisDevice(cloudPassword)
+      await prepareRecoveryWithoutBlockingEntry(cloudPassword)
 
       setCloudProgress('Sincronizando imágenes cifradas…')
       let binaryWarning = ''
@@ -476,7 +488,7 @@ export function VaultGate({ renderUnlocked }: VaultGateProps) {
         <span className="vault-access__lock" aria-hidden="true"><span /></span>
         <div>
           <strong>Bóveda sincronizada con Google</strong>
-          <p>Usa la contraseña maestra de tu bóveda. Google identifica la cuenta, pero nunca recibe esta contraseña.</p>
+          <p>Usa la contraseña maestra de tu bóveda. Google identifica la cuenta; la recuperación por correo solo se activa para esta bóveda después de una entrada correcta.</p>
         </div>
       </div>
 
@@ -494,44 +506,66 @@ export function VaultGate({ renderUnlocked }: VaultGateProps) {
           </button>
         </div>
       ) : remoteVaultAvailable === true ? (
-        <form className="vault-form" onSubmit={(event) => void handleRestoreSyncedVault(event)}>
-          <small>Cuenta conectada: {onlineSession.email}</small>
-          <label className="field" htmlFor="cloud-master-password">
-            <span>Contraseña maestra de tu bóveda</span>
-            <div className="password-input">
-              <input
-                id="cloud-master-password"
-                type={showCloudPassword ? 'text' : 'password'}
-                value={cloudPassword}
-                onChange={(event) => setCloudPassword(event.target.value)}
-                autoComplete="current-password"
-                autoCapitalize="none"
-                autoCorrect="off"
-                spellCheck={false}
-                maxLength={256}
-                required
-                disabled={busy || restoreBusy || cloudBusy}
-              />
-              <button
-                className="input-action"
-                type="button"
-                onClick={() => setShowCloudPassword((visible) => !visible)}
-                aria-label={showCloudPassword ? 'Ocultar contraseña de la bóveda' : 'Mostrar contraseña de la bóveda'}
-                disabled={busy || restoreBusy || cloudBusy}
-              >
-                {showCloudPassword ? 'Ocultar' : 'Mostrar'}
-              </button>
-            </div>
-          </label>
+        <>
+          <form className="vault-form" onSubmit={(event) => void handleRestoreSyncedVault(event)}>
+            <small>Cuenta conectada: {onlineSession.email}</small>
+            <label className="field" htmlFor="cloud-master-password">
+              <span>Contraseña maestra de tu bóveda</span>
+              <div className="password-input">
+                <input
+                  id="cloud-master-password"
+                  type={showCloudPassword ? 'text' : 'password'}
+                  value={cloudPassword}
+                  onChange={(event) => setCloudPassword(event.target.value)}
+                  autoComplete="current-password"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  maxLength={256}
+                  required
+                  disabled={busy || restoreBusy || cloudBusy}
+                />
+                <button
+                  className="input-action"
+                  type="button"
+                  onClick={() => setShowCloudPassword((visible) => !visible)}
+                  aria-label={showCloudPassword ? 'Ocultar contraseña de la bóveda' : 'Mostrar contraseña de la bóveda'}
+                  disabled={busy || restoreBusy || cloudBusy}
+                >
+                  {showCloudPassword ? 'Ocultar' : 'Mostrar'}
+                </button>
+              </div>
+            </label>
 
-          {message && <p className="form-message" role="alert">{message}</p>}
+            {message && <p className="form-message" role="alert">{message}</p>}
 
-          <button className="primary-button" type="submit" disabled={busy || restoreBusy || cloudBusy || !cloudPassword}>
-            <span>{cloudBusy ? (cloudProgress || 'Preparando acceso…') : 'Entrar con mi bóveda sincronizada'}</span>
-            {!cloudBusy && <span aria-hidden="true">→</span>}
-          </button>
-          <small>Si esta ya es la misma bóveda del dispositivo, OANIX la abre directamente. Solo propone reemplazar cuando detecta otra bóveda local.</small>
-        </form>
+            <button className="primary-button" type="submit" disabled={busy || restoreBusy || cloudBusy || !cloudPassword}>
+              <span>{cloudBusy ? (cloudProgress || 'Preparando acceso…') : 'Entrar con mi bóveda sincronizada'}</span>
+              {!cloudBusy && <span aria-hidden="true">→</span>}
+            </button>
+            <small>Si esta ya es la misma bóveda del dispositivo, OANIX la abre directamente. Solo propone reemplazar cuando detecta otra bóveda local.</small>
+          </form>
+
+          <EmailRecoveryPanel
+            email={onlineSession.email}
+            disabled={busy || restoreBusy || cloudBusy}
+            onRecovered={(result) => {
+              setPassword('')
+              setConfirmation('')
+              setShowPassword(false)
+              resetCloudDraft()
+              setState('unlocked')
+
+              if (result.binaryWarning) {
+                window.setTimeout(() => {
+                  window.dispatchEvent(new CustomEvent('oanix:sync-status', {
+                    detail: { kind: 'conflict', message: result.binaryWarning, at: new Date().toISOString() },
+                  }))
+                }, 0)
+              }
+            }}
+          />
+        </>
       ) : remoteVaultAvailable === false ? (
         <div className="vault-restore">
           <small>Esta cuenta todavía no tiene una bóveda sincronizada disponible.</small>
