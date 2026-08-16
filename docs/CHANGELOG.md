@@ -3,6 +3,7 @@
 Todos los cambios relevantes del proyecto se registran aquí por versión.
 
 ## Unreleased
+- V2 Recuperación de acceso por correo: OANIX mantiene una sola contraseña maestra permanente para la bóveda sincronizada. `Recuperar por correo` solicita un Email OTP para la cuenta existente, exige una autenticación OTP reciente, obliga a crear y confirmar una nueva contraseña maestra y reenvuelve la MISMA clave de bóveda sin recifrar todas las notas. La recuperación se prepara automáticamente tras una entrada correcta, usa `securityGeneration`, actualiza el bootstrap con versión esperada y restaura registros/binarios. El broker `vault-recovery-broker` está aislado de clientes directos y guarda únicamente una envoltura cifrada; esta modalidad confía explícitamente en el backend durante recuperación y no se describe como zero-knowledge frente al proveedor. Implementación PR #75, pendiente validación real del correo OTP y varios dispositivos en #73.
 - V2 Historial de versiones: las notas conservan snapshots cifrados `note-history` dentro del mismo `encrypted_records`, con hasta 5 puntos por nota y coalescencia automática de 5 minutos. Un nuevo centro responsive `🕘` permite elegir nota, revisar fecha/hora y vista previa en memoria y restaurar con confirmación; antes de abrir espera el guardado visible y antes de restaurar crea un checkpoint `pre-restore` para hacer la operación reversible. El historial viaja mediante el sync E2EE no binario existente, no crea persistencia paralela y bloquea una restauración si faltan originales de imágenes históricas en vez de producir una nota incompleta. Al eliminar permanentemente una nota se elimina también su historial. La retención se redujo de 30 a 5 puntos por decisión del usuario para mantener una lista breve y útil. La implementación se publica para validación funcional real antes de cerrar el bloque.
 - V2 Resolución de conflictos — segunda fase binaria: los conflictos de imágenes originales se integran al centro de revisión con comparación visual descifrada solo en memoria y elección explícita entre la versión sincronizada o local; `Combinar ambas` no aplica a imágenes. Se revalidan fingerprints, versión remota, manifiestos y fragmentos SHA-256 antes de reemplazar; se mantienen fragmentos cifrados de 6 MiB y limpieza reintentable. `image-preview` se trata como dato derivado y regenerable, por lo que sus divergencias se invalidan/reconcilian automáticamente sin pedir una segunda decisión por la misma imagen. La implementación está completa; la deuda de validación real restante está registrada en #69.
 - V2 Resolución de conflictos — primera fase no binaria: nuevo centro de revisión que conserva ambos lados, permite elegir la versión sincronizada o local y combina únicamente notas compatibles colocando primero la versión aceptada remotamente; revalida payload local y versión remota antes de aplicar, conserva bloques estructurados, reutiliza `system.sync-state` cifrado y no crea persistencia paralela.
@@ -12,13 +13,13 @@ Todos los cambios relevantes del proyecto se registran aquí por versión.
 - V2 E2EE validada en uso real: el envío cifrado funcionó correctamente y Supabase confirmó 21 filas activas con identificadores opacos aleatorios y ciphertext, sin exponer contenido privado.
 - V2 Sincronización E2EE — primera fase endurecida: registros no binarios mediante sobres AES-GCM, `record_key` remoto aleatorio generado criptográficamente, reconocimiento de filas existentes solo después de descifrarlas localmente y omisión de escrituras cuando el payload ya está al día.
 - Orden manual de notas refinado: el modo `↕` sustituye las flechas por un asa `⠿` con Pointer Events para sostener, arrastrar y soltar con mouse, lápiz o tacto, conservando `manualOrder` cifrado y el grupo de notas fijadas.
-- V2 Backend de sincronización implementado en Supabase: una sola tabla general `public.sync_records` para sobres cifrados, RLS habilitado, acceso exclusivo del propietario autenticado, privilegios mínimos y timestamp controlado por trigger; el backend no interpreta el contenido privado.
+- V2 Backend de sincronización implementado en Supabase: una sola tabla general `public.sync_records` para sobres cifrados, RLS habilitado, acceso exclusivo del propietario autenticado, privilegios mínimos y timestamp controlado por trigger; el backend no interpreta el contenido privado durante la sincronización normal.
 - Organización de notas: fijar/desfijar desde `⋮` y orden manual mediante modo `↕`, guardando `pinned` y `manualOrder` dentro del registro cifrado existente sin crear stores ni cachés adicionales.
 - Actualizaciones PWA controladas por el usuario: OANIX avisa cuando hay una nueva versión y solo recarga después de pulsar `Actualizar` y esperar un estado de guardado seguro; se reutiliza el Service Worker existente.
 - Acceso con Google en ventana auxiliar: la pestaña principal de OANIX permanece activa durante OAuth para no perder innecesariamente la clave de bóveda que vive solo en memoria.
 - V2 Autenticación UX: el acceso a Cuenta se mueve del botón flotante a la cabecera principal junto al candado, reduciendo toques accidentales sin cambiar el flujo de seguridad ni el modo local.
 - V2 Backend de sincronización: diseño previo documentado con una superficie compacta de registros cifrados, RLS por `auth.uid()`, metadatos mínimos y modelo de amenazas antes de crear tablas o transportar contenido real.
-- V2 Autenticación validada en uso real: acceso con Google, sesión online, cierre de sesión y modo local coexistiendo sin que la cuenta sustituya la contraseña maestra ni desbloquee la bóveda.
+- V2 Autenticación validada en uso real: acceso con Google, sesión online, cierre de sesión y modo local coexistiendo sin que la cuenta sustituya la contraseña maestra ni desbloquee la bóveda durante el acceso normal.
 - V2 Autenticación: modo local explícito sin correo, inicio/cierre de sesión por correo, sesión online persistente y acceso con Google preparado dentro del mismo módulo `features/account/`, sin activar todavía sincronización ni tocar la bóveda local.
 - V2 Cuenta de usuario: cuenta online opcional mediante Supabase, separada de la contraseña maestra y del contenido cifrado local.
 - Funcionamiento offline V1 reforzado: el service worker precachea explícitamente el app shell ejecutable (`js`, `css`, `html` y futuros `wasm`), conserva `index.html` como fallback de navegación y limpia cachés obsoletos sin crear un sistema paralelo de almacenamiento.
@@ -78,20 +79,13 @@ Todos los cambios relevantes del proyecto se registran aquí por versión.
 OANIX utilizará versiones claras y progresivas. No se publicará una versión como cerrada hasta completar y validar su alcance definido en `ROADMAP.md`.
 
 - Pulido responsive transversal: dock sobre teclado virtual, menús de código sin recortes, cierre explícito de opciones de imagen y eliminación de acciones duplicadas.
-
 - Arrastre horizontal de imágenes desbloqueadas con ajuste responsive a izquierda, centro o derecha; alineación estable también en contenedores tipo tablet.
 - Cierre `×` de opciones de imagen sin marco visual, conservando accesibilidad táctil.
-
 - Checklists V1 como bloque nativo cifrado: tareas marcables, edición directa, Enter para añadir tarea, Backspace sobre una tarea vacía para retirarla y diseño responsive por contenedor.
-
 - Corregida la alineación derecha de imágenes compactas cuando una tablet pasa a un contenedor vertical estrecho; al desactivar `float` se restauran márgenes de Izq./Centro/Der. de forma determinista.
-
 - Fichas de contacto privadas V1 como bloque cifrado nativo con nombre, teléfono, correo, organización y notas; inserción desde `＋`, edición directa y layout fluido por contenedor.
-
 - Entradas por día dentro de una misma nota: separador visual con fecha local automática, título opcional por entrada, preparación compatible con notas antiguas y nueva sección cuando cambia el día local del dispositivo.
-
 - Carpetas cifradas V1: creación, renombrado, eliminación sin borrar notas, pestañas de filtro, creación contextual de notas y movimiento entre carpetas desde `⋮`.
-
 - Portada de acceso renovada con composición visual animada, glass UI y movimiento respetuoso de `prefers-reduced-motion`.
 - Las actualizaciones PWA dejan de recargar automáticamente la pantalla de contraseña; una versión nueva espera un reinicio seguro de la aplicación.
 - Carpetas con orden manual cifrado, indicación de desplazamiento horizontal y cierre automático de la nota abierta al cambiar de carpeta.
