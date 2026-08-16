@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
-test('V2 E2EE transport reuses the authenticated client and encrypts opaque records', () => {
+test('V2 E2EE transport reuses auth and keeps remote identifiers cryptographically random', () => {
   const accountSource = readFileSync('src/features/account/accountService.ts', 'utf8')
   const syncSource = readFileSync('src/features/sync/syncService.ts', 'utf8')
 
@@ -13,11 +13,24 @@ test('V2 E2EE transport reuses the authenticated client and encrypts opaque reco
 
   assert.match(syncSource, /encryptVaultJson/)
   assert.match(syncSource, /decryptVaultJson/)
-  assert.match(syncSource, /'SHA-256'/)
-  assert.match(syncSource, /\['OANIX', 'sync-key', 1, userId, localKey\]/)
+  assert.match(syncSource, /newOpaqueRecordKey/)
+  assert.match(syncSource, /crypto\?\.randomUUID|crypto\.randomUUID/)
+  assert.match(syncSource, /getRandomValues\(new Uint8Array\(24\)\)/)
+  assert.doesNotMatch(syncSource, /'SHA-256'|sync-key/)
   assert.match(syncSource, /protocol: SYNC_ENVELOPE_PROTOCOL/)
   assert.match(syncSource, /localKey: record\.key/)
-  assert.match(syncSource, /ciphertext: JSON\.stringify\(encryptedEnvelope\)/)
+  assert.match(syncSource, /return JSON\.stringify\(encryptedEnvelope\)/)
+})
+
+test('existing opaque rows are matched only after local E2EE decryption and unchanged data is not rewritten', () => {
+  const syncSource = readFileSync('src/features/sync/syncService.ts', 'utf8')
+
+  assert.match(syncSource, /select\('record_key, ciphertext, version, deleted'\)/)
+  assert.match(syncSource, /await decryptRemoteEnvelope\(vaultKey, row\)/)
+  assert.match(syncSource, /existingByLocalKey\.set\(envelope\.localKey/)
+  assert.match(syncSource, /encryptedPayloadMatches\(existing\.envelope\.payload, record\.payload\)/)
+  assert.match(syncSource, /unchanged \+= 1/)
+  assert.match(syncSource, /OANIX no los sobrescribirá/)
 })
 
 test('first E2EE transport keeps heavy binaries local and creates no parallel persistence', () => {
@@ -42,8 +55,8 @@ test('first E2EE transport keeps heavy binaries local and creates no parallel pe
 test('E2EE upload updates only mutable remote columns for existing rows', () => {
   const syncSource = readFileSync('src/features/sync/syncService.ts', 'utf8')
 
-  assert.match(syncSource, /\.insert\(\{[\s\S]*user_id: session\.userId,[\s\S]*record_key: prepared\.recordKey/)
-  assert.match(syncSource, /\.update\(\{[\s\S]*ciphertext: prepared\.ciphertext,[\s\S]*version: currentVersion \+ 1,[\s\S]*deleted: false/)
+  assert.match(syncSource, /\.insert\(\{[\s\S]*user_id: session\.userId,[\s\S]*record_key: recordKey/)
+  assert.match(syncSource, /\.update\(\{[\s\S]*ciphertext,[\s\S]*version: currentVersion \+ 1,[\s\S]*deleted: false/)
 
   const updateBlock = syncSource.match(/\.update\(\{([\s\S]*?)\}\)\n\s*\.eq\('user_id'/)?.[1] ?? ''
   assert.doesNotMatch(updateBlock, /user_id|record_key|updated_at/)
