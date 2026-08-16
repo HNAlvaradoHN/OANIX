@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
-test('V2 account remains isolated from the local master password and sync payloads', () => {
+test('V2 account auth remains isolated from the local master password while sync stays a separate service', () => {
   const service = readFileSync('src/features/account/accountService.ts', 'utf8')
   const panel = readFileSync('src/features/account/AccountPanel.tsx', 'utf8')
   const app = readFileSync('src/app/App.tsx', 'utf8')
@@ -21,6 +21,7 @@ test('V2 account remains isolated from the local master password and sync payloa
   assert.match(service, /supabase\.auth\.signOut/)
   assert.match(service, /persistSession: true/)
   assert.match(service, /SUPABASE_PUBLISHABLE_KEY/)
+  assert.match(service, /getOnlineDataClient/)
   assert.doesNotMatch(service, /vaultService|unlockLocalVault|createMasterPassword|encrypted_records/)
   assert.doesNotMatch(service, /from ['"][^'"]*\/sync(?:\/|['"])/)
   assert.doesNotMatch(service, /syncService|syncPayload|synchronizeRecords/)
@@ -35,7 +36,9 @@ test('V2 account remains isolated from the local master password and sync payloa
   assert.match(panel, /Seguir en modo local/)
   assert.match(panel, /Cerrar sesión online/)
   assert.match(panel, /(separada de|independiente de) tu contraseña maestra/)
-  assert.match(panel, /Sincronización todavía desactivada/)
+  assert.match(panel, /Enviar registros cifrados/)
+  assert.match(panel, /E2EE en validación/)
+  assert.match(panel, /Las imágenes\/binarios todavía no se transportan/)
 
   assert.match(app, /createPortal/)
   assert.match(app, /\.notes-header__actions/)
