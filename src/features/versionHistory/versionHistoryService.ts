@@ -6,13 +6,21 @@ import {
 import { hasEncryptedImage } from '../images/imageService'
 import type { NoteRecord } from '../notes/noteTypes'
 import {
+  NOTE_HISTORY_AUTOMATIC_WINDOW_MS,
+  NOTE_HISTORY_MAX_SNAPSHOTS_PER_NOTE,
+  shouldCaptureAutomaticSnapshot,
+} from './versionHistoryPolicy'
+import {
   NOTE_HISTORY_SCHEMA_VERSION,
   type NoteHistoryReason,
   type NoteHistorySnapshot,
 } from './versionHistoryTypes'
 
-export const NOTE_HISTORY_AUTOMATIC_WINDOW_MS = 5 * 60 * 1000
-export const NOTE_HISTORY_MAX_SNAPSHOTS_PER_NOTE = 30
+export {
+  NOTE_HISTORY_AUTOMATIC_WINDOW_MS,
+  NOTE_HISTORY_MAX_SNAPSHOTS_PER_NOTE,
+  shouldCaptureAutomaticSnapshot,
+} from './versionHistoryPolicy'
 
 function createSnapshotId(): string {
   if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID()
@@ -38,20 +46,6 @@ export function sortNoteHistoryNewestFirst(snapshots: NoteHistorySnapshot[]): No
     const time = right.capturedAt.localeCompare(left.capturedAt)
     return time || right.id.localeCompare(left.id)
   })
-}
-
-export function shouldCaptureAutomaticSnapshot(
-  currentNote: NoteRecord,
-  latest: NoteHistorySnapshot | null,
-  nowMs: number,
-): boolean {
-  if (!latest) return true
-  if (sameNoteState(latest.note, currentNote)) return false
-  if (latest.reason !== 'automatic') return true
-
-  const latestMs = Date.parse(latest.capturedAt)
-  if (!Number.isFinite(latestMs)) return true
-  return nowMs - latestMs >= NOTE_HISTORY_AUTOMATIC_WINDOW_MS
 }
 
 export async function listNoteVersionHistory(noteId: string): Promise<NoteHistorySnapshot[]> {
