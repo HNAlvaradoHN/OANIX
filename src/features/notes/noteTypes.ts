@@ -156,10 +156,29 @@ export interface NoteRecord {
   updatedAt: string
   folderId?: string | null
   tagIds?: string[]
+  pinned?: boolean
+  manualOrder?: number
   content: {
     format: 'blocks-v1'
     blocks: StoredNoteBlock[]
   }
+}
+
+export function compareNotesForList(left: NoteRecord, right: NoteRecord): number {
+  const leftPinned = left.pinned === true
+  const rightPinned = right.pinned === true
+  if (leftPinned !== rightPinned) return leftPinned ? -1 : 1
+
+  const leftHasManualOrder = Number.isSafeInteger(left.manualOrder)
+  const rightHasManualOrder = Number.isSafeInteger(right.manualOrder)
+
+  if (leftHasManualOrder && rightHasManualOrder && left.manualOrder !== right.manualOrder) {
+    return (right.manualOrder ?? 0) - (left.manualOrder ?? 0)
+  }
+  if (leftHasManualOrder !== rightHasManualOrder) return leftHasManualOrder ? -1 : 1
+
+  const modifiedComparison = right.updatedAt.localeCompare(left.updatedAt)
+  return modifiedComparison || left.id.localeCompare(right.id)
 }
 
 export function normalizeNoteLink(value: string): string | null {
@@ -319,6 +338,9 @@ export function isNoteRecord(value: unknown): value is NoteRecord {
       (Array.isArray(note.tagIds) &&
         note.tagIds.every((tagId) => typeof tagId === 'string' && tagId.length > 0) &&
         new Set(note.tagIds).size === note.tagIds.length)) &&
+    (note.pinned === undefined || typeof note.pinned === 'boolean') &&
+    (note.manualOrder === undefined ||
+      (Number.isSafeInteger(note.manualOrder) && (note.manualOrder ?? -1) >= 0)) &&
     !!note.content &&
     note.content.format === 'blocks-v1' &&
     Array.isArray(note.content.blocks) &&
