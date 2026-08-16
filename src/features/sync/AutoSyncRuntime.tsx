@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import {
   getOnlineAccountSession,
+  getOnlineDataClient,
   subscribeOnlineAccountSession,
 } from '../account/accountService'
 import { syncEncryptedBinariesBidirectional } from './binarySyncService'
@@ -31,11 +32,41 @@ export function AutoSyncRuntime({ onRemoteApplied }: AutoSyncRuntimeProps) {
     let running = false
     let runAgain = false
     let timeoutId = 0
+    let realtimeUserId: string | null = null
+    let cleanupRealtime = () => undefined
 
-    const schedule = (delay = 650) => {
+    const schedule = (delay = 250) => {
       if (disposed) return
       window.clearTimeout(timeoutId)
       timeoutId = window.setTimeout(() => void runSync(), delay)
+    }
+
+    const bindRealtime = (userId: string | null) => {
+      if (realtimeUserId === userId) return
+
+      cleanupRealtime()
+      cleanupRealtime = () => undefined
+      realtimeUserId = userId
+      if (!userId) return
+
+      const client = getOnlineDataClient()
+      const channel = client
+        .channel(`oanix-sync-${userId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'sync_records',
+            filter: `user_id=eq.${userId}`,
+          },
+          () => schedule(60),
+        )
+        .subscribe()
+
+      cleanupRealtime = () => {
+        void client.removeChannel(channel)
+      }
     }
 
     const runSync = async () => {
@@ -51,6 +82,7 @@ export function AutoSyncRuntime({ onRemoteApplied }: AutoSyncRuntimeProps) {
       }
 
       const session = await getOnlineAccountSession().catch(() => null)
+      bindRealtime(session?.userId ?? null)
       if (!session) {
         emitSyncStatus('idle', 'Modo local. Conecta una cuenta para sincronizar automáticamente entre dispositivos.')
         return
@@ -95,7 +127,7 @@ export function AutoSyncRuntime({ onRemoteApplied }: AutoSyncRuntimeProps) {
         running = false
         if (runAgain && !disposed) {
           runAgain = false
-          schedule(250)
+          schedule(120)
         }
       }
     }
@@ -111,7 +143,8 @@ export function AutoSyncRuntime({ onRemoteApplied }: AutoSyncRuntimeProps) {
     }
 
     const unsubscribe = subscribeOnlineAccountSession((session) => {
-      if (session) schedule(150)
+      bindRealtime(session?.userId ?? null)
+      if (session) schedule(80)
       else emitSyncStatus('idle', 'Modo local. Conecta una cuenta para sincronizar automáticamente entre dispositivos.')
     })
 
@@ -122,12 +155,13 @@ export function AutoSyncRuntime({ onRemoteApplied }: AutoSyncRuntimeProps) {
       if (document.visibilityState === 'visible') schedule(0)
     }, 30_000)
 
-    schedule(350)
+    schedule(200)
 
     return () => {
       disposed = true
       window.clearTimeout(timeoutId)
       window.clearInterval(intervalId)
+      cleanupRealtime()
       unsubscribe()
       window.removeEventListener('oanix:local-data-changed', handleLocalChange)
       window.removeEventListener('online', handleOnline)
