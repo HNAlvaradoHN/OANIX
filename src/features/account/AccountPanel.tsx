@@ -113,6 +113,7 @@ export function AccountPanel({ onClose }: AccountPanelProps) {
       await continueWithGoogle()
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'No se pudo iniciar con Google.')
+    } finally {
       setBusyAction(null)
     }
   }
