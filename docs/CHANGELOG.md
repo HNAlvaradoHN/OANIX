@@ -3,7 +3,7 @@
 Todos los cambios relevantes del proyecto se registran aquí por versión.
 
 ## Unreleased
-- Backup/exportación cifrada V1: archivo `.oanixbackup` versionado con metadatos de protección y todos los registros ya cifrados; restauración segura desde una bóveda nueva usando la contraseña maestra original.
+- Backup/exportación/restauración cifrada V1: archivo `.oanixbackup` versionado con metadatos de protección y todos los registros ya cifrados; antes de restaurar OANIX verifica la contraseña maestra y autentica secuencialmente cada registro AES-GCM, y solo después reemplaza la bóveda en una transacción. El archivo se procesa en memoria sin crear copias persistentes auxiliares.
 - Búsqueda local global: ignora la carpeta/etiqueta activa mientras se busca y muestra carpeta, ubicación, fragmento y cantidad de coincidencias antes de abrir una nota.
 - Búsqueda local V1 sobre contenido ya descifrado en memoria, insensible a mayúsculas/acentos, con términos múltiples y combinable con Carpetas + Etiquetas, sin persistir un índice en texto plano.
 - Etiquetas V1 cifradas: CRUD, asignación múltiple por nota, filtro combinado con carpetas, chips en la nota y eliminación sin borrar contenido.
