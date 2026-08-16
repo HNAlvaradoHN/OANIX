@@ -27,88 +27,34 @@ jobs:
                   raise SystemExit(f'pattern not found in {path}: {old[:80]!r}')
               p.write_text(text.replace(old, new, 1))
 
-          # NotesWorkspace: import + state + export handler + menu action.
-          replace_once(
-              'src/features/notes/NotesWorkspace.tsx',
-              "import { deleteEncryptedImage } from '../images/imageService'\n",
-              "import { deleteEncryptedImage } from '../images/imageService'\nimport { downloadEncryptedBackup } from '../backup/backupService'\n",
-          )
-          replace_once(
-              'src/features/notes/NotesWorkspace.tsx',
-              "  const [searchQuery, setSearchQuery] = useState('')\n  const [selectedId, setSelectedId] = useState<string | null>(null)\n",
-              "  const [searchQuery, setSearchQuery] = useState('')\n  const [backupBusy, setBackupBusy] = useState(false)\n  const [selectedId, setSelectedId] = useState<string | null>(null)\n",
-          )
-          replace_once(
-              'src/features/notes/NotesWorkspace.tsx',
-              "  async function handleLockWorkspace() {\n    if (!(await flushPendingContent())) return\n    await finalizeRemovedImages()\n    onLock()\n  }\n\n  async function handleToggleSearch() {\n",
-              "  async function handleLockWorkspace() {\n    if (!(await flushPendingContent())) return\n    await finalizeRemovedImages()\n    onLock()\n  }\n\n  async function handleExportBackup() {\n    if (backupBusy) return\n    setWorkspaceMenuOpen(false)\n    if (!(await flushPendingContent())) return\n    await finalizeRemovedImages()\n\n    setBackupBusy(true)\n    setError('')\n    try {\n      const result = await downloadEncryptedBackup()\n      window.alert(`Backup cifrado creado: ${result.fileName}\\n\\nIncluye ${result.recordCount} registros cifrados. Guárdalo junto con tu contraseña maestra.`)\n    } catch (backupError) {\n      setError(backupError instanceof Error ? backupError.message : 'No se pudo crear el backup cifrado de OANIX.')\n    } finally {\n      setBackupBusy(false)\n    }\n  }\n\n  async function handleToggleSearch() {\n",
-          )
-          replace_once(
-              'src/features/notes/NotesWorkspace.tsx',
-              "                    <span aria-hidden=\"true\">🏷</span> Administrar etiquetas\n                  </button>\n                  <button\n                    type=\"button\"\n                    role=\"menuitem\"\n                    onClick={() => {\n                      setWorkspaceMenuOpen(false)\n                      window.alert('OANIX V1 · bóveda local cifrada · offline-first')\n                    }}\n",
-              "                    <span aria-hidden=\"true\">🏷</span> Administrar etiquetas\n                  </button>\n                  <button\n                    type=\"button\"\n                    role=\"menuitem\"\n                    disabled={backupBusy}\n                    onClick={() => void handleExportBackup()}\n                  >\n                    <span aria-hidden=\"true\">🛡</span> {backupBusy ? 'Creando backup…' : 'Exportar backup cifrado'}\n                  </button>\n                  <button\n                    type=\"button\"\n                    role=\"menuitem\"\n                    onClick={() => {\n                      setWorkspaceMenuOpen(false)\n                      window.alert('OANIX V1 · bóveda local cifrada · offline-first')\n                    }}\n",
-          )
+          replace_once('src/features/notes/NotesWorkspace.tsx', "import { deleteEncryptedImage } from '../images/imageService'\n", "import { deleteEncryptedImage } from '../images/imageService'\nimport { downloadEncryptedBackup } from '../backup/backupService'\n")
+          replace_once('src/features/notes/NotesWorkspace.tsx', "  const [searchQuery, setSearchQuery] = useState('')\n  const [selectedId, setSelectedId] = useState<string | null>(null)\n", "  const [searchQuery, setSearchQuery] = useState('')\n  const [backupBusy, setBackupBusy] = useState(false)\n  const [selectedId, setSelectedId] = useState<string | null>(null)\n")
+          replace_once('src/features/notes/NotesWorkspace.tsx', "  async function handleLockWorkspace() {\n    if (!(await flushPendingContent())) return\n    await finalizeRemovedImages()\n    onLock()\n  }\n\n  async function handleToggleSearch() {\n", "  async function handleLockWorkspace() {\n    if (!(await flushPendingContent())) return\n    await finalizeRemovedImages()\n    onLock()\n  }\n\n  async function handleExportBackup() {\n    if (backupBusy) return\n    setWorkspaceMenuOpen(false)\n    if (!(await flushPendingContent())) return\n    await finalizeRemovedImages()\n\n    setBackupBusy(true)\n    setError('')\n    try {\n      const result = await downloadEncryptedBackup()\n      window.alert(`Backup cifrado creado: ${result.fileName}\\n\\nIncluye ${result.recordCount} registros cifrados. Guárdalo junto con tu contraseña maestra.`)\n    } catch (backupError) {\n      setError(backupError instanceof Error ? backupError.message : 'No se pudo crear el backup cifrado de OANIX.')\n    } finally {\n      setBackupBusy(false)\n    }\n  }\n\n  async function handleToggleSearch() {\n")
+          replace_once('src/features/notes/NotesWorkspace.tsx', "                    <span aria-hidden=\"true\">🏷</span> Administrar etiquetas\n                  </button>\n                  <button\n                    type=\"button\"\n                    role=\"menuitem\"\n                    onClick={() => {\n                      setWorkspaceMenuOpen(false)\n                      window.alert('OANIX V1 · bóveda local cifrada · offline-first')\n                    }}\n", "                    <span aria-hidden=\"true\">🏷</span> Administrar etiquetas\n                  </button>\n                  <button\n                    type=\"button\"\n                    role=\"menuitem\"\n                    disabled={backupBusy}\n                    onClick={() => void handleExportBackup()}\n                  >\n                    <span aria-hidden=\"true\">🛡</span> {backupBusy ? 'Creando backup…' : 'Exportar backup cifrado'}\n                  </button>\n                  <button\n                    type=\"button\"\n                    role=\"menuitem\"\n                    onClick={() => {\n                      setWorkspaceMenuOpen(false)\n                      window.alert('OANIX V1 · bóveda local cifrada · offline-first')\n                    }}\n")
 
-          # VaultGate: restore only into an empty/setup vault.
-          replace_once(
-              'src/app/VaultGate.tsx',
-              "import { useEffect, useState, type FormEvent, type ReactNode } from 'react'\n",
-              "import { useEffect, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react'\n",
-          )
-          replace_once(
-              'src/app/VaultGate.tsx',
-              "} from '../security/vault/vaultService'\n",
-              "} from '../security/vault/vaultService'\nimport { restoreEncryptedBackupFromFile } from '../features/backup/backupService'\n",
-          )
-          replace_once(
-              'src/app/VaultGate.tsx',
-              "  const [busy, setBusy] = useState(false)\n  const [showPassword, setShowPassword] = useState(false)\n",
-              "  const [busy, setBusy] = useState(false)\n  const [restoreBusy, setRestoreBusy] = useState(false)\n  const [showPassword, setShowPassword] = useState(false)\n",
-          )
-          replace_once(
-              'src/app/VaultGate.tsx',
-              "  async function handleUnlock(event: FormEvent<HTMLFormElement>) {\n    event.preventDefault()\n    setMessage('')\n    setBusy(true)\n    const result = await unlockLocalVault(password)\n\n    if (result.status === 'error') {\n      setBusy(false)\n      setMessage(result.message)\n      return\n    }\n\n    await verifyUnlockedVault(false)\n    setBusy(false)\n  }\n\n  if (state === 'unlocked') {\n",
-              "  async function handleUnlock(event: FormEvent<HTMLFormElement>) {\n    event.preventDefault()\n    setMessage('')\n    setBusy(true)\n    const result = await unlockLocalVault(password)\n\n    if (result.status === 'error') {\n      setBusy(false)\n      setMessage(result.message)\n      return\n    }\n\n    await verifyUnlockedVault(false)\n    setBusy(false)\n  }\n\n  async function handleRestoreBackup(event: ChangeEvent<HTMLInputElement>) {\n    const input = event.currentTarget\n    const file = input.files?.[0] ?? null\n    input.value = ''\n    if (!file || state !== 'setup' || restoreBusy) return\n\n    setRestoreBusy(true)\n    setMessage('')\n    try {\n      const result = await restoreEncryptedBackupFromFile(file)\n      lockLocalVault()\n      setPassword('')\n      setConfirmation('')\n      setShowPassword(false)\n      setState('locked')\n      setMessage(`Backup restaurado (${result.recordCount} registros cifrados). Ingresa la contraseña maestra original del backup.`)\n    } catch (restoreError) {\n      setMessage(restoreError instanceof Error ? restoreError.message : 'No se pudo restaurar el backup cifrado.')\n    } finally {\n      setRestoreBusy(false)\n    }\n  }\n\n  if (state === 'unlocked') {\n",
-          )
-          replace_once(
-              'src/app/VaultGate.tsx',
-              "          <button className=\"primary-button\" type=\"submit\" disabled={busy}>\n",
-              "          <button className=\"primary-button\" type=\"submit\" disabled={busy || restoreBusy}>\n",
-          )
-          replace_once(
-              'src/app/VaultGate.tsx',
-              "        {isSetup && (\n          <p className=\"security-note\">\n            OANIX no guarda tu contraseña. En V1 no existe recuperación si la olvidas.\n          </p>\n        )}\n",
-              "        {isSetup && (\n          <>\n            <p className=\"security-note\">\n              OANIX no guarda tu contraseña. En V1 no existe recuperación si la olvidas.\n            </p>\n            <div className=\"vault-restore\">\n              <span>¿Ya tienes una bóveda de OANIX?</span>\n              <label className={`vault-restore__button${restoreBusy ? ' vault-restore__button--busy' : ''}`}>\n                <span aria-hidden=\"true\">↥</span>\n                <span>{restoreBusy ? 'Restaurando backup…' : 'Restaurar backup cifrado'}</span>\n                <input\n                  type=\"file\"\n                  accept=\".oanixbackup,application/json,application/vnd.oanix.encrypted-backup+json\"\n                  onChange={(event) => void handleRestoreBackup(event)}\n                  disabled={busy || restoreBusy}\n                />\n              </label>\n              <small>Usarás la misma contraseña maestra con la que se creó esa copia.</small>\n            </div>\n          </>\n        )}\n",
-          )
+          replace_once('src/app/VaultGate.tsx', "import { useEffect, useState, type FormEvent, type ReactNode } from 'react'\n", "import { useEffect, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react'\n")
+          replace_once('src/app/VaultGate.tsx', "} from '../security/vault/vaultService'\n", "} from '../security/vault/vaultService'\nimport { restoreEncryptedBackupFromFile } from '../features/backup/backupService'\n")
+          replace_once('src/app/VaultGate.tsx', "  const [busy, setBusy] = useState(false)\n  const [showPassword, setShowPassword] = useState(false)\n", "  const [busy, setBusy] = useState(false)\n  const [restoreBusy, setRestoreBusy] = useState(false)\n  const [showPassword, setShowPassword] = useState(false)\n")
+          replace_once('src/app/VaultGate.tsx', "  async function handleUnlock(event: FormEvent<HTMLFormElement>) {\n    event.preventDefault()\n    setMessage('')\n    setBusy(true)\n    const result = await unlockLocalVault(password)\n\n    if (result.status === 'error') {\n      setBusy(false)\n      setMessage(result.message)\n      return\n    }\n\n    await verifyUnlockedVault(false)\n    setBusy(false)\n  }\n\n  if (state === 'unlocked') {\n", "  async function handleUnlock(event: FormEvent<HTMLFormElement>) {\n    event.preventDefault()\n    setMessage('')\n    setBusy(true)\n    const result = await unlockLocalVault(password)\n\n    if (result.status === 'error') {\n      setBusy(false)\n      setMessage(result.message)\n      return\n    }\n\n    await verifyUnlockedVault(false)\n    setBusy(false)\n  }\n\n  async function handleRestoreBackup(event: ChangeEvent<HTMLInputElement>) {\n    const input = event.currentTarget\n    const file = input.files?.[0] ?? null\n    input.value = ''\n    if (!file || state !== 'setup' || restoreBusy) return\n\n    setRestoreBusy(true)\n    setMessage('')\n    try {\n      const result = await restoreEncryptedBackupFromFile(file)\n      lockLocalVault()\n      setPassword('')\n      setConfirmation('')\n      setShowPassword(false)\n      setState('locked')\n      setMessage(`Backup restaurado (${result.recordCount} registros cifrados). Ingresa la contraseña maestra original del backup.`)\n    } catch (restoreError) {\n      setMessage(restoreError instanceof Error ? restoreError.message : 'No se pudo restaurar el backup cifrado.')\n    } finally {\n      setRestoreBusy(false)\n    }\n  }\n\n  if (state === 'unlocked') {\n")
+          replace_once('src/app/VaultGate.tsx', "          <button className=\"primary-button\" type=\"submit\" disabled={busy}>\n", "          <button className=\"primary-button\" type=\"submit\" disabled={busy || restoreBusy}>\n")
+          replace_once('src/app/VaultGate.tsx', "        {isSetup && (\n          <p className=\"security-note\">\n            OANIX no guarda tu contraseña. En V1 no existe recuperación si la olvidas.\n          </p>\n        )}\n", "        {isSetup && (\n          <>\n            <p className=\"security-note\">\n              OANIX no guarda tu contraseña. En V1 no existe recuperación si la olvidas.\n            </p>\n            <div className=\"vault-restore\">\n              <span>¿Ya tienes una bóveda de OANIX?</span>\n              <label className={`vault-restore__button${restoreBusy ? ' vault-restore__button--busy' : ''}`}>\n                <span aria-hidden=\"true\">↥</span>\n                <span>{restoreBusy ? 'Restaurando backup…' : 'Restaurar backup cifrado'}</span>\n                <input type=\"file\" accept=\".oanixbackup,application/json,application/vnd.oanix.encrypted-backup+json\" onChange={(event) => void handleRestoreBackup(event)} disabled={busy || restoreBusy} />\n              </label>\n              <small>Usarás la misma contraseña maestra con la que se creó esa copia.</small>\n            </div>\n          </>\n        )}\n")
 
-          # Styling is fluid and shared across viewport sizes.
-          css = Path('src/app/global.css')
+          css = Path('src/styles/global.css')
           text = css.read_text()
           marker = '/* OANIX encrypted backup restore */'
           if marker not in text:
-              text += '''\n\n/* OANIX encrypted backup restore */\n.vault-restore {\n  display: grid;\n  gap: 0.55rem;\n  margin-top: 1rem;\n  padding-top: 1rem;\n  border-top: 1px solid rgba(148, 163, 184, 0.2);\n}\n\n.vault-restore > span {\n  font-size: 0.82rem;\n  font-weight: 700;\n}\n\n.vault-restore__button {\n  min-height: 2.8rem;\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  gap: 0.55rem;\n  width: 100%;\n  padding: 0.72rem 1rem;\n  border: 1px solid rgba(148, 163, 184, 0.28);\n  border-radius: 0.9rem;\n  background: rgba(15, 23, 42, 0.42);\n  color: inherit;\n  cursor: pointer;\n  font-weight: 750;\n  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;\n}\n\n.vault-restore__button:hover {\n  transform: translateY(-1px);\n  border-color: rgba(96, 165, 250, 0.65);\n  background: rgba(30, 64, 175, 0.16);\n}\n\n.vault-restore__button--busy {\n  opacity: 0.7;\n  cursor: wait;\n}\n\n.vault-restore__button input {\n  position: absolute;\n  inline-size: 1px;\n  block-size: 1px;\n  opacity: 0;\n  pointer-events: none;\n}\n\n.vault-restore small {\n  color: var(--muted, #94a3b8);\n  line-height: 1.45;\n}\n'''
+              text += '''\n\n/* OANIX encrypted backup restore */\n.vault-restore { display: grid; gap: 0.55rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(148, 163, 184, 0.2); }\n.vault-restore > span { font-size: 0.82rem; font-weight: 700; }\n.vault-restore__button { min-height: 2.8rem; display: inline-flex; align-items: center; justify-content: center; gap: 0.55rem; width: 100%; padding: 0.72rem 1rem; border: 1px solid rgba(148, 163, 184, 0.28); border-radius: 0.9rem; background: rgba(15, 23, 42, 0.42); color: inherit; cursor: pointer; font-weight: 750; transition: transform 160ms ease, border-color 160ms ease, background 160ms ease; }\n.vault-restore__button:hover { transform: translateY(-1px); border-color: rgba(96, 165, 250, 0.65); background: rgba(30, 64, 175, 0.16); }\n.vault-restore__button--busy { opacity: 0.7; cursor: wait; }\n.vault-restore__button input { position: absolute; inline-size: 1px; block-size: 1px; opacity: 0; pointer-events: none; }\n.vault-restore small { color: var(--muted, #94a3b8); line-height: 1.45; }\n'''
               css.write_text(text)
 
-          # Roadmap, security and changelog.
-          replace_once(
-              'docs/ROADMAP.md',
-              '- [ ] Backup/exportación cifrada\n- [ ] Funcionamiento offline\n',
-              '- [x] Backup/exportación cifrada\n- [ ] Funcionamiento offline\n',
-          )
-          replace_once(
-              'docs/ROADMAP.md',
-              '**Siguiente bloque de trabajo:** Backup/exportación cifrada.',
-              '**Siguiente bloque de trabajo:** Funcionamiento offline.',
-          )
+          replace_once('docs/ROADMAP.md', '- [ ] Backup/exportación cifrada\n- [ ] Funcionamiento offline\n', '- [x] Backup/exportación cifrada\n- [ ] Funcionamiento offline\n')
+          replace_once('docs/ROADMAP.md', '**Siguiente bloque de trabajo:** Backup/exportación cifrada.', '**Siguiente bloque de trabajo:** Funcionamiento offline.')
           security = Path('docs/SECURITY.md')
           security_text = security.read_text()
           anchor = '### Comprobación de almacenamiento cifrado\n'
           backup_section = '''### Backup cifrado V1\n\nEl backup V1 no exporta una representación descifrada de notas, imágenes, carpetas o etiquetas. OANIX copia los metadatos de protección de la bóveda y los registros que ya están cifrados en IndexedDB dentro de un contenedor versionado `oanix-encrypted-backup` con extensión `.oanixbackup`.\n\nEl archivo conserva el material necesario para volver a derivar y desenvolver la misma clave de bóveda, por lo que requiere la contraseña maestra original para abrirse después de restaurarlo. La contraseña y la clave de bóveda en texto plano no forman parte del archivo.\n\nLa restauración de V1 se ofrece únicamente cuando OANIX está preparando una bóveda local nueva, evitando sobrescribir silenciosamente una bóveda existente. El reemplazo de metadatos y registros se realiza en una sola transacción de IndexedDB.\n\n'''
           if backup_section not in security_text:
-              if anchor not in security_text:
-                  raise SystemExit('security anchor not found')
+              if anchor not in security_text: raise SystemExit('security anchor not found')
               security.write_text(security_text.replace(anchor, backup_section + anchor, 1))
-
           changelog = Path('docs/CHANGELOG.md')
           changelog_text = changelog.read_text()
           line = '- Backup/exportación cifrada V1: archivo `.oanixbackup` versionado con metadatos de protección y todos los registros ya cifrados; restauración segura desde una bóveda nueva usando la contraseña maestra original.\n'
