@@ -30,10 +30,11 @@ Su propósito es permitir que otra IA o colaborador continúe OANIX sin reconstr
 - Protección contra sobrescritura silenciosa cuando hay divergencia concurrente.
 - Resolución de conflictos no binarios integrada mediante PR #66.
 - Resolución de conflictos de imágenes originales y previews derivados integrada mediante PR #67.
+- Historial cifrado de versiones integrado mediante PR #71.
 
 **Resolución de conflictos:** implementación completa. La detección de divergencia fue validada en dos dispositivos; las pruebas reales restantes quedaron registradas como deuda visible en issue #69 por decisión explícita del usuario de continuar sin frenar el desarrollo.
 
-**Bloque oficial activo:** Historial de versiones — `IN_PROGRESS` en PR #71.
+**Bloque oficial activo:** Historial de versiones — implementación publicada; validación funcional real pendiente en issue #70.
 
 **Después del bloque actual:** Recuperación de acceso.
 
@@ -149,7 +150,7 @@ Esta documentación no forma parte de la lógica de ejecución de OANIX y no deb
 
 ### DEC-2026-08-16-004 — Historial de versiones cifrado
 
-**Estado:** IN_PROGRESS
+**Estado:** IMPLEMENTED / VALIDATION_DEBT
 
 **Versión / bloque:** V2 — Historial de versiones
 
@@ -160,7 +161,7 @@ Esta documentación no forma parte de la lógica de ejecución de OANIX y no deb
 - Los snapshots se guardan bajo el tipo cifrado `note-history` dentro del mismo `encrypted_records` existente.
 - Cada snapshot conserva una copia completa de `NoteRecord`; no se modifica el schema `NoteRecord.version = 1` solo para añadir historial.
 - Los snapshots son elegibles para el autosync E2EE no binario existente, por lo que el historial puede viajar con la bóveda sincronizada.
-- Retención: máximo 30 snapshots por nota.
+- Retención actual: máximo 5 snapshots por nota. La implementación inicial se publicó con 30; el usuario decidió reducirla posteriormente a 5 para mantener la lista corta y útil. Al crear un sexto punto, se elimina el más antiguo y permanecen los cinco más recientes.
 - Coalescencia automática: una ventana de 5 minutos evita crear una versión por cada autoguardado/tecla.
 - Solo se crea snapshot cuando existe un cambio real.
 - Todas las mutaciones normales de una nota pasan por la captura centralizada anterior a la modificación.
@@ -180,8 +181,8 @@ Una imagen que el usuario eliminó de la nota puede haber sido eliminada tambié
 
 **Estado de validación:**
 
-- Pruebas automáticas, build y auditoría offline deben quedar verdes antes de integrar PR #71.
-- Después de publicar, falta prueba funcional real: editar una nota, generar al menos dos snapshots, abrir el centro, revisar una versión, restaurarla y confirmar que el checkpoint pre-restauración permite volver al estado previo.
+- PR #71 fue integrado y publicado después de pasar pruebas automáticas, build y auditoría offline.
+- Falta prueba funcional real registrada en #70: editar una nota, generar al menos dos snapshots, abrir el centro, revisar una versión, restaurarla y confirmar que el checkpoint pre-restauración permite volver al estado previo.
 
 ---
 
