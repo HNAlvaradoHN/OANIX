@@ -41,6 +41,23 @@ function parseRecordContext(key: string): { recordType: string; recordId: string
   return { recordType: parsed[0], recordId: parsed[1] }
 }
 
+export async function validateEncryptedBackupRecords(
+  snapshot: LocalVaultSnapshot,
+  vaultKey: CryptoKey,
+): Promise<void> {
+  for (const record of snapshot.records) {
+    const context = parseRecordContext(record.key)
+    let plaintext: Uint8Array | null = null
+    try {
+      plaintext = await decryptVaultBytes(vaultKey, record.payload, context)
+    } catch {
+      throw new Error('El backup está dañado: no se pudo verificar uno de sus registros cifrados.')
+    } finally {
+      plaintext?.fill(0)
+    }
+  }
+}
+
 export async function validateEncryptedBackupSnapshot(
   snapshot: LocalVaultSnapshot,
   password: string,
@@ -56,18 +73,7 @@ export async function validateEncryptedBackupSnapshot(
     throw new Error('La contraseña del backup no es correcta o la protección del archivo está dañada.')
   }
 
-  for (const record of snapshot.records) {
-    const context = parseRecordContext(record.key)
-    let plaintext: Uint8Array | null = null
-    try {
-      plaintext = await decryptVaultBytes(vaultKey, record.payload, context)
-    } catch {
-      throw new Error('El backup está dañado: no se pudo verificar uno de sus registros cifrados.')
-    } finally {
-      plaintext?.fill(0)
-    }
-  }
-
+  await validateEncryptedBackupRecords(snapshot, vaultKey)
   return vaultKey
 }
 
