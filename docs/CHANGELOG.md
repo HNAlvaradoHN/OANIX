@@ -3,7 +3,7 @@
 Todos los cambios relevantes del proyecto se registran aquí por versión.
 
 ## Unreleased
-- V2 Sincronización E2EE — primera fase: envío manual de registros no binarios mediante sobres AES-GCM, claves remotas opacas SHA-256, verificación por descifrado de la fila devuelta y reutilización del mismo cliente Supabase; imágenes/binarios, descarga en otro dispositivo y conflictos permanecen fuera de este bloque.
+- V2 Sincronización E2EE — primera fase endurecida: envío manual de registros no binarios mediante sobres AES-GCM, `record_key` remoto aleatorio generado criptográficamente, reconocimiento de filas existentes solo después de descifrarlas localmente y omisión de escrituras cuando el payload ya está al día; imágenes/binarios, descarga en otro dispositivo y conflictos permanecen fuera de este bloque.
 - Orden manual de notas refinado: el modo `↕` sustituye las flechas por un asa `⠿` con Pointer Events para sostener, arrastrar y soltar con mouse, lápiz o tacto, conservando `manualOrder` cifrado y el grupo de notas fijadas.
 - V2 Backend de sincronización implementado en Supabase: una sola tabla general `public.sync_records` para sobres cifrados, RLS habilitado, acceso exclusivo del propietario autenticado, privilegios mínimos y timestamp controlado por trigger; el backend no interpreta el contenido privado.
 - Organización de notas: fijar/desfijar desde `⋮` y orden manual mediante modo `↕`, guardando `pinned` y `manualOrder` dentro del registro cifrado existente sin crear stores ni cachés adicionales.
