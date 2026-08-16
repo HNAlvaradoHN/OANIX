@@ -20,6 +20,13 @@ function encryptedBlobKey(recordType: string, recordId: string): string {
   return JSON.stringify([recordType, recordId])
 }
 
+function notifyLocalEncryptedBlobChange(recordType: string, recordId: string) {
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(new CustomEvent('oanix:local-data-changed', {
+    detail: { recordType, recordId },
+  }))
+}
+
 function transactionCompleted(transaction: IDBTransaction): Promise<void> {
   return new Promise((resolve, reject) => {
     transaction.oncomplete = () => resolve()
@@ -51,6 +58,7 @@ export async function writeEncryptedBlob(
       database.close()
     }
   })
+  notifyLocalEncryptedBlobChange(recordType, recordId)
 }
 
 export async function readEncryptedBlob(
@@ -91,4 +99,5 @@ export async function deleteEncryptedBlob(recordType: string, recordId: string):
   } finally {
     database.close()
   }
+  notifyLocalEncryptedBlobChange(recordType, recordId)
 }
