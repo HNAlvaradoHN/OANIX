@@ -50,7 +50,7 @@ Objetivo: sincronización cifrada entre dispositivos sin que el servidor pueda l
 - [x] Cuenta de usuario
 - [x] Autenticación
 - [x] Backend de sincronización
-- [ ] Sincronización E2EE ← en implementación
+- [ ] Sincronización E2EE ← implementación técnica, validación real pendiente
 - [ ] Varios dispositivos
 - [ ] Resolución de conflictos
 - [ ] Historial de versiones
@@ -66,11 +66,21 @@ Objetivo: sincronización cifrada entre dispositivos sin que el servidor pueda l
 
 ### Backend V2 validado
 
-- Supabase usa una sola tabla general `public.sync_records` para futuros sobres cifrados.
+- Supabase usa una sola tabla general `public.sync_records` para sobres cifrados.
 - RLS está habilitado y todas las políticas de lectura/escritura se limitan a `authenticated` con propiedad por `auth.uid()`.
 - `anon` no tiene privilegios sobre los registros de sincronización.
 - El cliente autenticado solo puede modificar `ciphertext`, `version` y `deleted`; propietario, clave opaca y timestamp del servidor no son modificables por esa vía.
-- El backend todavía no transporta notas reales: la sincronización permanece desactivada hasta completar el protocolo E2EE del siguiente bloque.
+- El backend no interpreta el contenido privado; únicamente almacena los sobres producidos por el cliente E2EE.
+
+### Sincronización E2EE — primera fase
+
+- El envío es manual desde Cuenta mientras se valida el protocolo; no se ejecuta una sincronización silenciosa en segundo plano.
+- Cada registro local elegible conserva su payload ya cifrado y se encapsula nuevamente en un sobre AES-GCM usando la clave activa de la bóveda, que permanece en memoria.
+- `record_key` remoto es un identificador opaco SHA-256 ligado al usuario autenticado y a la clave local; el tipo e identificador local permanecen dentro del sobre cifrado.
+- Después de escribir en Supabase, OANIX lee la fila devuelta, descifra el sobre en memoria y verifica que coincida con el registro local antes de contarla como validada.
+- `image` e `image-preview` quedan fuera de esta primera fase para no cargar ni duplicar binarios grandes antes de definir su estrategia específica.
+- Todavía no se descargan registros hacia otro dispositivo, no se comparte la clave de bóveda entre dispositivos y no se resuelven conflictos; esos alcances pertenecen a los siguientes puntos de V2.
+- No se crea un segundo IndexedDB, store, caché, cola persistente ni copia local de los registros remotos.
 
 ## V3 — Android con Capacitor
 
@@ -102,6 +112,6 @@ Objetivo: empaquetar la misma base de código como aplicación Android.
 
 **Versión activa: V2 — Cuenta y sincronización**
 
-**Siguiente bloque de trabajo:** Sincronización E2EE.
+**Siguiente bloque de trabajo:** Sincronización E2EE — validación real del primer transporte cifrado.
 
 La cuenta online es opcional y debe permanecer separada de la contraseña maestra y de la bóveda local. No se implementan funciones de V3 o V4 mientras V2 no esté cerrada, salvo preparación arquitectónica explícitamente documentada.

@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import { sendEncryptedVaultRecords } from '../sync/syncService'
 import {
   ACCOUNT_PASSWORD_MIN_CHARACTERS,
   continueWithGoogle,
@@ -16,7 +17,7 @@ interface AccountPanelProps {
 }
 
 type AccountView = 'signin' | 'signup'
-type BusyAction = 'email' | 'google' | 'signout' | null
+type BusyAction = 'email' | 'google' | 'signout' | 'sync' | null
 
 export function AccountPanel({ onClose }: AccountPanelProps) {
   const [view, setView] = useState<AccountView>('signin')
@@ -121,6 +122,24 @@ export function AccountPanel({ onClose }: AccountPanelProps) {
     }
   }
 
+  async function handleEncryptedSync() {
+    setMessage('')
+    setSuccess(false)
+    setBusyAction('sync')
+    try {
+      const result = await sendEncryptedVaultRecords()
+      setSuccess(true)
+      setMessage(
+        `${result.uploaded} registro${result.uploaded === 1 ? '' : 's'} cifrado${result.uploaded === 1 ? '' : 's'} enviado${result.uploaded === 1 ? '' : 's'} y ${result.verified} verificado${result.verified === 1 ? '' : 's'}. ` +
+        `${result.skippedBinary} imagen${result.skippedBinary === 1 ? '' : 'es'}/binario${result.skippedBinary === 1 ? '' : 's'} permanece${result.skippedBinary === 1 ? '' : 'n'} solo en este dispositivo por ahora.`,
+      )
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'No se pudieron enviar los registros cifrados.')
+    } finally {
+      setBusyAction(null)
+    }
+  }
+
   async function handleSignOut() {
     setMessage('')
     setSuccess(false)
@@ -181,7 +200,7 @@ export function AccountPanel({ onClose }: AccountPanelProps) {
             </div>
 
             <p className="account-session__privacy">
-              Esta sesión identifica tu cuenta online. No desbloquea la bóveda ni reemplaza la contraseña maestra. La sincronización sigue desactivada en este paso.
+              La contraseña maestra nunca se envía. Al usar el botón siguiente, OANIX crea sobres E2EE con la clave de la bóveda en memoria y Supabase recibe únicamente claves opacas, ciphertext y metadatos técnicos mínimos. Las imágenes/binarios todavía no se transportan en este paso.
             </p>
 
             {message && (
@@ -190,6 +209,9 @@ export function AccountPanel({ onClose }: AccountPanelProps) {
               </p>
             )}
 
+            <button type="button" className="account-form__submit" onClick={() => void handleEncryptedSync()} disabled={isBusy}>
+              {busyAction === 'sync' ? 'Cifrando, enviando y verificando…' : 'Enviar registros cifrados'}
+            </button>
             <button type="button" className="account-secondary-action" onClick={() => void handleSignOut()} disabled={isBusy}>
               {busyAction === 'signout' ? 'Cerrando sesión…' : 'Cerrar sesión online'}
             </button>
@@ -300,8 +322,8 @@ export function AccountPanel({ onClose }: AccountPanelProps) {
         )}
 
         <footer className="account-panel__footer">
-          <span>Sincronización todavía desactivada</span>
-          <span>V2 · Autenticación</span>
+          <span>E2EE en validación · binarios pendientes</span>
+          <span>V2 · Sincronización E2EE</span>
         </footer>
       </section>
     </div>

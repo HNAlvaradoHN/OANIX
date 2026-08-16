@@ -60,6 +60,47 @@ export async function readLocalVaultSnapshot(): Promise<LocalVaultSnapshot> {
   }
 }
 
+export async function readStoredEncryptedRecordsMatching(
+  includeKey: (key: string) => boolean,
+): Promise<StoredEncryptedSnapshotRecord[]> {
+  requireActiveVaultKey()
+  const database = await openLocalDatabase()
+
+  try {
+    const transaction = database.transaction(ENCRYPTED_RECORDS_STORE, 'readonly')
+    const completion = transactionCompleted(transaction)
+    const request = transaction.objectStore(ENCRYPTED_RECORDS_STORE).openCursor()
+
+    const records = await new Promise<StoredEncryptedSnapshotRecord[]>((resolve, reject) => {
+      const matching: StoredEncryptedSnapshotRecord[] = []
+
+      request.onsuccess = () => {
+        const cursor = request.result
+        if (!cursor) {
+          resolve(matching)
+          return
+        }
+
+        const value = cursor.value as StoredEncryptedSnapshotRecord | undefined
+        if (
+          value &&
+          typeof value.key === 'string' &&
+          includeKey(value.key)
+        ) {
+          matching.push(value)
+        }
+        cursor.continue()
+      }
+      request.onerror = () => reject(request.error ?? new Error('Unable to scan encrypted records.'))
+    })
+
+    await completion
+    return records
+  } finally {
+    database.close()
+  }
+}
+
 export async function replaceLocalVaultSnapshot(snapshot: LocalVaultSnapshot): Promise<void> {
   const database = await openLocalDatabase()
 
