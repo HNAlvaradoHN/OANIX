@@ -6,6 +6,7 @@ export interface VaultMetadata {
   schemaVersion: 1
   createdAt: string
   protection: 'pending' | VaultProtectionMetadata
+  securityGeneration?: number
 }
 
 const PRIMARY_VAULT_KEY = 'primary'
