@@ -142,6 +142,14 @@ La búsqueda de V1 se ejecuta únicamente sobre las notas que ya fueron descifra
 
 El buscador reutiliza la representación de texto plano en memoria del modelo `blocks-v1`, por lo que puede localizar título, texto enriquecido, código, checklists, contactos, títulos de entradas por día y metadatos textuales de imágenes que ya forman parte del registro cifrado de la nota.
 
+### Backup cifrado V1
+
+El backup V1 no exporta una representación descifrada de notas, imágenes, carpetas o etiquetas. OANIX copia los metadatos de protección de la bóveda y los registros que ya están cifrados en IndexedDB dentro de un contenedor versionado `oanix-encrypted-backup` con extensión `.oanixbackup`.
+
+El archivo conserva el material necesario para volver a derivar y desenvolver la misma clave de bóveda, por lo que requiere la contraseña maestra original para abrirse después de restaurarlo. La contraseña y la clave de bóveda en texto plano no forman parte del archivo.
+
+La restauración de V1 se ofrece únicamente cuando OANIX está preparando una bóveda local nueva, evitando sobrescribir silenciosamente una bóveda existente. El reemplazo de metadatos y registros se realiza en una sola transacción de IndexedDB.
+
 ### Comprobación de almacenamiento cifrado
 
 Después de crear o desbloquear la bóveda, OANIX puede realizar una comprobación de ida y vuelta con un registro técnico aleatorio:
