@@ -1,4 +1,5 @@
 import { deleteNoteRecord, listNotes, readNote, saveNote } from '../../storage/repositories/noteRepository'
+import { captureNoteVersion } from '../versionHistory/versionHistoryService'
 import { createDailyEntryBlocks } from './dailyEntries'
 import { compareNotesForList, type NoteRecord, type StoredNoteBlock } from './noteTypes'
 
@@ -20,6 +21,20 @@ function createNoteId(): string {
     .join('')
 }
 
+function sameNoteState(left: NoteRecord, right: NoteRecord): boolean {
+  return JSON.stringify(left) === JSON.stringify(right)
+}
+
+function reportHistoryWarning(noteId: string, error: unknown) {
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(new CustomEvent('oanix:history-warning', {
+    detail: {
+      noteId,
+      message: error instanceof Error ? error.message : 'No se pudo guardar un punto del historial.',
+    },
+  }))
+}
+
 function enqueueNoteMutation(
   noteId: string,
   mutate: (note: NoteRecord) => NoteRecord,
@@ -35,7 +50,17 @@ function enqueueNoteMutation(
       }
 
       const updated = mutate(existing)
+      if (sameNoteState(existing, updated)) return existing
+
+      let historyError: unknown = null
+      try {
+        await captureNoteVersion(existing)
+      } catch (error) {
+        historyError = error
+      }
+
       await saveNote(updated)
+      if (historyError) reportHistoryWarning(noteId, historyError)
       return updated
     })
 
