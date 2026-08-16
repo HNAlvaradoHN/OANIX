@@ -25,8 +25,9 @@ Su propósito es permitir que otra IA o colaborador continúe OANIX sin reconstr
 - Resolución de conflictos integrada mediante PR #66 y #67; validación de campo restante en #69.
 - Historial cifrado de versiones integrado mediante PR #71 y retención reducida a 5 mediante PR #72; validación funcional restante en #70.
 - Base criptográfica de cambio de contraseña integrada mediante PR #74.
+- Recuperación por correo integrada mediante PR #75; validación real restante en #73.
 
-**Bloque oficial activo:** Recuperación de acceso — implementación por correo en PR #75; pendiente validación real del OTP, rotación y varios dispositivos en issue #73.
+**Bloque oficial activo:** Recuperación de acceso — implementación integrada; pendiente validación real del OTP, rotación y varios dispositivos en issue #73.
 
 **Después del bloque actual:** cierre de V2 y, cuando corresponda, V3 — Android con Capacitor.
 
@@ -101,7 +102,7 @@ La propuesta inicial era exigir una segunda clave/código de recuperación perma
 **Sustituida por:** DEC-2026-08-16-006.
 
 ### DEC-2026-08-16-006 — Recuperación de contraseña maestra por Email OTP
-**Estado:** IN_PROGRESS / IMPLEMENTATION_READY_FOR_MERGE
+**Estado:** IMPLEMENTED / VALIDATION_DEBT
 
 **Versión / bloque:** V2 — Recuperación de acceso
 
@@ -119,7 +120,7 @@ La comodidad de recuperación por correo implica confiar en el proveedor de aute
 
 **Implementación:**
 - PR #74: reenvoltorio de la misma clave de bóveda al cambiar contraseña; no recifra todas las notas ni crea una segunda bóveda.
-- PR #75: `EmailRecoveryPanel`, `recoveryService`, recuperación desde la pantalla de bóveda sincronizada, prueba criptográfica y backend versionado.
+- PR #75: `EmailRecoveryPanel`, `recoveryService`, recuperación desde la pantalla de bóveda sincronizada, prueba criptográfica y backend versionado; fusionado a `main`.
 - Supabase producción: tablas `oanix_recovery_root` y `vault_recovery_envelopes`, RLS habilitado y sin grants directos a `anon`/`authenticated`.
 - Edge Function `vault-recovery-broker`, `verify_jwt=true`.
 - `status`: consulta si la recuperación está preparada.
