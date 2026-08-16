@@ -40,7 +40,7 @@ Objetivo: entregar una PWA útil, segura, offline-first y completamente funciona
 - [x] Etiquetas
 - [x] Búsqueda local
 - [x] Backup, exportación y restauración cifrada
-- [ ] Funcionamiento offline
+- [x] Funcionamiento offline
 - [ ] Pruebas de la V1
 
 ## V2 — Cuenta y sincronización
@@ -84,6 +84,6 @@ Objetivo: empaquetar la misma base de código como aplicación Android.
 
 **Versión activa: V1 — Núcleo local**
 
-**Siguiente bloque de trabajo:** Funcionamiento offline.
+**Siguiente bloque de trabajo:** Pruebas finales de V1.
 
 No se implementan funciones de V2, V3 o V4 mientras V1 no esté cerrada, salvo preparación arquitectónica explícitamente documentada.
