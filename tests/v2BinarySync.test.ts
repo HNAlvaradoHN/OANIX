@@ -6,7 +6,8 @@ test('encrypted image autosync uses one private bucket contract with bounded chu
   const source = readFileSync('src/features/sync/binarySyncService.ts', 'utf8')
 
   assert.match(source, /STORAGE_BUCKET = 'oanix-encrypted-blobs'/)
-  assert.match(source, /CHUNK_BYTES = 8 \* 1024 \* 1024/)
+  assert.match(source, /CHUNK_BYTES = 6 \* 1024 \* 1024/)
+  assert.match(source, /BASE64_CHARS_PER_CHUNK/)
   assert.match(source, /application\/octet-stream/)
   assert.match(source, /\.storage\.from\(STORAGE_BUCKET\)/)
   assert.match(source, /\.upload\(/)
@@ -42,22 +43,25 @@ test('image changes enter the same automatic sync runtime without another local 
   assert.equal(createStoreCalls.length, 2)
 })
 
-test('binary transfer verifies ciphertext before rebuilding the existing local encrypted payload', () => {
+test('binary transfer verifies each bounded ciphertext chunk before rebuilding the local payload', () => {
   const source = readFileSync('src/features/sync/binarySyncService.ts', 'utf8')
 
-  assert.match(source, /ciphertextSha256/)
-  assert.match(source, /sha256Base64Url\(bytes\)/)
-  assert.match(source, /La verificación de integridad de la imagen cifrada no coincide/)
+  assert.match(source, /chunkSha256/)
+  assert.match(source, /inspectLocalBinary/)
+  assert.match(source, /sha256Base64Url\(chunk\)/)
+  assert.match(source, /La verificación de integridad de un fragmento cifrado no coincide/)
   assert.match(source, /applyStoredEncryptedRecordChanges/)
   assert.match(source, /scheme: manifest\.scheme/)
   assert.match(source, /iv: manifest\.iv/)
-  assert.match(source, /ciphertext: bytesToBase64\(bytes\)/)
+  assert.match(source, /ciphertext: base64Parts\.join\(''\)/)
+  assert.doesNotMatch(source, /base64ToBytes\(payload\.ciphertext\)/)
 })
 
-test('binary updates use optimistic versions and retain a compact encrypted cleanup queue', () => {
+test('binary updates use optimistic versions, reuse tombstones and retain a compact encrypted cleanup queue', () => {
   const source = readFileSync('src/features/sync/binarySyncService.ts', 'utf8')
 
-  assert.match(source, /\.eq\('version', existing\.row\.version\)/)
+  assert.match(source, /\.eq\('version', targetRow\.version\)/)
+  assert.match(source, /insertOrUpdateBinaryRemote\(session\.userId, vaultKey, local, localInspection, remoteRow, state\)/)
   assert.match(source, /cleanupPaths/)
   assert.match(source, /queueCleanup/)
   assert.match(source, /flushCleanupQueue/)
