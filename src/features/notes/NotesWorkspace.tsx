@@ -15,7 +15,7 @@ import { storageSaveErrorMessage } from '../../storage/local/storageErrors'
 import { usesSinglePaneLayout } from '../../shared/responsiveLayout'
 import { ImageNoteEditor } from '../images/ImageNoteEditor'
 import { createEmptyNote, deleteNote, loadNotes, moveNoteToFolder, renameNote, replaceNoteContent, setNoteTags } from './noteService'
-import { filterNotesByLocalSearch } from '../search/localSearch'
+import { filterByLocalSearch } from '../search/localSearch'
 import { prepareDailyEntriesForEditing } from './dailyEntries'
 import { noteBlocksToPlainText, type NoteRecord, type StoredNoteBlock } from './noteTypes'
 import './notes.css'
@@ -144,7 +144,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
       (activeFolderId === 'all' || note.folderId === activeFolderId) &&
       (activeTagId === 'all' || (note.tagIds ?? []).includes(activeTagId)),
     )
-    return filterNotesByLocalSearch(organized, searchQuery)
+    return filterByLocalSearch(organized, searchQuery, (note) => `${note.title}\n${noteBlocksToPlainText(note.content.blocks)}`)
   }, [notes, activeFolderId, activeTagId, searchQuery])
   const hasSearchQuery = searchQuery.trim().length > 0
   const moveTargetNote = useMemo(
