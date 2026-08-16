@@ -124,3 +124,21 @@ test('V1 keeps local storage compact instead of creating a store per feature', (
   assert.match(databaseSource, /VAULT_METADATA_STORE = 'vault_metadata'/)
   assert.match(databaseSource, /ENCRYPTED_RECORDS_STORE = 'encrypted_records'/)
 })
+
+test('PWA updates stay prompt-based and reuse the existing service worker cache', () => {
+  const mainSource = readFileSync('src/main.tsx', 'utf8')
+  const appSource = readFileSync('src/app/App.tsx', 'utf8')
+  const viteSource = readFileSync('vite.config.ts', 'utf8')
+
+  assert.match(mainSource, /onNeedRefresh/)
+  assert.match(mainSource, /oanix:update-available/)
+  assert.match(mainSource, /registration\.update\(\)/)
+  assert.match(mainSource, /updateSW\(true\)/)
+  assert.match(appSource, /Nueva versión disponible/)
+  assert.match(appSource, /prepareVisibleWorkspaceForUpdate/)
+  assert.match(appSource, /document\.activeElement/)
+  assert.match(appSource, /\.save-status/)
+  assert.match(viteSource, /registerType: 'prompt'/)
+  assert.match(viteSource, /cleanupOutdatedCaches: true/)
+  assert.doesNotMatch(mainSource, /caches\.open|localStorage|indexedDB/)
+})
