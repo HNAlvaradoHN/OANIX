@@ -1,21 +1,5 @@
-.account-launcher {
-  position: fixed;
-  z-index: 70;
-  right: max(1rem, env(safe-area-inset-right));
-  bottom: max(1rem, env(safe-area-inset-bottom));
-  min-width: 3rem;
-  min-height: 3rem;
-  display: inline-grid;
-  place-items: center;
-  border: 1px solid rgba(148,163,184,.28);
-  border-radius: 999px;
-  background: rgba(15,23,42,.92);
-  color: #eef5ff;
-  box-shadow: 0 14px 40px rgba(0,0,0,.34);
-  backdrop-filter: blur(16px);
-  font-size: 1.05rem;
-}
-.account-launcher:hover { transform: translateY(-1px); border-color: rgba(111,145,255,.72); }
+.account-header-action { order: 1; }
+.notes-header__actions > .workspace-menu-wrap { order: 2; }
 .account-overlay {
   position: fixed;
   z-index: 120;
@@ -117,7 +101,6 @@
 @media (max-width: 560px) {
   .account-overlay { place-items: end center; padding: 0; }
   .account-panel { width: 100%; max-height: min(90dvh, 46rem); border-radius: 1.25rem 1.25rem 0 0; padding-bottom: env(safe-area-inset-bottom); }
-  .account-launcher { bottom: max(4.4rem, calc(env(safe-area-inset-bottom) + 3.4rem)); }
   .account-panel__header,
   .account-panel__footer { padding-inline: .95rem; }
   .account-panel__notice,
