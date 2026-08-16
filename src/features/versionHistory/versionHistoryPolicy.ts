@@ -1,5 +1,5 @@
 export const NOTE_HISTORY_AUTOMATIC_WINDOW_MS = 5 * 60 * 1000
-export const NOTE_HISTORY_MAX_SNAPSHOTS_PER_NOTE = 30
+export const NOTE_HISTORY_MAX_SNAPSHOTS_PER_NOTE = 5
 
 interface ComparableHistorySnapshot {
   capturedAt: string
