@@ -175,7 +175,6 @@ export function moveNoteToFolder(noteId: string, folderId: string | null): Promi
   return enqueueNoteMutation(noteId, (existing) => ({
     ...existing,
     folderId,
-    updatedAt: new Date().toISOString(),
   }))
 }
 
@@ -192,7 +191,6 @@ export function setNotePinned(noteId: string, pinned: boolean): Promise<NoteReco
   return enqueueNoteMutation(noteId, (existing) => ({
     ...existing,
     pinned,
-    updatedAt: new Date().toISOString(),
   }))
 }
 
@@ -254,7 +252,6 @@ export async function persistNoteOrder(orderedNoteIds: string[]): Promise<NoteRe
     const updated = await enqueueNoteMutation(noteId, (current) => ({
       ...current,
       manualOrder,
-      updatedAt: new Date().toISOString(),
     }))
     updatedById.set(noteId, updated)
   }))
