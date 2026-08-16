@@ -3,6 +3,10 @@
 Todos los cambios relevantes del proyecto se registran aquí por versión.
 
 ## Unreleased
+- V2 Backend de sincronización implementado en Supabase: una sola tabla general `public.sync_records` para sobres cifrados, RLS habilitado, acceso exclusivo del propietario autenticado, privilegios mínimos y timestamp controlado por trigger; todavía no se transportan notas reales hasta completar Sincronización E2EE.
+- Organización de notas: fijar/desfijar desde `⋮` y orden manual mediante modo `↕`, guardando `pinned` y `manualOrder` dentro del registro cifrado existente sin crear stores ni cachés adicionales.
+- Actualizaciones PWA controladas por el usuario: OANIX avisa cuando hay una nueva versión y solo recarga después de pulsar `Actualizar` y esperar un estado de guardado seguro; se reutiliza el Service Worker existente.
+- Acceso con Google en ventana auxiliar: la pestaña principal de OANIX permanece activa durante OAuth para no perder innecesariamente la clave de bóveda que vive solo en memoria.
 - V2 Autenticación UX: el acceso a Cuenta se mueve del botón flotante a la cabecera principal junto al candado, reduciendo toques accidentales sin cambiar el flujo de seguridad ni el modo local.
 - V2 Backend de sincronización: diseño previo documentado con una superficie compacta de registros cifrados, RLS por `auth.uid()`, metadatos mínimos y modelo de amenazas antes de crear tablas o transportar contenido real.
 - V2 Autenticación validada en uso real: acceso con Google, sesión online, cierre de sesión y modo local coexistiendo sin que la cuenta sustituya la contraseña maestra ni desbloquee la bóveda.
