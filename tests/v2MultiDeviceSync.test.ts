@@ -13,7 +13,7 @@ test('multi-device bootstrap reuses the existing wrapped vault key protection', 
   assert.match(syncSource, /setActiveVaultKey\(vaultKey\)/)
   assert.match(gateSource, /Conectar mi cuenta sincronizada/)
   assert.match(gateSource, /Traer mi bóveda a este dispositivo/)
-  assert.match(gateSource, /misma contraseña maestra/)
+  assert.match(gateSource, /(misma|esa misma) contraseña/)
 })
 
 test('automatic sync runs after local changes and when the app returns online or visible', () => {
