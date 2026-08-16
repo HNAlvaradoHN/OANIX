@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { VaultGate } from './VaultGate'
 import { NotesWorkspace } from '../features/notes/NotesWorkspace'
 import { AccountPanel } from '../features/account/AccountPanel'
-import '../features/account/account.css'
 
 function UnlockedApp({ lockVault }: { lockVault: () => void }) {
   const [accountOpen, setAccountOpen] = useState(false)
