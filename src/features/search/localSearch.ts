@@ -1,5 +1,3 @@
-import { noteBlocksToPlainText, type NoteRecord } from '../notes/noteTypes'
-
 export function normalizeLocalSearchText(value: string): string {
   return value
     .normalize('NFD')
@@ -14,19 +12,23 @@ export function localSearchTokens(query: string): string[] {
   return normalized ? normalized.split(' ').filter(Boolean) : []
 }
 
-export function noteMatchesLocalSearch(note: NoteRecord, query: string): boolean {
+export function localSearchTextMatches(searchableText: string, query: string): boolean {
   const tokens = localSearchTokens(query)
   if (tokens.length === 0) return true
 
-  const searchable = normalizeLocalSearchText(
-    `${note.title}\n${noteBlocksToPlainText(note.content.blocks)}`,
-  )
-
+  const searchable = normalizeLocalSearchText(searchableText)
   return tokens.every((token) => searchable.includes(token))
 }
 
-export function filterNotesByLocalSearch(notes: NoteRecord[], query: string): NoteRecord[] {
+export function filterByLocalSearch<T>(
+  items: T[],
+  query: string,
+  searchableText: (item: T) => string,
+): T[] {
   const tokens = localSearchTokens(query)
-  if (tokens.length === 0) return notes
-  return notes.filter((note) => noteMatchesLocalSearch(note, query))
+  if (tokens.length === 0) return items
+  return items.filter((item) => {
+    const searchable = normalizeLocalSearchText(searchableText(item))
+    return tokens.every((token) => searchable.includes(token))
+  })
 }
