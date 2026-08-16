@@ -5,6 +5,8 @@ import test from 'node:test'
 test('V2 account remains isolated from the local master password and sync payloads', () => {
   const service = readFileSync('src/features/account/accountService.ts', 'utf8')
   const panel = readFileSync('src/features/account/AccountPanel.tsx', 'utf8')
+  const app = readFileSync('src/app/App.tsx', 'utf8')
+  const styles = readFileSync('src/features/account/account.css', 'utf8')
 
   assert.match(service, /createOnlineAccount/)
   assert.match(service, /supabase\.auth\.signUp/)
@@ -29,4 +31,11 @@ test('V2 account remains isolated from the local master password and sync payloa
   assert.match(panel, /Cerrar sesión online/)
   assert.match(panel, /(separada de|independiente de) tu contraseña maestra/)
   assert.match(panel, /Sincronización todavía desactivada/)
+
+  assert.match(app, /createPortal/)
+  assert.match(app, /\.notes-header__actions/)
+  assert.match(app, /account-header-action/)
+  assert.doesNotMatch(app, /account-launcher/)
+  assert.match(styles, /\.account-header-action/)
+  assert.doesNotMatch(styles, /\.account-launcher/)
 })
