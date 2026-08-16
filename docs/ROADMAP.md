@@ -52,8 +52,8 @@ Objetivo: sincronización cifrada entre dispositivos sin que el servidor pueda l
 - [x] Backend de sincronización
 - [x] Sincronización E2EE
 - [x] Varios dispositivos
-- [ ] Resolución de conflictos
-- [ ] Historial de versiones
+- [x] Resolución de conflictos *(implementación completa; validación de campo restante registrada en #69)*
+- [ ] Historial de versiones *(implementación publicada; cerrar tras prueba funcional real registrada en #70)*
 - [ ] Recuperación de acceso
 
 ### Reglas de acceso V2
@@ -94,11 +94,23 @@ Objetivo: sincronización cifrada entre dispositivos sin que el servidor pueda l
 - El autosync se activa tras cambios locales, al recuperar Internet, al volver a la app, mediante Realtime como aviso de cambios remotos y con una comprobación periódica de respaldo mientras está visible.
 - El estado de sincronización se conserva como registros pequeños cifrados bajo el tipo general `system.sync-state` dentro de `encrypted_records`; no se crea otro store, base local, caché ni cola independiente.
 - Las escrituras remotas usan versión esperada para evitar sobrescribir silenciosamente una modificación concurrente.
-- Si ambos dispositivos modificaron de forma incompatible el mismo registro desde la última base común, OANIX conserva ambos lados sin sobrescribir y lo entrega al siguiente punto oficial: Resolución de conflictos.
+- Si ambos dispositivos modificaron de forma incompatible el mismo registro desde la última base común, OANIX conserva ambos lados sin sobrescribir y lo entrega al centro de Resolución de conflictos.
 - `image` e `image-preview` forman parte del autosync E2EE: su ciphertext ya cifrado se procesa y transfiere en fragmentos de 6 MiB como `application/octet-stream` en el bucket privado para limitar el pico de memoria en móvil.
 - El nombre, ID y tipo local de una imagen no forman parte de la ruta remota; la ruta usa únicamente el UID requerido por RLS y un identificador aleatorio.
 - El manifiesto que relaciona una imagen local con sus fragmentos permanece cifrado dentro de `sync_records`; cada fragmento se verifica con SHA-256 antes de reconstruir el payload cifrado local.
 - Al reemplazar o eliminar un binario, OANIX limpia los fragmentos que dejan de ser necesarios; una cola mínima de limpieza queda cifrada dentro del mismo estado de sincronización para reintentar sin crear almacenamiento paralelo.
+
+### Historial de versiones — implementación V2
+
+- Los estados anteriores de las notas se guardan como registros cifrados `note-history` dentro del mismo `encrypted_records`; no se crea otra base, store ni caché.
+- Se conservan hasta 30 snapshots por nota y los snapshots automáticos se agrupan con una ventana mínima de 5 minutos para no crear una versión por cada autoguardado.
+- El historial puede sincronizarse mediante el transporte E2EE no binario existente.
+- Antes de restaurar se crea un checkpoint `pre-restore`, haciendo reversible la restauración.
+- La interfaz permite seleccionar una nota, revisar fecha/hora y vista previa de una versión anterior y ejecutar `Restaurar esta versión` con confirmación explícita.
+- Antes de abrir el historial se espera que la nota visible termine de guardarse, evitando capturar/restaurar sobre cambios pendientes.
+- Si una versión histórica referencia un original de imagen que ya no está disponible, la restauración se bloquea explícitamente en vez de crear una nota incompleta.
+- Los snapshots conservan referencias `imageId`; esta etapa no duplica binarios históricos.
+- Al eliminar permanentemente una nota se elimina también su historial para no dejar versiones huérfanas sin una superficie de recuperación definida.
 
 ### Recuperación de acceso — requisitos obligatorios antes de implementar
 
@@ -138,6 +150,8 @@ Objetivo: empaquetar la misma base de código como aplicación Android.
 
 **Versión activa: V2 — Cuenta y sincronización**
 
-**Siguiente bloque oficial:** Resolución de conflictos.
+**Bloque oficial activo:** Historial de versiones — implementación publicada; pendiente validación funcional real (#70).
+
+**Deuda de validación visible:** Resolución de conflictos (#69). No bloquea el avance, pero no debe darse por probada hasta cerrar esos casos reales.
 
 La cuenta online es opcional y debe permanecer separada de la contraseña maestra y de la bóveda local. No se implementan funciones de V3 o V4 mientras V2 no esté cerrada, salvo preparación arquitectónica explícitamente documentada.

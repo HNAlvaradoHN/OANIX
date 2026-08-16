@@ -61,6 +61,25 @@ export async function writeEncryptedBlob(
   notifyLocalEncryptedBlobChange(recordType, recordId)
 }
 
+export async function hasEncryptedBlob(recordType: string, recordId: string): Promise<boolean> {
+  requireActiveVaultKey()
+  const database = await openLocalDatabase()
+
+  try {
+    const transaction = database.transaction(ENCRYPTED_RECORDS_STORE, 'readonly')
+    const completion = transactionCompleted(transaction)
+    const request = transaction.objectStore(ENCRYPTED_RECORDS_STORE).getKey(encryptedBlobKey(recordType, recordId))
+    const exists = await new Promise<boolean>((resolve, reject) => {
+      request.onsuccess = () => resolve(request.result !== undefined)
+      request.onerror = () => reject(request.error ?? new Error('Unable to check encrypted blob.'))
+    })
+    await completion
+    return exists
+  } finally {
+    database.close()
+  }
+}
+
 export async function readEncryptedBlob(
   recordType: string,
   recordId: string,

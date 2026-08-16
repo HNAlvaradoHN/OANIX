@@ -1,4 +1,10 @@
 import { deleteNoteRecord, listNotes, readNote, saveNote } from '../../storage/repositories/noteRepository'
+import {
+  captureNoteVersion,
+  deleteNoteVersionHistory,
+  findMissingHistoricalImageIds,
+} from '../versionHistory/versionHistoryService'
+import type { NoteHistoryReason, NoteHistorySnapshot } from '../versionHistory/versionHistoryTypes'
 import { createDailyEntryBlocks } from './dailyEntries'
 import { compareNotesForList, type NoteRecord, type StoredNoteBlock } from './noteTypes'
 
@@ -20,9 +26,24 @@ function createNoteId(): string {
     .join('')
 }
 
+function sameNoteState(left: NoteRecord, right: NoteRecord): boolean {
+  return JSON.stringify(left) === JSON.stringify(right)
+}
+
+function reportHistoryWarning(noteId: string, error: unknown) {
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(new CustomEvent('oanix:history-warning', {
+    detail: {
+      noteId,
+      message: error instanceof Error ? error.message : 'No se pudo guardar un punto del historial.',
+    },
+  }))
+}
+
 function enqueueNoteMutation(
   noteId: string,
   mutate: (note: NoteRecord) => NoteRecord,
+  historyReason: NoteHistoryReason = 'automatic',
 ): Promise<NoteRecord> {
   const previous = mutationQueues.get(noteId) ?? Promise.resolve()
   const next = previous
@@ -35,7 +56,17 @@ function enqueueNoteMutation(
       }
 
       const updated = mutate(existing)
+      if (sameNoteState(existing, updated)) return existing
+
+      let historyError: unknown = null
+      try {
+        await captureNoteVersion(existing, historyReason)
+      } catch (error) {
+        historyError = error
+      }
+
       await saveNote(updated)
+      if (historyError) reportHistoryWarning(noteId, historyError)
       return updated
     })
 
@@ -100,6 +131,11 @@ export function deleteNote(noteId: string): Promise<NoteRecord> {
       }
 
       await deleteNoteRecord(noteId)
+      try {
+        await deleteNoteVersionHistory(noteId)
+      } catch (error) {
+        reportHistoryWarning(noteId, error)
+      }
       return existing
     })
 
@@ -156,6 +192,26 @@ export function setNotePinned(noteId: string, pinned: boolean): Promise<NoteReco
     ...existing,
     pinned,
   }))
+}
+
+export async function restoreNoteVersion(snapshot: NoteHistorySnapshot): Promise<NoteRecord> {
+  const missingImageIds = await findMissingHistoricalImageIds(snapshot)
+  if (missingImageIds.length > 0) {
+    throw new Error(
+      `Esta versión no se puede restaurar completa porque ${missingImageIds.length} imagen${missingImageIds.length === 1 ? '' : 'es'} histórica${missingImageIds.length === 1 ? '' : 's'} ya no está${missingImageIds.length === 1 ? '' : 'n'} disponible${missingImageIds.length === 1 ? '' : 's'}.`,
+    )
+  }
+
+  return enqueueNoteMutation(
+    snapshot.noteId,
+    (existing) => ({
+      ...structuredClone(snapshot.note),
+      id: existing.id,
+      createdAt: existing.createdAt,
+      updatedAt: new Date().toISOString(),
+    }),
+    'pre-restore',
+  )
 }
 
 export async function persistNoteOrder(orderedNoteIds: string[]): Promise<NoteRecord[]> {

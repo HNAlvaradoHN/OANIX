@@ -5,6 +5,7 @@ import { NotesWorkspace } from '../features/notes/NotesWorkspace'
 import { AccountPanel } from '../features/account/AccountPanel'
 import { AutoSyncRuntime } from '../features/sync/AutoSyncRuntime'
 import { ConflictCenter } from '../features/sync/ConflictCenter'
+import { VersionHistoryCenter } from '../features/versionHistory/VersionHistoryCenter'
 
 type OanixUpdateWindow = Window & {
   __oanixApplyUpdate?: () => Promise<void>
@@ -50,6 +51,7 @@ function UnlockedApp({ lockVault }: { lockVault: () => void }) {
       <AutoSyncRuntime onRemoteApplied={() => setWorkspaceRevision((value) => value + 1)} />
       <NotesWorkspace key={workspaceRevision} onLock={lockVault} />
       <ConflictCenter onResolved={() => setWorkspaceRevision((value) => value + 1)} />
+      <VersionHistoryCenter onRestored={() => setWorkspaceRevision((value) => value + 1)} />
       {accountHost && createPortal(
         <button
           className="icon-button account-header-action"
