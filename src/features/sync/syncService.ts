@@ -27,14 +27,20 @@ interface SyncEnvelope {
 
 interface RemoteSyncRow {
   record_key: string
-  ciphertext: string
+  ciphertext: string | null
   version: number
   deleted: boolean
+}
+
+interface ExistingRemoteRecord {
+  row: RemoteSyncRow
+  envelope: SyncEnvelope
 }
 
 export interface EncryptedSyncResult {
   uploaded: number
   verified: number
+  unchanged: number
   skippedBinary: number
 }
 
@@ -80,21 +86,35 @@ function isSyncEnvelope(value: unknown): value is SyncEnvelope {
   )
 }
 
+function encryptedPayloadMatches(
+  left: EncryptedVaultPayload,
+  right: EncryptedVaultPayload,
+): boolean {
+  return (
+    left.scheme === right.scheme &&
+    left.iv === right.iv &&
+    left.ciphertext === right.ciphertext
+  )
+}
+
 function requireRemoteRow(value: unknown): RemoteSyncRow {
   if (!value || typeof value !== 'object') {
     throw new Error('Supabase devolvió un registro de sincronización inválido.')
   }
 
   const row = value as Partial<RemoteSyncRow>
+  const validCiphertext = row.deleted === true
+    ? row.ciphertext === null
+    : typeof row.ciphertext === 'string' && row.ciphertext.length > 0
+
   if (
     typeof row.record_key !== 'string' ||
     row.record_key.length === 0 ||
-    typeof row.ciphertext !== 'string' ||
-    row.ciphertext.length === 0 ||
     typeof row.version !== 'number' ||
     !Number.isSafeInteger(row.version) ||
     row.version <= 0 ||
-    typeof row.deleted !== 'boolean'
+    typeof row.deleted !== 'boolean' ||
+    !validCiphertext
   ) {
     throw new Error('Supabase devolvió metadatos de sincronización inválidos.')
   }
@@ -110,24 +130,23 @@ function base64Url(bytes: Uint8Array): string {
     .replace(/=+$/g, '')
 }
 
-async function opaqueRecordKey(userId: string, localKey: string): Promise<string> {
-  if (!globalThis.crypto?.subtle) {
-    throw new Error('Web Crypto no está disponible para preparar la sincronización.')
+function newOpaqueRecordKey(): string {
+  if (globalThis.crypto?.randomUUID) {
+    return globalThis.crypto.randomUUID()
+  }
+  if (!globalThis.crypto?.getRandomValues) {
+    throw new Error('No hay un generador aleatorio seguro para preparar la sincronización.')
   }
 
-  const input = new TextEncoder().encode(
-    JSON.stringify(['OANIX', 'sync-key', 1, userId, localKey]),
-  )
-  const digest = await globalThis.crypto.subtle.digest('SHA-256', input)
-  return base64Url(new Uint8Array(digest))
+  const bytes = globalThis.crypto.getRandomValues(new Uint8Array(24))
+  return base64Url(bytes)
 }
 
 async function encryptRecordForSync(
   vaultKey: CryptoKey,
-  userId: string,
   record: StoredEncryptedSnapshotRecord,
-): Promise<{ recordKey: string; ciphertext: string }> {
-  const recordKey = await opaqueRecordKey(userId, record.key)
+  recordKey: string,
+): Promise<string> {
   const envelope: SyncEnvelope = {
     protocol: SYNC_ENVELOPE_PROTOCOL,
     localKey: record.key,
@@ -138,19 +157,15 @@ async function encryptRecordForSync(
     recordId: recordKey,
   })
 
-  return {
-    recordKey,
-    ciphertext: JSON.stringify(encryptedEnvelope),
-  }
+  return JSON.stringify(encryptedEnvelope)
 }
 
-async function verifyRemoteEnvelope(
+async function decryptRemoteEnvelope(
   vaultKey: CryptoKey,
-  expectedRecord: StoredEncryptedSnapshotRecord,
   row: RemoteSyncRow,
-): Promise<void> {
-  if (row.deleted) {
-    throw new Error('El servidor devolvió como eliminado un registro recién enviado.')
+): Promise<SyncEnvelope> {
+  if (row.deleted || row.ciphertext === null) {
+    throw new Error('No se puede descifrar un registro remoto eliminado.')
   }
 
   let encryptedEnvelope: unknown
@@ -173,9 +188,18 @@ async function verifyRemoteEnvelope(
     throw new Error('No se pudo validar el contenido del sobre E2EE.')
   }
 
+  return decoded
+}
+
+async function verifyRemoteEnvelope(
+  vaultKey: CryptoKey,
+  expectedRecord: StoredEncryptedSnapshotRecord,
+  row: RemoteSyncRow,
+): Promise<void> {
+  const decoded = await decryptRemoteEnvelope(vaultKey, row)
   if (
     decoded.localKey !== expectedRecord.key ||
-    JSON.stringify(decoded.payload) !== JSON.stringify(expectedRecord.payload)
+    !encryptedPayloadMatches(decoded.payload, expectedRecord.payload)
   ) {
     throw new Error('La verificación E2EE no coincide con el registro local.')
   }
@@ -200,46 +224,62 @@ export async function sendEncryptedVaultRecords(): Promise<EncryptedSyncResult> 
   })
 
   if (records.length === 0) {
-    return { uploaded: 0, verified: 0, skippedBinary }
+    return { uploaded: 0, verified: 0, unchanged: 0, skippedBinary }
   }
 
   const client = getOnlineDataClient()
   const { data: existingData, error: existingError } = await client
     .from('sync_records')
-    .select('record_key, version')
+    .select('record_key, ciphertext, version, deleted')
     .eq('user_id', session.userId)
 
   if (existingError) {
     throw new Error(`No se pudo consultar el estado cifrado remoto: ${existingError.message}`)
   }
 
-  const existingVersions = new Map<string, number>()
+  const existingByLocalKey = new Map<string, ExistingRemoteRecord>()
   for (const value of existingData ?? []) {
-    if (
-      value &&
-      typeof value.record_key === 'string' &&
-      typeof value.version === 'number' &&
-      Number.isSafeInteger(value.version) &&
-      value.version > 0
-    ) {
-      existingVersions.set(value.record_key, value.version)
+    const row = requireRemoteRow(value)
+    if (row.deleted) continue
+
+    let envelope: SyncEnvelope
+    try {
+      envelope = await decryptRemoteEnvelope(vaultKey, row)
+    } catch {
+      throw new Error(
+        'La cuenta online contiene datos E2EE que esta bóveda no puede descifrar. OANIX no los sobrescribirá; la vinculación entre bóvedas pertenece al siguiente paso de varios dispositivos.',
+      )
     }
+
+    if (existingByLocalKey.has(envelope.localKey)) {
+      throw new Error('La cuenta online contiene dos sobres E2EE para el mismo registro local.')
+    }
+    existingByLocalKey.set(envelope.localKey, { row, envelope })
   }
 
   let uploaded = 0
   let verified = 0
+  let unchanged = 0
 
   for (const record of records) {
-    const prepared = await encryptRecordForSync(vaultKey, session.userId, record)
-    const currentVersion = existingVersions.get(prepared.recordKey)
+    const existing = existingByLocalKey.get(record.key)
+    if (existing && encryptedPayloadMatches(existing.envelope.payload, record.payload)) {
+      unchanged += 1
+      verified += 1
+      continue
+    }
+
+    const recordKey = existing?.row.record_key ?? newOpaqueRecordKey()
+    const currentVersion = existing?.row.version
+    const ciphertext = await encryptRecordForSync(vaultKey, record, recordKey)
 
     const query = currentVersion === undefined
       ? client
           .from('sync_records')
           .insert({
             user_id: session.userId,
-            record_key: prepared.recordKey,
-            ciphertext: prepared.ciphertext,
+            record_key: recordKey,
+            ciphertext,
             version: 1,
             deleted: false,
           })
@@ -248,12 +288,12 @@ export async function sendEncryptedVaultRecords(): Promise<EncryptedSyncResult> 
       : client
           .from('sync_records')
           .update({
-            ciphertext: prepared.ciphertext,
+            ciphertext,
             version: currentVersion + 1,
             deleted: false,
           })
           .eq('user_id', session.userId)
-          .eq('record_key', prepared.recordKey)
+          .eq('record_key', recordKey)
           .select('record_key, ciphertext, version, deleted')
           .single()
 
@@ -263,7 +303,7 @@ export async function sendEncryptedVaultRecords(): Promise<EncryptedSyncResult> 
     }
 
     const row = requireRemoteRow(data)
-    if (row.record_key !== prepared.recordKey) {
+    if (row.record_key !== recordKey) {
       throw new Error('El servidor devolvió una clave opaca distinta a la enviada.')
     }
 
@@ -272,5 +312,5 @@ export async function sendEncryptedVaultRecords(): Promise<EncryptedSyncResult> 
     verified += 1
   }
 
-  return { uploaded, verified, skippedBinary }
+  return { uploaded, verified, unchanged, skippedBinary }
 }

@@ -76,7 +76,10 @@ Objetivo: sincronización cifrada entre dispositivos sin que el servidor pueda l
 
 - El envío es manual desde Cuenta mientras se valida el protocolo; no se ejecuta una sincronización silenciosa en segundo plano.
 - Cada registro local elegible conserva su payload ya cifrado y se encapsula nuevamente en un sobre AES-GCM usando la clave activa de la bóveda, que permanece en memoria.
-- `record_key` remoto es un identificador opaco SHA-256 ligado al usuario autenticado y a la clave local; el tipo e identificador local permanecen dentro del sobre cifrado.
+- `record_key` remoto es un identificador aleatorio generado criptográficamente y no deriva de título, tipo, identificador local ni otros metadatos predecibles.
+- Para reconocer filas ya existentes, OANIX descifra sus sobres únicamente en memoria y reconstruye de forma temporal la relación con la clave local; no persiste un mapa paralelo.
+- Si un sobre remoto no puede descifrarse con la bóveda activa, OANIX se detiene y no lo sobrescribe.
+- Los registros cuyo payload cifrado no cambió se verifican localmente pero no se reescriben ni incrementan artificialmente su versión.
 - Después de escribir en Supabase, OANIX lee la fila devuelta, descifra el sobre en memoria y verifica que coincida con el registro local antes de contarla como validada.
 - `image` e `image-preview` quedan fuera de esta primera fase para no cargar ni duplicar binarios grandes antes de definir su estrategia específica.
 - Todavía no se descargan registros hacia otro dispositivo, no se comparte la clave de bóveda entre dispositivos y no se resuelven conflictos; esos alcances pertenecen a los siguientes puntos de V2.
