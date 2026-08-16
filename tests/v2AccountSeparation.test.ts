@@ -13,6 +13,9 @@ test('V2 account remains isolated from the local master password and sync payloa
   assert.match(service, /supabase\.auth\.signInWithPassword/)
   assert.match(service, /supabase\.auth\.signInWithOAuth/)
   assert.match(service, /provider: 'google'/)
+  assert.match(service, /skipBrowserRedirect: true/)
+  assert.match(service, /window\.open\(/)
+  assert.match(service, /waitForGooglePopupSession/)
   assert.match(service, /supabase\.auth\.getSession/)
   assert.match(service, /supabase\.auth\.onAuthStateChange/)
   assert.match(service, /supabase\.auth\.signOut/)
@@ -25,6 +28,8 @@ test('V2 account remains isolated from the local master password and sync payloa
 
   assert.match(panel, /Modo local siempre disponible/)
   assert.match(panel, /Continuar con Google/)
+  assert.match(panel, /Esperando Google/)
+  assert.match(panel, /La bóveda permaneció abierta/)
   assert.match(panel, /Iniciar sesión/)
   assert.match(panel, /Crear cuenta/)
   assert.match(panel, /Seguir en modo local/)
