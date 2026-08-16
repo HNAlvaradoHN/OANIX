@@ -28,10 +28,11 @@ Su propósito es permitir que otra IA o colaborador continúe OANIX sin reconstr
 - Restauración de la bóveda sincronizada en un dispositivo nuevo mediante bootstrap cifrado.
 - Realtime como aviso de cambios remotos, con comprobación periódica de respaldo.
 - Protección contra sobrescritura silenciosa cuando hay divergencia concurrente.
+- Primera fase de Resolución de conflictos no binarios integrada en `main` mediante PR #66.
 
 **Bloque oficial activo:** Resolución de conflictos — `IN_PROGRESS`.
 
-**Primera fase implementada en PR #66:** resolución de conflictos para registros no binarios, con elección de cualquiera de las dos versiones y combinación conservadora de notas compatibles. El bloque no se considera cerrado hasta cubrir conflictos binarios de imágenes y validar el flujo completo en uso real.
+**Segunda fase implementada en PR #67:** resolución explícita de conflictos de imágenes originales y reconciliación automática de `image-preview` como dato derivado. Tests, build y auditoría offline pasan. El bloque no se considera cerrado hasta validarlo en uso real con dos dispositivos.
 
 **Después del bloque actual:**
 
@@ -90,26 +91,26 @@ Si el usuario entrega el repositorio a otra IA y dice «continuemos con lo que e
 
 **Problema que resuelve:**
 
-La misma nota o registro puede modificarse en dos dispositivos partiendo de una misma base antes de que ambos cambios se sincronicen entre sí. OANIX ya evita sobrescribir silenciosamente una modificación concurrente; este bloque añade la interfaz y lógica final para que el usuario decida qué versión conservar.
+La misma nota o registro puede modificarse en dos dispositivos partiendo de una misma base antes de que ambos cambios se sincronicen entre sí. OANIX debe impedir que una de esas versiones legítimas desaparezca de forma silenciosa.
 
-**Decisión funcional acordada:**
+**Decisión funcional acordada para notas y registros combinables:**
 
-Cuando exista un conflicto real, OANIX debe conservar ambas versiones y ofrecer al usuario tres caminos principales:
+Cuando exista un conflicto real, OANIX conserva ambas versiones y ofrece al usuario tres caminos principales:
 
 1. **Usar esta versión.**
    - La versión seleccionada queda como resultado final.
-   - La otra no debe mezclarse dentro del contenido final.
+   - La otra no se mezcla dentro del contenido final.
 
 2. **Usar la otra versión.**
    - La versión seleccionada queda como resultado final.
-   - La primera no debe mezclarse dentro del contenido final.
+   - La primera no se mezcla dentro del contenido final.
 
 3. **Combinar ambas.**
    - OANIX conserva completos los contenidos de ambos lados.
-   - Primero se coloca la versión cuyo cambio fue **aceptado primero por la sincronización remota**.
-   - En el renglón/párrafo siguiente se coloca la segunda versión.
-   - No se deben insertar rótulos permanentes como «PC», «Teléfono», «Versión A» o «Versión B» dentro de la nota resultante.
-   - La pantalla de resolución sí puede indicar temporalmente de qué dispositivo o lado proviene cada versión.
+   - Primero coloca la versión cuyo cambio fue **aceptado primero por la sincronización remota**.
+   - En el renglón/párrafo siguiente coloca la segunda versión.
+   - No inserta rótulos permanentes como «PC», «Teléfono», «Versión A» o «Versión B» dentro de la nota resultante.
+   - La pantalla de resolución sí puede indicar temporalmente de qué lado proviene cada versión.
 
 **Aclaración importante sobre el orden al combinar:**
 
@@ -120,12 +121,12 @@ No usar «el dispositivo que primero tuvo Internet» como criterio, porque no es
 - No intentar un merge semántico palabra por palabra que pueda cambiar el significado.
 - No inventar una tercera versión.
 - No eliminar automáticamente fragmentos porque parezcan duplicados sin una regla segura y explícita.
-- No convertir silenciosamente todos los bloques estructurados a texto plano.
-- No resolver el conflicto con un simple «último cambio gana» si eso implica pérdida silenciosa de una versión legítima.
+- No convertir silenciosamente bloques estructurados a texto plano.
+- No resolver con simple «último cambio gana» si eso implica pérdida silenciosa de una versión legítima.
 
 **Bloques estructurados:**
 
-Checklists, fichas de contacto, imágenes u otros bloques estructurados deben conservar su tipo. La combinación puede necesitar reglas específicas por tipo de bloque; si no existe una combinación segura para un tipo, OANIX debe conservar ambas alternativas y pedir una decisión explícita en lugar de degradar los datos.
+Checklists, fichas de contacto y demás bloques estructurados deben conservar su tipo. Si no existe una combinación segura para un tipo, OANIX conserva las alternativas y pide una decisión explícita en lugar de degradar los datos.
 
 **Principio rector:**
 
@@ -133,7 +134,7 @@ Checklists, fichas de contacto, imágenes u otros bloques estructurados deben co
 
 La combinación automática solo es aceptable cuando se pueda demostrar que no destruye ni altera de forma ambigua los cambios de ninguna de las partes.
 
-**Implementación — primera fase (PR #66):**
+#### Implementación — primera fase (PR #66, integrada en `main`)
 
 - El centro de conflictos vive dentro de `features/sync/` y no modifica el editor principal para mantener modularidad.
 - Los conflictos no binarios se reconstruyen usando la versión local cifrada, la fila remota y el `system.sync-state` cifrado existente; no se añadió IndexedDB, store, caché ni cola paralela.
@@ -143,17 +144,46 @@ La combinación automática solo es aceptable cuando se pueda demostrar que no d
 - Las escrituras remotas continúan usando versión esperada para evitar sobrescrituras concurrentes.
 - `Combinar ambas` está habilitado únicamente cuando ambos lados son la misma nota y no difieren en título, carpeta, etiquetas, estado fijado u orden manual. Si esos metadatos también cambiaron, el usuario debe elegir una de las versiones.
 - Al combinar una nota compatible se conservan primero todos los bloques de la versión ya aceptada remotamente y después todos los bloques de la versión local.
-- Los bloques locales reciben identificadores de bloque nuevos al incorporarse a la combinación para evitar colisiones, conservando su tipo y contenido estructurado.
+- Los bloques locales reciben identificadores nuevos al incorporarse a la combinación para evitar colisiones, conservando su tipo y contenido estructurado.
 - No se insertan rótulos permanentes dentro de la nota combinada.
 - Eliminación contra contenido no admite `Combinar`; el usuario elige cuál estado conservar.
 - Los conflictos anómalos que no pueden resolverse de forma segura se muestran/bloquean en lugar de adivinar.
-- CI de la primera fase: pruebas, build y auditoría offline completados correctamente.
+- CI: pruebas, build y auditoría offline completados correctamente.
 
-**Pendiente para cerrar este bloque:**
+#### Implementación — segunda fase binaria (PR #67)
 
-- Extender la resolución explícita a conflictos binarios de `image` e `image-preview`, respetando manifiestos, fragmentos cifrados y limpieza segura.
-- Validar en uso real con dos dispositivos los tres caminos: elegir remoto, elegir local y combinar una nota compatible.
-- Solo después de esas validaciones se puede marcar `Resolución de conflictos` como completada en `ROADMAP.md` y avanzar a Historial de versiones.
+**Regla nueva y obligatoria:** `image` es el original autoritativo; `image-preview` es una optimización derivada y regenerable.
+
+- Un conflicto de `image` se presenta en el mismo centro de conflictos.
+- Para una imagen original se ofrecen **Usar esta versión** y **Usar la otra versión**.
+- `Combinar ambas` permanece deshabilitado para imágenes: OANIX no inventa una mezcla gráfica entre dos originales.
+- Al abrir el conflicto, las dos imágenes se descifran únicamente en memoria para comparación visual; las URLs temporales creadas para mostrarlas se revocan al cerrar o cambiar de conflicto.
+- La comparación visual no crea archivos, stores, cachés ni copias persistentes en texto plano.
+- Elegir el lado remoto descarga todos sus fragmentos cifrados, verifica SHA-256 por fragmento y longitud total, vuelve a verificar que la fila remota no cambió durante la descarga y solo entonces reemplaza la copia local.
+- Elegir el lado local publica el original mediante fragmentos cifrados de 6 MiB, mantiene el manifiesto cifrado y usa versión remota esperada; si otro dispositivo cambió la fila, OANIX aborta sin sobrescribir.
+- Cuando se reemplaza una imagen remota, los fragmentos anteriores se agregan a la misma cola cifrada/reintentable de limpieza usada por el autosync binario.
+- Después de resolver el original, el `image-preview` del mismo `imageId` se invalida de ambos lados cuando corresponde y se deja regenerar desde el original elegido.
+- Un conflicto independiente de `image-preview` no requiere una decisión del usuario: como el preview no es autoritativo, se invalida/reconcilia automáticamente en vez de mostrar dos conflictos por una sola foto.
+- El estado binario sigue reutilizando `system.sync-state` con id `binary`; no existe persistencia paralela nueva.
+- Los manifiestos y rutas remotas continúan siendo opacos; no se añade el nombre ni el tipo local de la imagen a la ruta del bucket.
+- CI de esta fase: pruebas, build y auditoría offline completados correctamente antes de integrar.
+
+#### Pendiente para cerrar Resolución de conflictos
+
+La implementación automática está cubierta, pero **no marcar este bloque como terminado todavía**. Falta validación real con dos dispositivos usando la misma bóveda/cuenta.
+
+Pruebas obligatorias antes de marcar `[x]` en `ROADMAP.md`:
+
+1. **Nota — elegir primera en sincronizarse:** crear una divergencia real y comprobar que queda exactamente el lado remoto elegido.
+2. **Nota — elegir este dispositivo:** crear otra divergencia y comprobar que el lado local se publica y llega al segundo dispositivo.
+3. **Nota — combinar ambas:** con metadatos compatibles, comprobar que queda primero la versión aceptada remotamente y debajo la local, sin rótulos añadidos y conservando bloques estructurados.
+4. **Cambio concurrente durante la decisión:** modificar desde el segundo dispositivo mientras el diálogo está abierto y comprobar que OANIX rechaza una resolución obsoleta en vez de sobrescribir.
+5. **Imagen — elegir primera en sincronizarse:** provocar una divergencia de original, verificar visualmente ambos lados y confirmar que el remoto elegido queda igual en ambos dispositivos.
+6. **Imagen — elegir este dispositivo:** repetir el caso eligiendo el original local y confirmar propagación al segundo dispositivo.
+7. **Preview derivado:** después de resolver una imagen, comprobar que el preview se regenera desde el original elegido y que el autosync vuelve a estado sin conflicto.
+8. **Eliminación contra modificación:** validar al menos un conflicto donde un lado elimina y el otro modifica, comprobando que la elección explícita se respeta.
+
+Solo después de esas pruebas se puede cambiar `Resolución de conflictos` a completado y avanzar a **Historial de versiones**.
 
 ---
 
