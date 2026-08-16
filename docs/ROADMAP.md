@@ -48,8 +48,8 @@ Objetivo: entregar una PWA útil, segura, offline-first y completamente funciona
 Objetivo: sincronización cifrada entre dispositivos sin que el servidor pueda leer el contenido.
 
 - [x] Cuenta de usuario
-- [ ] Autenticación ← en implementación
-- [ ] Backend de sincronización
+- [x] Autenticación
+- [ ] Backend de sincronización ← en implementación
 - [ ] Sincronización E2EE
 - [ ] Varios dispositivos
 - [ ] Resolución de conflictos
@@ -60,7 +60,7 @@ Objetivo: sincronización cifrada entre dispositivos sin que el servidor pueda l
 
 - El modo local permanece disponible sin correo ni proveedor social.
 - La cuenta online es opcional y no sustituye la contraseña maestra.
-- OANIX admite acceso por correo + contraseña y prepara acceso con Google usando la misma cuenta Supabase.
+- OANIX admite acceso por correo + contraseña y acceso con Google usando la misma identidad Supabase.
 - La autenticación online no concede por sí sola acceso al contenido descifrado de la bóveda.
 - No se solicitan permisos de Gmail, Drive ni Contactos para autenticarse con Google.
 
@@ -94,6 +94,6 @@ Objetivo: empaquetar la misma base de código como aplicación Android.
 
 **Versión activa: V2 — Cuenta y sincronización**
 
-**Siguiente bloque de trabajo:** Autenticación.
+**Siguiente bloque de trabajo:** Backend de sincronización.
 
 La cuenta online es opcional y debe permanecer separada de la contraseña maestra y de la bóveda local. No se implementan funciones de V3 o V4 mientras V2 no esté cerrada, salvo preparación arquitectónica explícitamente documentada.
