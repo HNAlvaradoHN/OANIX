@@ -2,7 +2,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { loadNotes, restoreNoteVersion } from '../notes/noteService'
 import { noteBlocksToPlainText, type NoteRecord } from '../notes/noteTypes'
-import { listNoteVersionHistory } from './versionHistoryService'
+import {
+  listNoteVersionHistory,
+  NOTE_HISTORY_MAX_SNAPSHOTS_PER_NOTE,
+} from './versionHistoryService'
 import type { NoteHistorySnapshot } from './versionHistoryTypes'
 import './versionHistory.css'
 
@@ -285,7 +288,7 @@ export function VersionHistoryCenter({ onRestored }: VersionHistoryCenterProps) 
             )}
 
             <footer className="version-history-footer">
-              Hasta 30 puntos por nota · los guardados automáticos se agrupan en ventanas de 5 minutos.
+              Hasta {NOTE_HISTORY_MAX_SNAPSHOTS_PER_NOTE} puntos por nota · los guardados automáticos se agrupan en ventanas de 5 minutos.
             </footer>
           </section>
         </div>
