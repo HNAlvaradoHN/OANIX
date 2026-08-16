@@ -203,8 +203,12 @@ export async function createVaultProtection(password: string): Promise<{
 
 export async function openVaultProtection(
   password: string,
-  protection: VaultProtectionMetadata,
+  protection: VaultProtectionMetadata | 'pending',
 ): Promise<CryptoKey> {
+  if (protection === 'pending') {
+    throw new Error('Vault protection is not configured yet.')
+  }
+
   validateProtectionMetadata(protection)
 
   const cryptoApi = requireWebCrypto()
