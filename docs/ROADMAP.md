@@ -103,7 +103,7 @@ Objetivo: sincronización cifrada entre dispositivos sin que el servidor pueda l
 ### Historial de versiones — implementación V2
 
 - Los estados anteriores de las notas se guardan como registros cifrados `note-history` dentro del mismo `encrypted_records`; no se crea otra base, store ni caché.
-- Se conservan hasta 30 snapshots por nota y los snapshots automáticos se agrupan con una ventana mínima de 5 minutos para no crear una versión por cada autoguardado.
+- Se conservan hasta 5 snapshots por nota y los snapshots automáticos se agrupan con una ventana mínima de 5 minutos para no crear una versión por cada autoguardado.
 - El historial puede sincronizarse mediante el transporte E2EE no binario existente.
 - Antes de restaurar se crea un checkpoint `pre-restore`, haciendo reversible la restauración.
 - La interfaz permite seleccionar una nota, revisar fecha/hora y vista previa de una versión anterior y ejecutar `Restaurar esta versión` con confirmación explícita.
