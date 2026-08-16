@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { readFile } from 'node:fs/promises'
 import test from 'node:test'
 
 import {
@@ -6,12 +7,8 @@ import {
   parseEncryptedBackup,
   serializeEncryptedBackup,
 } from '../src/features/backup/backupFormat.ts'
-import {
-  validateEncryptedBackupRecords,
-  validateEncryptedBackupSnapshot,
-} from '../src/features/backup/backupService.ts'
-import { encryptVaultBytes } from '../src/security/crypto/contentCrypto.ts'
-import { createVaultProtection } from '../src/security/crypto/vaultCrypto.ts'
+import { decryptVaultBytes, encryptVaultBytes } from '../src/security/crypto/contentCrypto.ts'
+import { createVaultProtection, openVaultProtection } from '../src/security/crypto/vaultCrypto.ts'
 
 const snapshot = {
   metadata: {
@@ -73,7 +70,7 @@ test('uses a portable OANIX backup extension', () => {
   )
 })
 
-test('verifies the backup password and every encrypted record before restore', async () => {
+test('backup cryptography rejects a wrong password and altered encrypted records', async () => {
   const password = 'frase maestra segura para backup'
   const { protection, vaultKey } = await createVaultProtection(password)
   const context = { recordType: 'note', recordId: 'note-secure-1' }
@@ -82,35 +79,37 @@ test('verifies the backup password and every encrypted record before restore', a
     new TextEncoder().encode('contenido cifrado de prueba'),
     context,
   )
-  const secureSnapshot = {
-    metadata: {
-      key: 'primary' as const,
-      schemaVersion: 1 as const,
-      createdAt: '2026-08-15T12:00:00.000Z',
-      protection,
-    },
-    records: [
-      {
-        key: JSON.stringify([context.recordType, context.recordId]),
-        payload,
-      },
-    ],
-  }
 
-  const restoredKey = await validateEncryptedBackupSnapshot(secureSnapshot, password)
-  assert.equal(restoredKey.algorithm.name, 'AES-GCM')
+  const reopenedKey = await openVaultProtection(password, protection)
+  const plaintext = await decryptVaultBytes(reopenedKey, payload, context)
+  assert.equal(new TextDecoder().decode(plaintext), 'contenido cifrado de prueba')
+  plaintext.fill(0)
 
   await assert.rejects(
-    () => validateEncryptedBackupSnapshot(secureSnapshot, 'una contraseña equivocada'),
-    /contraseña del backup/i,
+    () => openVaultProtection('una contraseña equivocada', protection),
   )
 
-  const corruptedSnapshot = structuredClone(secureSnapshot)
-  const ciphertext = corruptedSnapshot.records[0].payload.ciphertext
-  corruptedSnapshot.records[0].payload.ciphertext = `${ciphertext[0] === 'A' ? 'B' : 'A'}${ciphertext.slice(1)}`
-
+  const corruptedPayload = { ...payload }
+  corruptedPayload.ciphertext = `${payload.ciphertext[0] === 'A' ? 'B' : 'A'}${payload.ciphertext.slice(1)}`
   await assert.rejects(
-    () => validateEncryptedBackupRecords(corruptedSnapshot, vaultKey),
-    /backup está dañado/i,
+    () => decryptVaultBytes(vaultKey, corruptedPayload, context),
   )
+})
+
+test('restore service verifies the complete snapshot before replacing local storage', async () => {
+  const source = await readFile(
+    new URL('../src/features/backup/backupService.ts', import.meta.url),
+    'utf8',
+  )
+  const restoreStart = source.indexOf('export async function restoreEncryptedBackupFromFile')
+  assert.ok(restoreStart >= 0)
+
+  const restoreSource = source.slice(restoreStart)
+  const validationPosition = restoreSource.indexOf('validateEncryptedBackupSnapshot(backup.vault, password)')
+  const replacementPosition = restoreSource.indexOf('replaceLocalVaultSnapshot(backup.vault)')
+
+  assert.ok(validationPosition >= 0)
+  assert.ok(replacementPosition > validationPosition)
+  assert.match(source, /for \(const record of snapshot\.records\)/)
+  assert.match(source, /plaintext\?\.fill\(0\)/)
 })
