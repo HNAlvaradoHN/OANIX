@@ -307,3 +307,36 @@ export async function rewrapVaultProtection(
     vaultKeyBytes.fill(0)
   }
 }
+
+export async function exportVaultKeyForRecovery(
+  password: string,
+  protection: VaultProtectionMetadata | 'pending',
+): Promise<string> {
+  const vaultKeyBytes = await openVaultProtectionBytes(password, protection)
+
+  try {
+    return bytesToBase64(vaultKeyBytes)
+  } finally {
+    vaultKeyBytes.fill(0)
+  }
+}
+
+export async function createVaultProtectionFromRecoveryKey(
+  newPassword: string,
+  encodedVaultKey: string,
+): Promise<VaultProtectionMetadata> {
+  const validationMessage = validateMasterPassword(newPassword)
+  if (validationMessage) throw new Error(validationMessage)
+
+  const vaultKeyBytes = base64ToBytes(encodedVaultKey)
+  if (vaultKeyBytes.byteLength !== VAULT_KEY_LENGTH) {
+    vaultKeyBytes.fill(0)
+    throw new Error('Invalid recovered vault key length.')
+  }
+
+  try {
+    return await createProtectionForVaultKeyBytes(newPassword, vaultKeyBytes)
+  } finally {
+    vaultKeyBytes.fill(0)
+  }
+}

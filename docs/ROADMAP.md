@@ -45,7 +45,7 @@ Objetivo: entregar una PWA útil, segura, offline-first y completamente funciona
 
 ## V2 — Cuenta y sincronización
 
-Objetivo: sincronización cifrada entre dispositivos sin que el servidor pueda leer el contenido.
+Objetivo: sincronización cifrada entre dispositivos sin exponer contenido al servidor durante el transporte normal. La recuperación por correo es una excepción explícita al modelo zero-knowledge: el backend participa como parte confiable únicamente en el flujo de recuperación elegido por el usuario.
 
 - [x] Cuenta de usuario
 - [x] Autenticación
@@ -54,24 +54,26 @@ Objetivo: sincronización cifrada entre dispositivos sin que el servidor pueda l
 - [x] Varios dispositivos
 - [x] Resolución de conflictos *(implementación completa; validación de campo restante registrada en #69)*
 - [x] Historial de versiones *(implementación publicada; validación funcional restante registrada en #70)*
-- [ ] Recuperación de acceso *(bloque activo; diseño e implementación en #73)*
+- [ ] Recuperación de acceso *(implementación por correo en PR #75; pendiente validación real OTP y multidispositivo en #73)*
 
 ### Reglas de acceso V2
 
 - El modo local permanece disponible sin correo ni proveedor social.
-- La cuenta online es opcional y no sustituye la contraseña maestra.
+- La cuenta online es opcional y no sustituye la contraseña maestra durante el acceso normal.
 - OANIX admite acceso por correo + contraseña y acceso con Google usando la misma identidad Supabase.
-- La autenticación online no concede por sí sola acceso al contenido descifrado de la bóveda.
+- Una sesión normal de Google/correo no desbloquea por sí sola la bóveda.
+- La única excepción deliberada es `Recuperar por correo`: un OTP reciente puede autorizar temporalmente al broker de recuperación para recuperar la misma clave de bóveda y obligar a crear una contraseña maestra nueva.
 - No se solicitan permisos de Gmail, Drive ni Contactos para autenticarse con Google.
 - Al iniciar OANIX, el usuario puede elegir explícitamente entre su bóveda sincronizada y el modo local antes de introducir la contraseña maestra correspondiente.
 
 ### Backend V2 validado
 
-- Supabase usa una sola tabla general `public.sync_records` para sobres cifrados y manifiestos E2EE.
-- RLS está habilitado y todas las políticas de lectura/escritura se limitan a `authenticated` con propiedad por `auth.uid()`.
+- Supabase usa una sola tabla general `public.sync_records` para sobres cifrados y manifiestos E2EE del transporte normal.
+- RLS está habilitado y todas las políticas de lectura/escritura de `sync_records` se limitan a `authenticated` con propiedad por `auth.uid()`.
 - `anon` no tiene privilegios sobre los registros de sincronización.
 - El cliente autenticado solo puede modificar `ciphertext`, `version` y `deleted`; propietario, clave opaca y timestamp del servidor no son modificables por esa vía.
-- El backend no interpreta el contenido privado; únicamente almacena los sobres producidos por el cliente E2EE.
+- El backend de sincronización normal no interpreta el contenido privado; únicamente almacena sobres producidos por el cliente E2EE.
+- La recuperación por correo usa un broker separado y tablas de recuperación sin grants para `anon`/`authenticated`; el broker es la excepción explícita de confianza y solo libera material de recuperación después de OTP reciente.
 - Los binarios usan un único bucket privado `oanix-encrypted-blobs`; los objetos se guardan bajo el UID autenticado y RLS impide acceder a objetos de otro usuario.
 
 ### Sincronización E2EE — validada
@@ -79,7 +81,7 @@ Objetivo: sincronización cifrada entre dispositivos sin que el servidor pueda l
 - El primer transporte cifrado fue validado en uso real desde OANIX y se verificaron filas opacas activas en Supabase.
 - Cada registro local elegible conserva su payload ya cifrado y se encapsula nuevamente en un sobre AES-GCM usando la clave activa de la bóveda, que permanece en memoria.
 - `record_key` remoto es un identificador aleatorio generado criptográficamente y no deriva de título, tipo, identificador local ni otros metadatos predecibles.
-- Para reconocer filas ya existentes, OANIX descifra sus sobres únicamente en memoria; no expone al servidor la clave local del registro.
+- Para reconocer filas ya existentes, OANIX descifra sus sobres únicamente en memoria durante la sincronización normal; no expone al servidor la clave local del registro.
 - Si un sobre remoto no puede descifrarse con la bóveda activa, OANIX se detiene y no lo sobrescribe.
 - Los registros cuyo payload cifrado no cambió se verifican localmente pero no se reescriben ni incrementan artificialmente su versión.
 - No se crea un segundo IndexedDB, store o caché para E2EE.
@@ -88,8 +90,8 @@ Objetivo: sincronización cifrada entre dispositivos sin que el servidor pueda l
 
 - El guardado local continúa siendo automático y offline-first.
 - Con una cuenta conectada, la sincronización E2EE es automática: el usuario no depende de un botón manual para subir o bajar cambios.
-- Al entrar con la misma cuenta en un dispositivo nuevo, OANIX puede traer la misma bóveda cifrada; el usuario sigue necesitando conocer su contraseña maestra para abrir la clave de bóveda localmente.
-- La contraseña maestra y la clave de bóveda sin cifrar nunca se envían a Supabase.
+- Al entrar con la misma cuenta en un dispositivo nuevo, OANIX puede traer la misma bóveda cifrada; en el flujo normal el usuario sigue necesitando conocer su contraseña maestra para abrir la clave de bóveda localmente.
+- Durante la sincronización normal la contraseña maestra y la clave de bóveda sin cifrar no se envían al backend. La recuperación por correo es una excepción deliberada: el broker puede procesar temporalmente la clave de bóveda tras OTP reciente para permitir el restablecimiento.
 - Al volver a una instancia anterior de OANIX, los cambios hechos en otro dispositivo se comprueban y reflejan automáticamente cuando hay conexión.
 - El autosync se activa tras cambios locales, al recuperar Internet, al volver a la app, mediante Realtime como aviso de cambios remotos y con una comprobación periódica de respaldo mientras está visible.
 - El estado de sincronización se conserva como registros pequeños cifrados bajo el tipo general `system.sync-state` dentro de `encrypted_records`; no se crea otro store, base local, caché ni cola independiente.
@@ -112,15 +114,23 @@ Objetivo: sincronización cifrada entre dispositivos sin que el servidor pueda l
 - Los snapshots conservan referencias `imageId`; esta etapa no duplica binarios históricos.
 - Al eliminar permanentemente una nota se elimina también su historial para no dejar versiones huérfanas sin una superficie de recuperación definida.
 
-### Recuperación de acceso — bloque activo
+### Recuperación de acceso — implementación V2
 
-- Cambiar la contraseña maestra no debe volver a cifrar todas las notas ni generar una segunda bóveda: debe reenvolver la misma clave de bóveda con una protección nueva.
-- La primera base técnica reutiliza los mismos bytes de clave de bóveda y crea únicamente un nuevo envoltorio Argon2id + AES-GCM; no se exporta la `CryptoKey` activa.
-- En una bóveda sincronizada, la rotación de contraseña debe propagarse de forma coherente a todos los dispositivos; no se publicará una solución que deje contraseñas distintas activas en cada dispositivo.
-- El cambio local de contraseña no se expondrá en la interfaz hasta implementar la propagación sincronizada segura.
-- Si el usuario olvidó por completo la contraseña maestra, Google o la sesión Supabase no pueden saltarse E2EE ni entregar la clave descifrada.
-- La recuperación por olvido requerirá un mecanismo preparado previamente, por ejemplo una clave/código de recuperación protegido por el usuario, diseñado y validado dentro de este bloque.
-- Supabase no almacenará una copia en texto plano de la contraseña maestra ni de la clave de bóveda como mecanismo de recuperación.
+- OANIX mantiene una sola contraseña maestra permanente para la bóveda sincronizada; no obliga al usuario a conservar una segunda clave de recuperación.
+- Después de una entrada correcta en la bóveda sincronizada, OANIX prepara una envoltura de recuperación de la misma clave de bóveda mediante el broker del backend.
+- Si el usuario olvida la contraseña, `Recuperar por correo` solicita un Email OTP para la cuenta existente con `shouldCreateUser: false`.
+- `recover` exige un JWT válido cuyo método de autenticación más reciente sea `otp` y tenga una antigüedad máxima de 10 minutos.
+- Tras validar el código, el usuario debe escribir y confirmar una nueva contraseña maestra antes de continuar.
+- La misma clave de bóveda se reenvuelve con la contraseña nueva; no se crea otra bóveda ni se recifran todas las notas.
+- El bootstrap remoto se actualiza con versión esperada para evitar sobrescribir una rotación concurrente.
+- La generación de seguridad aumenta después de una recuperación y la envoltura de recuperación se rota.
+- Una recuperación ya preparada no puede ser reemplazada desde una sesión normal usando una clave de bóveda diferente.
+- Las tablas `oanix_recovery_root` y `vault_recovery_envelopes` no conceden acceso directo a `anon` ni `authenticated`; el acceso ocurre mediante el broker con service role y JWT del usuario validado.
+- La contraseña maestra no se guarda en Supabase. La clave de bóveda no se guarda en claro en tablas; el broker la procesa temporalmente durante preparación/recuperación y almacena únicamente una envoltura cifrada bajo una raíz de servidor.
+- Esta modalidad prioriza recuperación sencilla y por ello NO debe describirse como zero-knowledge frente al proveedor de backend.
+- El modo exclusivamente local, sin cuenta online/correo, no puede usar recuperación por correo.
+- Un dispositivo completamente offline puede conservar una protección antigua hasta reconectarse; OANIX no promete revocación instantánea de copias offline.
+- Dependencia de validación real: la plantilla de Supabase Email OTP debe incluir `{{ .Token }}` para mostrar el código numérico en lugar de enviar solo un Magic Link.
 
 ## V3 — Android con Capacitor
 
@@ -152,8 +162,8 @@ Objetivo: empaquetar la misma base de código como aplicación Android.
 
 **Versión activa: V2 — Cuenta y sincronización**
 
-**Bloque oficial activo:** Recuperación de acceso — diseño e implementación en issue #73.
+**Bloque oficial activo:** Recuperación de acceso — implementación por correo en PR #75; pendiente validación real del OTP, rotación y varios dispositivos en issue #73.
 
 **Deudas de validación visibles:** Resolución de conflictos (#69) e Historial de versiones (#70). No bloquean el avance por decisión explícita del usuario, pero no deben darse por probadas hasta cerrar sus casos reales.
 
-La cuenta online es opcional y debe permanecer separada de la contraseña maestra y de la bóveda local. No se implementan funciones de V3 o V4 mientras V2 no esté cerrada, salvo preparación arquitectónica explícitamente documentada.
+La cuenta online es opcional. No se implementan funciones de V3 o V4 mientras V2 no esté cerrada, salvo preparación arquitectónica explícitamente documentada.
