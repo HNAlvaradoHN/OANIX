@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react'
 import {
   createMasterPassword,
   initializeLocalVault,
@@ -7,6 +7,7 @@ import {
   unlockLocalVault,
   verifyLocalEncryption,
 } from '../security/vault/vaultService'
+import { restoreEncryptedBackupFromFile } from '../features/backup/backupService'
 
 type GateState = 'checking' | 'setup' | 'locked' | 'unlocked' | 'error'
 
@@ -20,6 +21,7 @@ export function VaultGate({ renderUnlocked }: VaultGateProps) {
   const [confirmation, setConfirmation] = useState('')
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
+  const [restoreBusy, setRestoreBusy] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
 
   useEffect(() => {
@@ -107,6 +109,29 @@ export function VaultGate({ renderUnlocked }: VaultGateProps) {
 
     await verifyUnlockedVault(false)
     setBusy(false)
+  }
+
+  async function handleRestoreBackup(event: ChangeEvent<HTMLInputElement>) {
+    const input = event.currentTarget
+    const file = input.files?.[0] ?? null
+    input.value = ''
+    if (!file || state !== 'setup' || restoreBusy) return
+
+    setRestoreBusy(true)
+    setMessage('')
+    try {
+      const result = await restoreEncryptedBackupFromFile(file)
+      lockLocalVault()
+      setPassword('')
+      setConfirmation('')
+      setShowPassword(false)
+      setState('locked')
+      setMessage(`Backup restaurado (${result.recordCount} registros cifrados). Ingresa la contraseña maestra original del backup.`)
+    } catch (restoreError) {
+      setMessage(restoreError instanceof Error ? restoreError.message : 'No se pudo restaurar el backup cifrado.')
+    } finally {
+      setRestoreBusy(false)
+    }
   }
 
   if (state === 'unlocked') {
@@ -205,16 +230,27 @@ export function VaultGate({ renderUnlocked }: VaultGateProps) {
 
           {message && <p className="form-message" role="alert">{message}</p>}
 
-          <button className="primary-button" type="submit" disabled={busy}>
+          <button className="primary-button" type="submit" disabled={busy || restoreBusy}>
             <span>{busy ? 'Procesando…' : isSetup ? 'Crear bóveda segura' : 'Entrar a OANIX'}</span>
             {!busy && <span aria-hidden="true">→</span>}
           </button>
         </form>
 
         {isSetup && (
-          <p className="security-note">
-            OANIX no guarda tu contraseña. En V1 no existe recuperación si la olvidas.
-          </p>
+          <>
+            <p className="security-note">
+              OANIX no guarda tu contraseña. En V1 no existe recuperación si la olvidas.
+            </p>
+            <div className="vault-restore">
+              <span>¿Ya tienes una bóveda de OANIX?</span>
+              <label className={`vault-restore__button${restoreBusy ? ' vault-restore__button--busy' : ''}`}>
+                <span aria-hidden="true">↥</span>
+                <span>{restoreBusy ? 'Restaurando backup…' : 'Restaurar backup cifrado'}</span>
+                <input type="file" accept=".oanixbackup,application/json,application/vnd.oanix.encrypted-backup+json" onChange={(event) => void handleRestoreBackup(event)} disabled={busy || restoreBusy} />
+              </label>
+              <small>Usarás la misma contraseña maestra con la que se creó esa copia.</small>
+            </div>
+          </>
         )}
       </div>
     )

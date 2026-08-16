@@ -7,6 +7,7 @@ import {
   type MouseEvent as ReactMouseEvent,
 } from 'react'
 import { deleteEncryptedImage } from '../images/imageService'
+import { downloadEncryptedBackup } from '../backup/backupService'
 import { createFolder, deleteFolder, loadFolders, renameFolder, reorderFolder } from '../folders/folderService'
 import type { FolderRecord } from '../folders/folderTypes'
 import { createTag, deleteTag, loadTags, renameTag } from '../tags/tagService'
@@ -177,6 +178,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
   const [savingNoteTags, setSavingNoteTags] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [backupBusy, setBackupBusy] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [draftTitle, setDraftTitle] = useState('')
   const [loading, setLoading] = useState(true)
@@ -943,6 +945,24 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     onLock()
   }
 
+  async function handleExportBackup() {
+    if (backupBusy) return
+    setWorkspaceMenuOpen(false)
+    if (!(await flushPendingContent())) return
+    await finalizeRemovedImages()
+
+    setBackupBusy(true)
+    setError('')
+    try {
+      const result = await downloadEncryptedBackup()
+      window.alert(`Backup cifrado creado: ${result.fileName}\n\nIncluye ${result.recordCount} registros cifrados. Guárdalo junto con tu contraseña maestra.`)
+    } catch (backupError) {
+      setError(backupError instanceof Error ? backupError.message : 'No se pudo crear el backup cifrado de OANIX.')
+    } finally {
+      setBackupBusy(false)
+    }
+  }
+
   async function handleToggleSearch() {
     if (searchOpen) {
       const openNote = selectedIdRef.current
@@ -1078,6 +1098,14 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
                     }}
                   >
                     <span aria-hidden="true">🏷</span> Administrar etiquetas
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    disabled={backupBusy}
+                    onClick={() => void handleExportBackup()}
+                  >
+                    <span aria-hidden="true">🛡</span> {backupBusy ? 'Creando backup…' : 'Exportar backup cifrado'}
                   </button>
                   <button
                     type="button"
