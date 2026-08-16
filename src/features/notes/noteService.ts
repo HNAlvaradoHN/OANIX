@@ -1,6 +1,6 @@
 import { deleteNoteRecord, listNotes, readNote, saveNote } from '../../storage/repositories/noteRepository'
 import { createDailyEntryBlocks } from './dailyEntries'
-import type { NoteRecord, StoredNoteBlock } from './noteTypes'
+import { compareNotesForList, type NoteRecord, type StoredNoteBlock } from './noteTypes'
 
 const DEFAULT_NOTE_TITLE = 'Nueva nota'
 const UNTITLED_NOTE_TITLE = 'Sin título'
@@ -52,12 +52,23 @@ function enqueueNoteMutation(
 
 export async function loadNotes(): Promise<NoteRecord[]> {
   const notes = await listNotes()
-  return notes.sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
+  return notes.sort(compareNotesForList)
 }
 
 export async function createEmptyNote(folderId: string | null = null, tagIds: string[] = []): Promise<NoteRecord> {
   const nowDate = new Date()
   const now = nowDate.toISOString()
+  const existingNotes = await listNotes()
+  const canContinueManualOrder = existingNotes.length === 0 || existingNotes.every((note) =>
+    Number.isSafeInteger(note.manualOrder) && (note.manualOrder ?? -1) >= 0,
+  )
+  const highestManualOrder = canContinueManualOrder
+    ? existingNotes.reduce((highest, note) => Math.max(highest, note.manualOrder ?? 0), 0)
+    : 0
+  const nextManualOrder = canContinueManualOrder && highestManualOrder < Number.MAX_SAFE_INTEGER
+    ? highestManualOrder + 1
+    : undefined
+
   const note: NoteRecord = {
     version: 1,
     id: createNoteId(),
@@ -66,6 +77,7 @@ export async function createEmptyNote(folderId: string | null = null, tagIds: st
     updatedAt: now,
     folderId,
     tagIds: [...new Set(tagIds.filter((tagId) => tagId.length > 0))],
+    ...(nextManualOrder === undefined ? {} : { manualOrder: nextManualOrder }),
     content: {
       format: 'blocks-v1',
       blocks: createDailyEntryBlocks(nowDate),
@@ -137,4 +149,56 @@ export function setNoteTags(noteId: string, tagIds: string[]): Promise<NoteRecor
     tagIds: normalizedTagIds,
     updatedAt: new Date().toISOString(),
   }))
+}
+
+export function setNotePinned(noteId: string, pinned: boolean): Promise<NoteRecord> {
+  return enqueueNoteMutation(noteId, (existing) => ({
+    ...existing,
+    pinned,
+  }))
+}
+
+export async function persistNoteOrder(orderedNoteIds: string[]): Promise<NoteRecord[]> {
+  const uniqueIds = [...new Set(orderedNoteIds)]
+  if (uniqueIds.length !== orderedNoteIds.length) {
+    throw new Error('El orden de notas contiene identificadores duplicados.')
+  }
+  if (uniqueIds.length === 0) return []
+
+  const records = await Promise.all(uniqueIds.map((noteId) => readNote(noteId)))
+  if (records.some((note) => !note)) {
+    throw new Error('No se pudo ordenar porque una nota ya no existe.')
+  }
+
+  const existingRecords = records as NoteRecord[]
+  const recordById = new Map(existingRecords.map((note) => [note.id, note]))
+  const allHaveManualOrder = existingRecords.every((note) =>
+    Number.isSafeInteger(note.manualOrder) && (note.manualOrder ?? -1) >= 0,
+  )
+
+  const targetOrders = allHaveManualOrder
+    ? [...existingRecords]
+        .sort(compareNotesForList)
+        .map((note) => note.manualOrder ?? 0)
+    : orderedNoteIds.map((_, index) => orderedNoteIds.length - index)
+
+  const updatedById = new Map<string, NoteRecord>()
+  await Promise.all(orderedNoteIds.map(async (noteId, index) => {
+    const existing = recordById.get(noteId)
+    if (!existing) return
+    const manualOrder = targetOrders[index]
+
+    if (existing.manualOrder === manualOrder) {
+      updatedById.set(noteId, existing)
+      return
+    }
+
+    const updated = await enqueueNoteMutation(noteId, (current) => ({
+      ...current,
+      manualOrder,
+    }))
+    updatedById.set(noteId, updated)
+  }))
+
+  return orderedNoteIds.map((noteId) => updatedById.get(noteId) ?? recordById.get(noteId)!)
 }
