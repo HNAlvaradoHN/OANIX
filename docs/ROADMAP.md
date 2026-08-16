@@ -51,7 +51,7 @@ Objetivo: sincronización cifrada entre dispositivos sin que el servidor pueda l
 - [x] Autenticación
 - [x] Backend de sincronización
 - [x] Sincronización E2EE
-- [ ] Varios dispositivos ← implementación técnica completa; validación real en segundo dispositivo pendiente
+- [x] Varios dispositivos
 - [ ] Resolución de conflictos
 - [ ] Historial de versiones
 - [ ] Recuperación de acceso
@@ -63,6 +63,7 @@ Objetivo: sincronización cifrada entre dispositivos sin que el servidor pueda l
 - OANIX admite acceso por correo + contraseña y acceso con Google usando la misma identidad Supabase.
 - La autenticación online no concede por sí sola acceso al contenido descifrado de la bóveda.
 - No se solicitan permisos de Gmail, Drive ni Contactos para autenticarse con Google.
+- Al iniciar OANIX, el usuario puede elegir explícitamente entre su bóveda sincronizada y el modo local antes de introducir la contraseña maestra correspondiente.
 
 ### Backend V2 validado
 
@@ -83,14 +84,14 @@ Objetivo: sincronización cifrada entre dispositivos sin que el servidor pueda l
 - Los registros cuyo payload cifrado no cambió se verifican localmente pero no se reescriben ni incrementan artificialmente su versión.
 - No se crea un segundo IndexedDB, store o caché para E2EE.
 
-### Varios dispositivos — regla oficial de producto
+### Varios dispositivos — validado en dispositivo real
 
 - El guardado local continúa siendo automático y offline-first.
 - Con una cuenta conectada, la sincronización E2EE es automática: el usuario no depende de un botón manual para subir o bajar cambios.
 - Al entrar con la misma cuenta en un dispositivo nuevo, OANIX puede traer la misma bóveda cifrada; el usuario sigue necesitando conocer su contraseña maestra para abrir la clave de bóveda localmente.
 - La contraseña maestra y la clave de bóveda sin cifrar nunca se envían a Supabase.
 - Al volver a una instancia anterior de OANIX, los cambios hechos en otro dispositivo se comprueban y reflejan automáticamente cuando hay conexión.
-- El autosync se activa tras cambios locales, al recuperar Internet, al volver a la app y mediante una comprobación periódica mientras está visible.
+- El autosync se activa tras cambios locales, al recuperar Internet, al volver a la app, mediante Realtime como aviso de cambios remotos y con una comprobación periódica de respaldo mientras está visible.
 - El estado de sincronización se conserva como registros pequeños cifrados bajo el tipo general `system.sync-state` dentro de `encrypted_records`; no se crea otro store, base local, caché ni cola independiente.
 - Las escrituras remotas usan versión esperada para evitar sobrescribir silenciosamente una modificación concurrente.
 - Si ambos dispositivos modificaron de forma incompatible el mismo registro desde la última base común, OANIX conserva ambos lados sin sobrescribir y lo entrega al siguiente punto oficial: Resolución de conflictos.
@@ -98,6 +99,14 @@ Objetivo: sincronización cifrada entre dispositivos sin que el servidor pueda l
 - El nombre, ID y tipo local de una imagen no forman parte de la ruta remota; la ruta usa únicamente el UID requerido por RLS y un identificador aleatorio.
 - El manifiesto que relaciona una imagen local con sus fragmentos permanece cifrado dentro de `sync_records`; cada fragmento se verifica con SHA-256 antes de reconstruir el payload cifrado local.
 - Al reemplazar o eliminar un binario, OANIX limpia los fragmentos que dejan de ser necesarios; una cola mínima de limpieza queda cifrada dentro del mismo estado de sincronización para reintentar sin crear almacenamiento paralelo.
+
+### Recuperación de acceso — requisitos obligatorios antes de implementar
+
+- Cambiar la contraseña maestra no debe volver a cifrar todas las notas ni generar una segunda bóveda: debe reenvolver la misma clave de bóveda con una protección nueva.
+- En una bóveda sincronizada, la rotación de contraseña debe propagarse de forma coherente a todos los dispositivos; no se publicará una solución que deje contraseñas distintas activas en cada dispositivo.
+- Si el usuario olvidó por completo la contraseña maestra, Google o la sesión Supabase no pueden saltarse E2EE ni entregar la clave descifrada.
+- La recuperación por olvido requerirá un mecanismo preparado previamente, por ejemplo una clave/código de recuperación protegido por el usuario, diseñado y validado dentro del bloque oficial Recuperación de acceso.
+- Supabase no almacenará una copia en texto plano de la contraseña maestra ni de la clave de bóveda como mecanismo de recuperación.
 
 ## V3 — Android con Capacitor
 
@@ -129,6 +138,6 @@ Objetivo: empaquetar la misma base de código como aplicación Android.
 
 **Versión activa: V2 — Cuenta y sincronización**
 
-**Siguiente bloque de trabajo:** Varios dispositivos — validación real del autosync completo, incluidas imágenes, en un segundo dispositivo.
+**Siguiente bloque oficial:** Resolución de conflictos.
 
 La cuenta online es opcional y debe permanecer separada de la contraseña maestra y de la bóveda local. No se implementan funciones de V3 o V4 mientras V2 no esté cerrada, salvo preparación arquitectónica explícitamente documentada.
