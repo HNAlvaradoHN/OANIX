@@ -1,4 +1,4 @@
-import { useEffect, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react'
+import { useCallback, useEffect, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react'
 import {
   createMasterPassword,
   initializeLocalVault,
@@ -17,6 +17,7 @@ import {
   hasRemoteSyncedVault,
   restoreSyncedVaultToThisDevice,
 } from '../features/sync/syncService'
+import { syncEncryptedBinariesBidirectional } from '../features/sync/binarySyncService'
 
 type GateState = 'checking' | 'setup' | 'locked' | 'unlocked' | 'error'
 
@@ -41,6 +42,7 @@ export function VaultGate({ renderUnlocked }: VaultGateProps) {
   const [cloudPassword, setCloudPassword] = useState('')
   const [showCloudPassword, setShowCloudPassword] = useState(false)
   const [cloudBusy, setCloudBusy] = useState(false)
+  const [cloudProgress, setCloudProgress] = useState('')
 
   useEffect(() => {
     let active = true
@@ -63,7 +65,7 @@ export function VaultGate({ renderUnlocked }: VaultGateProps) {
   }, [])
 
   useEffect(() => {
-    if (state !== 'setup') return
+    if (state !== 'setup' && state !== 'locked') return
     let active = true
 
     void getOnlineAccountSession()
@@ -95,6 +97,7 @@ export function VaultGate({ renderUnlocked }: VaultGateProps) {
   function resetCloudDraft() {
     setCloudPassword('')
     setShowCloudPassword(false)
+    setCloudProgress('')
   }
 
   function handleLock() {
@@ -206,9 +209,11 @@ export function VaultGate({ renderUnlocked }: VaultGateProps) {
     }
   }
 
-  async function handleAccountSessionChange(session: OnlineAccountSession | null) {
+  const handleAccountSessionChange = useCallback(async (session: OnlineAccountSession | null) => {
     setOnlineSession(session)
-    resetCloudDraft()
+    setCloudPassword('')
+    setShowCloudPassword(false)
+    setCloudProgress('')
     if (!session) {
       setRemoteVaultAvailable(null)
       return
@@ -220,16 +225,42 @@ export function VaultGate({ renderUnlocked }: VaultGateProps) {
       setRemoteVaultAvailable(false)
       setMessage(error instanceof Error ? error.message : 'No se pudo comprobar la bóveda sincronizada.')
     }
-  }
+  }, [])
 
   async function handleRestoreSyncedVault(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (!cloudPassword || cloudBusy || state !== 'setup' || !onlineSession || remoteVaultAvailable !== true) return
+    const canReplaceFromCloud = state === 'setup' || state === 'locked'
+    if (!cloudPassword || cloudBusy || !canReplaceFromCloud || !onlineSession || remoteVaultAvailable !== true) return
+
+    if (
+      state === 'locked'
+      && !window.confirm(
+        'Este dispositivo ya tiene una bóveda local. La bóveda sincronizada de tu cuenta la reemplazará. Si quieres conservar la bóveda local actual, cancela y crea primero un backup cifrado. ¿Quieres continuar?',
+      )
+    ) {
+      return
+    }
 
     setCloudBusy(true)
+    setCloudProgress('Verificando contraseña y registros cifrados…')
     setMessage('')
     try {
       const result = await restoreSyncedVaultToThisDevice(cloudPassword)
+
+      setCloudProgress('Sincronizando imágenes cifradas…')
+      let binaryWarning = ''
+      try {
+        const binaryResult = await syncEncryptedBinariesBidirectional()
+        if (binaryResult.conflicts > 0) {
+          binaryWarning = `${binaryResult.conflicts} imagen${binaryResult.conflicts === 1 ? '' : 'es'} requiere${binaryResult.conflicts === 1 ? '' : 'n'} revisión de conflicto.`
+        }
+      } catch (binaryError) {
+        binaryWarning = binaryError instanceof Error
+          ? binaryError.message
+          : 'Las imágenes se reintentarán mediante la sincronización automática.'
+      }
+
+      setCloudProgress('Comprobando almacenamiento local…')
       const verification = await verifyLocalEncryption()
       if (verification.status === 'error') {
         lockLocalVault()
@@ -237,13 +268,26 @@ export function VaultGate({ renderUnlocked }: VaultGateProps) {
         return
       }
 
+      setPassword('')
+      setConfirmation('')
+      setShowPassword(false)
       resetCloudDraft()
       setState('unlocked')
-      window.alert(`Bóveda sincronizada descargada correctamente.\n\n${result.recordCount} registros cifrados restaurados en este dispositivo.`)
+
+      if (binaryWarning) {
+        window.setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('oanix:sync-status', {
+            detail: { kind: 'conflict', message: binaryWarning, at: new Date().toISOString() },
+          }))
+        }, 0)
+      }
+
+      void result
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'No se pudo traer la bóveda sincronizada.')
     } finally {
       setCloudBusy(false)
+      setCloudProgress('')
     }
   }
 
@@ -356,9 +400,9 @@ export function VaultGate({ renderUnlocked }: VaultGateProps) {
           </p>
         )}
 
-        {isSetup && (
+        {canRestore && (
           <div className="vault-restore">
-            <span>¿Ya usas OANIX en otro dispositivo?</span>
+            <span>{isSetup ? '¿Ya usas OANIX en otro dispositivo?' : '¿Quieres usar aquí la bóveda sincronizada de tu cuenta?'}</span>
             {!onlineSession ? (
               <button
                 type="button"
@@ -367,13 +411,16 @@ export function VaultGate({ renderUnlocked }: VaultGateProps) {
                 disabled={busy || restoreBusy || cloudBusy}
               >
                 <span aria-hidden="true">☁</span>
-                <span>Conectar mi cuenta sincronizada</span>
+                <span>{isSetup ? 'Conectar mi cuenta sincronizada' : 'Conectar cuenta y elegir bóveda sincronizada'}</span>
               </button>
             ) : remoteVaultAvailable === true ? (
               <form className="vault-form" onSubmit={(event) => void handleRestoreSyncedVault(event)}>
                 <small>Cuenta conectada: {onlineSession.email}</small>
+                {state === 'locked' && (
+                  <small>Este dispositivo ya tiene otra bóveda local. Si la necesitas, crea un backup cifrado antes de reemplazarla.</small>
+                )}
                 <label className="field" htmlFor="cloud-master-password">
-                  <span>Contraseña maestra de tu bóveda</span>
+                  <span>Contraseña maestra de tu bóveda sincronizada</span>
                   <div className="password-input">
                     <input
                       id="cloud-master-password"
@@ -400,7 +447,13 @@ export function VaultGate({ renderUnlocked }: VaultGateProps) {
                   </div>
                 </label>
                 <button className="primary-button" type="submit" disabled={busy || restoreBusy || cloudBusy || !cloudPassword}>
-                  <span>{cloudBusy ? 'Descifrando y descargando…' : 'Traer mi bóveda a este dispositivo'}</span>
+                  <span>
+                    {cloudBusy
+                      ? (cloudProgress || 'Preparando bóveda sincronizada…')
+                      : state === 'locked'
+                        ? 'Reemplazar por mi bóveda sincronizada'
+                        : 'Traer mi bóveda a este dispositivo'}
+                  </span>
                   {!cloudBusy && <span aria-hidden="true">→</span>}
                 </button>
                 <small>La clave de la bóveda permanece cifrada en Supabase; solo esta contraseña puede abrirla localmente.</small>
@@ -552,7 +605,7 @@ export function VaultGate({ renderUnlocked }: VaultGateProps) {
         <AccountPanel
           context="vault-setup"
           onClose={() => setAccountOpen(false)}
-          onSessionChange={(session) => void handleAccountSessionChange(session)}
+          onSessionChange={handleAccountSessionChange}
         />
       )}
     </>
