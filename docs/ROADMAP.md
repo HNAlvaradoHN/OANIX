@@ -51,7 +51,7 @@ Objetivo: sincronización cifrada entre dispositivos sin que el servidor pueda l
 - [x] Autenticación
 - [x] Backend de sincronización
 - [x] Sincronización E2EE
-- [ ] Varios dispositivos ← en implementación y validación real
+- [ ] Varios dispositivos ← implementación técnica completa; validación real en segundo dispositivo pendiente
 - [ ] Resolución de conflictos
 - [ ] Historial de versiones
 - [ ] Recuperación de acceso
@@ -66,11 +66,12 @@ Objetivo: sincronización cifrada entre dispositivos sin que el servidor pueda l
 
 ### Backend V2 validado
 
-- Supabase usa una sola tabla general `public.sync_records` para sobres cifrados.
+- Supabase usa una sola tabla general `public.sync_records` para sobres cifrados y manifiestos E2EE.
 - RLS está habilitado y todas las políticas de lectura/escritura se limitan a `authenticated` con propiedad por `auth.uid()`.
 - `anon` no tiene privilegios sobre los registros de sincronización.
 - El cliente autenticado solo puede modificar `ciphertext`, `version` y `deleted`; propietario, clave opaca y timestamp del servidor no son modificables por esa vía.
 - El backend no interpreta el contenido privado; únicamente almacena los sobres producidos por el cliente E2EE.
+- Los binarios usan un único bucket privado `oanix-encrypted-blobs`; los objetos se guardan bajo el UID autenticado y RLS impide acceder a objetos de otro usuario.
 
 ### Sincronización E2EE — validada
 
@@ -85,14 +86,18 @@ Objetivo: sincronización cifrada entre dispositivos sin que el servidor pueda l
 ### Varios dispositivos — regla oficial de producto
 
 - El guardado local continúa siendo automático y offline-first.
-- Con una cuenta conectada, la sincronización E2EE debe ser automática: el usuario no debe depender de un botón manual para subir o bajar cambios.
-- Al entrar con la misma cuenta en un dispositivo nuevo, OANIX debe poder traer la misma bóveda cifrada; el usuario sigue necesitando conocer su contraseña maestra para abrir la clave de bóveda localmente.
+- Con una cuenta conectada, la sincronización E2EE es automática: el usuario no depende de un botón manual para subir o bajar cambios.
+- Al entrar con la misma cuenta en un dispositivo nuevo, OANIX puede traer la misma bóveda cifrada; el usuario sigue necesitando conocer su contraseña maestra para abrir la clave de bóveda localmente.
 - La contraseña maestra y la clave de bóveda sin cifrar nunca se envían a Supabase.
-- Al volver a una instancia anterior de OANIX, los cambios hechos en otro dispositivo deben reflejarse automáticamente cuando haya conexión.
-- La primera implementación usa un único registro local cifrado `system.sync-state` dentro del store general existente para recordar versión/fingerprint y detectar cambios o eliminaciones; no crea otro store, base local, caché ni cola persistente.
+- Al volver a una instancia anterior de OANIX, los cambios hechos en otro dispositivo se comprueban y reflejan automáticamente cuando hay conexión.
+- El autosync se activa tras cambios locales, al recuperar Internet, al volver a la app y mediante una comprobación periódica mientras está visible.
+- El estado de sincronización se conserva como registros pequeños cifrados bajo el tipo general `system.sync-state` dentro de `encrypted_records`; no se crea otro store, base local, caché ni cola independiente.
 - Las escrituras remotas usan versión esperada para evitar sobrescribir silenciosamente una modificación concurrente.
 - Si ambos dispositivos modificaron de forma incompatible el mismo registro desde la última base común, OANIX conserva ambos lados sin sobrescribir y lo entrega al siguiente punto oficial: Resolución de conflictos.
-- `image` e `image-preview` continúan pendientes dentro de este mismo bloque de Varios dispositivos; deben incorporarse a autosync cifrado antes de marcar este punto como completado.
+- `image` e `image-preview` forman parte del autosync E2EE: su ciphertext ya cifrado se divide en fragmentos de 8 MiB y se guarda como `application/octet-stream` en el bucket privado.
+- El nombre, ID y tipo local de una imagen no forman parte de la ruta remota; la ruta usa únicamente el UID requerido por RLS y un identificador aleatorio.
+- El manifiesto que relaciona una imagen local con sus fragmentos permanece cifrado dentro de `sync_records` y se verifica mediante SHA-256 antes de reconstruir el payload cifrado local.
+- Al reemplazar o eliminar un binario, OANIX limpia los fragmentos que dejan de ser necesarios; una cola mínima de limpieza queda cifrada dentro del mismo estado de sincronización para reintentar sin crear almacenamiento paralelo.
 
 ## V3 — Android con Capacitor
 
@@ -124,6 +129,6 @@ Objetivo: empaquetar la misma base de código como aplicación Android.
 
 **Versión activa: V2 — Cuenta y sincronización**
 
-**Siguiente bloque de trabajo:** Varios dispositivos — autosync E2EE, incorporación de binarios y validación real en un segundo dispositivo.
+**Siguiente bloque de trabajo:** Varios dispositivos — validación real del autosync completo, incluidas imágenes, en un segundo dispositivo.
 
 La cuenta online es opcional y debe permanecer separada de la contraseña maestra y de la bóveda local. No se implementan funciones de V3 o V4 mientras V2 no esté cerrada, salvo preparación arquitectónica explícitamente documentada.
