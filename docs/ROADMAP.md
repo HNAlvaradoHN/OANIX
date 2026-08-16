@@ -49,8 +49,8 @@ Objetivo: sincronización cifrada entre dispositivos sin que el servidor pueda l
 
 - [x] Cuenta de usuario
 - [x] Autenticación
-- [ ] Backend de sincronización ← en implementación
-- [ ] Sincronización E2EE
+- [x] Backend de sincronización
+- [ ] Sincronización E2EE ← en implementación
 - [ ] Varios dispositivos
 - [ ] Resolución de conflictos
 - [ ] Historial de versiones
@@ -63,6 +63,14 @@ Objetivo: sincronización cifrada entre dispositivos sin que el servidor pueda l
 - OANIX admite acceso por correo + contraseña y acceso con Google usando la misma identidad Supabase.
 - La autenticación online no concede por sí sola acceso al contenido descifrado de la bóveda.
 - No se solicitan permisos de Gmail, Drive ni Contactos para autenticarse con Google.
+
+### Backend V2 validado
+
+- Supabase usa una sola tabla general `public.sync_records` para futuros sobres cifrados.
+- RLS está habilitado y todas las políticas de lectura/escritura se limitan a `authenticated` con propiedad por `auth.uid()`.
+- `anon` no tiene privilegios sobre los registros de sincronización.
+- El cliente autenticado solo puede modificar `ciphertext`, `version` y `deleted`; propietario, clave opaca y timestamp del servidor no son modificables por esa vía.
+- El backend todavía no transporta notas reales: la sincronización permanece desactivada hasta completar el protocolo E2EE del siguiente bloque.
 
 ## V3 — Android con Capacitor
 
@@ -94,6 +102,6 @@ Objetivo: empaquetar la misma base de código como aplicación Android.
 
 **Versión activa: V2 — Cuenta y sincronización**
 
-**Siguiente bloque de trabajo:** Backend de sincronización.
+**Siguiente bloque de trabajo:** Sincronización E2EE.
 
 La cuenta online es opcional y debe permanecer separada de la contraseña maestra y de la bóveda local. No se implementan funciones de V3 o V4 mientras V2 no esté cerrada, salvo preparación arquitectónica explícitamente documentada.
