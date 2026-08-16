@@ -3,6 +3,8 @@
 Todos los cambios relevantes del proyecto se registran aquí por versión.
 
 ## Unreleased
+- V2 Backend de sincronización: diseño previo documentado con una superficie compacta de registros cifrados, RLS por `auth.uid()`, metadatos mínimos y modelo de amenazas antes de crear tablas o transportar contenido real.
+- V2 Autenticación validada en uso real: acceso con Google, sesión online, cierre de sesión y modo local coexistiendo sin que la cuenta sustituya la contraseña maestra ni desbloquee la bóveda.
 - V2 Autenticación: modo local explícito sin correo, inicio/cierre de sesión por correo, sesión online persistente y acceso con Google preparado dentro del mismo módulo `features/account/`, sin activar todavía sincronización ni tocar la bóveda local.
 - V2 Cuenta de usuario: cuenta online opcional mediante Supabase, separada de la contraseña maestra y del contenido cifrado local.
 - Funcionamiento offline V1 reforzado: el service worker precachea explícitamente el app shell ejecutable (`js`, `css`, `html` y futuros `wasm`), conserva `index.html` como fallback de navegación y limpia cachés obsoletos sin crear un sistema paralelo de almacenamiento.

@@ -169,3 +169,62 @@ Los checklists de V1 son bloques estructurados dentro de `blocks-v1`: cada eleme
 - Cada nota guarda opcionalmente `folderId` dentro de su propio registro cifrado; notas antiguas sin este campo siguen siendo válidas.
 - Eliminar una carpeta nunca elimina notas: primero se desvinculan y vuelven al estado `Sin carpeta`.
 - La lista usa una única fila de pestañas fluida para `Todas` y las carpetas creadas; la misma estructura funciona en móvil, tablet y PC.
+
+## Backend de sincronización V2 — diseño previo
+
+El backend de V2 se diseña primero como un almacén de sobres cifrados. Supabase autentica al usuario y autoriza filas, pero no recibe la contraseña maestra ni claves capaces de descifrar la bóveda.
+
+### Superficie mínima del servidor
+
+La primera migración debe preferir **una sola tabla general de registros sincronizados**, en lugar de crear tablas separadas por notas, carpetas, etiquetas, imágenes o futuras funciones. El tipo semántico del registro permanece dentro del payload cifrado siempre que el protocolo no necesite conocerlo.
+
+Cada fila necesita únicamente metadatos operativos mínimos:
+
+- `user_id`: propietario Supabase, usado exclusivamente para RLS;
+- `record_key`: identificador opaco generado por el cliente, sin título ni nombre legible;
+- `ciphertext`: sobre cifrado versionado producido en el cliente;
+- `version`: contador/versionado necesario para sincronización y conflictos posteriores;
+- `updated_at`: marca temporal del servidor para consultas incrementales;
+- estado de borrado lógico únicamente si el protocolo de sincronización lo requiere para propagar eliminaciones.
+
+No se almacenarán en columnas separadas títulos, nombres de carpeta, etiquetas, texto de notas, nombres de contactos ni descripciones de imágenes.
+
+### RLS y acceso
+
+La tabla expuesta a la aplicación debe tener RLS habilitado desde su creación. Las políticas se limitan al rol `authenticated` y comprueban que `(select auth.uid()) = user_id` tanto al leer como al insertar/modificar. `anon` no recibe acceso a registros sincronizados.
+
+El `user_id` debe estar indexado porque participa en todas las políticas y consultas. Las consultas del cliente también filtrarán explícitamente por `user_id`, aun cuando RLS ya imponga el mismo límite, para permitir mejores planes de ejecución.
+
+La clave `service_role` o cualquier secreto capaz de saltarse RLS nunca se incluye en el navegador, el repositorio público ni la PWA.
+
+### Separación entre autenticación y cifrado
+
+```text
+Cuenta Google / correo
+        ↓
+Supabase Auth
+        ↓
+JWT de usuario
+        ↓
+RLS: solo sus filas
+
+Contraseña maestra
+        ↓
+Clave de bóveda local
+        ↓
+Cifrado E2EE del registro
+        ↓
+Servidor recibe solo ciphertext
+```
+
+Una sesión Supabase válida autoriza transporte y almacenamiento, pero no desbloquea la bóveda local. Un usuario puede cerrar sesión online sin borrar ni bloquear sus datos locales.
+
+### Higiene local durante V2
+
+La sincronización no debe crear un segundo IndexedDB ni stores por función. Cuando haga falta persistir estado técnico de sync, se reutilizará la infraestructura local existente y se mantendrá el mínimo estado necesario; los cursores o metadatos que deban sobrevivir reinicios se guardarán de forma compacta y, si contienen información sensible, cifrada.
+
+No se implementará una caché paralela de registros remotos. El servidor es una réplica cifrada para sincronización, no un tercer formato local de la bóveda.
+
+### Fuera de este primer bloque
+
+Todavía no pertenecen al backend base: protocolo E2EE multi-dispositivo, envoltura de claves por dispositivo, resolución de conflictos, historial, recuperación y estrategia definitiva para binarios grandes. Esos puntos tienen bloques propios en V2 y se diseñan sobre esta base sin debilitar el modelo local existente.
