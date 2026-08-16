@@ -3,9 +3,12 @@ import test from 'node:test'
 
 import {
   filterByLocalSearch,
+  findLocalSearchMatches,
   localSearchTextMatches,
   localSearchTokens,
   normalizeLocalSearchText,
+  searchItemsByLocalFields,
+  type LocalSearchField,
 } from '../src/features/search/localSearch.ts'
 import { noteBlocksToPlainText, type NoteRecord } from '../src/features/notes/noteTypes.ts'
 
@@ -72,4 +75,45 @@ test('filters decrypted notes without changing their order', () => {
 
   assert.deepEqual(filterByLocalSearch([first, second, third], 'galaxia', searchableText).map((item) => item.id), ['second'])
   assert.deepEqual(filterByLocalSearch([first, second, third], '', searchableText).map((item) => item.id), ['first', 'second', 'third'])
+})
+
+test('returns labeled locations and occurrence counts for a match', () => {
+  const fields: LocalSearchField[] = [
+    { key: 'title', label: 'Título', text: 'Sensores de producción' },
+    { key: 'paragraph', label: 'Texto', text: 'Revisar sensores y limpiar sensores del pasillo norte.' },
+    { key: 'code', label: 'Código', text: 'const sensor = true' },
+  ]
+
+  const matches = findLocalSearchMatches(fields, 'sensores')
+
+  assert.deepEqual(matches.map((match) => match.label), ['Título', 'Texto'])
+  assert.equal(matches[0]?.occurrences, 1)
+  assert.equal(matches[1]?.occurrences, 2)
+  assert.match(matches[1]?.snippet ?? '', /sensores/i)
+})
+
+test('global item search is independent from external folder state', () => {
+  const items = [
+    { id: 'folder-3-note', folder: '3', title: 'Otra cosa', text: 'Nada aquí' },
+    { id: 'folder-1-note', folder: '1', title: 'Mantenimiento', text: 'Revisar sensores del área' },
+    { id: 'folder-2-note', folder: '2', title: 'Compras', text: 'Comprar sensores nuevos' },
+  ]
+
+  const results = searchItemsByLocalFields(items, 'sensores', (item) => [
+    { key: `${item.id}:title`, label: 'Título', text: item.title },
+    { key: `${item.id}:text`, label: 'Texto', text: item.text },
+  ])
+
+  assert.deepEqual(results.map((result) => result.item.id), ['folder-1-note', 'folder-2-note'])
+  assert.equal(results.every((result) => result.matches.length > 0), true)
+})
+
+test('multi-word global search can report terms found in different locations of one item', () => {
+  const fields: LocalSearchField[] = [
+    { key: 'title', label: 'Título', text: 'Reunión de mantenimiento' },
+    { key: 'checklist', label: 'Checklist', text: 'Revisar sensores' },
+  ]
+
+  const matches = findLocalSearchMatches(fields, 'reunion sensores')
+  assert.deepEqual(matches.map((match) => match.label), ['Título', 'Checklist'])
 })

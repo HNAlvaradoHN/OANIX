@@ -708,3 +708,59 @@
   .notes-search { padding-inline: .5rem; }
   .notes-search__field { min-height: 2.5rem; }
 }
+
+/* Global local-search results */
+.notes-shell--searching .notes-tabs-shell,
+.notes-shell--searching .notes-tag-filter {
+  display: none;
+}
+
+.search-result-locations {
+  min-width: 0;
+  display: grid;
+  gap: .3rem;
+  margin-top: .25rem;
+}
+
+.search-result-location {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(5.4rem, auto) minmax(0, 1fr);
+  align-items: start;
+  gap: .45rem;
+  padding: .32rem .42rem;
+  border: 1px solid #e3e9f1;
+  border-radius: .55rem;
+  background: #f8fafc;
+  text-align: left;
+}
+
+.search-result-location__label {
+  color: #315fd4;
+  font-size: .66rem;
+  font-weight: 850;
+  line-height: 1.35;
+}
+
+.search-result-location__snippet {
+  min-width: 0;
+  color: #536273;
+  font-size: .7rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.search-result-location__more {
+  color: #64748b;
+  font-size: .68rem;
+  font-weight: 750;
+  padding-inline: .15rem;
+}
+
+@media (max-width: 520px) {
+  .search-result-location {
+    grid-template-columns: 1fr;
+    gap: .15rem;
+  }
+}
+
