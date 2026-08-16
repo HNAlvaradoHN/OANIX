@@ -11,24 +11,47 @@ test('multi-device bootstrap reuses the existing wrapped vault key protection', 
   assert.match(syncSource, /openVaultProtection\(masterPassword, bootstrap\.metadata\.protection\)/)
   assert.match(syncSource, /replaceLocalVaultSnapshot/)
   assert.match(syncSource, /setActiveVaultKey\(vaultKey\)/)
-  assert.match(gateSource, /Conectar mi cuenta sincronizada/)
-  assert.match(gateSource, /Traer mi bóveda a este dispositivo/)
-  assert.match(gateSource, /(misma|esa misma) contraseña/)
+  assert.match(gateSource, /Bóveda sincronizada con Google/)
+  assert.match(gateSource, /Modo local/)
+  assert.match(gateSource, /Contraseña maestra de tu bóveda/)
 })
 
-test('an existing local vault can be deliberately replaced by the synchronized vault', () => {
+test('vault gate asks for an access path before showing a password form', () => {
   const gateSource = readFileSync('src/app/VaultGate.tsx', 'utf8')
 
-  assert.match(gateSource, /state !== 'setup' && state !== 'locked'/)
-  assert.match(gateSource, /Reemplazar por mi bóveda sincronizada/)
+  assert.match(gateSource, /type AccessChoice = 'choose' \| 'local' \| 'synced'/)
+  assert.match(gateSource, /Elige cómo entrar/)
+  assert.match(gateSource, /chooseAccess\('synced'\)/)
+  assert.match(gateSource, /chooseAccess\('local'\)/)
+  assert.match(gateSource, /accessChoice === 'choose'/)
+  assert.match(gateSource, /accessChoice === 'local'/)
+  assert.match(gateSource, /accessChoice === 'synced'|syncedAccess/)
+  assert.match(gateSource, /setAccessChoice\('choose'\)/)
+})
+
+test('synchronized access opens an already-linked local vault without replacing it', () => {
+  const gateSource = readFileSync('src/app/VaultGate.tsx', 'utf8')
+
+  assert.match(gateSource, /const localUnlock = await unlockLocalVault\(cloudPassword\)/)
+  assert.match(gateSource, /await ensureRemoteVaultBootstrap\(\)/)
+  assert.match(gateSource, /setState\('unlocked'\)/)
+  assert.match(gateSource, /Si esta ya es la misma bóveda del dispositivo, OANIX la abre directamente/)
+})
+
+test('a different local vault is only replaced after explicit confirmation', () => {
+  const gateSource = readFileSync('src/app/VaultGate.tsx', 'utf8')
+
+  assert.match(gateSource, /otra clave de bóveda/)
+  assert.match(gateSource, /Este dispositivo tiene una bóveda local diferente/)
   assert.match(gateSource, /Si quieres conservar la bóveda local actual, cancela y crea primero un backup cifrado/)
-  assert.match(gateSource, /state === 'locked'/)
+  assert.match(gateSource, /restoreSyncedVaultToThisDevice\(cloudPassword\)/)
   assert.match(gateSource, /syncEncryptedBinariesBidirectional/)
 })
 
 test('cloud restore exposes meaningful stages instead of one indefinite busy label', () => {
   const gateSource = readFileSync('src/app/VaultGate.tsx', 'utf8')
 
+  assert.match(gateSource, /Comprobando esta bóveda/)
   assert.match(gateSource, /Verificando contraseña y registros cifrados/)
   assert.match(gateSource, /Sincronizando imágenes cifradas/)
   assert.match(gateSource, /Comprobando almacenamiento local/)
