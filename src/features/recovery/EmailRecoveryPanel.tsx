@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useRef, useState, type FormEvent } from 'react'
 import { MASTER_PASSWORD_MIN_CHARACTERS } from '../../security/vault/vaultService'
 import {
   completeEmailVaultRecovery,
@@ -23,9 +23,11 @@ export function EmailRecoveryPanel({ email, disabled = false, onRecovered }: Ema
   const [showPassword, setShowPassword] = useState(false)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
+  const startInFlight = useRef(false)
 
   async function handleStartRecovery() {
-    if (busy || disabled) return
+    if (busy || disabled || startInFlight.current) return
+    startInFlight.current = true
     setBusy(true)
     setMessage('')
 
@@ -36,12 +38,17 @@ export function EmailRecoveryPanel({ email, disabled = false, onRecovered }: Ema
         return
       }
 
-      await requestEmailRecoveryCode(email)
+      const delivery = await requestEmailRecoveryCode(email)
       setStage('code-sent')
-      setMessage(`Código enviado a ${email}. Escríbelo abajo y crea tu nueva contraseña maestra.`)
+      setMessage(
+        delivery === 'uncertain'
+          ? `OANIX no pudo confirmar la respuesta de red, pero el código puede haberse enviado a ${email}. Revisa tu correo; si no llega, usa “Enviar otro código”.`
+          : `Código enviado a ${email}. Escríbelo abajo y crea tu nueva contraseña maestra.`,
+      )
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'No se pudo iniciar la recuperación por correo.')
     } finally {
+      startInFlight.current = false
       setBusy(false)
     }
   }
@@ -157,7 +164,7 @@ export function EmailRecoveryPanel({ email, disabled = false, onRecovered }: Ema
           />
         </label>
 
-        {message && message.startsWith('Código enviado') === false && (
+        {message && message.startsWith('Código enviado') === false && message.startsWith('OANIX no pudo confirmar') === false && (
           <p className="form-message" role="alert">{message}</p>
         )}
 
