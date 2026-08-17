@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.Locale;
@@ -33,13 +34,50 @@ public class OanixSharePlugin extends Plugin {
     private static final long MAX_TOTAL_BYTES = 120L * 1024L * 1024L;
     private static final int MAX_IMAGE_COUNT = 10;
     private static final int MAX_TEXT_CHARS = 250_000;
+    private static final int MAX_PENDING_SHARE_INTENTS = 8;
     private static final String SHARE_PREFIX = "oanix-share-";
 
     private final ArrayList<File> pendingFiles = new ArrayList<>();
+    private final ArrayDeque<Intent> pendingShareIntents = new ArrayDeque<>();
 
     @Override
     public void load() {
         cleanupAbandonedShareFiles();
+    }
+
+    @Override
+    protected void handleOnNewIntent(Intent intent) {
+        super.handleOnNewIntent(intent);
+        if (!isShareIntent(intent)) return;
+
+        int queueSize;
+        synchronized (pendingShareIntents) {
+            // Keep the queue memory-only and bounded. Under normal Android sharing this is one
+            // item; the bound prevents a malicious/buggy sender from retaining unlimited Intent
+            // payloads while OANIX is locked.
+            if (pendingShareIntents.size() >= MAX_PENDING_SHARE_INTENTS) {
+                pendingShareIntents.removeFirst();
+            }
+            pendingShareIntents.addLast(new Intent(intent));
+            queueSize = pendingShareIntents.size();
+        }
+
+        // Never put the shared text/image metadata in the event. JavaScript only needs a wake-up
+        // signal; actual content remains in the in-memory Intent queue until the unlocked runtime
+        // explicitly consumes it.
+        JSObject signal = new JSObject();
+        signal.put("pending", true);
+        signal.put("queueSize", queueSize);
+        notifyListeners("shareReceived", signal, false);
+    }
+
+    @Override
+    protected void handleOnDestroy() {
+        cleanupPendingFiles();
+        synchronized (pendingShareIntents) {
+            pendingShareIntents.clear();
+        }
+        super.handleOnDestroy();
     }
 
     private void cleanupAbandonedShareFiles() {
@@ -76,7 +114,19 @@ public class OanixSharePlugin extends Plugin {
         return Intent.ACTION_SEND.equals(action) || Intent.ACTION_SEND_MULTIPLE.equals(action);
     }
 
+    private Intent takePendingShareIntent(Activity activity) {
+        synchronized (pendingShareIntents) {
+            if (!pendingShareIntents.isEmpty()) return pendingShareIntents.removeFirst();
+        }
+
+        // Compatibility fallback for an Activity restored by Android before the plugin had an
+        // opportunity to receive handleOnNewIntent(). This still remains process-memory only.
+        Intent current = activity == null ? null : activity.getIntent();
+        return isShareIntent(current) ? new Intent(current) : null;
+    }
+
     private void clearIncomingShareIntent(Activity activity) {
+        if (activity == null) return;
         Intent cleared = new Intent(Intent.ACTION_MAIN);
         activity.setIntent(cleared);
     }
@@ -228,7 +278,7 @@ public class OanixSharePlugin extends Plugin {
     @PluginMethod
     public void consumePendingShare(PluginCall call) {
         Activity activity = getActivity();
-        Intent intent = activity == null ? null : activity.getIntent();
+        Intent intent = takePendingShareIntent(activity);
         JSObject response = new JSObject();
 
         if (activity == null || !isShareIntent(intent)) {
