@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { NoteRecord } from '../../features/notes/noteTypes'
+import { isVaultUnlocked } from '../../security/vault/vaultSession'
 import {
   addAndroidShareReceivedListener,
   importPendingAndroidShare,
@@ -27,9 +28,6 @@ function prioritizeEncryptedImagePreviews(): void {
   document
     .querySelectorAll<HTMLImageElement>('.image-note-editor-root img[data-image-element="true"]')
     .forEach((image) => {
-      // These previews are already decrypted from local encrypted storage before a src is assigned.
-      // Lazy loading only delays rendering inside Android WebView and can leave a broken/alt-text
-      // placeholder until the user touches the editor.
       image.loading = 'eager'
 
       if (
@@ -99,6 +97,16 @@ export function NativeShareRuntime({ onImported }: NativeShareRuntimeProps) {
 
     async function processPendingShares() {
       if (!active) return
+
+      // Android can deliver ACTION_SEND while the previously unlocked React tree is still mounted
+      // but the active vault key has already been cleared by the background lock. Never consume the
+      // native Intent in that window: keep it memory-only on the native side until authentication
+      // finishes and a fresh unlocked runtime mounts.
+      if (!isVaultUnlocked()) {
+        rerunRequested = true
+        return
+      }
+
       if (processing) {
         rerunRequested = true
         return
@@ -109,6 +117,11 @@ export function NativeShareRuntime({ onImported }: NativeShareRuntimeProps) {
         do {
           rerunRequested = false
           setError('')
+
+          if (!isVaultUnlocked()) {
+            rerunRequested = true
+            return
+          }
 
           let note: NoteRecord | null = null
           try {
@@ -137,20 +150,17 @@ export function NativeShareRuntime({ onImported }: NativeShareRuntimeProps) {
           if (messageTimer !== null) window.clearTimeout(messageTimer)
           messageTimer = window.setTimeout(() => setMessage(''), 3200)
 
-          // Drain one more item. If Android queued another share while this one was being
-          // encrypted, it is processed immediately; if the queue is empty the next call returns
-          // available=false and exits without creating anything.
           rerunRequested = true
-        } while (active && rerunRequested)
+        } while (active && rerunRequested && isVaultUnlocked())
       } finally {
         processing = false
-        if (active && rerunRequested) void processPendingShares()
+        if (active && rerunRequested && isVaultUnlocked()) void processPendingShares()
       }
     }
 
     void addAndroidShareReceivedListener(() => {
       rerunRequested = true
-      void processPendingShares()
+      if (isVaultUnlocked()) void processPendingShares()
     })
       .then((handle) => {
         if (!active) {
@@ -161,7 +171,6 @@ export function NativeShareRuntime({ onImported }: NativeShareRuntimeProps) {
         void processPendingShares()
       })
       .catch(() => {
-        // Cold-start import still works even if listener registration itself fails.
         if (active) void processPendingShares()
       })
 
