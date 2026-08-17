@@ -5,6 +5,7 @@ import android.os.Build;
 import android.security.keystore.KeyGenParameterSpec;
 import android.security.keystore.KeyPermanentlyInvalidatedException;
 import android.security.keystore.KeyProperties;
+import android.security.keystore.UserNotAuthenticatedException;
 import android.util.Base64;
 
 import androidx.biometric.BiometricManager;
@@ -23,6 +24,7 @@ import java.security.KeyStore;
 import java.util.Arrays;
 import java.util.concurrent.Executor;
 
+import javax.crypto.AEADBadTagException;
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
@@ -31,12 +33,14 @@ import javax.crypto.spec.GCMParameterSpec;
 @CapacitorPlugin(name = "OanixBiometric")
 public class OanixBiometricPlugin extends Plugin {
     private static final String PROVIDER = "AndroidKeyStore";
-    private static final String KEY_ALIAS = "oanix.biometric-vault.v1";
+    private static final String KEY_ALIAS = "oanix.biometric-vault.v2";
+    private static final String LEGACY_KEY_ALIAS = "oanix.biometric-vault.v1";
     private static final String TRANSFORMATION = "AES/GCM/NoPadding";
     private static final int KEY_SIZE_BITS = 256;
     private static final int GCM_TAG_BITS = 128;
     private static final int VAULT_KEY_BYTES = 32;
-    private static final int ENVELOPE_VERSION = 1;
+    private static final int ENVELOPE_VERSION = 2;
+    private static final int AUTH_VALIDITY_SECONDS = 5;
     private static final int MIN_BIOMETRIC_API = Build.VERSION_CODES.R;
 
     private static final String PREFS_NAME = "oanix.biometric-vault";
@@ -44,7 +48,7 @@ public class OanixBiometricPlugin extends Plugin {
     private static final String PREF_IV = "iv";
     private static final String PREF_CIPHERTEXT = "ciphertext";
     private static final String PREF_BINDING = "binding";
-    private static final String AAD_PREFIX = "OANIX:biometric-vault:v1:";
+    private static final String AAD_PREFIX = "OANIX:biometric-vault:v2:";
 
     private boolean promptActive = false;
 
@@ -110,7 +114,7 @@ public class OanixBiometricPlugin extends Plugin {
             .setRandomizedEncryptionRequired(true)
             .setUserAuthenticationRequired(true)
             .setUserAuthenticationParameters(
-                0,
+                AUTH_VALIDITY_SECONDS,
                 KeyProperties.AUTH_BIOMETRIC_STRONG | KeyProperties.AUTH_DEVICE_CREDENTIAL
             )
             .build();
@@ -119,11 +123,16 @@ public class OanixBiometricPlugin extends Plugin {
         return generator.generateKey();
     }
 
+    private void deleteAliasIfPresent(KeyStore store, String alias) throws Exception {
+        if (store.containsAlias(alias)) store.deleteEntry(alias);
+    }
+
     private void clearBiometricState() {
-        preferences().edit().clear().apply();
+        preferences().edit().clear().commit();
         try {
             KeyStore store = keyStore();
-            if (store.containsAlias(KEY_ALIAS)) store.deleteEntry(KEY_ALIAS);
+            deleteAliasIfPresent(store, KEY_ALIAS);
+            deleteAliasIfPresent(store, LEGACY_KEY_ALIAS);
         } catch (Exception ignored) {
             // The encrypted envelope is already removed. Password unlock remains available.
         }
@@ -157,6 +166,14 @@ public class OanixBiometricPlugin extends Plugin {
         result.put("requiresPassword", true);
         result.put("reason", reason);
         return result;
+    }
+
+    private BiometricPrompt createPrompt(
+        FragmentActivity activity,
+        BiometricPrompt.AuthenticationCallback callback
+    ) {
+        Executor executor = ContextCompat.getMainExecutor(getContext());
+        return new BiometricPrompt(activity, executor, callback);
     }
 
     @PluginMethod
@@ -215,39 +232,41 @@ public class OanixBiometricPlugin extends Plugin {
         }
 
         try {
-            Cipher cipher = Cipher.getInstance(TRANSFORMATION);
-            try {
-                cipher.init(Cipher.ENCRYPT_MODE, requireBiometricKey());
-            } catch (KeyPermanentlyInvalidatedException invalidated) {
-                clearBiometricState();
-                cipher.init(Cipher.ENCRYPT_MODE, requireBiometricKey());
-            }
-            cipher.updateAAD(aadForBinding(binding));
-
+            // A v1 envelope could have been created by an earlier debug build. Start the v2
+            // enrollment from a clean native state so Android never mixes two key policies.
+            clearBiometricState();
+            final SecretKey biometricKey = requireBiometricKey();
             FragmentActivity activity = requireActivity();
-            Executor executor = ContextCompat.getMainExecutor(getContext());
-            BiometricPrompt prompt = new BiometricPrompt(activity, executor, new BiometricPrompt.AuthenticationCallback() {
+
+            BiometricPrompt prompt = createPrompt(activity, new BiometricPrompt.AuthenticationCallback() {
                 @Override
                 public void onAuthenticationSucceeded(BiometricPrompt.AuthenticationResult authenticationResult) {
                     super.onAuthenticationSucceeded(authenticationResult);
                     promptActive = false;
                     byte[] ciphertext = null;
                     try {
-                        BiometricPrompt.CryptoObject cryptoObject = authenticationResult.getCryptoObject();
-                        Cipher authenticatedCipher = cryptoObject == null ? null : cryptoObject.getCipher();
-                        if (authenticatedCipher == null) throw new IllegalStateException("Authenticated cipher missing.");
+                        Cipher cipher = Cipher.getInstance(TRANSFORMATION);
+                        cipher.init(Cipher.ENCRYPT_MODE, biometricKey);
+                        cipher.updateAAD(aadForBinding(binding));
+                        ciphertext = cipher.doFinal(vaultKeyBytes);
 
-                        ciphertext = authenticatedCipher.doFinal(vaultKeyBytes);
-                        preferences().edit()
+                        boolean persisted = preferences().edit()
                             .putInt(PREF_VERSION, ENVELOPE_VERSION)
-                            .putString(PREF_IV, Base64.encodeToString(authenticatedCipher.getIV(), Base64.NO_WRAP))
+                            .putString(PREF_IV, Base64.encodeToString(cipher.getIV(), Base64.NO_WRAP))
                             .putString(PREF_CIPHERTEXT, Base64.encodeToString(ciphertext, Base64.NO_WRAP))
                             .putString(PREF_BINDING, binding)
-                            .apply();
+                            .commit();
+
+                        if (!persisted || !hasStoredEnvelope() || !keyStore().containsAlias(KEY_ALIAS)) {
+                            throw new IllegalStateException("Biometric envelope was not persisted.");
+                        }
 
                         JSObject result = new JSObject();
                         result.put("enabled", true);
                         call.resolve(result);
+                    } catch (UserNotAuthenticatedException error) {
+                        clearBiometricState();
+                        call.reject("La autorización del dispositivo expiró antes de proteger la bóveda.", error);
                     } catch (Exception error) {
                         clearBiometricState();
                         call.reject("No se pudo activar el acceso rápido de OANIX.", error);
@@ -268,6 +287,7 @@ public class OanixBiometricPlugin extends Plugin {
                         result.put("cancelled", true);
                         call.resolve(result);
                     } else {
+                        clearBiometricState();
                         call.reject("No se pudo confirmar la identidad para activar el acceso rápido: " + errString);
                     }
                 }
@@ -278,12 +298,12 @@ public class OanixBiometricPlugin extends Plugin {
                 promptInfo(
                     "Activar acceso rápido de OANIX",
                     "Confirma con tu huella, rostro o bloqueo del dispositivo"
-                ),
-                new BiometricPrompt.CryptoObject(cipher)
+                )
             ));
         } catch (Exception error) {
             promptActive = false;
             Arrays.fill(vaultKeyBytes, (byte) 0);
+            clearBiometricState();
             call.reject("No se pudo preparar el acceso rápido de OANIX.", error);
         }
     }
@@ -321,7 +341,8 @@ public class OanixBiometricPlugin extends Plugin {
         }
 
         try {
-            if (!keyStore().containsAlias(KEY_ALIAS)) {
+            KeyStore store = keyStore();
+            if (!store.containsAlias(KEY_ALIAS)) {
                 Arrays.fill(iv, (byte) 0);
                 Arrays.fill(ciphertext, (byte) 0);
                 clearBiometricState();
@@ -329,32 +350,19 @@ public class OanixBiometricPlugin extends Plugin {
                 return;
             }
 
-            Cipher cipher = Cipher.getInstance(TRANSFORMATION);
-            try {
-                cipher.init(Cipher.DECRYPT_MODE, requireBiometricKey(), new GCMParameterSpec(GCM_TAG_BITS, iv));
-            } catch (KeyPermanentlyInvalidatedException invalidated) {
-                Arrays.fill(iv, (byte) 0);
-                Arrays.fill(ciphertext, (byte) 0);
-                clearBiometricState();
-                call.resolve(passwordFallbackResult("key-invalidated"));
-                return;
-            }
-            cipher.updateAAD(aadForBinding(binding));
-
+            final SecretKey biometricKey = requireBiometricKey();
             FragmentActivity activity = requireActivity();
-            Executor executor = ContextCompat.getMainExecutor(getContext());
-            BiometricPrompt prompt = new BiometricPrompt(activity, executor, new BiometricPrompt.AuthenticationCallback() {
+            BiometricPrompt prompt = createPrompt(activity, new BiometricPrompt.AuthenticationCallback() {
                 @Override
                 public void onAuthenticationSucceeded(BiometricPrompt.AuthenticationResult authenticationResult) {
                     super.onAuthenticationSucceeded(authenticationResult);
                     promptActive = false;
                     byte[] plaintext = null;
                     try {
-                        BiometricPrompt.CryptoObject cryptoObject = authenticationResult.getCryptoObject();
-                        Cipher authenticatedCipher = cryptoObject == null ? null : cryptoObject.getCipher();
-                        if (authenticatedCipher == null) throw new IllegalStateException("Authenticated cipher missing.");
-
-                        plaintext = authenticatedCipher.doFinal(ciphertext);
+                        Cipher cipher = Cipher.getInstance(TRANSFORMATION);
+                        cipher.init(Cipher.DECRYPT_MODE, biometricKey, new GCMParameterSpec(GCM_TAG_BITS, iv));
+                        cipher.updateAAD(aadForBinding(binding));
+                        plaintext = cipher.doFinal(ciphertext);
                         if (plaintext.length != VAULT_KEY_BYTES) {
                             throw new IllegalStateException("Invalid vault key length.");
                         }
@@ -363,9 +371,13 @@ public class OanixBiometricPlugin extends Plugin {
                         result.put("unlocked", true);
                         result.put("vaultKey", Base64.encodeToString(plaintext, Base64.NO_WRAP));
                         call.resolve(result);
-                    } catch (Exception error) {
+                    } catch (UserNotAuthenticatedException error) {
+                        call.resolve(passwordFallbackResult("auth-expired"));
+                    } catch (KeyPermanentlyInvalidatedException | AEADBadTagException error) {
                         clearBiometricState();
-                        call.resolve(passwordFallbackResult("decrypt-failed"));
+                        call.resolve(passwordFallbackResult("key-invalidated"));
+                    } catch (Exception error) {
+                        call.resolve(passwordFallbackResult("unavailable"));
                     } finally {
                         if (plaintext != null) Arrays.fill(plaintext, (byte) 0);
                         Arrays.fill(iv, (byte) 0);
@@ -385,7 +397,7 @@ public class OanixBiometricPlugin extends Plugin {
                         result.put("cancelled", true);
                         call.resolve(result);
                     } else {
-                        call.reject("No se pudo autenticar el acceso a OANIX: " + errString);
+                        call.resolve(passwordFallbackResult("authentication-error"));
                     }
                 }
             });
@@ -395,9 +407,14 @@ public class OanixBiometricPlugin extends Plugin {
                 promptInfo(
                     "Desbloquear OANIX",
                     "Usa tu huella, rostro o bloqueo del dispositivo"
-                ),
-                new BiometricPrompt.CryptoObject(cipher)
+                )
             ));
+        } catch (KeyPermanentlyInvalidatedException error) {
+            promptActive = false;
+            Arrays.fill(iv, (byte) 0);
+            Arrays.fill(ciphertext, (byte) 0);
+            clearBiometricState();
+            call.resolve(passwordFallbackResult("key-invalidated"));
         } catch (Exception error) {
             promptActive = false;
             Arrays.fill(iv, (byte) 0);
