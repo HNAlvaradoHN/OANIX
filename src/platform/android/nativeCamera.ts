@@ -1,4 +1,5 @@
 import { Capacitor, registerPlugin } from '@capacitor/core'
+import { withAndroidSystemInteraction } from './systemInteractionGuard'
 
 const MAX_NATIVE_CAMERA_BYTES = 24 * 1024 * 1024
 
@@ -33,7 +34,7 @@ function cameraFileName(now = new Date()): string {
 
 export async function captureAndroidCameraPhoto(): Promise<File | null> {
   requireAndroidRuntime()
-  const result = await nativeCamera.takePhoto()
+  const result = await withAndroidSystemInteraction(() => nativeCamera.takePhoto())
   if (result.cancelled) return null
 
   try {
