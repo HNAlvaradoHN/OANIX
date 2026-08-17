@@ -47,6 +47,19 @@ test('incoming content is prepared only after the unlocked runtime asks for it',
   assert.match(plugin, /finishShare\(PluginCall call\)/)
 })
 
+test('share runtime opens the imported note and prioritizes encrypted previews without app restart', () => {
+  const runtime = readFileSync('src/platform/android/NativeShareRuntime.tsx', 'utf8')
+
+  assert.match(runtime, /findImportedNoteButton/)
+  assert.match(runtime, /data-reorder-note-id/)
+  assert.match(runtime, /\.note-row__open/)
+  assert.match(runtime, /button\.click\(\)/)
+  assert.match(runtime, /prioritizeEncryptedImagePreviews/)
+  assert.match(runtime, /image\.loading = 'eager'/)
+  assert.match(runtime, /MutationObserver\(prioritizeEncryptedImagePreviews\)/)
+  assert.match(runtime, /OPEN_IMPORTED_NOTE_TIMEOUT_MS = 5000/)
+})
+
 test('share limits and accepted image formats stay aligned with the encrypted image pipeline', () => {
   const service = readFileSync('src/platform/android/nativeShare.ts', 'utf8')
   const plugin = readFileSync(
