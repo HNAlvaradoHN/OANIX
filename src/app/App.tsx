@@ -9,7 +9,9 @@ import { VersionHistoryCenter } from '../features/versionHistory/VersionHistoryC
 import { NativeCameraRuntime } from '../platform/android/NativeCameraRuntime'
 import { NativeDocumentsRuntime } from '../platform/android/NativeDocumentsRuntime'
 import { NativeShareRuntime } from '../platform/android/NativeShareRuntime'
+import { AndroidBackRuntime } from '../platform/android/AndroidBackRuntime'
 import { AndroidBiometricRetryRuntime } from '../platform/android/AndroidBiometricRetryRuntime'
+import { AndroidDeviceCredentialRetryRuntime } from '../platform/android/AndroidDeviceCredentialRetryRuntime'
 import { isAndroidBiometricRuntime } from '../platform/android/biometricVault'
 import { isAndroidSystemInteractionActive } from '../platform/android/systemInteractionGuard'
 import { lockLocalVault } from '../security/vault/vaultService'
@@ -56,6 +58,7 @@ function UnlockedApp({ lockVault }: { lockVault: () => void }) {
   return (
     <>
       <AutoSyncRuntime onRemoteApplied={() => setWorkspaceRevision((value) => value + 1)} />
+      <AndroidBackRuntime />
       <NativeCameraRuntime />
       <NativeShareRuntime onImported={() => setWorkspaceRevision((value) => value + 1)} />
       <NotesWorkspace key={workspaceRevision} onLock={lockVault} />
@@ -151,6 +154,9 @@ export function App() {
         renderUnlocked={(lockVault) => <UnlockedApp lockVault={lockVault} />}
       />
       <AndroidBiometricRetryRuntime
+        onUnlocked={() => setVaultGateRevision((value) => value + 1)}
+      />
+      <AndroidDeviceCredentialRetryRuntime
         onUnlocked={() => setVaultGateRevision((value) => value + 1)}
       />
 
