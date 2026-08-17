@@ -23,24 +23,29 @@ test('Android biometric unlock uses the stable AndroidX biometric dependency and
   assert.match(mainActivitySource, /registerPlugin\(OanixBiometricPlugin\.class\)/)
 })
 
-test('biometric vault key is auth-per-use and accepts only strong biometric or device credential', () => {
+test('biometric vault key is Keystore-gated by strong biometric or device credential', () => {
   assert.match(pluginSource, /Build\.VERSION\.SDK_INT >= MIN_BIOMETRIC_API/)
   assert.match(pluginSource, /MIN_BIOMETRIC_API = Build\.VERSION_CODES\.R/)
   assert.match(pluginSource, /BiometricManager\.Authenticators\.BIOMETRIC_STRONG/)
   assert.match(pluginSource, /BiometricManager\.Authenticators\.DEVICE_CREDENTIAL/)
   assert.doesNotMatch(pluginSource, /BIOMETRIC_WEAK/)
   assert.match(pluginSource, /\.setUserAuthenticationRequired\(true\)/)
-  assert.match(pluginSource, /\.setUserAuthenticationParameters\(\s*0,/)
+  assert.match(pluginSource, /AUTH_VALIDITY_SECONDS = 5/)
+  assert.match(pluginSource, /\.setUserAuthenticationParameters\(\s*AUTH_VALIDITY_SECONDS,/)
   assert.match(pluginSource, /KeyProperties\.AUTH_BIOMETRIC_STRONG \| KeyProperties\.AUTH_DEVICE_CREDENTIAL/)
-  assert.match(pluginSource, /new BiometricPrompt\.CryptoObject\(cipher\)/)
+  assert.doesNotMatch(pluginSource, /new BiometricPrompt\.CryptoObject\(cipher\)/)
 })
 
-test('native biometric persistence stores only an authenticated ciphertext envelope bound to one vault', () => {
+test('native biometric persistence stores and verifies only an authenticated ciphertext envelope bound to one vault', () => {
+  assert.match(pluginSource, /ENVELOPE_VERSION = 2/)
+  assert.match(pluginSource, /oanix\.biometric-vault\.v2/)
   assert.match(pluginSource, /VAULT_KEY_BYTES = 32/)
   assert.match(pluginSource, /AAD_PREFIX \+ binding/)
   assert.match(pluginSource, /putString\(PREF_IV,/)
   assert.match(pluginSource, /putString\(PREF_CIPHERTEXT,/)
   assert.match(pluginSource, /putString\(PREF_BINDING, binding\)/)
+  assert.match(pluginSource, /\.commit\(\)/)
+  assert.match(pluginSource, /!persisted \|\| !hasStoredEnvelope\(\) \|\| !keyStore\(\)\.containsAlias\(KEY_ALIAS\)/)
   assert.doesNotMatch(pluginSource, /putString\([^\n]*vaultKey/i)
   assert.doesNotMatch(pluginSource, /getEncoded\(\)/)
 })
