@@ -6,17 +6,17 @@ const runtimeSource = readFileSync('src/platform/android/AndroidBiometricRetryRu
 const vaultSource = readFileSync('src/security/vault/vaultService.ts', 'utf8')
 const appSource = readFileSync('src/app/App.tsx', 'utf8')
 
-test('locked Android vault exposes a manual biometric retry without requiring the master password', () => {
+test('locked Android vault exposes one device-security retry without requiring the master password', () => {
   assert.match(vaultSource, /export async function canUseAndroidBiometricUnlock/)
   assert.match(vaultSource, /export async function unlockLocalVaultWithBiometrics/)
   assert.match(vaultSource, /await tryAndroidBiometricUnlock\(metadata\)/)
   assert.doesNotMatch(runtimeSource, /masterPassword|password\s*:/)
 })
 
-test('biometric retry appears only beside the local master-password form when native quick unlock is available', () => {
+test('device-security retry appears only beside the local master-password form when native quick unlock is available', () => {
   assert.match(runtimeSource, /querySelector<HTMLInputElement>\('#master-password'\)/)
   assert.match(runtimeSource, /canUseAndroidBiometricUnlock\(\)/)
-  assert.match(runtimeSource, /Desbloquear con huella/)
+  assert.match(runtimeSource, /Usar PIN, patrón o huella/)
   assert.match(runtimeSource, /<svg/)
 })
 
