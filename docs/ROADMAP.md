@@ -62,6 +62,7 @@ Objetivo: sincronización cifrada entre dispositivos sin exponer contenido al se
 - El backend de sincronización normal no interpreta el contenido privado.
 - Binarios usan el bucket privado `oanix-encrypted-blobs`, fragmentos cifrados de 6 MiB y manifiesto cifrado.
 - Autosync usa cambios locales, reconexión, regreso a la app, Realtime y polling de respaldo.
+- El estado compacto de sincronización y resolución se conserva cifrado bajo `system.sync-state` dentro de `encrypted_records`; no existe una base/store paralelo para esa coordinación.
 - Conflictos se conservan y se entregan al usuario; no existe overwrite silencioso deliberado.
 - Historial guarda hasta 5 snapshots cifrados por nota dentro del almacenamiento general existente.
 - Recuperación por correo usa un broker separado y representa una frontera de confianza explícita diferente del transporte normal E2EE.
