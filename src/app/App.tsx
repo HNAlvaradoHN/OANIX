@@ -11,7 +11,6 @@ import { NativeDocumentsRuntime } from '../platform/android/NativeDocumentsRunti
 import { NativeShareRuntime } from '../platform/android/NativeShareRuntime'
 import { AndroidBackRuntime } from '../platform/android/AndroidBackRuntime'
 import { AndroidBiometricRetryRuntime } from '../platform/android/AndroidBiometricRetryRuntime'
-import { AndroidDeviceCredentialRetryRuntime } from '../platform/android/AndroidDeviceCredentialRetryRuntime'
 import { isAndroidBiometricRuntime } from '../platform/android/biometricVault'
 import { isAndroidSystemInteractionActive } from '../platform/android/systemInteractionGuard'
 import { lockLocalVault } from '../security/vault/vaultService'
@@ -154,9 +153,6 @@ export function App() {
         renderUnlocked={(lockVault) => <UnlockedApp lockVault={lockVault} />}
       />
       <AndroidBiometricRetryRuntime
-        onUnlocked={() => setVaultGateRevision((value) => value + 1)}
-      />
-      <AndroidDeviceCredentialRetryRuntime
         onUnlocked={() => setVaultGateRevision((value) => value + 1)}
       />
 
