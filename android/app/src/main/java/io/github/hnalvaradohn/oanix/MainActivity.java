@@ -10,6 +10,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(OanixKeystorePlugin.class);
         registerPlugin(OanixBiometricPlugin.class);
         registerPlugin(OanixCameraPlugin.class);
+        registerPlugin(OanixDocumentsPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }
