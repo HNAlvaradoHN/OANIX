@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { VaultGate } from './VaultGate'
 import { NotesWorkspace } from '../features/notes/NotesWorkspace'
@@ -8,6 +8,9 @@ import { ConflictCenter } from '../features/sync/ConflictCenter'
 import { VersionHistoryCenter } from '../features/versionHistory/VersionHistoryCenter'
 import { NativeCameraRuntime } from '../platform/android/NativeCameraRuntime'
 import { NativeDocumentsRuntime } from '../platform/android/NativeDocumentsRuntime'
+import { isAndroidBiometricRuntime } from '../platform/android/biometricVault'
+import { isAndroidSystemInteractionActive } from '../platform/android/systemInteractionGuard'
+import { lockLocalVault } from '../security/vault/vaultService'
 
 type OanixUpdateWindow = Window & {
   __oanixApplyUpdate?: () => Promise<void>
@@ -76,6 +79,8 @@ export function App() {
   const [updateAvailable, setUpdateAvailable] = useState(false)
   const [updating, setUpdating] = useState(false)
   const [updateError, setUpdateError] = useState('')
+  const [vaultGateRevision, setVaultGateRevision] = useState(0)
+  const androidWasBackgrounded = useRef(false)
 
   useEffect(() => {
     const updateWindow = window as OanixUpdateWindow
@@ -84,6 +89,28 @@ export function App() {
     showUpdate()
     window.addEventListener('oanix:update-available', showUpdate)
     return () => window.removeEventListener('oanix:update-available', showUpdate)
+  }, [])
+
+  useEffect(() => {
+    if (!isAndroidBiometricRuntime()) return
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        if (isAndroidSystemInteractionActive()) return
+
+        lockLocalVault()
+        androidWasBackgrounded.current = true
+        return
+      }
+
+      if (document.visibilityState === 'visible' && androidWasBackgrounded.current) {
+        androidWasBackgrounded.current = false
+        setVaultGateRevision((value) => value + 1)
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
   }, [])
 
   async function handleApplyUpdate() {
@@ -117,6 +144,7 @@ export function App() {
     <>
       <NativeDocumentsRuntime />
       <VaultGate
+        key={vaultGateRevision}
         renderUnlocked={(lockVault) => <UnlockedApp lockVault={lockVault} />}
       />
 
