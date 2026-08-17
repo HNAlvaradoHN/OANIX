@@ -88,7 +88,9 @@ export async function downloadEncryptedBackup(): Promise<BackupExportResult> {
 
   if (isAndroidNativeDocumentsRuntime()) {
     const saved = await saveEncryptedBackupWithAndroidDocuments(serialized, fileName)
-    if (!saved) throw new DOMException('Guardado de backup cancelado.', 'AbortError')
+    // Existing workspace UI treats thrown errors as visible messages. An empty AbortError
+    // therefore preserves the current void-return contract while keeping user cancellation silent.
+    if (!saved) throw new DOMException('', 'AbortError')
     return { fileName, recordCount: snapshot.records.length }
   }
 
