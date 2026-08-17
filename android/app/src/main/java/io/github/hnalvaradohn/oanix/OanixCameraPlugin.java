@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.net.Uri;
+import android.os.Bundle;
 import android.provider.MediaStore;
 import android.util.Base64;
 
@@ -32,6 +33,8 @@ public class OanixCameraPlugin extends Plugin {
     private static final String CAPTURE_PREFIX = "oanix-camera-";
     private static final String CAPTURE_SUFFIX = ".jpg";
     private static final int URI_FLAGS = Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION;
+    private static final String STATE_CAPTURE_PATH = "oanixCameraCapturePath";
+    private static final String STATE_CAPTURE_URI = "oanixCameraCaptureUri";
 
     private File pendingCaptureFile;
     private Uri pendingCaptureUri;
@@ -68,6 +71,18 @@ public class OanixCameraPlugin extends Plugin {
         );
     }
 
+    private boolean isOwnedCaptureFile(File file) {
+        try {
+            File cacheDir = getContext().getCacheDir().getCanonicalFile();
+            File candidate = file.getCanonicalFile();
+            return cacheDir.equals(candidate.getParentFile())
+                && candidate.getName().startsWith(CAPTURE_PREFIX)
+                && candidate.getName().endsWith(CAPTURE_SUFFIX);
+        } catch (IOException error) {
+            return false;
+        }
+    }
+
     private void grantCameraUri(Intent intent, Uri uri) {
         intent.addFlags(URI_FLAGS);
         intent.setClipData(ClipData.newRawUri("OANIX camera capture", uri));
@@ -90,7 +105,7 @@ public class OanixCameraPlugin extends Plugin {
 
     private void cleanupPendingCapture() {
         revokeCameraUri();
-        if (pendingCaptureFile != null && pendingCaptureFile.exists()) {
+        if (pendingCaptureFile != null && pendingCaptureFile.exists() && isOwnedCaptureFile(pendingCaptureFile)) {
             pendingCaptureFile.delete();
         }
         pendingCaptureFile = null;
@@ -100,8 +115,8 @@ public class OanixCameraPlugin extends Plugin {
 
     private byte[] readCaptureBytes(File file) throws IOException {
         long length = file.length();
-        if (length <= 0 || length > MAX_CAPTURE_BYTES) {
-            throw new IOException("Captured image size is invalid.");
+        if (!isOwnedCaptureFile(file) || length <= 0 || length > MAX_CAPTURE_BYTES) {
+            throw new IOException("Captured image size or location is invalid.");
         }
 
         try (
@@ -122,6 +137,37 @@ public class OanixCameraPlugin extends Plugin {
             Arrays.fill(buffer, (byte) 0);
             return output.toByteArray();
         }
+    }
+
+    @Override
+    protected Bundle saveInstanceState() {
+        Bundle state = super.saveInstanceState();
+        if (state == null) state = new Bundle();
+
+        if (pendingCaptureFile != null && isOwnedCaptureFile(pendingCaptureFile)) {
+            state.putString(STATE_CAPTURE_PATH, pendingCaptureFile.getAbsolutePath());
+        }
+        if (pendingCaptureUri != null) {
+            state.putString(STATE_CAPTURE_URI, pendingCaptureUri.toString());
+        }
+        return state;
+    }
+
+    @Override
+    protected void restoreState(Bundle state) {
+        super.restoreState(state);
+        if (state == null) return;
+
+        String restoredPath = state.getString(STATE_CAPTURE_PATH);
+        String restoredUri = state.getString(STATE_CAPTURE_URI);
+        if (restoredPath == null || restoredUri == null) return;
+
+        File restoredFile = new File(restoredPath);
+        if (!restoredFile.exists() || !isOwnedCaptureFile(restoredFile)) return;
+
+        pendingCaptureFile = restoredFile;
+        pendingCaptureUri = Uri.parse(restoredUri);
+        captureActive = true;
     }
 
     @PluginMethod
@@ -190,8 +236,8 @@ public class OanixCameraPlugin extends Plugin {
 
     @Override
     protected void handleOnDestroy() {
-        // Normal activity teardown should not leave a plaintext capture in the app cache.
-        // If Android kills the process abruptly, load() removes captures older than 24h.
+        // Normal teardown should not leave a plaintext capture in the app cache. Android can
+        // persist/restore the pending path and URI before recreation through saveInstanceState().
         cleanupPendingCapture();
     }
 }
