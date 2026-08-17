@@ -2,16 +2,14 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
-test('Android advertises OANIX only for supported share types', () => {
+test('Android advertises OANIX for text and image share intents without broad storage permissions', () => {
   const manifest = readFileSync('android/app/src/main/AndroidManifest.xml', 'utf8')
 
   assert.match(manifest, /android\.intent\.action\.SEND/)
   assert.match(manifest, /android\.intent\.action\.SEND_MULTIPLE/)
   assert.match(manifest, /android:mimeType="text\/plain"/)
-  assert.match(manifest, /android:mimeType="image\/jpeg"/)
-  assert.match(manifest, /android:mimeType="image\/png"/)
-  assert.match(manifest, /android:mimeType="image\/webp"/)
-  assert.match(manifest, /android:mimeType="image\/gif"/)
+  assert.match(manifest, /android:mimeType="image\/\*"/)
+  assert.doesNotMatch(manifest, /android:mimeType="\*\/\*"/)
   assert.doesNotMatch(manifest, /READ_EXTERNAL_STORAGE|WRITE_EXTERNAL_STORAGE|MANAGE_EXTERNAL_STORAGE|READ_MEDIA_IMAGES/)
 })
 
@@ -45,10 +43,11 @@ test('incoming content is prepared only after the unlocked runtime asks for it',
   assert.match(plugin, /consumePendingShare\(PluginCall call\)/)
   assert.match(plugin, /getActivity\(\)\.getIntent\(\)|activity\.getIntent\(\)/)
   assert.match(plugin, /File\.createTempFile\(SHARE_PREFIX/)
+  assert.match(plugin, /cleanupAbandonedShareFiles\(\)/)
   assert.match(plugin, /finishShare\(PluginCall call\)/)
 })
 
-test('share limits stay aligned with the encrypted image pipeline', () => {
+test('share limits and accepted image formats stay aligned with the encrypted image pipeline', () => {
   const service = readFileSync('src/platform/android/nativeShare.ts', 'utf8')
   const plugin = readFileSync(
     'android/app/src/main/java/io/github/hnalvaradohn/oanix/OanixSharePlugin.java',
@@ -60,4 +59,8 @@ test('share limits stay aligned with the encrypted image pipeline', () => {
   assert.match(plugin, /MAX_IMAGE_BYTES = 50L \* 1024L \* 1024L/)
   assert.match(plugin, /MAX_IMAGE_COUNT = 10/)
   assert.match(plugin, /MAX_TOTAL_BYTES = 120L \* 1024L \* 1024L/)
+  assert.match(plugin, /"image\/jpeg"/)
+  assert.match(plugin, /"image\/png"/)
+  assert.match(plugin, /"image\/webp"/)
+  assert.match(plugin, /"image\/gif"/)
 })
