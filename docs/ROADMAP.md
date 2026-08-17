@@ -45,7 +45,7 @@ Objetivo: sincronización cifrada entre dispositivos sin exponer contenido al se
 - [x] Varios dispositivos
 - [x] Resolución de conflictos *(implementación completa; validación de campo restante en #69)*
 - [x] Historial de versiones *(implementación publicada; validación funcional restante en #70)*
-- [x] Recuperación de acceso *(implementación por correo integrada; validación real/multidispositivo/offline restante documentada en #73)*
+- [x] Recuperación de acceso *(flujo principal validado en uso real; deuda multidispositivo/offline restante documentada en #73)*
 
 ### Reglas de acceso V2
 
@@ -67,7 +67,7 @@ Objetivo: sincronización cifrada entre dispositivos sin exponer contenido al se
 - Historial guarda hasta 5 snapshots cifrados por nota dentro del almacenamiento general existente.
 - Recuperación por correo usa un broker separado y representa una frontera de confianza explícita diferente del transporte normal E2EE.
 
-**Estado:** implementación funcional completada y se avanzó a V3. Las deudas #69, #70 y #73 siguen siendo reales y no deben declararse probadas hasta ejecutar sus casos de campo.
+**Estado:** CERRADA FUNCIONALMENTE ✅. Las deudas #69, #70 y #73 siguen siendo reales y no deben declararse probadas hasta ejecutar sus casos de campo.
 
 ---
 
@@ -77,11 +77,11 @@ Objetivo: empaquetar la misma base de código como aplicación Android y añadir
 
 - [x] Capacitor *(PR #81)*
 - [x] APK / AAB *(PR #82; APK instalada en Android real y modo local validado; firma final de Play Store pendiente para publicación)*
-- [x] Android Keystore *(PR #83; implementación/CI completos; prueba específica de campo pendiente)*
-- [x] Biometría / credencial segura del dispositivo *(PR #84; implementación/CI completos; prueba real pendiente)*
-- [x] Cámara nativa *(PR #86; implementación/CI completos; prueba real pendiente)*
-- [x] Integración nativa de archivos *(PR #87; implementación/CI completos; prueba real pendiente)*
-- [ ] **Compartir hacia OANIX — BLOQUE ACTIVO**
+- [x] Android Keystore *(PR #83; implementación/CI completos; prueba específica `seal/open` pendiente)*
+- [x] Biometría / credencial segura del dispositivo *(PR #84 + #88/#89/#90; flujo principal y reintento manual validados en teléfono real)*
+- [x] Cámara nativa *(PR #86; implementación/CI y prueba funcional básica real completadas)*
+- [x] Integración nativa de archivos *(PR #87; implementación/CI y prueba funcional básica real completadas)*
+- [x] Compartir hacia OANIX *(PR #91; implementación/CI completos; prueba funcional real pendiente)*
 
 ### Capacitor / empaquetado
 
@@ -90,6 +90,7 @@ Objetivo: empaquetar la misma base de código como aplicación Android y añadir
 - `appId` actual: `io.github.hnalvaradohn.oanix`, provisional hasta publicación.
 - El workflow Android compila APK debug y AAB release de validación.
 - No existe todavía una clave privada definitiva de firma para Play Store.
+- Las APK debug de CI todavía no mantienen una firma de pruebas estable entre runners; una build nueva puede requerir desinstalar la anterior. No confundir esta deuda con la firma definitiva de publicación.
 
 ### Android Keystore
 
@@ -102,10 +103,12 @@ Objetivo: empaquetar la misma base de código como aplicación Android y añadir
 
 - La contraseña maestra sigue siendo principal y fallback.
 - Android 11+ puede usar biometría fuerte o PIN/patrón/contraseña segura del dispositivo como acceso rápido.
-- La clave biométrica de Keystore exige autenticación por cada uso.
 - No se acepta `BIOMETRIC_WEAK` para liberar la clave de bóveda.
-- La copia local para acceso rápido se conserva solo como ciphertext AES-GCM ligado a una bóveda concreta; tras autenticar se importa a Web Crypto como clave no extraíble.
-- Android anterior conserva el flujo de contraseña maestra.
+- La envoltura biométrica v2 usa AES-256-GCM con clave no exportable de Android Keystore y una ventana breve de autorización después del `BiometricPrompt`.
+- La copia local para acceso rápido se conserva solo como ciphertext ligado a una bóveda concreta; tras autenticar se importa a Web Crypto como clave no extraíble.
+- Al enviar OANIX realmente a segundo plano se limpia la clave activa de la sesión; al regresar se exige nuevamente autorización.
+- Si se cancela el prompt, la pantalla de contraseña permanece disponible y muestra `Desbloquear con huella` para reintentar sin escribir antes la contraseña.
+- Flujo principal, reapertura, cancelación y botón manual de reintento fueron validados en teléfono real.
 
 ### Cámara nativa
 
@@ -116,6 +119,7 @@ Objetivo: empaquetar la misma base de código como aplicación Android y añadir
 - No se solicitan permisos `CAMERA`, `READ_MEDIA_IMAGES` ni almacenamiento para este flujo de cámara externa.
 - Cada captura se limita a 24 MiB, se elimina tras importarla o cancelarla y existe limpieza de temporales abandonados.
 - El estado de una captura pendiente se conserva frente a recreación de Activity mediante `saveInstanceState/restoreState`.
+- Flujo funcional básico validado en teléfono real.
 
 ### Integración nativa de archivos
 
@@ -127,22 +131,40 @@ Objetivo: empaquetar la misma base de código como aplicación Android y añadir
 - No se solicitan permisos amplios de almacenamiento (`READ_EXTERNAL_STORAGE`, `WRITE_EXTERNAL_STORAGE`, `MANAGE_EXTERNAL_STORAGE` ni `READ_MEDIA_IMAGES`).
 - No se toma permiso persistente sobre el URI ni se crea una copia durable paralela dentro de Android.
 - Fuera de Android se conserva el flujo web de descarga/selección de archivo.
+- Flujo funcional básico validado en teléfono real.
 
-### Deudas visibles de V3
+### Compartir hacia OANIX
 
-- APK/mode local: validado en teléfono real.
+- Android expone OANIX como destino para `text/plain` y `image/*`; la importación valida internamente y solo acepta imágenes JPEG, PNG, WebP o GIF.
+- `ACTION_SEND` admite texto/enlace, una imagen o ambos; `ACTION_SEND_MULTIPLE` admite hasta 10 imágenes por envío.
+- Cada envío crea una nota nueva para no mezclar accidentalmente el contenido con una nota existente.
+- El bridge se consume únicamente dentro del área desbloqueada. Si la bóveda está cerrada, el usuario debe autenticarse antes de que OANIX copie/importa el contenido.
+- Las imágenes no se copian a almacenamiento de OANIX mientras la bóveda está bloqueada. Después del desbloqueo pasan brevemente por caché privada, se validan y reutilizan `storeEncryptedImage`; el temporal se elimina al terminar.
+- Temporales de compartir abandonados se eliminan al cargar de nuevo el plugin.
+- Límites: texto 250 000 caracteres; imagen 50 MiB; hasta 10 imágenes / 120 MiB temporales por envío.
+- Ante fallo se eliminan blobs cifrados creados por ese intento para evitar imágenes huérfanas.
+- No se añaden permisos generales de almacenamiento.
+
+### Deudas visibles / validación restante de V3
+
+- APK / modo local: validado en teléfono real.
 - Cuenta/bóveda sincronizada dentro de Android: todavía no se declara funcional/validada.
 - Keystore `seal/open`: falta prueba específica en dispositivo.
-- Biometría: falta prueba real de enrolamiento, reapertura, cancelación, fallback e invalidación.
-- Cámara nativa: falta prueba real de captura, cancelación, inserción cifrada y reapertura de la nota.
-- Archivos nativos: falta prueba real de guardar/cancelar un `.oanixbackup`, elegirlo después y completar una restauración verificada; conviene probar proveedor local y al menos un proveedor de documentos disponible en el teléfono.
+- Biometría: flujo principal y reintento manual validados; PIN/patrón e invalidación por cambio biométrico son cobertura adicional pendiente si se quiere probar todas las variantes.
+- Cámara nativa: prueba funcional básica completada.
+- Archivos nativos: prueba funcional básica completada.
+- Compartir hacia OANIX: falta prueba real de texto/enlace, una imagen, varias imágenes y llegada con la bóveda bloqueada.
+- Firma estable de pruebas: pendiente; no comprometer una clave privada en el repositorio público.
 - Icono Android actual: provisional; dirección visual premium ya definida y debe aplicarse antes de publicación.
+- App ID: provisional hasta preparar publicación.
 
 ### Orden restante V3
 
-1. Compartir hacia OANIX.
-2. Completar validaciones de campo pendientes.
-3. Identidad visual, firma y preparación de publicación cuando corresponda.
+1. Validar Compartir hacia OANIX en teléfono real.
+2. Diagnosticar/validar cuenta y sincronización dentro del WebView Android.
+3. Resolver firma estable de builds de prueba sin exponer claves privadas.
+4. Completar identidad visual y confirmar `appId` antes de publicación.
+5. Revisar deudas de campo no bloqueantes y declarar cierre completo de V3 cuando corresponda.
 
 ---
 
@@ -164,10 +186,10 @@ Objetivo: empaquetar la misma base de código como aplicación Android y añadir
 
 **V1 — Núcleo local: CERRADA ✅**
 
-**V2 — Cuenta y sincronización: implementación funcional completada; deudas de validación #69, #70 y #73 continúan visibles.**
+**V2 — Cuenta y sincronización: CERRADA FUNCIONALMENTE ✅; deudas de validación #69, #70 y #73 continúan visibles.**
 
 **Versión activa: V3 — Android con Capacitor.**
 
-**Bloque oficial activo: Compartir hacia OANIX.**
+**Implementación funcional V3: completa. Bloque de validación activo: Compartir hacia OANIX en dispositivo real.**
 
 No avanzar a V4 mientras V3 siga abierta, salvo preparación arquitectónica estrictamente necesaria y registrada.
