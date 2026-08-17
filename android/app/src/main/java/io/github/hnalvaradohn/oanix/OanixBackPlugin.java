@@ -36,7 +36,7 @@ public class OanixBackPlugin extends Plugin {
 
     @PluginMethod
     public void setEnabled(PluginCall call) {
-        boolean enabled = Boolean.TRUE.equals(call.getBool("enabled", false));
+        boolean enabled = Boolean.TRUE.equals(call.getBoolean("enabled", false));
         if (callback == null) {
             call.reject("El control de regreso de OANIX todavía no está disponible.");
             return;
