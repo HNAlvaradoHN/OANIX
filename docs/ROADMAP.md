@@ -4,7 +4,7 @@ Este documento define el orden oficial de desarrollo de OANIX.
 
 ## Regla principal
 
-OANIX se desarrolla estrictamente por versiones. Una función perteneciente a una versión futura se puede registrar, pero no se implementa antes de tiempo salvo que sea necesaria únicamente como preparación técnica de arquitectura.
+OANIX se desarrolla estrictamente por versiones. Una función perteneciente a una versión futura se puede registrar, pero no se implementa antes de tiempo salvo preparación técnica estrictamente necesaria y documentada.
 
 ## V1 — Núcleo local
 
@@ -19,29 +19,20 @@ Objetivo: entregar una PWA útil, segura, offline-first y completamente funciona
 - [x] Editor de texto enriquecido
 - [x] Bloques de código
 - [x] Imágenes
-
-### Pendiente inmediato antes de Checklists — Pulido móvil del editor
-
-- [x] Permitir reducir más las imágenes en móvil manteniendo siempre su proporción, especialmente imágenes verticales tipo recibo.
-- [x] Mantener controles de imagen utilizables y legibles cuando la imagen sea pequeña, sin invadir el contenido.
-- [x] Sustituir en móvil la barra horizontal de formato por un botón flotante de herramientas que permanezca accesible durante el scroll y permita añadir más acciones en el futuro.
-- [x] Mantener Deshacer y Rehacer como controles flotantes de acceso rápido en móvil.
-- [x] Revisar el comportamiento con teclado virtual, scroll, selección de texto, imágenes y bloques especiales.
-- [x] En móvil, tratar imágenes como bloques completos sin texto lateral y permitir escalarlas desde cualquier esquina sin salir del margen útil.
-- [x] Mantener los bloques de código contenidos dentro de la nota y ofrecer una vista/editor de código a pantalla completa para líneas largas.
-- [x] Auditar botones, menús, tarjetas y controles responsive para evitar textos cortados, desbordados o ilegibles; incluye acciones largas como `Convertir a texto` y `Eliminar bloque`.
-- [x] Validar visualmente en móvil y pasar CI antes de continuar.
-- [x] Confirmar guardado cifrado real en móvil, navegación Atrás/gesto y auditoría responsive en móvil, tablet y PC.
-
+- [x] Pulido móvil del editor
 - [x] Checklists
 - [x] Fichas de contacto privadas
-- [x] Entradas por día dentro de una nota (fecha automática + título opcional)
+- [x] Entradas por día dentro de una nota
 - [x] Carpetas
 - [x] Etiquetas
 - [x] Búsqueda local
 - [x] Backup, exportación y restauración cifrada
 - [x] Funcionamiento offline
 - [x] Pruebas de la V1
+
+**Estado:** CERRADA ✅
+
+---
 
 ## V2 — Cuenta y sincronización
 
@@ -52,97 +43,86 @@ Objetivo: sincronización cifrada entre dispositivos sin exponer contenido al se
 - [x] Backend de sincronización
 - [x] Sincronización E2EE
 - [x] Varios dispositivos
-- [x] Resolución de conflictos *(implementación completa; validación de campo restante registrada en #69)*
-- [x] Historial de versiones *(implementación publicada; validación funcional restante registrada en #70)*
-- [ ] Recuperación de acceso *(implementación por correo en PR #75; pendiente validación real OTP y multidispositivo en #73)*
+- [x] Resolución de conflictos *(implementación completa; validación de campo restante en #69)*
+- [x] Historial de versiones *(implementación publicada; validación funcional restante en #70)*
+- [x] Recuperación de acceso *(implementación por correo integrada; validación real/multidispositivo/offline restante documentada en #73)*
 
 ### Reglas de acceso V2
 
 - El modo local permanece disponible sin correo ni proveedor social.
 - La cuenta online es opcional y no sustituye la contraseña maestra durante el acceso normal.
-- OANIX admite acceso por correo + contraseña y acceso con Google usando la misma identidad Supabase.
 - Una sesión normal de Google/correo no desbloquea por sí sola la bóveda.
-- La única excepción deliberada es `Recuperar por correo`: un OTP reciente puede autorizar temporalmente al broker de recuperación para recuperar la misma clave de bóveda y obligar a crear una contraseña maestra nueva.
+- La excepción deliberada es `Recuperar por correo`: un OTP reciente puede autorizar temporalmente al broker de recuperación para recuperar la misma clave de bóveda y obligar a crear una contraseña maestra nueva.
 - No se solicitan permisos de Gmail, Drive ni Contactos para autenticarse con Google.
-- Al iniciar OANIX, el usuario puede elegir explícitamente entre su bóveda sincronizada y el modo local antes de introducir la contraseña maestra correspondiente.
+- La misma clave de bóveda se conserva al rotar la contraseña; no se recifran todas las notas.
 
-### Backend V2 validado
+### Backend y E2EE V2
 
-- Supabase usa una sola tabla general `public.sync_records` para sobres cifrados y manifiestos E2EE del transporte normal.
-- RLS está habilitado y todas las políticas de lectura/escritura de `sync_records` se limitan a `authenticated` con propiedad por `auth.uid()`.
-- `anon` no tiene privilegios sobre los registros de sincronización.
-- El cliente autenticado solo puede modificar `ciphertext`, `version` y `deleted`; propietario, clave opaca y timestamp del servidor no son modificables por esa vía.
-- El backend de sincronización normal no interpreta el contenido privado; únicamente almacena sobres producidos por el cliente E2EE.
-- La recuperación por correo usa un broker separado y tablas de recuperación sin grants para `anon`/`authenticated`; el broker es la excepción explícita de confianza y solo libera material de recuperación después de OTP reciente.
-- Los binarios usan un único bucket privado `oanix-encrypted-blobs`; los objetos se guardan bajo el UID autenticado y RLS impide acceder a objetos de otro usuario.
+- `public.sync_records` conserva sobres cifrados y manifiestos E2EE del transporte normal con RLS por `auth.uid()`.
+- El backend de sincronización normal no interpreta el contenido privado.
+- Binarios usan el bucket privado `oanix-encrypted-blobs`, fragmentos cifrados de 6 MiB y manifiesto cifrado.
+- Autosync usa cambios locales, reconexión, regreso a la app, Realtime y polling de respaldo.
+- Conflictos se conservan y se entregan al usuario; no existe overwrite silencioso deliberado.
+- Historial guarda hasta 5 snapshots cifrados por nota dentro del almacenamiento general existente.
+- Recuperación por correo usa un broker separado y representa una frontera de confianza explícita diferente del transporte normal E2EE.
 
-### Sincronización E2EE — validada
+**Estado:** implementación funcional completada y se avanzó a V3. Las deudas #69, #70 y #73 siguen siendo reales y no deben declararse probadas hasta ejecutar sus casos de campo.
 
-- El primer transporte cifrado fue validado en uso real desde OANIX y se verificaron filas opacas activas en Supabase.
-- Cada registro local elegible conserva su payload ya cifrado y se encapsula nuevamente en un sobre AES-GCM usando la clave activa de la bóveda, que permanece en memoria.
-- `record_key` remoto es un identificador aleatorio generado criptográficamente y no deriva de título, tipo, identificador local ni otros metadatos predecibles.
-- Para reconocer filas ya existentes, OANIX descifra sus sobres únicamente en memoria durante la sincronización normal; no expone al servidor la clave local del registro.
-- Si un sobre remoto no puede descifrarse con la bóveda activa, OANIX se detiene y no lo sobrescribe.
-- Los registros cuyo payload cifrado no cambió se verifican localmente pero no se reescriben ni incrementan artificialmente su versión.
-- No se crea un segundo IndexedDB, store o caché para E2EE.
-
-### Varios dispositivos — validado en dispositivo real
-
-- El guardado local continúa siendo automático y offline-first.
-- Con una cuenta conectada, la sincronización E2EE es automática: el usuario no depende de un botón manual para subir o bajar cambios.
-- Al entrar con la misma cuenta en un dispositivo nuevo, OANIX puede traer la misma bóveda cifrada; en el flujo normal el usuario sigue necesitando conocer su contraseña maestra para abrir la clave de bóveda localmente.
-- Durante la sincronización normal la contraseña maestra y la clave de bóveda sin cifrar no se envían al backend. La recuperación por correo es una excepción deliberada: el broker puede procesar temporalmente la clave de bóveda tras OTP reciente para permitir el restablecimiento.
-- Al volver a una instancia anterior de OANIX, los cambios hechos en otro dispositivo se comprueban y reflejan automáticamente cuando hay conexión.
-- El autosync se activa tras cambios locales, al recuperar Internet, al volver a la app, mediante Realtime como aviso de cambios remotos y con una comprobación periódica de respaldo mientras está visible.
-- El estado de sincronización se conserva como registros pequeños cifrados bajo el tipo general `system.sync-state` dentro de `encrypted_records`; no se crea otro store, base local, caché ni cola independiente.
-- Las escrituras remotas usan versión esperada para evitar sobrescribir silenciosamente una modificación concurrente.
-- Si ambos dispositivos modificaron de forma incompatible el mismo registro desde la última base común, OANIX conserva ambos lados sin sobrescribir y lo entrega al centro de Resolución de conflictos.
-- `image` e `image-preview` forman parte del autosync E2EE: su ciphertext ya cifrado se procesa y transfiere en fragmentos de 6 MiB como `application/octet-stream` en el bucket privado para limitar el pico de memoria en móvil.
-- El nombre, ID y tipo local de una imagen no forman parte de la ruta remota; la ruta usa únicamente el UID requerido por RLS y un identificador aleatorio.
-- El manifiesto que relaciona una imagen local con sus fragmentos permanece cifrado dentro de `sync_records`; cada fragmento se verifica con SHA-256 antes de reconstruir el payload cifrado local.
-- Al reemplazar o eliminar un binario, OANIX limpia los fragmentos que dejan de ser necesarios; una cola mínima de limpieza queda cifrada dentro del mismo estado de sincronización para reintentar sin crear almacenamiento paralelo.
-
-### Historial de versiones — implementación V2
-
-- Los estados anteriores de las notas se guardan como registros cifrados `note-history` dentro del mismo `encrypted_records`; no se crea otra base, store ni caché.
-- Se conservan hasta 5 snapshots por nota y los snapshots automáticos se agrupan con una ventana mínima de 5 minutos para no crear una versión por cada autoguardado.
-- El historial puede sincronizarse mediante el transporte E2EE no binario existente.
-- Antes de restaurar se crea un checkpoint `pre-restore`, haciendo reversible la restauración.
-- La interfaz permite seleccionar una nota, revisar fecha/hora y vista previa de una versión anterior y ejecutar `Restaurar esta versión` con confirmación explícita.
-- Antes de abrir el historial se espera que la nota visible termine de guardarse, evitando capturar/restaurar sobre cambios pendientes.
-- Si una versión histórica referencia un original de imagen que ya no está disponible, la restauración se bloquea explícitamente en vez de crear una nota incompleta.
-- Los snapshots conservan referencias `imageId`; esta etapa no duplica binarios históricos.
-- Al eliminar permanentemente una nota se elimina también su historial para no dejar versiones huérfanas sin una superficie de recuperación definida.
-
-### Recuperación de acceso — implementación V2
-
-- OANIX mantiene una sola contraseña maestra permanente para la bóveda sincronizada; no obliga al usuario a conservar una segunda clave de recuperación.
-- Después de una entrada correcta en la bóveda sincronizada, OANIX prepara una envoltura de recuperación de la misma clave de bóveda mediante el broker del backend.
-- Si el usuario olvida la contraseña, `Recuperar por correo` solicita un Email OTP para la cuenta existente con `shouldCreateUser: false`.
-- `recover` exige un JWT válido cuyo método de autenticación más reciente sea `otp` y tenga una antigüedad máxima de 10 minutos.
-- Tras validar el código, el usuario debe escribir y confirmar una nueva contraseña maestra antes de continuar.
-- La misma clave de bóveda se reenvuelve con la contraseña nueva; no se crea otra bóveda ni se recifran todas las notas.
-- El bootstrap remoto se actualiza con versión esperada para evitar sobrescribir una rotación concurrente.
-- La generación de seguridad aumenta después de una recuperación y la envoltura de recuperación se rota.
-- Una recuperación ya preparada no puede ser reemplazada desde una sesión normal usando una clave de bóveda diferente.
-- Las tablas `oanix_recovery_root` y `vault_recovery_envelopes` no conceden acceso directo a `anon` ni `authenticated`; el acceso ocurre mediante el broker con service role y JWT del usuario validado.
-- La contraseña maestra no se guarda en Supabase. La clave de bóveda no se guarda en claro en tablas; el broker la procesa temporalmente durante preparación/recuperación y almacena únicamente una envoltura cifrada bajo una raíz de servidor.
-- Esta modalidad prioriza recuperación sencilla y por ello NO debe describirse como zero-knowledge frente al proveedor de backend.
-- El modo exclusivamente local, sin cuenta online/correo, no puede usar recuperación por correo.
-- Un dispositivo completamente offline puede conservar una protección antigua hasta reconectarse; OANIX no promete revocación instantánea de copias offline.
-- Dependencia de validación real: la plantilla de Supabase Email OTP debe incluir `{{ .Token }}` para mostrar el código numérico en lugar de enviar solo un Magic Link.
+---
 
 ## V3 — Android con Capacitor
 
-Objetivo: empaquetar la misma base de código como aplicación Android.
+Objetivo: empaquetar la misma base de código como aplicación Android y añadir integraciones nativas sin duplicar la lógica de negocio ni debilitar el cifrado existente.
 
-- [ ] Capacitor
-- [ ] APK / AAB
-- [ ] Android Keystore
-- [ ] Biometría
-- [ ] Cámara nativa
+- [x] Capacitor *(PR #81)*
+- [x] APK / AAB *(PR #82; APK instalada en Android real y modo local validado; firma final de Play Store pendiente para publicación)*
+- [x] Android Keystore *(PR #83; implementación/CI completos; prueba específica de campo pendiente)*
+- [x] Biometría / credencial segura del dispositivo *(PR #84; implementación/CI completos; prueba real pendiente)*
+- [ ] **Cámara nativa — BLOQUE ACTIVO**
 - [ ] Integración nativa de archivos
 - [ ] Compartir hacia OANIX
+
+### Capacitor / empaquetado
+
+- Se reutiliza la misma base React + TypeScript + Vite/PWA.
+- La PWA conserva su comportamiento; Android usa el proyecto `android/` generado por Capacitor.
+- `appId` actual: `io.github.hnalvaradohn.oanix`, provisional hasta publicación.
+- El workflow Android compila APK debug y AAB release de validación.
+- No existe todavía una clave privada definitiva de firma para Play Store.
+
+### Android Keystore
+
+- Una clave AES-256-GCM no exportable vive dentro de `AndroidKeyStore` para sellado nativo pequeño.
+- La `CryptoKey` activa de la bóveda web no se vuelve exportable.
+- La contraseña maestra no se almacena en Android.
+- La clave genérica de sellado y la clave biométrica se mantienen separadas.
+
+### Biometría / credencial
+
+- La contraseña maestra sigue siendo principal y fallback.
+- Android 11+ puede usar biometría fuerte o PIN/patrón/contraseña segura del dispositivo como acceso rápido.
+- La clave biométrica de Keystore exige autenticación por cada uso.
+- No se acepta `BIOMETRIC_WEAK` para liberar la clave de bóveda.
+- La copia local para acceso rápido se conserva solo como ciphertext AES-GCM ligado a una bóveda concreta; tras autenticar se importa a Web Crypto como clave no extraíble.
+- Android anterior conserva el flujo de contraseña maestra.
+
+### Deudas visibles de V3
+
+- APK/mode local: validado en teléfono real.
+- Cuenta/bóveda sincronizada dentro de Android: todavía no se declara funcional/validada.
+- Keystore `seal/open`: falta prueba específica en dispositivo.
+- Biometría: falta prueba real de enrolamiento, reapertura, cancelación, fallback e invalidación.
+- Icono Android actual: provisional; dirección visual premium ya definida y debe aplicarse antes de publicación.
+
+### Orden restante V3
+
+1. Cámara nativa.
+2. Integración nativa de archivos.
+3. Compartir hacia OANIX.
+4. Completar validaciones de campo pendientes.
+5. Identidad visual, firma y preparación de publicación cuando corresponda.
+
+---
 
 ## V4 — Funciones avanzadas
 
@@ -156,14 +136,16 @@ Objetivo: empaquetar la misma base de código como aplicación Android.
 - [ ] Avatar o foto opcional por nota, almacenada de forma privada
 - [ ] IA opcional con modelo de privacidad definido
 
+---
+
 ## Estado actual
 
 **V1 — Núcleo local: CERRADA ✅**
 
-**Versión activa: V2 — Cuenta y sincronización**
+**V2 — Cuenta y sincronización: implementación funcional completada; deudas de validación #69, #70 y #73 continúan visibles.**
 
-**Bloque oficial activo:** Recuperación de acceso — implementación por correo en PR #75; pendiente validación real del OTP, rotación y varios dispositivos en issue #73.
+**Versión activa: V3 — Android con Capacitor.**
 
-**Deudas de validación visibles:** Resolución de conflictos (#69) e Historial de versiones (#70). No bloquean el avance por decisión explícita del usuario, pero no deben darse por probadas hasta cerrar sus casos reales.
+**Bloque oficial activo: Cámara nativa.**
 
-La cuenta online es opcional. No se implementan funciones de V3 o V4 mientras V2 no esté cerrada, salvo preparación arquitectónica explícitamente documentada.
+No avanzar a V4 mientras V3 siga abierta, salvo preparación arquitectónica estrictamente necesaria y registrada.
