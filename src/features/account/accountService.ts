@@ -1,8 +1,14 @@
 import { createClient, type Session } from '@supabase/supabase-js'
+import {
+  ANDROID_OAUTH_REDIRECT_URL,
+  isAndroidNativeAccountAuth,
+  openAndroidOAuthUrl,
+} from '../../platform/android/nativeAccountAuth'
 
 const SUPABASE_URL = 'https://kpnhdtiscxckveqeyqfq.supabase.co'
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_WouuStU5HcKeGYOL60Eelw_kyzaPJLZ'
 const GOOGLE_POPUP_NAME = 'oanix-google-auth'
+const AUTH_WAIT_TIMEOUT_MS = 2 * 60 * 1000
 
 export const ACCOUNT_PASSWORD_MIN_CHARACTERS = 12
 
@@ -39,7 +45,9 @@ function validateEmail(rawEmail: string) {
 }
 
 function redirectUrl() {
-  return `${window.location.origin}${import.meta.env.BASE_URL}`
+  return isAndroidNativeAccountAuth()
+    ? ANDROID_OAUTH_REDIRECT_URL
+    : `${window.location.origin}${import.meta.env.BASE_URL}`
 }
 
 function describeAuthError(error: unknown, fallback: string) {
@@ -86,16 +94,9 @@ function sessionInfo(session: Session | null): OnlineAccountSession | null {
   }
 }
 
-function googlePopupFeatures() {
-  const width = Math.min(520, Math.max(320, window.outerWidth - 48))
-  const height = Math.min(720, Math.max(520, window.outerHeight - 80))
-  const left = Math.max(0, Math.round(window.screenX + (window.outerWidth - width) / 2))
-  const top = Math.max(0, Math.round(window.screenY + (window.outerHeight - height) / 2))
-
-  return `popup=yes,width=${Math.round(width)},height=${Math.round(height)},left=${left},top=${top}`
-}
-
-function waitForGooglePopupSession(popup: Window): Promise<OnlineAccountSession> {
+function waitForSession(
+  closedEarly?: () => boolean,
+): Promise<OnlineAccountSession> {
   return new Promise((resolve, reject) => {
     let settled = false
     let intervalId = 0
@@ -112,11 +113,6 @@ function waitForGooglePopupSession(popup: Window): Promise<OnlineAccountSession>
       if (settled) return
       settled = true
       cleanup()
-      try {
-        popup.close()
-      } catch {
-        // The session is already established; failing to close the auxiliary window is harmless.
-      }
       resolve(session)
     }
 
@@ -124,11 +120,6 @@ function waitForGooglePopupSession(popup: Window): Promise<OnlineAccountSession>
       if (settled) return
       settled = true
       cleanup()
-      try {
-        popup.close()
-      } catch {
-        // Nothing else to clean up.
-      }
       reject(new Error(message))
     }
 
@@ -143,12 +134,12 @@ function waitForGooglePopupSession(popup: Window): Promise<OnlineAccountSession>
             finish(nextSession)
             return
           }
-          if (popup.closed) {
-            fail('Se cerró la ventana de Google antes de completar el acceso.')
+          if (closedEarly?.()) {
+            fail('Se cerró Google antes de completar el acceso.')
           }
         })
         .catch(() => {
-          if (popup.closed) {
+          if (closedEarly?.()) {
             fail('No se pudo comprobar la sesión después de cerrar Google.')
           }
         })
@@ -156,8 +147,80 @@ function waitForGooglePopupSession(popup: Window): Promise<OnlineAccountSession>
 
     timeoutId = window.setTimeout(() => {
       fail('Google tardó demasiado en responder. Vuelve a intentarlo.')
-    }, 2 * 60 * 1000)
+    }, AUTH_WAIT_TIMEOUT_MS)
   })
+}
+
+function googlePopupFeatures() {
+  const width = Math.min(520, Math.max(320, window.outerWidth - 48))
+  const height = Math.min(720, Math.max(520, window.outerHeight - 80))
+  const left = Math.max(0, Math.round(window.screenX + (window.outerWidth - width) / 2))
+  const top = Math.max(0, Math.round(window.screenY + (window.outerHeight - height) / 2))
+
+  return `popup=yes,width=${Math.round(width)},height=${Math.round(height)},left=${left},top=${top}`
+}
+
+function waitForGooglePopupSession(popup: Window): Promise<OnlineAccountSession> {
+  return waitForSession(() => popup.closed)
+    .finally(() => {
+      try {
+        popup.close()
+      } catch {
+        // Session completion is independent from closing the auxiliary browser window.
+      }
+    })
+}
+
+function authCallbackParams(url: URL): URLSearchParams {
+  const params = new URLSearchParams(url.search)
+  const fragment = new URLSearchParams(url.hash.startsWith('#') ? url.hash.slice(1) : url.hash)
+  fragment.forEach((value, key) => {
+    if (!params.has(key)) params.set(key, value)
+  })
+  return params
+}
+
+export async function completeOnlineAccountFromRedirect(
+  callbackUrl: string,
+): Promise<OnlineAccountSession> {
+  let url: URL
+  try {
+    url = new URL(callbackUrl)
+  } catch {
+    throw new Error('Android devolvió una respuesta de acceso no válida.')
+  }
+
+  if (url.protocol !== 'oanix:' || url.hostname !== 'auth-callback') {
+    throw new Error('OANIX rechazó un callback de autenticación que no le pertenece.')
+  }
+
+  const params = authCallbackParams(url)
+  const errorDescription = params.get('error_description') || params.get('error')
+  if (errorDescription) throw new Error(errorDescription)
+
+  const accessToken = params.get('access_token')
+  const refreshToken = params.get('refresh_token')
+  const code = params.get('code')
+
+  let session: Session | null = null
+  if (accessToken && refreshToken) {
+    const { data, error } = await supabase.auth.setSession({
+      access_token: accessToken,
+      refresh_token: refreshToken,
+    })
+    if (error) throw new Error(describeAuthError(error, 'No se pudo importar la sesión de Google en Android.'))
+    session = data.session
+  } else if (code) {
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code)
+    if (error) throw new Error(describeAuthError(error, 'No se pudo completar el código de acceso de Google.'))
+    session = data.session
+  } else {
+    throw new Error('Google regresó a OANIX sin una sesión utilizable.')
+  }
+
+  const info = sessionInfo(session)
+  if (!info) throw new Error('OANIX no pudo leer la sesión recibida desde Android.')
+  return info
 }
 
 export async function createOnlineAccount(
@@ -207,6 +270,26 @@ export async function signInOnlineAccount(
 }
 
 export async function continueWithGoogle(): Promise<OnlineAccountSession> {
+  if (isAndroidNativeAccountAuth()) {
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: ANDROID_OAUTH_REDIRECT_URL,
+        skipBrowserRedirect: true,
+        queryParams: {
+          prompt: 'select_account',
+        },
+      },
+    })
+
+    if (error || !data.url) {
+      throw new Error(describeAuthError(error, 'No se pudo iniciar con Google en Android.'))
+    }
+
+    await openAndroidOAuthUrl(data.url)
+    return await waitForSession()
+  }
+
   // Open synchronously from the user's click so popup blockers do not mistake it for an unsolicited window.
   const popup = window.open('', GOOGLE_POPUP_NAME, googlePopupFeatures())
   if (!popup) {
