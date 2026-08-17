@@ -1,10 +1,12 @@
 import {
   createVaultProtection,
+  exportVaultKeyForRecovery,
   MASTER_PASSWORD_MIN_CHARACTERS,
   openVaultProtection,
   rewrapVaultProtection,
   validateMasterPassword,
 } from '../crypto/vaultCrypto'
+import { importTrustedDeviceVaultKey } from '../crypto/trustedDeviceVaultKey'
 import {
   clearActiveVaultKey,
   isVaultUnlocked,
@@ -20,6 +22,13 @@ import {
   readEncryptedRecord,
   writeEncryptedRecord,
 } from '../../storage/repositories/encryptedRecordRepository'
+import {
+  disableAndroidBiometricVault,
+  enableAndroidBiometricVault,
+  getAndroidBiometricVaultStatus,
+  isAndroidBiometricRuntime,
+  unlockAndroidBiometricVault,
+} from '../../platform/android/biometricVault'
 
 export { MASTER_PASSWORD_MIN_CHARACTERS }
 
@@ -50,11 +59,76 @@ function randomProbeToken(): string {
     .join('')
 }
 
+function biometricVaultBinding(metadata: VaultMetadata): string {
+  return `primary:${metadata.createdAt}`
+}
+
+async function tryAndroidBiometricUnlock(metadata: VaultMetadata): Promise<boolean> {
+  if (!isAndroidBiometricRuntime() || metadata.protection === 'pending') return false
+
+  try {
+    const binding = biometricVaultBinding(metadata)
+    const status = await getAndroidBiometricVaultStatus()
+    if (!status.supported || !status.enabled || status.vaultBinding !== binding) return false
+
+    const result = await unlockAndroidBiometricVault(binding)
+    if (!result.unlocked || !result.vaultKey) return false
+
+    let encodedVaultKey = result.vaultKey
+    try {
+      const vaultKey = await importTrustedDeviceVaultKey(encodedVaultKey)
+      setActiveVaultKey(vaultKey)
+      return true
+    } finally {
+      encodedVaultKey = ''
+    }
+  } catch {
+    clearActiveVaultKey()
+    return false
+  }
+}
+
+async function maybeEnableAndroidBiometricUnlock(
+  password: string,
+  metadata: VaultMetadata,
+): Promise<void> {
+  if (!isAndroidBiometricRuntime() || metadata.protection === 'pending') return
+
+  try {
+    const binding = biometricVaultBinding(metadata)
+    const status = await getAndroidBiometricVaultStatus()
+    if (!status.supported) return
+    if (status.enabled && status.vaultBinding === binding) return
+
+    if (status.vaultBinding && status.vaultBinding !== binding) {
+      await disableAndroidBiometricVault()
+    }
+
+    let encodedVaultKey = await exportVaultKeyForRecovery(password, metadata.protection)
+    try {
+      await enableAndroidBiometricVault(encodedVaultKey, binding)
+    } finally {
+      encodedVaultKey = ''
+    }
+  } catch {
+    // Fast unlock is optional. A biometric/device-credential failure must never
+    // block the master-password path or weaken the active vault session.
+  }
+}
+
 export async function initializeLocalVault(): Promise<VaultInitializationResult> {
   try {
     const existingMetadata = await readVaultMetadata()
 
     if (existingMetadata) {
+      if (
+        !isVaultUnlocked()
+        && existingMetadata.protection !== 'pending'
+        && await tryAndroidBiometricUnlock(existingMetadata)
+      ) {
+        return { status: 'ready', access: 'unlocked', created: false }
+      }
+
       const access: VaultAccessState = isVaultUnlocked()
         ? 'unlocked'
         : existingMetadata.protection === 'pending'
@@ -100,13 +174,14 @@ export async function createMasterPassword(password: string): Promise<VaultActio
     }
 
     const { protection, vaultKey } = await createVaultProtection(password)
-
-    await writeVaultMetadata({
+    const protectedMetadata: VaultMetadata = {
       ...metadata,
       protection,
-    })
+    }
 
+    await writeVaultMetadata(protectedMetadata)
     setActiveVaultKey(vaultKey)
+    await maybeEnableAndroidBiometricUnlock(password, protectedMetadata)
     return { status: 'success' }
   } catch {
     clearActiveVaultKey()
@@ -131,6 +206,7 @@ export async function unlockLocalVault(password: string): Promise<VaultActionRes
 
     const vaultKey = await openVaultProtection(password, metadata.protection)
     setActiveVaultKey(vaultKey)
+    await maybeEnableAndroidBiometricUnlock(password, metadata)
     return { status: 'success' }
   } catch {
     clearActiveVaultKey()

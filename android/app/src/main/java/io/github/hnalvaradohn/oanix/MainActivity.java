@@ -8,6 +8,7 @@ public class MainActivity extends BridgeActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         registerPlugin(OanixKeystorePlugin.class);
+        registerPlugin(OanixBiometricPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }
