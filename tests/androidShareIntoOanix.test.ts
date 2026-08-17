@@ -13,7 +13,7 @@ test('Android advertises OANIX for text and image share intents without broad st
   assert.doesNotMatch(manifest, /READ_EXTERNAL_STORAGE|WRITE_EXTERNAL_STORAGE|MANAGE_EXTERNAL_STORAGE|READ_MEDIA_IMAGES/)
 })
 
-test('Android refreshes the Activity intent and registers the native share bridge', () => {
+test('Android publishes the newest Activity intent before Capacitor dispatches it', () => {
   const activity = readFileSync(
     'android/app/src/main/java/io/github/hnalvaradohn/oanix/MainActivity.java',
     'utf8',
@@ -21,7 +21,28 @@ test('Android refreshes the Activity intent and registers the native share bridg
 
   assert.match(activity, /registerPlugin\(OanixSharePlugin\.class\)/)
   assert.match(activity, /onNewIntent\(Intent intent\)/)
-  assert.match(activity, /setIntent\(intent\)/)
+  const setIntentIndex = activity.indexOf('setIntent(intent)')
+  const superIndex = activity.indexOf('super.onNewIntent(intent)')
+  assert.ok(setIntentIndex >= 0)
+  assert.ok(superIndex >= 0)
+  assert.ok(setIntentIndex < superIndex)
+})
+
+test('native share intents are queued only in memory and signal repeated warm deliveries', () => {
+  const plugin = readFileSync(
+    'android/app/src/main/java/io/github/hnalvaradohn/oanix/OanixSharePlugin.java',
+    'utf8',
+  )
+
+  assert.match(plugin, /ArrayDeque<Intent> pendingShareIntents/)
+  assert.match(plugin, /handleOnNewIntent\(Intent intent\)/)
+  assert.match(plugin, /pendingShareIntents\.addLast\(new Intent\(intent\)\)/)
+  assert.match(plugin, /notifyListeners\("shareReceived", signal, false\)/)
+  assert.match(plugin, /takePendingShareIntent\(Activity activity\)/)
+  assert.match(plugin, /pendingShareIntents\.removeFirst\(\)/)
+  assert.match(plugin, /handleOnDestroy\(\)[\s\S]*pendingShareIntents\.clear\(\)/)
+  assert.doesNotMatch(plugin, /SharedPreferences/)
+  assert.doesNotMatch(plugin, /saveInstanceState|restoreState/)
 })
 
 test('incoming content is prepared only after the unlocked runtime asks for it', () => {
@@ -35,29 +56,33 @@ test('incoming content is prepared only after the unlocked runtime asks for it',
 
   assert.match(app, /function UnlockedApp/)
   assert.match(app, /<NativeShareRuntime/)
-  assert.match(runtime, /importPendingAndroidShare\(\)/)
+  assert.match(runtime, /importPendingAndroidShare\(/)
+  assert.match(runtime, /addAndroidShareReceivedListener/)
   assert.match(service, /nativeShare\.consumePendingShare\(\)/)
   assert.match(service, /storeEncryptedImage\(file\)/)
   assert.match(service, /createNoteWithContent/)
   assert.match(service, /finally[\s\S]*nativeShare\.finishShare\(\)/)
   assert.match(plugin, /consumePendingShare\(PluginCall call\)/)
-  assert.match(plugin, /getActivity\(\)\.getIntent\(\)|activity\.getIntent\(\)/)
   assert.match(plugin, /File\.createTempFile\(SHARE_PREFIX/)
   assert.match(plugin, /cleanupAbandonedShareFiles\(\)/)
   assert.match(plugin, /finishShare\(PluginCall call\)/)
 })
 
-test('share runtime opens the imported note and prioritizes encrypted previews without app restart', () => {
+test('share runtime shows local progress, drains repeated shares and opens the imported note', () => {
   const runtime = readFileSync('src/platform/android/NativeShareRuntime.tsx', 'utf8')
+  const service = readFileSync('src/platform/android/nativeShare.ts', 'utf8')
 
+  assert.match(runtime, /processPendingShares/)
+  assert.match(runtime, /rerunRequested/)
+  assert.match(runtime, /role="progressbar"/)
+  assert.match(runtime, /Cifrado local · no requiere Internet/)
   assert.match(runtime, /findImportedNoteButton/)
-  assert.match(runtime, /data-reorder-note-id/)
-  assert.match(runtime, /\.note-row__open/)
   assert.match(runtime, /button\.click\(\)/)
   assert.match(runtime, /prioritizeEncryptedImagePreviews/)
   assert.match(runtime, /image\.loading = 'eager'/)
-  assert.match(runtime, /MutationObserver\(prioritizeEncryptedImagePreviews\)/)
-  assert.match(runtime, /OPEN_IMPORTED_NOTE_TIMEOUT_MS = 5000/)
+  assert.match(service, /Procesando foto \$\{currentImage\} de \$\{images\.length\}/)
+  assert.match(service, /Guardando la nota cifrada/)
+  assert.match(service, /phase: 'complete'/)
 })
 
 test('share limits and accepted image formats stay aligned with the encrypted image pipeline', () => {

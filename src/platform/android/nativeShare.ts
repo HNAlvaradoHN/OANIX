@@ -27,15 +27,45 @@ interface NativeShareResult {
   images?: NativeSharedImage[]
 }
 
+interface ShareReceivedEvent {
+  pending?: boolean
+  queueSize?: number
+}
+
+interface NativeListenerHandle {
+  remove(): Promise<void>
+}
+
 interface OanixSharePlugin {
   consumePendingShare(): Promise<NativeShareResult>
   finishShare(): Promise<{ finished: boolean }>
+  addListener(
+    eventName: 'shareReceived',
+    listener: (event: ShareReceivedEvent) => void,
+  ): Promise<NativeListenerHandle>
+}
+
+export interface AndroidShareImportProgress {
+  phase: 'preparing' | 'processing-image' | 'saving-note' | 'complete'
+  message: string
+  percent: number
+  currentImage: number
+  totalImages: number
 }
 
 const nativeShare = registerPlugin<OanixSharePlugin>('OanixShare')
 
 export function isAndroidNativeShareRuntime(): boolean {
   return Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android'
+}
+
+export async function addAndroidShareReceivedListener(
+  listener: () => void,
+): Promise<NativeListenerHandle> {
+  if (!isAndroidNativeShareRuntime()) {
+    return { remove: async () => undefined }
+  }
+  return nativeShare.addListener('shareReceived', () => listener())
 }
 
 function createBlockId(): string {
@@ -124,10 +154,27 @@ async function sharedImageToFile(image: NativeSharedImage, index: number): Promi
   })
 }
 
-export async function importPendingAndroidShare(): Promise<NoteRecord | null> {
+function reportProgress(
+  callback: ((progress: AndroidShareImportProgress) => void) | undefined,
+  progress: AndroidShareImportProgress,
+) {
+  callback?.(progress)
+}
+
+export async function importPendingAndroidShare(
+  onProgress?: (progress: AndroidShareImportProgress) => void,
+): Promise<NoteRecord | null> {
   if (!isAndroidNativeShareRuntime()) return null
 
   const encryptedImageIds: string[] = []
+
+  reportProgress(onProgress, {
+    phase: 'preparing',
+    message: 'Preparando contenido compartido…',
+    percent: 6,
+    currentImage: 0,
+    totalImages: 0,
+  })
 
   try {
     const result = await nativeShare.consumePendingShare()
@@ -140,8 +187,19 @@ export async function importPendingAndroidShare(): Promise<NoteRecord | null> {
     }
 
     const blocks: StoredNoteBlock[] = blocksForSharedText(text)
+    const imageProgressSpan = 78
 
     for (let index = 0; index < images.length; index += 1) {
+      const currentImage = index + 1
+      const beforePercent = 10 + Math.floor((index / Math.max(1, images.length)) * imageProgressSpan)
+      reportProgress(onProgress, {
+        phase: 'processing-image',
+        message: `Procesando foto ${currentImage} de ${images.length}…`,
+        percent: beforePercent,
+        currentImage,
+        totalImages: images.length,
+      })
+
       const file = await sharedImageToFile(images[index], index)
       const stored = await storeEncryptedImage(file)
       encryptedImageIds.push(stored.imageId)
@@ -153,11 +211,37 @@ export async function importPendingAndroidShare(): Promise<NoteRecord | null> {
         name: stored.name,
         byteLength: stored.byteLength,
       })
+
+      reportProgress(onProgress, {
+        phase: 'processing-image',
+        message: `Foto ${currentImage} de ${images.length} lista`,
+        percent: 10 + Math.floor((currentImage / Math.max(1, images.length)) * imageProgressSpan),
+        currentImage,
+        totalImages: images.length,
+      })
     }
 
     if (blocks.length === 0) return null
 
-    return await createNoteWithContent(normalizeSharedTitle(result.subject), blocks)
+    reportProgress(onProgress, {
+      phase: 'saving-note',
+      message: images.length > 0 ? 'Guardando la nota cifrada…' : 'Guardando contenido compartido…',
+      percent: 94,
+      currentImage: images.length,
+      totalImages: images.length,
+    })
+
+    const note = await createNoteWithContent(normalizeSharedTitle(result.subject), blocks)
+
+    reportProgress(onProgress, {
+      phase: 'complete',
+      message: 'Contenido listo',
+      percent: 100,
+      currentImage: images.length,
+      totalImages: images.length,
+    })
+
+    return note
   } catch (error) {
     await Promise.allSettled(encryptedImageIds.map((imageId) => deleteEncryptedImage(imageId)))
     throw error
