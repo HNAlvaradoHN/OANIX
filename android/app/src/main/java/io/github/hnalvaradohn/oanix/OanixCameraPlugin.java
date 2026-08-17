@@ -8,7 +8,6 @@ import android.content.pm.ResolveInfo;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
-import android.util.Base64;
 
 import androidx.activity.result.ActivityResult;
 import androidx.core.content.FileProvider;
@@ -20,16 +19,14 @@ import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.ActivityCallback;
 import com.getcapacitor.annotation.CapacitorPlugin;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.List;
 
 @CapacitorPlugin(name = "OanixCamera")
 public class OanixCameraPlugin extends Plugin {
     private static final long MAX_CAPTURE_BYTES = 24L * 1024L * 1024L;
+    private static final long STALE_CAPTURE_MS = 60L * 60L * 1000L;
     private static final String CAPTURE_PREFIX = "oanix-camera-";
     private static final String CAPTURE_SUFFIX = ".jpg";
     private static final int URI_FLAGS = Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION;
@@ -50,12 +47,9 @@ public class OanixCameraPlugin extends Plugin {
         File[] files = cacheDir.listFiles((dir, name) -> name.startsWith(CAPTURE_PREFIX) && name.endsWith(CAPTURE_SUFFIX));
         if (files == null) return;
 
-        long cutoff = System.currentTimeMillis() - (24L * 60L * 60L * 1000L);
+        long cutoff = System.currentTimeMillis() - STALE_CAPTURE_MS;
         for (File file : files) {
-            if (file.lastModified() < cutoff) {
-                // Best-effort cleanup only. Cache files contain no data that OANIX relies on after import.
-                file.delete();
-            }
+            if (file.lastModified() < cutoff) file.delete();
         }
     }
 
@@ -99,7 +93,7 @@ public class OanixCameraPlugin extends Plugin {
         try {
             getContext().revokeUriPermission(pendingCaptureUri, URI_FLAGS);
         } catch (Exception ignored) {
-            // The temporary URI is scoped to OANIX and the file is removed below.
+            // Best effort: the URI belongs to OANIX's private FileProvider.
         }
     }
 
@@ -111,32 +105,6 @@ public class OanixCameraPlugin extends Plugin {
         pendingCaptureFile = null;
         pendingCaptureUri = null;
         captureActive = false;
-    }
-
-    private byte[] readCaptureBytes(File file) throws IOException {
-        long length = file.length();
-        if (!isOwnedCaptureFile(file) || length <= 0 || length > MAX_CAPTURE_BYTES) {
-            throw new IOException("Captured image size or location is invalid.");
-        }
-
-        try (
-            FileInputStream input = new FileInputStream(file);
-            ByteArrayOutputStream output = new ByteArrayOutputStream((int) Math.min(length, Integer.MAX_VALUE))
-        ) {
-            byte[] buffer = new byte[64 * 1024];
-            int read;
-            long total = 0;
-            while ((read = input.read(buffer)) != -1) {
-                total += read;
-                if (total > MAX_CAPTURE_BYTES) {
-                    Arrays.fill(buffer, (byte) 0);
-                    throw new IOException("Captured image exceeds the OANIX camera limit.");
-                }
-                output.write(buffer, 0, read);
-            }
-            Arrays.fill(buffer, (byte) 0);
-            return output.toByteArray();
-        }
     }
 
     @Override
@@ -172,8 +140,8 @@ public class OanixCameraPlugin extends Plugin {
 
     @PluginMethod
     public void takePhoto(PluginCall call) {
-        if (captureActive) {
-            call.reject("Ya hay una captura de cámara en curso.");
+        if (captureActive || pendingCaptureFile != null) {
+            call.reject("Ya hay una captura de cámara pendiente en OANIX.");
             return;
         }
 
@@ -211,34 +179,45 @@ public class OanixCameraPlugin extends Plugin {
             return;
         }
 
-        if (pendingCaptureFile == null || !pendingCaptureFile.exists()) {
+        if (pendingCaptureFile == null || pendingCaptureUri == null || !pendingCaptureFile.exists()) {
             cleanupPendingCapture();
             call.reject("La cámara no devolvió una foto válida.");
             return;
         }
 
-        byte[] bytes = null;
-        try {
-            bytes = readCaptureBytes(pendingCaptureFile);
-            JSObject response = new JSObject();
-            response.put("cancelled", false);
-            response.put("mimeType", "image/jpeg");
-            response.put("byteLength", bytes.length);
-            response.put("base64", Base64.encodeToString(bytes, Base64.NO_WRAP));
-            call.resolve(response);
-        } catch (Exception error) {
-            call.reject("No se pudo leer la foto capturada.", error);
-        } finally {
-            if (bytes != null) Arrays.fill(bytes, (byte) 0);
+        long byteLength = pendingCaptureFile.length();
+        if (!isOwnedCaptureFile(pendingCaptureFile) || byteLength <= 0 || byteLength > MAX_CAPTURE_BYTES) {
             cleanupPendingCapture();
+            call.reject("La foto capturada supera el límite seguro de OANIX o no es válida.");
+            return;
         }
+
+        JSObject response = new JSObject();
+        response.put("cancelled", false);
+        response.put("uri", pendingCaptureUri.toString());
+        response.put("mimeType", "image/jpeg");
+        response.put("byteLength", byteLength);
+
+        // The external camera no longer needs the temporary URI. Keep the private cache file
+        // only until JavaScript imports it into OANIX's existing encrypted image pipeline.
+        revokeCameraUri();
+        captureActive = false;
+        call.resolve(response);
+    }
+
+    @PluginMethod
+    public void finishPhoto(PluginCall call) {
+        cleanupPendingCapture();
+        JSObject response = new JSObject();
+        response.put("finished", true);
+        call.resolve(response);
     }
 
     @Override
     protected void handleOnDestroy() {
-        // If the activity is being recreated while the external camera owns the foreground,
-        // saveInstanceState()/restoreState() needs this private cache file to survive. Successful,
-        // cancelled and normal non-capture teardown paths still delete it immediately.
+        // While the external camera is active, saveInstanceState()/restoreState() needs the
+        // private cache file to survive activity recreation. Once the result is back, normal
+        // teardown removes any capture that JavaScript has not already finished importing.
         if (!captureActive) cleanupPendingCapture();
     }
 }
