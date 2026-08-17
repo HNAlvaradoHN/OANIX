@@ -28,8 +28,9 @@ test('Keystore envelopes bind ciphertext to an explicit purpose through GCM AAD'
   assert.match(pluginSource, /MAX_PLAINTEXT_BYTES = 4096/)
 })
 
-test('Keystore foundation is registered natively and is not yet biometric-gated', () => {
+test('generic device sealing remains separate from the user-authenticated biometric vault key', () => {
   assert.match(mainActivitySource, /registerPlugin\(OanixKeystorePlugin\.class\)/)
+  assert.match(mainActivitySource, /registerPlugin\(OanixBiometricPlugin\.class\)/)
   assert.match(pluginSource, /\.setUserAuthenticationRequired\(false\)/)
   assert.match(bridgeSource, /Capacitor\.getPlatform\(\) === 'android'/)
   assert.doesNotMatch(bridgeSource, /exportVaultKeyForRecovery/)
