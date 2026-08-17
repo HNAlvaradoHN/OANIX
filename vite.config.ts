@@ -9,7 +9,7 @@ export default defineConfig(({ mode }) => {
     base: isCapacitor ? './' : '/OANIX/',
     plugins: [
       react(),
-      !isCapacitor && VitePWA({
+      VitePWA({
         registerType: 'prompt',
         includeAssets: ['oanix-icon.svg'],
         workbox: {
