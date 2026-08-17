@@ -12,26 +12,28 @@ Su propósito es permitir que otra IA o colaborador continúe OANIX sin reconstr
 
 **Última actualización:** 2026-08-16
 
-**Versión activa:** V2 — Cuenta y sincronización
+**Versión activa:** V3 — Android con Capacitor
 
 **V1 — Núcleo local:** CERRADA
 
-**Completado/implementado en V2:**
-- Cuenta de usuario y autenticación.
-- Backend de sincronización.
-- Sincronización E2EE para el transporte normal.
-- Varios dispositivos, Realtime y autosync.
-- Imágenes/previews cifrados en sync.
-- Resolución de conflictos integrada mediante PR #66 y #67; validación de campo restante en #69.
-- Historial cifrado de versiones integrado mediante PR #71 y retención reducida a 5 mediante PR #72; validación funcional restante en #70.
-- Base criptográfica de cambio de contraseña integrada mediante PR #74.
-- Recuperación por correo integrada mediante PR #75; validación real restante en #73.
+**V2 — Cuenta y sincronización:** implementación funcional completada y se avanzó a V3. No borrar ni falsificar las deudas de validación restantes:
+- Resolución de conflictos: implementación completa; detección real comprobada; casos restantes en issue #69.
+- Historial cifrado de versiones: implementación publicada, retención de 5 puntos; validación real restante en issue #70.
+- Recuperación por Email OTP: implementación integrada; validación real/multidispositivo/offline restante documentada en issue #73.
 
-**Bloque oficial activo:** Recuperación de acceso — implementación integrada; pendiente validación real del OTP, rotación y varios dispositivos en issue #73.
+**V3 implementado hasta ahora:**
+- Capacitor 8.4.2 y proyecto Android: PR #81.
+- APK debug + AAB release de validación: PR #82.
+- APK instalada en teléfono Android real: aplicación nativa abre y el modo local funciona.
+- El flujo Android online/bóveda sincronizada todavía no funciona o no está validado; mantenerlo como deuda visible y no declararlo probado.
+- Android Keystore: PR #83, compilación Android real de CI completada; prueba específica de sellar/abrir en dispositivo pendiente.
+- Biometría/credencial segura del dispositivo: PR #84, compilación Android real de CI completada; prueba funcional en teléfono pendiente.
 
-**Después del bloque actual:** cierre de V2 y, cuando corresponda, V3 — Android con Capacitor.
+**Bloque oficial activo:** Cámara nativa.
 
-**No avanzar todavía:** V3 ni V4 salvo preparación arquitectónica estrictamente necesaria y registrada.
+**Después:** integración nativa de archivos → compartir hacia OANIX → cierre/validación de V3 y preparación de publicación.
+
+**No avanzar todavía:** V4 salvo preparación arquitectónica estrictamente necesaria y registrada.
 
 ---
 
@@ -43,21 +45,24 @@ OANIX se desarrolla estrictamente por versiones y en el orden oficial del roadma
 ### 2.2 Modularidad
 Reutilizar de forma segura lo existente antes que crear bases, stores, cachés o capas paralelas. Mantener módulos suficientemente independientes para modificar funciones sin afectar innecesariamente al resto.
 
+En Android, Capacitor envuelve la misma aplicación. No crear una segunda lógica de notas, cifrado, imágenes o sincronización solo para la APK.
+
 ### 2.3 Seguridad y datos
 - Offline-first sigue siendo fundamental.
 - El contenido privado permanece cifrado localmente.
 - El transporte normal de sincronización mantiene E2EE y sobres opacos.
 - Una sesión normal de Google/correo no desbloquea por sí sola la bóveda.
-- **Excepción explícita:** por decisión del usuario, la recuperación por correo confía en el backend/proveedor de autenticación para recuperar temporalmente la misma clave de bóveda después de un OTP reciente. No describir este mecanismo como zero-knowledge frente al proveedor.
-- La contraseña maestra no se guarda en Supabase.
-- La clave de bóveda no se guarda en claro en tablas de cliente; el broker de recuperación la procesa temporalmente y conserva únicamente una envoltura cifrada bajo una raíz de servidor.
+- **Excepción explícita:** la recuperación por correo confía en el backend/proveedor de autenticación para recuperar temporalmente la misma clave de bóveda después de un OTP reciente. No describir este mecanismo como zero-knowledge frente al proveedor.
+- La contraseña maestra no se guarda en Supabase ni en Android.
+- La clave de bóveda no se guarda en claro en tablas de cliente ni en preferencias Android.
+- La `CryptoKey` activa del runtime web sigue siendo no extraíble.
 - Ante incertidumbre de sincronización, conservar datos tiene prioridad sobre sobrescribir silenciosamente.
 
 ### 2.4 Continuidad entre IAs
 Una IA que continúe OANIX debe leer `AGENTS.md`, `ROADMAP.md`, esta memoria, `ARCHITECTURE.md`, `SECURITY.md` y `CHANGELOG.md`; verificar `main`; no pedir al usuario decisiones ya documentadas; no inventar requisitos; registrar cambios, aplazamientos y excepciones.
 
 ### 2.5 Avance automático de ajustes pequeños
-El usuario pidió explícitamente no perder tiempo deteniéndose por ajustes pequeños. Cuando un cambio es local, de bajo riesgo, no altera seguridad/datos/alcance ni una decisión importante y puede validarse con pruebas, la IA debe corregirlo, probarlo y continuar automáticamente.
+El usuario pidió explícitamente no perder tiempo deteniéndose por ajustes pequeños. Cuando un cambio es local, de bajo riesgo, no altera seguridad/datos/alcance ni una decisión importante y puede validarse con pruebas, la IA debe corregirlo, probarlo, integrarlo y continuar automáticamente.
 
 Sí debe pedir decisión cuando haya alternativas reales que cambien seguridad, datos, alcance o experiencia importante.
 
@@ -68,7 +73,7 @@ Sí debe pedir decisión cuando haya alternativas reales que cambien seguridad, 
 ### DEC-2026-08-16-001 — Resolución de conflictos multidispositivo
 **Estado:** IMPLEMENTED / VALIDATION_DEBT
 
-Cuando existe divergencia real OANIX conserva ambos lados y el usuario decide. Para notas compatibles puede elegir la versión sincronizada, la local o combinar ambas. La combinación conserva completos ambos contenidos: primero el cambio **aceptado primero por la sincronización remota** y luego el otro, sin merge semántico, sin rótulos permanentes y sin convertir bloques estructurados a texto plano. Principio: `detectar -> conservar -> mostrar -> usuario decide`.
+Cuando existe divergencia real OANIX conserva ambos lados y el usuario decide. Para notas compatibles puede elegir la versión sincronizada, la local o combinar ambas. La combinación conserva completos ambos contenidos: primero el cambio aceptado primero por la sincronización remota y luego el otro, sin merge semántico, sin rótulos permanentes y sin convertir bloques estructurados a texto plano. Principio: `detectar -> conservar -> mostrar -> usuario decide`.
 
 PR #66 cubre conflictos no binarios y PR #67 imágenes originales/previews. La detección real fue comprobada; deuda restante en #69.
 
@@ -97,7 +102,7 @@ El repositorio es la fuente persistente de verdad. Conversaciones previas ayudan
 ### DEC-2026-08-16-005 — Recuperación con clave permanente bajo control del usuario
 **Estado:** SUPERSEDED
 
-La propuesta inicial era exigir una segunda clave/código de recuperación permanente guardado por el usuario para conservar un modelo donde el servidor no pudiera recuperar la bóveda. Esta propuesta fue descartada por el usuario por fricción de uso.
+La propuesta inicial era exigir una segunda clave/código de recuperación permanente guardado por el usuario. Esta propuesta fue descartada por fricción de uso.
 
 **Sustituida por:** DEC-2026-08-16-006.
 
@@ -120,27 +125,69 @@ La comodidad de recuperación por correo implica confiar en el proveedor de aute
 
 **Implementación:**
 - PR #74: reenvoltorio de la misma clave de bóveda al cambiar contraseña; no recifra todas las notas ni crea una segunda bóveda.
-- PR #75: `EmailRecoveryPanel`, `recoveryService`, recuperación desde la pantalla de bóveda sincronizada, prueba criptográfica y backend versionado; fusionado a `main`.
-- Supabase producción: tablas `oanix_recovery_root` y `vault_recovery_envelopes`, RLS habilitado y sin grants directos a `anon`/`authenticated`.
-- Edge Function `vault-recovery-broker`, `verify_jwt=true`.
-- `status`: consulta si la recuperación está preparada.
-- `register`: prepara/rota la envoltura; una recuperación ya preparada no puede reemplazarse con una clave de bóveda diferente desde una sesión normal.
-- `recover`: exige JWT válido cuyo método AMR más reciente sea `otp` y tenga como máximo 10 minutos.
-- OANIX prepara automáticamente la recuperación después de una entrada correcta a la bóveda sincronizada con la contraseña vigente.
-- Tras recuperación aumenta `securityGeneration`, actualiza el bootstrap con versión esperada y restaura la misma bóveda con la nueva contraseña.
-- La recuperación reutiliza la misma clave de bóveda: no recifra cada nota.
+- PR #75: flujo Email OTP y broker de recuperación.
+- Supabase producción: `oanix_recovery_root` y `vault_recovery_envelopes`, sin grants directos a `anon`/`authenticated`.
+- `vault-recovery-broker` exige JWT y OTP reciente para recuperar.
+- `securityGeneration` evita que dispositivos obsoletos reviertan silenciosamente la protección.
 
-**Validación pendiente antes de cerrar V2:**
-1. Confirmar que el email de Supabase muestra código numérico; la plantilla debe incluir `{{ .Token }}` y no solo Magic Link.
-2. Entrar una vez normalmente para preparar recuperación.
-3. Recuperar con OTP real y contraseña nueva.
-4. Confirmar mismas notas/imágenes.
-5. Confirmar que la contraseña anterior ya no abre el bootstrap sincronizado y la nueva sí.
-6. Validar en segundo dispositivo.
-7. Comprobar que un OTP usado no se reutiliza.
-8. Comprobar comportamiento de un dispositivo que estuvo offline durante la rotación.
+**Deuda que permanece visible al haber avanzado a V3:**
+- Confirmar flujo real completo OTP → nueva contraseña → misma bóveda → contraseña anterior inválida.
+- Validar segundo dispositivo, reutilización de OTP y comportamiento de dispositivo offline.
+- Un dispositivo completamente offline puede conservar una protección antigua hasta reconectarse; no prometer revocación instantánea.
 
-**Limitación física:** un dispositivo completamente offline puede conservar una copia local que todavía acepte la contraseña antigua. No prometer revocación instantánea de una copia local desconectada.
+### DEC-2026-08-16-007 — Android usa una sola base de aplicación
+**Estado:** IMPLEMENTED
+
+**Referencia:** issue #79, PR #81 y #82.
+
+- Capacitor envuelve la misma base React + TypeScript + Vite/PWA.
+- La PWA conserva su estrategia de Service Worker y `/OANIX/`; el bundle nativo usa rutas apropiadas para WebView y no registra el Service Worker de actualización de la PWA.
+- No mantener una implementación paralela de notas/cifrado/sync para Android.
+- App ID actual: `io.github.hnalvaradohn.oanix`. Se considera provisional antes de publicación; después de publicar en Play Store no debe cambiarse.
+- La firma definitiva de Play Store todavía no fue creada ni almacenada; tratar esa credencial permanente de forma explícita antes de publicación.
+
+### DEC-2026-08-16-008 — Android Keystore separado de la clave activa web
+**Estado:** IMPLEMENTED / VALIDATION_DEBT
+
+**Referencia:** PR #83.
+
+- `OanixKeystorePlugin` genera una clave AES-256-GCM no exportable dentro de `AndroidKeyStore` con alias `oanix.device-seal.v1`.
+- Usa IV aleatorio, AAD de propósito y limita el material sellado a 4 KiB.
+- Esta clave genérica NO es la `CryptoKey` activa de la bóveda y no almacena contraseña maestra.
+- Se mantiene deliberadamente separada de la clave usada por biometría para evitar cambiar silenciosamente los parámetros de un alias que ya pueda existir en un dispositivo.
+- Compilación APK/AAB pasó; falta una prueba real específica `seal/open` en teléfono.
+
+### DEC-2026-08-16-009 — Desbloqueo rápido Android con biometría fuerte o credencial del dispositivo
+**Estado:** IMPLEMENTED / VALIDATION_DEBT
+
+**Referencia:** PR #84, issue #79.
+
+**UX aprobada por el usuario:**
+- La contraseña maestra continúa siendo la credencial principal y el fallback.
+- Después de un desbloqueo correcto con contraseña, OANIX puede activar acceso rápido en ese teléfono.
+- En aperturas posteriores puede usar huella/rostro fuerte o PIN/patrón/contraseña segura del dispositivo.
+- Si la autenticación se cancela, se invalida la clave, cambia el entorno o no es compatible, OANIX vuelve al flujo normal de contraseña maestra.
+
+**Modelo técnico:**
+- Alias separado `oanix.biometric-vault.v1` dentro de Android Keystore.
+- AES-256-GCM y autenticación obligatoria por cada uso (`timeout = 0`).
+- Solo `BIOMETRIC_STRONG | DEVICE_CREDENTIAL`; no usar `BIOMETRIC_WEAK` para liberar material criptográfico de bóveda.
+- La implementación se habilita desde Android 11 / API 30 para mantener un camino criptográfico coherente con biometría fuerte + credencial del dispositivo. Android anterior conserva la contraseña maestra.
+- La clave de bóveda se guarda nativamente únicamente como ciphertext autenticado por Keystore, con IV y binding; nunca como texto plano en SharedPreferences.
+- El binding es `primary:${metadata.createdAt}`. Una envoltura de otra bóveda no debe abrir una bóveda reemplazada accidentalmente.
+- Tras autenticar, los 32 bytes de clave cruzan el bridge solo de forma temporal; el lado TypeScript los importa inmediatamente como `CryptoKey` AES-GCM **no extraíble** y limpia los arrays temporales.
+- La `CryptoKey` activa existente no se vuelve exportable para implementar biometría.
+- CI web + auditoría offline + compilación Android APK/AAB pasaron antes del merge.
+- Falta prueba en teléfono real: enrolar acceso rápido, cerrar/reabrir, autenticar, cancelar, usar contraseña fallback e invalidación de credencial/biometría.
+
+### DEC-2026-08-16-010 — Identidad visual Android pendiente de publicación
+**Estado:** DECIDED / DEFERRED_WITHIN_V3
+
+- El icono Android actual es provisional.
+- Dirección aprobada: identidad premium de OANIX basada en hoja/bloc de notas, una `O` integrada y un detalle de seguridad sutil.
+- Paleta preferida: azul noche/negro azulado + cian/azul brillante + blanco/plateado.
+- Evitar candado grande, aspecto genérico o texto pequeño/ilegible dentro del icono.
+- Sustituir los assets provisionales antes de publicación, sin bloquear Cámara/Archivos/Compartir.
 
 ---
 
@@ -155,26 +202,37 @@ Decisiones ya tomadas:
 - Búsqueda por título sí puede localizarla.
 - Ocultar también el título podría ser opción futura, no predeterminada.
 - Se estudia contraseña por nota y política configurable de re-bloqueo.
-- Se estudia auto-bloqueo general al permanecer OANIX en segundo plano.
-- Bloqueo físico exacto del dispositivo, biometría y Keystore quedan para V3 Android si es fiable.
+- La biometría global Android de V3 no implementa automáticamente una capa de cifrado independiente por nota.
 
-No implementar antes de asignarlo formalmente después de cerrar el alcance actual de V2.
+No implementar esta función solo por existir biometría global; requiere su propio bloque/decisión de seguridad.
 
-### DEFERRED — V3 Android
-Capacitor, APK/AAB, Android Keystore, biometría, cámara nativa, archivos nativos y compartir hacia OANIX.
+### V3 pendiente en orden
+1. Cámara nativa — ACTIVO.
+2. Integración nativa de archivos.
+3. Compartir hacia OANIX desde Android.
+4. Validaciones de campo restantes, identidad visual/firma/publicación cuando corresponda.
 
 ### DEFERRED — V4 funciones avanzadas
 PDF, audio, dibujos, tablas, OCR, compartir notas, personalización avanzada, avatar/foto opcional por nota e IA opcional con modelo de privacidad definido.
 
 ---
 
-## 5. Excepciones de orden
+## 5. Excepciones de orden y deudas no bloqueantes
 
 ### Avance desde Resolución de conflictos con deuda de validación
 Por decisión explícita del usuario se inició Historial de versiones sin completar todas las pruebas reales de conflictos. Deuda #69. No afirmar pruebas que no ocurrieron.
 
 ### Avance desde Historial de versiones con deuda de validación
-Por decisión explícita del usuario se inició Recuperación de acceso con Historial ya implementado/publicado pero sin completar toda la prueba real. Deuda #70. Cualquier regresión se corrige antes de cerrar V2.
+Por decisión explícita del usuario se inició Recuperación de acceso con Historial ya implementado/publicado pero sin completar toda la prueba real. Deuda #70.
+
+### Avance desde V2 a V3 con deuda de validación
+Se avanzó a V3 sin borrar las deudas reales de #69, #70 y #73. La implementación principal de V2 existe; estas validaciones deben seguir visibles y cualquier regresión se corrige.
+
+### Android real
+- APK/mode local: VALIDADO EN TELÉFONO REAL.
+- Android online/sync: NO VALIDADO / actualmente no funciona o no se comprobó correctamente.
+- Keystore `seal/open`: implementación y build completos; prueba real pendiente.
+- Biometría/credencial: implementación y build completos; prueba real pendiente.
 
 ---
 
@@ -185,10 +243,15 @@ Por decisión explícita del usuario se inició Recuperación de acceso con Hist
 
 El repositorio aparece actualmente con visibilidad pública. No cambiar visibilidad, permisos ni configuración sensible sin instrucción explícita del usuario.
 
-### Plantilla Email OTP de Supabase
+### Android online/sincronización
 **Estado:** VALIDATION_REQUIRED
 
-La implementación espera un código numérico. Supabase envía OTP numérico cuando la plantilla de correo usa `{{ .Token }}`. Las herramientas conectadas actuales no exponen edición de esa plantilla; comprobarlo en prueba real antes de declarar recuperación cerrada.
+El usuario confirmó que en la APK actual funciona el modo local. No afirmar que cuenta/bóveda sincronizada funciona dentro de Android hasta diagnosticarla y validarla en dispositivo.
+
+### Firma de Play Store
+**Estado:** NOT_CONFIGURED
+
+No existe todavía una clave privada definitiva de publicación registrada por este proyecto. No inventar, subir ni pedir una clave privada en chat. Diseñar su manejo explícitamente cuando llegue la etapa de publicación.
 
 ---
 

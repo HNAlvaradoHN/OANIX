@@ -21,13 +21,14 @@ No asumir que un chat, una memoria externa o una descripción antigua representa
 ## Identidad y principios de OANIX
 
 - El nombre oficial se escribe **OANIX**.
-- OANIX es una aplicación de notas segura, PWA, offline-first y con cifrado local.
+- OANIX es una aplicación de notas segura, offline-first y con cifrado local.
 - La cuenta online es opcional; no sustituye la contraseña maestra.
-- La sincronización debe mantener E2EE: el servidor no debe poder leer el contenido privado.
-- La misma base se prepara para una futura aplicación Android con Capacitor, pero las funciones nativas pertenecen a V3.
+- El transporte normal de sincronización mantiene E2EE y sobres opacos. La recuperación por correo es una excepción explícita del modelo de confianza documentada en `docs/PROJECT_MEMORY.md`.
+- La misma base React + TypeScript + Vite/PWA está empaquetada también como aplicación Android mediante Capacitor; no mantener dos lógicas de negocio paralelas.
 - La arquitectura debe ser modular: un cambio debe afectar lo mínimo posible al resto del sistema, sin crear una proliferación innecesaria de carpetas, stores, cachés o capas paralelas.
 - No crear persistencia paralela cuando pueda reutilizarse de forma segura el modelo existente.
 - Ante una duda de sincronización, se prioriza conservar datos sobre sobrescribirlos silenciosamente.
+- La contraseña maestra y la clave de bóveda no se persisten en texto plano. Las integraciones nativas deben respetar las fronteras de seguridad registradas para Android Keystore y biometría.
 
 ## Regla de versiones
 
@@ -62,6 +63,7 @@ Usar estados consistentes:
 - `DECIDED`: lógica acordada, todavía no necesariamente implementada.
 - `IN_PROGRESS`: implementación activa.
 - `IMPLEMENTED`: existe en código y debe verificarse con pruebas/estado del repositorio.
+- `VALIDATION_DEBT`: implementación existente cuya validación real restante sigue visible y no debe inventarse.
 - `DEFERRED`: aceptado o solicitado, pero reservado para una versión/bloque posterior.
 - `SUPERSEDED`: reemplazado por una decisión posterior; conservar el historial y señalar la nueva decisión.
 - `CANCELLED`: se decidió no hacerlo.
@@ -74,24 +76,34 @@ Al completar un cambio relevante:
 
 1. verificar pruebas y CI aplicables;
 2. actualizar `docs/CHANGELOG.md`;
-3. actualizar `docs/ROADMAP.md` solo cuando corresponda cambiar el estado oficial de un bloque;
+3. actualizar `docs/ROADMAP.md` cuando corresponda cambiar el estado oficial de un bloque;
 4. actualizar `docs/PROJECT_MEMORY.md` con el resultado, incluyendo cualquier desviación de lo acordado;
-5. mantener `AGENTS.md` estable salvo que cambien las reglas generales de trabajo.
+5. mantener `AGENTS.md` estable salvo que cambien las reglas generales de trabajo o su estado de continuidad quede obsoleto.
 
 La documentación de memoria no debe introducir lógica de ejecución ni modificar el comportamiento de la aplicación; es documentación de continuidad.
+
+## Avance automático de ajustes pequeños
+
+El usuario pidió explícitamente no detener el desarrollo por cambios pequeños y seguros. Si un ajuste es de bajo riesgo, local, no cambia seguridad/datos/alcance ni una decisión de producto importante y puede validarse con pruebas, corregirlo, probarlo, integrarlo y continuar con el siguiente trabajo útil.
+
+Detenerse para pedir decisión únicamente cuando exista una alternativa real que cambie seguridad, datos, alcance o una experiencia importante.
 
 ## Estado de continuidad actual
 
 A fecha de **2026-08-16**:
 
 - V1 — Núcleo local: cerrada.
-- Versión activa: **V2 — Cuenta y sincronización**.
-- Cuenta, autenticación, backend, sincronización E2EE y varios dispositivos están completados según el roadmap.
-- Siguiente bloque oficial: **Resolución de conflictos**.
-- Después: Historial de versiones y Recuperación de acceso.
-- No avanzar a V3 ni V4 antes de cerrar V2, salvo preparación arquitectónica explícitamente justificada y registrada.
+- V2 — Cuenta y sincronización: implementación funcional completada y se avanzó a V3; continúan deudas de validación visibles en #69, #70 y #73.
+- Versión activa: **V3 — Android con Capacitor**.
+- Capacitor: completado en PR #81.
+- APK/AAB: completado en PR #82; APK instalada en Android real y modo local validado. El flujo Android online/sincronizado todavía no se declara validado.
+- Android Keystore: base integrada en PR #83; prueba específica de campo pendiente.
+- Biometría/credencial del dispositivo: integrada en PR #84 con autenticación por uso, biometría fuerte o bloqueo seguro del dispositivo y contraseña maestra como fallback; validación real en teléfono pendiente.
+- **Siguiente bloque oficial: Cámara nativa.**
+- Después: integración nativa de archivos y compartir hacia OANIX.
+- No avanzar a V4 antes de cerrar V3 salvo preparación arquitectónica explícitamente justificada y registrada.
 
-La especificación funcional acordada para Resolución de conflictos está en `docs/PROJECT_MEMORY.md`.
+La especificación exacta, deudas y decisiones de seguridad están en `docs/PROJECT_MEMORY.md` e issue #79.
 
 ## Regla especial de traspaso entre IAs
 
