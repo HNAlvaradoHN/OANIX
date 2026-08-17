@@ -16,6 +16,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(OanixDocumentsPlugin.class);
         registerPlugin(OanixSharePlugin.class);
         registerPlugin(OanixOutboundSharePlugin.class);
+        registerPlugin(OanixAuthPlugin.class);
         super.onCreate(savedInstanceState);
     }
 
