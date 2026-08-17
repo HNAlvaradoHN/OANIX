@@ -88,24 +88,40 @@ El usuario pidió explícitamente no detener el desarrollo por cambios pequeños
 
 Detenerse para pedir decisión únicamente cuando exista una alternativa real que cambie seguridad, datos, alcance o una experiencia importante.
 
+## Secuencia acordada para cerrar V3 y diseñar la interfaz
+
+La secuencia vigente es deliberada:
+
+1. terminar y validar primero todas las funciones y correcciones funcionales pertenecientes a V3, incluidas las que solo pueden verificarse en Android real;
+2. congelar la lógica funcional de V3 salvo bugs reales;
+3. hacer después un rediseño/pulido visual completo principalmente sobre la PWA, porque comparte la misma base React con Android y permite iterar más rápido en móvil/tablet/PC;
+4. generar una APK consolidada para validar las diferencias nativas del diseño ya estabilizado;
+5. cerrar firma, icono/splash, `appId` y preparación de publicación.
+
+No adelantar cambios puramente visuales mientras todavía se estén cerrando fallos funcionales Android, salvo UI mínima necesaria para operar/probar una función.
+
 ## Estado de continuidad actual
 
-A fecha de **2026-08-16**:
+A fecha de **2026-08-17**:
 
 - V1 — Núcleo local: cerrada.
-- V2 — Cuenta y sincronización: implementación funcional completada y se avanzó a V3; continúan deudas de validación visibles en #69, #70 y #73.
+- V2 — Cuenta y sincronización: cerrada funcionalmente; continúan deudas de validación visibles en #69, #70 y #73.
 - Versión activa: **V3 — Android con Capacitor**.
-- Capacitor: completado en PR #81.
-- APK/AAB: completado en PR #82; APK instalada en Android real y modo local validado. El flujo Android online/sincronizado todavía no se declara validado.
-- Android Keystore: base integrada en PR #83; prueba específica de campo pendiente.
-- Biometría/credencial del dispositivo: integrada en PR #84; validación real en teléfono pendiente.
-- Cámara nativa: implementada en PR #86 reutilizando el pipeline cifrado de imágenes; validación real en teléfono pendiente.
-- Integración nativa de archivos: implementada en PR #87 con Storage Access Framework, reutilizando el formato/validación de backup existente y sin permisos amplios de almacenamiento; validación real pendiente.
-- **Siguiente bloque oficial: Compartir hacia OANIX.**
-- Después: validaciones de campo, identidad visual/firma y preparación de publicación.
+- Capacitor PR #81 y empaquetado APK/AAB PR #82 completados; modo local Android validado.
+- Android Keystore PR #83 implementado; prueba específica `seal/open` pendiente.
+- Huella / acceso rápido: PR #84 + #88/#89/#90; reapertura, cancelación y reintento manual por huella validados en teléfono real.
+- Cámara nativa PR #86 y archivos nativos PR #87: implementación y prueba funcional básica real completadas.
+- Compartir hacia OANIX: PR #91 + #92/#93. PR #93 usa cola de intents solo en memoria, soporta entregas repetidas con Activity viva, muestra progreso local y abre la nota al finalizar; falta validación consolidada en teléfono.
+- PR #94 implementa la navegación Android Atrás/salida segura y una acción explícita `Usar PIN o patrón del teléfono` mediante `DEVICE_CREDENTIAL`, reutilizando la misma envoltura cifrada de acceso rápido. Implementación/CI completas; falta prueba real.
+- En una nota, Back debe guardar y volver a la lista. Desde la lista, primer Back pregunta si se desea salir; segundo Back con la confirmación visible sale.
+- El flujo Android online/sincronizado todavía no se declara validado.
+- Las APK debug de CI aún no tienen firma de pruebas estable, por lo que una build nueva puede exigir desinstalar la anterior.
+- El icono/appId siguen provisionales antes de publicación.
+- **Bloque inmediato:** validación consolidada en teléfono de PR #93/#94.
+- Después: cuenta/sync Android → firma estable de pruebas → congelar funcionalidad V3 → rediseño visual completo en PWA → APK visual consolidada → publicación.
 - No avanzar a V4 antes de cerrar V3 salvo preparación arquitectónica explícitamente justificada y registrada.
 
-La especificación exacta, deudas y decisiones de seguridad están en `docs/PROJECT_MEMORY.md` e issue #79.
+La especificación exacta, deudas y decisiones de seguridad están en `docs/PROJECT_MEMORY.md`, `docs/ROADMAP.md` e issue #79.
 
 ## Regla especial de traspaso entre IAs
 
