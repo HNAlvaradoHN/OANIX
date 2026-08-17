@@ -33,24 +33,23 @@ public class OanixSharePlugin extends Plugin {
     private static final long MAX_TOTAL_BYTES = 120L * 1024L * 1024L;
     private static final int MAX_IMAGE_COUNT = 10;
     private static final int MAX_TEXT_CHARS = 250_000;
-    private static final long STALE_SHARE_MS = 60L * 60L * 1000L;
     private static final String SHARE_PREFIX = "oanix-share-";
 
     private final ArrayList<File> pendingFiles = new ArrayList<>();
 
     @Override
     public void load() {
-        cleanupStaleShareFiles();
+        cleanupAbandonedShareFiles();
     }
 
-    private void cleanupStaleShareFiles() {
+    private void cleanupAbandonedShareFiles() {
         File[] files = getContext().getCacheDir().listFiles((dir, name) -> name.startsWith(SHARE_PREFIX));
         if (files == null) return;
 
-        long cutoff = System.currentTimeMillis() - STALE_SHARE_MS;
-        for (File file : files) {
-            if (file.lastModified() < cutoff) file.delete();
-        }
+        // A share-cache file is useful only to the current live bridge call. If the plugin is
+        // loading again, that prior JavaScript import no longer exists, so delete every orphan
+        // immediately instead of retaining plaintext media in private cache for a time window.
+        for (File file : files) file.delete();
     }
 
     private void cleanupPendingFiles() {
