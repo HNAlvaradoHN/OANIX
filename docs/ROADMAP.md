@@ -80,8 +80,8 @@ Objetivo: empaquetar la misma base de código como aplicación Android y añadir
 - [x] Android Keystore *(PR #83; implementación/CI completos; prueba específica de campo pendiente)*
 - [x] Biometría / credencial segura del dispositivo *(PR #84; implementación/CI completos; prueba real pendiente)*
 - [x] Cámara nativa *(PR #86; implementación/CI completos; prueba real pendiente)*
-- [ ] **Integración nativa de archivos — BLOQUE ACTIVO**
-- [ ] Compartir hacia OANIX
+- [x] Integración nativa de archivos *(PR #87; implementación/CI completos; prueba real pendiente)*
+- [ ] **Compartir hacia OANIX — BLOQUE ACTIVO**
 
 ### Capacitor / empaquetado
 
@@ -117,6 +117,17 @@ Objetivo: empaquetar la misma base de código como aplicación Android y añadir
 - Cada captura se limita a 24 MiB, se elimina tras importarla o cancelarla y existe limpieza de temporales abandonados.
 - El estado de una captura pendiente se conserva frente a recreación de Activity mediante `saveInstanceState/restoreState`.
 
+### Integración nativa de archivos
+
+- El backup cifrado conserva el mismo formato `.oanixbackup`, la misma serialización y la misma validación criptográfica ya implementada en V1.
+- En Android, guardar usa `ACTION_CREATE_DOCUMENT`: el usuario elige la ubicación exacta y OANIX escribe el backup cifrado al URI seleccionado.
+- La escritura cruza el bridge en fragmentos UTF-8 acotados y se completa como una sesión efímera; ante fallo se aborta y se intenta eliminar el archivo parcial.
+- Restaurar usa `ACTION_OPEN_DOCUMENT`: Android entrega únicamente el documento que el usuario selecciona y OANIX lo pasa al mismo `restoreEncryptedBackupFromFile` existente.
+- La restauración sigue verificando contraseña y todos los registros AES-GCM antes de sustituir la bóveda local en una transacción.
+- No se solicitan permisos amplios de almacenamiento (`READ_EXTERNAL_STORAGE`, `WRITE_EXTERNAL_STORAGE`, `MANAGE_EXTERNAL_STORAGE` ni `READ_MEDIA_IMAGES`).
+- No se toma permiso persistente sobre el URI ni se crea una copia durable paralela dentro de Android.
+- Fuera de Android se conserva el flujo web de descarga/selección de archivo.
+
 ### Deudas visibles de V3
 
 - APK/mode local: validado en teléfono real.
@@ -124,14 +135,14 @@ Objetivo: empaquetar la misma base de código como aplicación Android y añadir
 - Keystore `seal/open`: falta prueba específica en dispositivo.
 - Biometría: falta prueba real de enrolamiento, reapertura, cancelación, fallback e invalidación.
 - Cámara nativa: falta prueba real de captura, cancelación, inserción cifrada y reapertura de la nota.
+- Archivos nativos: falta prueba real de guardar/cancelar un `.oanixbackup`, elegirlo después y completar una restauración verificada; conviene probar proveedor local y al menos un proveedor de documentos disponible en el teléfono.
 - Icono Android actual: provisional; dirección visual premium ya definida y debe aplicarse antes de publicación.
 
 ### Orden restante V3
 
-1. Integración nativa de archivos.
-2. Compartir hacia OANIX.
-3. Completar validaciones de campo pendientes.
-4. Identidad visual, firma y preparación de publicación cuando corresponda.
+1. Compartir hacia OANIX.
+2. Completar validaciones de campo pendientes.
+3. Identidad visual, firma y preparación de publicación cuando corresponda.
 
 ---
 
@@ -157,6 +168,6 @@ Objetivo: empaquetar la misma base de código como aplicación Android y añadir
 
 **Versión activa: V3 — Android con Capacitor.**
 
-**Bloque oficial activo: Integración nativa de archivos.**
+**Bloque oficial activo: Compartir hacia OANIX.**
 
 No avanzar a V4 mientras V3 siga abierta, salvo preparación arquitectónica estrictamente necesaria y registrada.
