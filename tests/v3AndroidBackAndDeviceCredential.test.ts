@@ -2,14 +2,14 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
-test('MainActivity registers Android back and explicit device credential plugins', () => {
+test('MainActivity registers Android back and device-security plugins', () => {
   const activity = readFileSync(
     'android/app/src/main/java/io/github/hnalvaradohn/oanix/MainActivity.java',
     'utf8',
   )
 
   assert.match(activity, /registerPlugin\(OanixBackPlugin\.class\)/)
-  assert.match(activity, /registerPlugin\(OanixDeviceCredentialPlugin\.class\)/)
+  assert.match(activity, /registerPlugin\(OanixBiometricPlugin\.class\)/)
 })
 
 test('Android back runtime returns from an open note through the existing safe back action', () => {
@@ -23,7 +23,7 @@ test('Android back runtime returns from an open note through the existing safe b
   assert.match(workspace, /await finalizeRemovedImages\(\)/)
 })
 
-test('Android back runtime confirms exit on home and exits on the second back gesture', () => {
+test('Android back runtime confirms exit professionally and exits on the second back gesture', () => {
   const runtime = readFileSync('src/platform/android/AndroidBackRuntime.tsx', 'utf8')
   const plugin = readFileSync(
     'android/app/src/main/java/io/github/hnalvaradohn/oanix/OanixBackPlugin.java',
@@ -33,37 +33,40 @@ test('Android back runtime confirms exit on home and exits on the second back ge
   assert.match(runtime, /¿Deseas salir de OANIX\?/)
   assert.match(runtime, /Si vuelves a usar Atrás, OANIX se cerrará\./)
   assert.match(runtime, /exitPromptVisibleRef\.current[\s\S]*exitAndroidApp\(\)/)
-  assert.match(runtime, /Cancel(?:ar)?/)
+  assert.match(runtime, /backdropFilter: 'blur\(10px\)'/)
+  assert.match(runtime, /boxShadow: '0 22px 70px/)
+  assert.match(runtime, /Cancelar/)
   assert.match(runtime, /Salir/)
   assert.match(plugin, /OnBackPressedCallback/)
   assert.match(plugin, /notifyListeners\("backPressed"/)
   assert.match(plugin, /activity::finish/)
 })
 
-test('device credential unlock explicitly requests Android PIN pattern or device password', () => {
+test('one quick-unlock action delegates PIN pattern password or strong biometric to Android', () => {
+  const biometricPlugin = readFileSync(
+    'android/app/src/main/java/io/github/hnalvaradohn/oanix/OanixBiometricPlugin.java',
+    'utf8',
+  )
+  const runtime = readFileSync(
+    'src/platform/android/AndroidBiometricRetryRuntime.tsx',
+    'utf8',
+  )
+  const app = readFileSync('src/app/App.tsx', 'utf8')
+
+  assert.match(biometricPlugin, /BIOMETRIC_STRONG\s*\|\s*BiometricManager\.Authenticators\.DEVICE_CREDENTIAL/)
+  assert.match(runtime, /Usar PIN, patrón o huella/)
+  assert.match(runtime, /unlockLocalVaultWithBiometrics\(\)/)
+  assert.match(app, /<AndroidBiometricRetryRuntime/)
+  assert.doesNotMatch(app, /<AndroidDeviceCredentialRetryRuntime/)
+})
+
+test('legacy explicit device credential path remains secure but is not exposed as a second UI action', () => {
   const plugin = readFileSync(
     'android/app/src/main/java/io/github/hnalvaradohn/oanix/OanixDeviceCredentialPlugin.java',
     'utf8',
   )
-  const runtime = readFileSync(
-    'src/platform/android/AndroidDeviceCredentialRetryRuntime.tsx',
-    'utf8',
-  )
 
   assert.match(plugin, /Authenticators\.DEVICE_CREDENTIAL/)
-  assert.match(plugin, /setAllowedAuthenticators\(BiometricManager\.Authenticators\.DEVICE_CREDENTIAL\)/)
-  assert.match(plugin, /Usa el PIN, patrón o contraseña de tu teléfono/)
   assert.match(plugin, /KEY_ALIAS = "oanix\.biometric-vault\.v2"/)
-  assert.match(plugin, /PREFS_NAME = "oanix\.biometric-vault"/)
   assert.doesNotMatch(plugin, /putString\([^\n]*(pin|pattern|password)/i)
-  assert.match(runtime, /Usar PIN o patrón del teléfono/)
-})
-
-test('device credential result imports the same vault key as a non-extractable trusted device key', () => {
-  const service = readFileSync('src/platform/android/deviceCredentialVault.ts', 'utf8')
-
-  assert.match(service, /readVaultMetadata\(\)/)
-  assert.match(service, /primary:\$\{createdAt\}/)
-  assert.match(service, /importTrustedDeviceVaultKey\(encodedVaultKey\)/)
-  assert.match(service, /setActiveVaultKey\(key\)/)
 })
