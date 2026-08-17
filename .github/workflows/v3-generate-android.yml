@@ -1,8 +1,6 @@
 name: V3 Generate Android Shell
 
 on:
-  push:
-    branches: ['feature/v3-capacitor-foundation']
   workflow_dispatch:
 
 permissions:
