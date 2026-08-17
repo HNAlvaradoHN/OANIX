@@ -78,11 +78,12 @@ Objetivo: empaquetar la misma base de código como aplicación Android y añadir
 - [x] Capacitor *(PR #81)*
 - [x] APK / AAB *(PR #82; APK instalada en Android real y modo local validado; firma final de Play Store pendiente para publicación)*
 - [x] Android Keystore *(PR #83; implementación/CI completos; prueba específica `seal/open` pendiente)*
-- [x] Biometría / credencial segura del dispositivo *(PR #84 + #88/#89/#90 + #94; huella validada, PIN/patrón explícito implementado y pendiente de validación real)*
+- [x] Biometría / credencial segura del dispositivo *(PR #84 + #88/#89/#90/#94/#95; huella validada; UI unificada `Usar PIN, patrón o huella` en #95 pendiente de validación real)*
 - [x] Cámara nativa *(PR #86; implementación/CI y prueba funcional básica real completadas)*
 - [x] Integración nativa de archivos *(PR #87; implementación/CI y prueba funcional básica real completadas)*
-- [x] Compartir hacia OANIX *(PR #91 + #92/#93; cola/progreso para arranque frío y caliente implementados; validación consolidada pendiente)*
-- [x] Navegación Atrás / salida segura *(PR #94; implementación/CI completos; prueba real pendiente)*
+- [x] Compartir hacia OANIX *(PR #91 + #92/#93 + #95; arranque frío validado anteriormente; corrección de carrera en segundo plano #95 pendiente de prueba real)*
+- [x] Navegación Atrás / salida segura *(PR #94 + pulido visual aislado #95; prueba real pendiente)*
+- [x] Compartir nota como texto *(PR #95; sharesheet Android/Web Share; PDF explícitamente reservado para V4)*
 
 ### Capacitor / empaquetado
 
@@ -102,15 +103,15 @@ Objetivo: empaquetar la misma base de código como aplicación Android y añadir
 
 ### Biometría / credencial
 
-- La contraseña maestra sigue siendo principal y fallback.
+- La contraseña maestra sigue siendo principal y fallback independiente.
 - Android 11+ puede usar biometría fuerte o PIN/patrón/contraseña segura del dispositivo como acceso rápido.
 - No se acepta `BIOMETRIC_WEAK` para liberar la clave de bóveda.
 - La envoltura biométrica v2 usa AES-256-GCM con clave no exportable de Android Keystore y una ventana breve de autorización después del `BiometricPrompt`.
 - La copia local para acceso rápido se conserva solo como ciphertext ligado a una bóveda concreta; tras autenticar se importa a Web Crypto como clave no extraíble.
 - Al enviar OANIX realmente a segundo plano se limpia la clave activa de la sesión; al regresar se exige nuevamente autorización.
-- Si se cancela el prompt, la pantalla de contraseña permanece disponible y muestra `Desbloquear con huella` para reintentar sin escribir antes la contraseña.
-- PR #94 añade `Usar PIN o patrón del teléfono`, que solicita únicamente `DEVICE_CREDENTIAL` a Android y reutiliza la misma envoltura cifrada `oanix.biometric-vault.v2`; OANIX nunca recibe ni guarda el PIN, patrón o contraseña del teléfono.
-- Flujo de huella, reapertura, cancelación y botón manual de reintento fueron validados en teléfono real. El botón explícito de credencial del dispositivo queda pendiente de prueba real.
+- PR #95 simplifica la UI bloqueada a una sola acción visible `Usar PIN, patrón o huella`, que reutiliza el prompt nativo ya autorizado con `BIOMETRIC_STRONG | DEVICE_CREDENTIAL`.
+- Android decide qué método seguro presenta/acepta; OANIX nunca recibe ni guarda el PIN, patrón, contraseña del dispositivo o huella.
+- El flujo de huella, reapertura y reintento manual fue validado antes; la experiencia unificada de #95 queda pendiente de prueba real.
 
 ### Cámara nativa
 
@@ -140,14 +141,24 @@ Objetivo: empaquetar la misma base de código como aplicación Android y añadir
 - Android expone OANIX como destino para `text/plain` y `image/*`; la importación valida internamente y solo acepta imágenes JPEG, PNG, WebP o GIF.
 - `ACTION_SEND` admite texto/enlace, una imagen o ambos; `ACTION_SEND_MULTIPLE` admite hasta 10 imágenes por envío.
 - Cada envío crea una nota nueva para no mezclar accidentalmente el contenido con una nota existente.
-- El bridge se consume únicamente dentro del área desbloqueada. Si la bóveda está cerrada, el usuario debe autenticarse antes de que OANIX copie/importa el contenido.
+- El bridge se consume únicamente dentro del área desbloqueada. Si la bóveda está cerrada, el usuario debe autenticarse antes de que OANIX copie/importe el contenido.
 - Las imágenes no se copian a almacenamiento de OANIX mientras la bóveda está bloqueada. Después del desbloqueo pasan brevemente por caché privada, se validan y reutilizan `storeEncryptedImage`; el temporal se elimina al terminar.
-- PR #93 corrige entregas con OANIX ya viva: cada Intent se conserva solo en una cola en memoria, el runtime escucha `shareReceived`, procesa de uno en uno y muestra progreso local `Preparando` → `Procesando foto N de M` → `Guardando` → `100%`.
+- PR #93 conserva cada Intent nuevo en una cola nativa limitada y solo en memoria, escucha `shareReceived`, procesa de uno en uno y muestra progreso local `Preparando` → `Procesando foto N de M` → `Guardando` → `100%`.
+- La prueba real detectó una carrera adicional: al volver desde Google Photos, el árbol React anterior podía seguir montado aunque la clave activa ya hubiese sido borrada; ese runtime alcanzaba a consumir el Intent y fallaba después por bóveda bloqueada.
+- PR #95 impide consumir el Intent mientras `isVaultUnlocked()` sea falso. En ese estado el envío permanece solo en la cola nativa en memoria y se procesa después de autenticar y montar de nuevo el runtime desbloqueado.
 - La nota se abre automáticamente solo después de terminar la creación cifrada.
 - Temporales de compartir abandonados se eliminan al cargar de nuevo el plugin.
 - Límites: texto 250 000 caracteres; imagen 50 MiB; hasta 10 imágenes / 120 MiB temporales por envío.
 - Ante fallo se eliminan blobs cifrados creados por ese intento para evitar imágenes huérfanas.
 - No se añaden permisos generales de almacenamiento.
+
+### Compartir nota hacia otras apps
+
+- PR #95 añade `Compartir nota` al menú `⋮` de la nota abierta.
+- Antes de compartir espera que el estado visible de autoguardado termine y luego vuelve a leer la nota cifrada local.
+- Usa `noteBlocksToPlainText` para producir una representación legible del título y contenido; las imágenes se representan solamente por su descripción/nombre ya disponible en el texto, sin exportar blobs privados.
+- Android abre el sharesheet con `ACTION_SEND` y `text/plain`; en PWA se usa Web Share API cuando está disponible y portapapeles como fallback.
+- Esta función no es el exportador PDF. **Exportar/Compartir como PDF queda reservado formalmente para V4**, donde se resolverán diseño, paginación, imágenes, código y presentación del documento.
 
 ### Navegación Atrás Android
 
@@ -155,7 +166,7 @@ Objetivo: empaquetar la misma base de código como aplicación Android y añadir
 - Desde una nota, Back reutiliza la acción existente de regreso, por lo que primero ejecuta el guardado pendiente y finaliza eliminaciones de imágenes antes de volver a la lista.
 - Desde la lista/inicio, el primer Back muestra `¿Deseas salir de OANIX?` con `Cancelar` y `Salir`.
 - Si la confirmación está visible y se vuelve a usar Back, Android cierra la Activity.
-- La apariencia de esta confirmación es deliberadamente funcional; el pulido visual se hará después en la fase de rediseño PWA.
+- PR #95 conserva esa lógica pero presenta la confirmación como tarjeta flotante aislada con blur, sombra y botones claros. No representa el inicio del rediseño visual general.
 
 ### Estrategia de cierre funcional y fase visual
 
@@ -164,25 +175,26 @@ Objetivo: empaquetar la misma base de código como aplicación Android y añadir
 - Luego se hace el rediseño/pulido visual completo principalmente en la PWA, donde es más rápido validar móvil, tablet y PC.
 - Como Android empaqueta la misma base React, el rediseño PWA se hereda en la APK; solo las diferencias nativas se validan posteriormente en una build consolidada.
 - No entrar en V4 para retrasar indefinidamente el rediseño visual.
-- Los cambios puramente visuales —incluido el aspecto definitivo del botón Atrás y de los diálogos— se reservan para esta fase PWA, no para las iteraciones funcionales de APK.
+- Se permiten pulidos visuales aislados necesarios para que un componente funcional nuevo no quede con apariencia provisional; el rediseño sistemático de botones, navegación, identidad y pantallas sigue reservado para la fase PWA.
 
 ### Deudas visibles / validación restante de V3
 
 - APK / modo local: validado en teléfono real.
 - Cuenta/bóveda sincronizada dentro de Android: todavía no se declara funcional/validada.
 - Keystore `seal/open`: falta prueba específica en dispositivo.
-- Biometría: huella y reintento manual validados; PIN/patrón explícito de PR #94 e invalidación por cambio biométrico pendientes de prueba real.
+- Biometría: huella validada; acción unificada `Usar PIN, patrón o huella` de PR #95 pendiente de prueba real.
 - Cámara nativa: prueba funcional básica completada.
 - Archivos nativos: prueba funcional básica completada.
-- Compartir hacia OANIX: validar PR #93 con app cerrada y ya abierta/en segundo plano, varias imágenes, texto/enlace y barra de progreso.
-- Atrás/salida segura: validar PR #94 en nota e inicio, incluyendo guardado antes de volver y segundo Back para salir.
+- Compartir hacia OANIX: validar #95 con app ya abierta/en segundo plano, varias imágenes y progreso/apertura final.
+- Compartir nota saliente: validar sharesheet Android y contenido textual resultante.
+- Atrás/salida segura: validar comportamiento de nota → lista, confirmación y segundo Back; el pulido visual #95 también debe revisarse en dispositivo.
 - Firma estable de pruebas: pendiente; no comprometer una clave privada en el repositorio público.
 - Icono Android actual: provisional; dirección visual premium ya definida y debe aplicarse antes de publicación.
 - App ID: provisional hasta preparar publicación.
 
 ### Orden restante V3
 
-1. Validación consolidada en teléfono de PR #93/#94: compartir en caliente, Atrás/salida y PIN/patrón explícito.
+1. Validar PR #95 en teléfono: share desde Google Photos con OANIX en segundo plano, acceso `PIN/patrón/huella`, compartir nota y diálogo de salida.
 2. Diagnosticar/validar cuenta y sincronización dentro del WebView Android.
 3. Resolver firma estable de builds de prueba sin exponer claves privadas.
 4. Congelar funcionalidad V3 y ejecutar el rediseño/pulido visual completo en la PWA.
@@ -193,12 +205,12 @@ Objetivo: empaquetar la misma base de código como aplicación Android y añadir
 
 ## V4 — Funciones avanzadas
 
-- [ ] PDF
+- [ ] PDF — exportar/compartir notas como PDF bien presentado
 - [ ] Audio
 - [ ] Dibujos
 - [ ] Tablas
 - [ ] OCR
-- [ ] Compartir notas
+- [ ] Compartir notas avanzado / formatos ricos
 - [ ] Temas y personalización avanzada
 - [ ] Avatar o foto opcional por nota, almacenada de forma privada
 - [ ] IA opcional con modelo de privacidad definido
@@ -213,6 +225,6 @@ Objetivo: empaquetar la misma base de código como aplicación Android y añadir
 
 **Versión activa: V3 — Android con Capacitor.**
 
-**Implementación funcional V3: completa. Bloque de validación activo: build consolidada PR #93/#94 en dispositivo real.**
+**Implementación funcional V3: completa. Bloque de validación activo: PR #95 y deudas Android restantes en dispositivo real.**
 
 No avanzar a V4 mientras V3 siga abierta, salvo preparación arquitectónica estrictamente necesaria y registrada.

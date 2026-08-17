@@ -15,14 +15,12 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(OanixCameraPlugin.class);
         registerPlugin(OanixDocumentsPlugin.class);
         registerPlugin(OanixSharePlugin.class);
+        registerPlugin(OanixOutboundSharePlugin.class);
         super.onCreate(savedInstanceState);
     }
 
     @Override
     protected void onNewIntent(Intent intent) {
-        // Make the newest Android share visible to plugins before BridgeActivity dispatches
-        // handleOnNewIntent(). This avoids a warm-start race where JavaScript could ask for
-        // pending content while Activity#getIntent() still referenced the previous launch.
         if (intent != null) setIntent(intent);
         super.onNewIntent(intent);
     }

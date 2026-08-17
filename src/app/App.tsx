@@ -9,9 +9,9 @@ import { VersionHistoryCenter } from '../features/versionHistory/VersionHistoryC
 import { NativeCameraRuntime } from '../platform/android/NativeCameraRuntime'
 import { NativeDocumentsRuntime } from '../platform/android/NativeDocumentsRuntime'
 import { NativeShareRuntime } from '../platform/android/NativeShareRuntime'
+import { NativeNoteShareRuntime } from '../platform/android/NativeNoteShareRuntime'
 import { AndroidBackRuntime } from '../platform/android/AndroidBackRuntime'
 import { AndroidBiometricRetryRuntime } from '../platform/android/AndroidBiometricRetryRuntime'
-import { AndroidDeviceCredentialRetryRuntime } from '../platform/android/AndroidDeviceCredentialRetryRuntime'
 import { isAndroidBiometricRuntime } from '../platform/android/biometricVault'
 import { isAndroidSystemInteractionActive } from '../platform/android/systemInteractionGuard'
 import { lockLocalVault } from '../security/vault/vaultService'
@@ -61,6 +61,7 @@ function UnlockedApp({ lockVault }: { lockVault: () => void }) {
       <AndroidBackRuntime />
       <NativeCameraRuntime />
       <NativeShareRuntime onImported={() => setWorkspaceRevision((value) => value + 1)} />
+      <NativeNoteShareRuntime />
       <NotesWorkspace key={workspaceRevision} onLock={lockVault} />
       <ConflictCenter onResolved={() => setWorkspaceRevision((value) => value + 1)} />
       <VersionHistoryCenter onRestored={() => setWorkspaceRevision((value) => value + 1)} />
@@ -154,9 +155,6 @@ export function App() {
         renderUnlocked={(lockVault) => <UnlockedApp lockVault={lockVault} />}
       />
       <AndroidBiometricRetryRuntime
-        onUnlocked={() => setVaultGateRevision((value) => value + 1)}
-      />
-      <AndroidDeviceCredentialRetryRuntime
         onUnlocked={() => setVaultGateRevision((value) => value + 1)}
       />
 
