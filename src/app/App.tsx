@@ -6,6 +6,7 @@ import { AccountPanel } from '../features/account/AccountPanel'
 import { AutoSyncRuntime } from '../features/sync/AutoSyncRuntime'
 import { ConflictCenter } from '../features/sync/ConflictCenter'
 import { VersionHistoryCenter } from '../features/versionHistory/VersionHistoryCenter'
+import { NativeCameraRuntime } from '../platform/android/NativeCameraRuntime'
 
 type OanixUpdateWindow = Window & {
   __oanixApplyUpdate?: () => Promise<void>
@@ -49,6 +50,7 @@ function UnlockedApp({ lockVault }: { lockVault: () => void }) {
   return (
     <>
       <AutoSyncRuntime onRemoteApplied={() => setWorkspaceRevision((value) => value + 1)} />
+      <NativeCameraRuntime />
       <NotesWorkspace key={workspaceRevision} onLock={lockVault} />
       <ConflictCenter onResolved={() => setWorkspaceRevision((value) => value + 1)} />
       <VersionHistoryCenter onRestored={() => setWorkspaceRevision((value) => value + 1)} />
