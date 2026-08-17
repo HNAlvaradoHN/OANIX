@@ -47,6 +47,8 @@ export interface EmailRecoveryResult {
   binaryWarning: string
 }
 
+export type EmailRecoveryDelivery = 'sent' | 'uncertain'
+
 function normalizeEmail(rawEmail: string) {
   return rawEmail.trim().toLocaleLowerCase()
 }
@@ -206,24 +208,33 @@ export async function prepareEmailRecoveryForCurrentVault(masterPassword: string
   }
 }
 
-export async function requestEmailRecoveryCode(rawEmail: string): Promise<void> {
+export async function requestEmailRecoveryCode(rawEmail: string): Promise<EmailRecoveryDelivery> {
   const email = normalizeEmail(rawEmail)
   if (!email || !email.includes('@')) throw new Error('No hay un correo válido para recuperar esta bóveda.')
 
   const client = getOnlineDataClient()
-  const { error } = await client.auth.signInWithOtp({
-    email,
-    options: {
-      shouldCreateUser: false,
-      emailRedirectTo: getRecoveryRedirectUrl(),
-    },
-  })
+  try {
+    const { error } = await client.auth.signInWithOtp({
+      email,
+      options: {
+        shouldCreateUser: false,
+        emailRedirectTo: getRecoveryRedirectUrl(),
+      },
+    })
 
-  if (error) {
-    const message = error.message.toLocaleLowerCase().includes('rate')
-      ? 'Se alcanzó temporalmente el límite de códigos. Espera un momento y vuelve a intentarlo.'
-      : error.message
-    throw new Error(message || 'No se pudo enviar el código de recuperación.')
+    if (error) {
+      const message = error.message.toLocaleLowerCase().includes('rate')
+        ? 'Se alcanzó temporalmente el límite de códigos. Espera un momento y vuelve a intentarlo.'
+        : error.message
+      throw new Error(message || 'No se pudo enviar el código de recuperación.')
+    }
+    return 'sent'
+  } catch (error) {
+    const message = error instanceof Error ? error.message.toLocaleLowerCase() : ''
+    if (message.includes('failed to fetch') || error instanceof TypeError) {
+      return 'uncertain'
+    }
+    throw error
   }
 }
 
