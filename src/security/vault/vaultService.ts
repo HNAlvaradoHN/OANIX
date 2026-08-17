@@ -116,6 +116,39 @@ async function maybeEnableAndroidBiometricUnlock(
   }
 }
 
+export async function canUseAndroidBiometricUnlock(): Promise<boolean> {
+  if (!isAndroidBiometricRuntime()) return false
+
+  try {
+    const metadata = await readVaultMetadata()
+    if (!metadata || metadata.protection === 'pending') return false
+
+    const binding = biometricVaultBinding(metadata)
+    const status = await getAndroidBiometricVaultStatus()
+    return status.supported && status.enabled && status.vaultBinding === binding
+  } catch {
+    return false
+  }
+}
+
+export async function unlockLocalVaultWithBiometrics(): Promise<VaultActionResult> {
+  try {
+    const metadata = await readVaultMetadata()
+    if (!metadata || metadata.protection === 'pending') {
+      return { status: 'error', message: 'La bóveda local no está lista para desbloqueo biométrico.' }
+    }
+
+    if (await tryAndroidBiometricUnlock(metadata)) {
+      return { status: 'success' }
+    }
+
+    return { status: 'error', message: 'No se completó el desbloqueo con el dispositivo.' }
+  } catch {
+    clearActiveVaultKey()
+    return { status: 'error', message: 'No se pudo iniciar el desbloqueo biométrico.' }
+  }
+}
+
 export async function initializeLocalVault(): Promise<VaultInitializationResult> {
   try {
     const existingMetadata = await readVaultMetadata()
