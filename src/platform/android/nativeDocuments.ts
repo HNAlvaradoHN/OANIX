@@ -1,4 +1,5 @@
 import { Capacitor, registerPlugin } from '@capacitor/core'
+import { withAndroidSystemInteraction } from './systemInteractionGuard'
 
 export const OANIX_BACKUP_MIME_TYPE = 'application/vnd.oanix.encrypted-backup+json'
 const STRING_CHUNK_CHARACTERS = 128 * 1024
@@ -50,7 +51,7 @@ export async function saveEncryptedBackupWithAndroidDocuments(
   fileName: string,
 ): Promise<boolean> {
   requireAndroidRuntime()
-  const session = await nativeDocuments.beginSaveBackup({ fileName })
+  const session = await withAndroidSystemInteraction(() => nativeDocuments.beginSaveBackup({ fileName }))
   if (session.cancelled) return false
   if (!session.sessionId) throw new Error('Android no pudo crear una sesión de guardado para OANIX.')
 
@@ -87,7 +88,7 @@ export async function saveEncryptedBackupWithAndroidDocuments(
 
 export async function openEncryptedBackupWithAndroidDocuments(): Promise<File | null> {
   requireAndroidRuntime()
-  const selection = await nativeDocuments.openBackup()
+  const selection = await withAndroidSystemInteraction(() => nativeDocuments.openBackup())
   if (selection.cancelled) return null
 
   if (
