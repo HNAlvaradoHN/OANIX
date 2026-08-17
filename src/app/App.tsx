@@ -8,6 +8,7 @@ import { ConflictCenter } from '../features/sync/ConflictCenter'
 import { VersionHistoryCenter } from '../features/versionHistory/VersionHistoryCenter'
 import { NativeCameraRuntime } from '../platform/android/NativeCameraRuntime'
 import { NativeDocumentsRuntime } from '../platform/android/NativeDocumentsRuntime'
+import { AndroidBiometricRetryRuntime } from '../platform/android/AndroidBiometricRetryRuntime'
 import { isAndroidBiometricRuntime } from '../platform/android/biometricVault'
 import { isAndroidSystemInteractionActive } from '../platform/android/systemInteractionGuard'
 import { lockLocalVault } from '../security/vault/vaultService'
@@ -146,6 +147,9 @@ export function App() {
       <VaultGate
         key={vaultGateRevision}
         renderUnlocked={(lockVault) => <UnlockedApp lockVault={lockVault} />}
+      />
+      <AndroidBiometricRetryRuntime
+        onUnlocked={() => setVaultGateRevision((value) => value + 1)}
       />
 
       {updateAvailable && (
