@@ -1,5 +1,6 @@
 package io.github.hnalvaradohn.oanix;
 
+import android.content.Intent;
 import android.os.Bundle;
 
 import com.getcapacitor.BridgeActivity;
@@ -11,6 +12,13 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(OanixBiometricPlugin.class);
         registerPlugin(OanixCameraPlugin.class);
         registerPlugin(OanixDocumentsPlugin.class);
+        registerPlugin(OanixSharePlugin.class);
         super.onCreate(savedInstanceState);
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
     }
 }

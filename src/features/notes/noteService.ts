@@ -81,13 +81,13 @@ function enqueueNoteMutation(
   return next
 }
 
-export async function loadNotes(): Promise<NoteRecord[]> {
-  const notes = await listNotes()
-  return notes.sort(compareNotesForList)
-}
-
-export async function createEmptyNote(folderId: string | null = null, tagIds: string[] = []): Promise<NoteRecord> {
-  const nowDate = new Date()
+async function createNewNoteRecord(
+  title: string,
+  blocks: StoredNoteBlock[],
+  folderId: string | null,
+  tagIds: string[],
+  nowDate = new Date(),
+): Promise<NoteRecord> {
   const now = nowDate.toISOString()
   const existingNotes = await listNotes()
   const canContinueManualOrder = existingNotes.length === 0 || existingNotes.every((note) =>
@@ -103,7 +103,7 @@ export async function createEmptyNote(folderId: string | null = null, tagIds: st
   const note: NoteRecord = {
     version: 1,
     id: createNoteId(),
-    title: DEFAULT_NOTE_TITLE,
+    title: title.trim() || UNTITLED_NOTE_TITLE,
     createdAt: now,
     updatedAt: now,
     folderId,
@@ -111,12 +111,37 @@ export async function createEmptyNote(folderId: string | null = null, tagIds: st
     ...(nextManualOrder === undefined ? {} : { manualOrder: nextManualOrder }),
     content: {
       format: 'blocks-v1',
-      blocks: createDailyEntryBlocks(nowDate),
+      blocks,
     },
   }
 
   await saveNote(note)
   return note
+}
+
+export async function loadNotes(): Promise<NoteRecord[]> {
+  const notes = await listNotes()
+  return notes.sort(compareNotesForList)
+}
+
+export function createEmptyNote(folderId: string | null = null, tagIds: string[] = []): Promise<NoteRecord> {
+  const nowDate = new Date()
+  return createNewNoteRecord(
+    DEFAULT_NOTE_TITLE,
+    createDailyEntryBlocks(nowDate),
+    folderId,
+    tagIds,
+    nowDate,
+  )
+}
+
+export function createNoteWithContent(
+  title: string,
+  blocks: StoredNoteBlock[],
+  folderId: string | null = null,
+  tagIds: string[] = [],
+): Promise<NoteRecord> {
+  return createNewNoteRecord(title, blocks, folderId, tagIds)
 }
 
 export function deleteNote(noteId: string): Promise<NoteRecord> {

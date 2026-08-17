@@ -8,6 +8,7 @@ import { ConflictCenter } from '../features/sync/ConflictCenter'
 import { VersionHistoryCenter } from '../features/versionHistory/VersionHistoryCenter'
 import { NativeCameraRuntime } from '../platform/android/NativeCameraRuntime'
 import { NativeDocumentsRuntime } from '../platform/android/NativeDocumentsRuntime'
+import { NativeShareRuntime } from '../platform/android/NativeShareRuntime'
 import { AndroidBiometricRetryRuntime } from '../platform/android/AndroidBiometricRetryRuntime'
 import { isAndroidBiometricRuntime } from '../platform/android/biometricVault'
 import { isAndroidSystemInteractionActive } from '../platform/android/systemInteractionGuard'
@@ -56,6 +57,7 @@ function UnlockedApp({ lockVault }: { lockVault: () => void }) {
     <>
       <AutoSyncRuntime onRemoteApplied={() => setWorkspaceRevision((value) => value + 1)} />
       <NativeCameraRuntime />
+      <NativeShareRuntime onImported={() => setWorkspaceRevision((value) => value + 1)} />
       <NotesWorkspace key={workspaceRevision} onLock={lockVault} />
       <ConflictCenter onResolved={() => setWorkspaceRevision((value) => value + 1)} />
       <VersionHistoryCenter onRestored={() => setWorkspaceRevision((value) => value + 1)} />
