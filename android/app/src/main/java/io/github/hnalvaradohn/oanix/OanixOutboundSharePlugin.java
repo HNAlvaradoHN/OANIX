@@ -14,10 +14,12 @@ public class OanixOutboundSharePlugin extends Plugin {
 
     @PluginMethod
     public void shareText(PluginCall call) {
-        String title = call.getString("title", "Nota de OANIX");
-        String text = call.getString("text", "");
+        String title = call.getString("title");
+        String text = call.getString("text");
+        if (title == null || title.trim().isEmpty()) title = "Nota de OANIX";
+        if (text == null) text = "";
 
-        if (text == null || text.trim().isEmpty()) {
+        if (text.trim().isEmpty()) {
             call.reject("La nota no tiene contenido legible para compartir.");
             return;
         }
@@ -29,7 +31,7 @@ public class OanixOutboundSharePlugin extends Plugin {
         try {
             Intent sendIntent = new Intent(Intent.ACTION_SEND);
             sendIntent.setType("text/plain");
-            sendIntent.putExtra(Intent.EXTRA_SUBJECT, title == null ? "Nota de OANIX" : title);
+            sendIntent.putExtra(Intent.EXTRA_SUBJECT, title);
             sendIntent.putExtra(Intent.EXTRA_TEXT, text);
 
             Intent chooser = Intent.createChooser(sendIntent, "Compartir nota");
