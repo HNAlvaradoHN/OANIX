@@ -10,6 +10,8 @@ public class MainActivity extends BridgeActivity {
     protected void onCreate(Bundle savedInstanceState) {
         registerPlugin(OanixKeystorePlugin.class);
         registerPlugin(OanixBiometricPlugin.class);
+        registerPlugin(OanixDeviceCredentialPlugin.class);
+        registerPlugin(OanixBackPlugin.class);
         registerPlugin(OanixCameraPlugin.class);
         registerPlugin(OanixDocumentsPlugin.class);
         registerPlugin(OanixSharePlugin.class);
