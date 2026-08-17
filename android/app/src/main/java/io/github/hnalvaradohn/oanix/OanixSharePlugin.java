@@ -257,7 +257,7 @@ public class OanixSharePlugin extends Plugin {
             String intentMimeType = intent.getType();
             for (int index = 0; index < uris.size(); index += 1) {
                 JSObject image = cacheSharedImage(uris.get(index), intentMimeType, index);
-                totalBytes += image.getLong("byteLength", 0L);
+                totalBytes += image.optLong("byteLength", 0L);
                 if (totalBytes > MAX_TOTAL_BYTES) {
                     throw new IOException("El conjunto de imágenes compartidas supera el límite temporal de OANIX.");
                 }
