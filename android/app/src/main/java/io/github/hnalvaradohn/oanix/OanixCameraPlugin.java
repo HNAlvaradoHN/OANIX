@@ -236,8 +236,9 @@ public class OanixCameraPlugin extends Plugin {
 
     @Override
     protected void handleOnDestroy() {
-        // Normal teardown should not leave a plaintext capture in the app cache. Android can
-        // persist/restore the pending path and URI before recreation through saveInstanceState().
-        cleanupPendingCapture();
+        // If the activity is being recreated while the external camera owns the foreground,
+        // saveInstanceState()/restoreState() needs this private cache file to survive. Successful,
+        // cancelled and normal non-capture teardown paths still delete it immediately.
+        if (!captureActive) cleanupPendingCapture();
     }
 }
