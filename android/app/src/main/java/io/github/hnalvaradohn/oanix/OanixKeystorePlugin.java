@@ -1,5 +1,6 @@
 package io.github.hnalvaradohn.oanix;
 
+import android.os.Build;
 import android.security.keystore.KeyGenParameterSpec;
 import android.security.keystore.KeyInfo;
 import android.security.keystore.KeyProperties;
@@ -13,6 +14,7 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 
 import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
+import java.util.Arrays;
 
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
@@ -74,7 +76,11 @@ public class OanixKeystorePlugin extends Plugin {
                 SecretKey key = ((KeyStore.SecretKeyEntry) store.getEntry(KEY_ALIAS, null)).getSecretKey();
                 KeyInfo keyInfo = (KeyInfo) SecretKeyFactory.getInstance(key.getAlgorithm(), PROVIDER)
                     .getKeySpec(key, KeyInfo.class);
-                result.put("securityLevel", keyInfo.getSecurityLevel());
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    result.put("securityLevel", keyInfo.getSecurityLevel());
+                } else {
+                    result.put("insideSecureHardware", keyInfo.isInsideSecureHardware());
+                }
                 result.put("userAuthenticationRequired", keyInfo.isUserAuthenticationRequired());
             }
 
@@ -87,9 +93,11 @@ public class OanixKeystorePlugin extends Plugin {
     @PluginMethod
     public void ensureKey(PluginCall call) {
         try {
+            KeyStore store = keyStore();
+            boolean existed = store.containsAlias(KEY_ALIAS);
             requireKey();
             JSObject result = new JSObject();
-            result.put("created", true);
+            result.put("created", !existed);
             result.put("aliasVersion", 1);
             call.resolve(result);
         } catch (Exception error) {
@@ -101,7 +109,7 @@ public class OanixKeystorePlugin extends Plugin {
     public void seal(PluginCall call) {
         String plaintext = call.getString("plaintext");
         String purpose = call.getString("purpose");
-        if (plaintext == null || purpose == null || purpose.isBlank()) {
+        if (plaintext == null || purpose == null || purpose.trim().isEmpty()) {
             call.reject("Faltan datos para proteger.");
             return;
         }
@@ -126,7 +134,7 @@ public class OanixKeystorePlugin extends Plugin {
         } catch (Exception error) {
             call.reject("No se pudo proteger el material con Android Keystore.", error);
         } finally {
-            java.util.Arrays.fill(plaintextBytes, (byte) 0);
+            Arrays.fill(plaintextBytes, (byte) 0);
         }
     }
 
@@ -136,7 +144,7 @@ public class OanixKeystorePlugin extends Plugin {
         String ciphertextEncoded = call.getString("ciphertext");
         String purpose = call.getString("purpose");
         Integer version = call.getInt("version");
-        if (version == null || version != 1 || ivEncoded == null || ciphertextEncoded == null || purpose == null || purpose.isBlank()) {
+        if (version == null || version != 1 || ivEncoded == null || ciphertextEncoded == null || purpose == null || purpose.trim().isEmpty()) {
             call.reject("La envoltura protegida no es válida.");
             return;
         }
@@ -156,7 +164,7 @@ public class OanixKeystorePlugin extends Plugin {
         } catch (Exception error) {
             call.reject("No se pudo abrir el material protegido de este dispositivo.", error);
         } finally {
-            if (plaintext != null) java.util.Arrays.fill(plaintext, (byte) 0);
+            if (plaintext != null) Arrays.fill(plaintext, (byte) 0);
         }
     }
 
