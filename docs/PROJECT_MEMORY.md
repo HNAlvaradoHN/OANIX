@@ -29,10 +29,11 @@ Su propósito es permitir que otra IA o colaborador continúe OANIX sin reconstr
 - Android Keystore: PR #83, compilación Android real de CI completada; prueba específica de sellar/abrir en dispositivo pendiente.
 - Biometría/credencial segura del dispositivo: PR #84, compilación Android real de CI completada; prueba funcional en teléfono pendiente.
 - Cámara nativa: PR #86, implementación y compilación APK/AAB completadas; prueba funcional en teléfono pendiente.
+- Integración nativa de archivos: PR #87, implementación y compilación APK/AAB completadas; prueba funcional en teléfono pendiente.
 
-**Bloque oficial activo:** Integración nativa de archivos.
+**Bloque oficial activo:** Compartir hacia OANIX.
 
-**Después:** compartir hacia OANIX → cierre/validación de V3 y preparación de publicación.
+**Después:** cierre/validación de V3, identidad visual/firma y preparación de publicación.
 
 **No avanzar todavía:** V4 salvo preparación arquitectónica estrictamente necesaria y registrada.
 
@@ -207,6 +208,23 @@ La comodidad de recuperación por correo implica confiar en el proveedor de aute
 - CI web, build, auditoría offline y compilación APK/AAB pasaron antes del merge.
 - Falta prueba real en teléfono: capturar, cancelar, insertar en la posición esperada, confirmar que la foto reaparece tras cerrar/abrir la nota y revisar que no se copie a la galería.
 
+### DEC-2026-08-16-012 — Archivos nativos usan Storage Access Framework sin permisos amplios
+**Estado:** IMPLEMENTED / VALIDATION_DEBT
+
+**Referencia:** PR #87, issue #79.
+
+- OANIX no crea una carpeta de almacenamiento paralela para Android. El usuario elige archivos/destinos mediante el selector de documentos del sistema.
+- Guardar backup usa `ACTION_CREATE_DOCUMENT`; el formato sigue siendo exactamente `.oanixbackup` producido por `serializeEncryptedBackup`.
+- El JSON ya cifrado se envía al `ContentResolver` por fragmentos UTF-8 acotados mediante una sesión nativa efímera. Si falla, OANIX cierra la sesión e intenta eliminar el documento parcial.
+- Restaurar usa `ACTION_OPEN_DOCUMENT`; Android entrega únicamente el URI elegido por el usuario y OANIX lo transforma en `File` para alimentar el control de restauración ya existente.
+- La ruta autoritativa de restauración sigue siendo `restoreEncryptedBackupFromFile`: parsea el formato, abre la protección con la contraseña, autentica secuencialmente cada registro AES-GCM y solo después sustituye la bóveda en una transacción.
+- No se solicitan `READ_EXTERNAL_STORAGE`, `WRITE_EXTERNAL_STORAGE`, `MANAGE_EXTERNAL_STORAGE` ni `READ_MEDIA_IMAGES`.
+- No se llama a `takePersistableUriPermission`; OANIX no conserva acceso permanente al documento seleccionado.
+- No se crea otra copia durable del backup dentro de Android. La PWA conserva su descarga/selector web actual.
+- Cancelar el selector de guardar/restaurar no se trata como fallo de datos; errores reales sí permanecen visibles.
+- OANIX CI y compilación Android APK/AAB pasaron antes de cerrar técnicamente el bloque.
+- Falta prueba real en teléfono: guardar y cancelar, restaurar el mismo backup, probar ubicación local y al menos un proveedor de documentos disponible, y confirmar que la validación de contraseña sigue precediendo cualquier sustitución de la bóveda.
+
 ---
 
 ## 4. Ideas y funciones diferidas
@@ -225,9 +243,8 @@ Decisiones ya tomadas:
 No implementar esta función solo por existir biometría global; requiere su propio bloque/decisión de seguridad.
 
 ### V3 pendiente en orden
-1. Integración nativa de archivos — ACTIVO.
-2. Compartir hacia OANIX desde Android.
-3. Validaciones de campo restantes, identidad visual/firma/publicación cuando corresponda.
+1. Compartir hacia OANIX desde Android — ACTIVO.
+2. Validaciones de campo restantes, identidad visual/firma/publicación cuando corresponda.
 
 ### DEFERRED — V4 funciones avanzadas
 PDF, audio, dibujos, tablas, OCR, compartir notas, personalización avanzada, avatar/foto opcional por nota e IA opcional con modelo de privacidad definido.
@@ -251,6 +268,7 @@ Se avanzó a V3 sin borrar las deudas reales de #69, #70 y #73. La implementaci�
 - Keystore `seal/open`: implementación y build completos; prueba real pendiente.
 - Biometría/credencial: implementación y build completos; prueba real pendiente.
 - Cámara nativa: implementación y build completos; prueba real pendiente.
+- Archivos nativos: implementación y build completos; prueba real pendiente.
 
 ---
 

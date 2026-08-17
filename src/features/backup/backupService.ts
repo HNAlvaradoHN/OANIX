@@ -2,6 +2,11 @@ import { decryptVaultBytes } from '../../security/crypto/contentCrypto'
 import { openVaultProtection } from '../../security/crypto/vaultCrypto'
 import { setActiveVaultKey } from '../../security/vault/vaultSession'
 import {
+  isAndroidNativeDocumentsRuntime,
+  OANIX_BACKUP_MIME_TYPE,
+  saveEncryptedBackupWithAndroidDocuments,
+} from '../../platform/android/nativeDocuments'
+import {
   readLocalVaultSnapshot,
   replaceLocalVaultSnapshot,
   type LocalVaultSnapshot,
@@ -11,8 +16,6 @@ import {
   parseEncryptedBackup,
   serializeEncryptedBackup,
 } from './backupFormat'
-
-const BACKUP_MIME_TYPE = 'application/vnd.oanix.encrypted-backup+json'
 
 export interface BackupExportResult {
   fileName: string
@@ -82,7 +85,16 @@ export async function downloadEncryptedBackup(): Promise<BackupExportResult> {
   const now = new Date()
   const fileName = encryptedBackupFileName(now)
   const serialized = serializeEncryptedBackup(snapshot, now)
-  const blob = new Blob([serialized], { type: BACKUP_MIME_TYPE })
+
+  if (isAndroidNativeDocumentsRuntime()) {
+    const saved = await saveEncryptedBackupWithAndroidDocuments(serialized, fileName)
+    // Existing workspace UI treats thrown errors as visible messages. An empty AbortError
+    // therefore preserves the current void-return contract while keeping user cancellation silent.
+    if (!saved) throw new DOMException('', 'AbortError')
+    return { fileName, recordCount: snapshot.records.length }
+  }
+
+  const blob = new Blob([serialized], { type: OANIX_BACKUP_MIME_TYPE })
   const url = URL.createObjectURL(blob)
 
   try {

@@ -7,6 +7,7 @@ import { AutoSyncRuntime } from '../features/sync/AutoSyncRuntime'
 import { ConflictCenter } from '../features/sync/ConflictCenter'
 import { VersionHistoryCenter } from '../features/versionHistory/VersionHistoryCenter'
 import { NativeCameraRuntime } from '../platform/android/NativeCameraRuntime'
+import { NativeDocumentsRuntime } from '../platform/android/NativeDocumentsRuntime'
 
 type OanixUpdateWindow = Window & {
   __oanixApplyUpdate?: () => Promise<void>
@@ -114,6 +115,7 @@ export function App() {
 
   return (
     <>
+      <NativeDocumentsRuntime />
       <VaultGate
         renderUnlocked={(lockVault) => <UnlockedApp lockVault={lockVault} />}
       />
