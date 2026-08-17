@@ -6,6 +6,7 @@ import { AccountPanel } from '../features/account/AccountPanel'
 import { AutoSyncRuntime } from '../features/sync/AutoSyncRuntime'
 import { ConflictCenter } from '../features/sync/ConflictCenter'
 import { VersionHistoryCenter } from '../features/versionHistory/VersionHistoryCenter'
+import { AndroidAuthRuntime } from '../platform/android/AndroidAuthRuntime'
 import { NativeCameraRuntime } from '../platform/android/NativeCameraRuntime'
 import { NativeDocumentsRuntime } from '../platform/android/NativeDocumentsRuntime'
 import { NativeShareRuntime } from '../platform/android/NativeShareRuntime'
@@ -149,6 +150,7 @@ export function App() {
 
   return (
     <>
+      <AndroidAuthRuntime />
       <NativeDocumentsRuntime />
       <VaultGate
         key={vaultGateRevision}
