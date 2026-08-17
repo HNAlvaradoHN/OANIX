@@ -56,6 +56,9 @@ export function AndroidBiometricRetryRuntime({ onUnlocked }: AndroidBiometricRet
     setBusy(true)
 
     try {
+      // The native biometric vault prompt already authorizes BIOMETRIC_STRONG | DEVICE_CREDENTIAL.
+      // Android decides whether the user completes it with fingerprint or the device PIN/pattern/
+      // password; OANIX never receives that credential.
       const result = await unlockLocalVaultWithBiometrics()
       if (result.status === 'error') return
 
@@ -74,8 +77,8 @@ export function AndroidBiometricRetryRuntime({ onUnlocked }: AndroidBiometricRet
       className="vault-restore__button"
       onClick={() => void handleRetry()}
       disabled={busy}
-      aria-label="Volver a desbloquear OANIX con huella o credencial del dispositivo"
-      title="Desbloquear con huella"
+      aria-label="Usar PIN, patrón, contraseña del teléfono o huella para desbloquear OANIX"
+      title="Usar seguridad del teléfono"
       style={{ marginTop: '.35rem' }}
     >
       <svg
@@ -96,7 +99,7 @@ export function AndroidBiometricRetryRuntime({ onUnlocked }: AndroidBiometricRet
         <path d="M13.9 11.5c0 3.6-.3 6.4-1 8.6" />
         <path d="M17.2 13.1c-.1 2.7-.7 5-1.8 6.8" />
       </svg>
-      <span>{busy ? 'Comprobando…' : 'Desbloquear con huella'}</span>
+      <span>{busy ? 'Comprobando…' : 'Usar PIN, patrón o huella'}</span>
     </button>,
     target,
   )
