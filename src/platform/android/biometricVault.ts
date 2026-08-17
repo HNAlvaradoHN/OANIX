@@ -1,5 +1,6 @@
 import { registerPlugin } from '@capacitor/core'
 import { isAndroidKeystoreRuntime } from './keystore'
+import { withAndroidSystemInteraction } from './systemInteractionGuard'
 
 export interface AndroidBiometricVaultStatus {
   supported: boolean
@@ -52,14 +53,14 @@ export async function enableAndroidBiometricVault(
   vaultBinding: string,
 ): Promise<AndroidBiometricEnableResult> {
   requireAndroidRuntime()
-  return nativeBiometric.enable({ vaultKey, vaultBinding })
+  return withAndroidSystemInteraction(() => nativeBiometric.enable({ vaultKey, vaultBinding }))
 }
 
 export async function unlockAndroidBiometricVault(
   vaultBinding: string,
 ): Promise<AndroidBiometricUnlockResult> {
   requireAndroidRuntime()
-  return nativeBiometric.unlock({ vaultBinding })
+  return withAndroidSystemInteraction(() => nativeBiometric.unlock({ vaultBinding }))
 }
 
 export async function disableAndroidBiometricVault(): Promise<void> {
