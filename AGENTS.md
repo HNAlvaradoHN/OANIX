@@ -28,7 +28,7 @@ No asumir que un chat, una memoria externa o una descripción antigua representa
 - La arquitectura debe ser modular: un cambio debe afectar lo mínimo posible al resto del sistema, sin crear una proliferación innecesaria de carpetas, stores, cachés o capas paralelas.
 - No crear persistencia paralela cuando pueda reutilizarse de forma segura el modelo existente.
 - Ante una duda de sincronización, se prioriza conservar datos sobre sobrescribirlos silenciosamente.
-- La contraseña maestra y la clave de bóveda no se persisten en texto plano. Las integraciones nativas deben respetar las fronteras de seguridad registradas para Android Keystore y biometría.
+- La contraseña maestra y la clave de bóveda no se persisten en texto plano. Las integraciones nativas deben respetar las fronteras de seguridad registradas para Android Keystore, biometría y temporales nativos.
 
 ## Regla de versiones
 
@@ -99,8 +99,9 @@ A fecha de **2026-08-16**:
 - APK/AAB: completado en PR #82; APK instalada en Android real y modo local validado. El flujo Android online/sincronizado todavía no se declara validado.
 - Android Keystore: base integrada en PR #83; prueba específica de campo pendiente.
 - Biometría/credencial del dispositivo: integrada en PR #84 con autenticación por uso, biometría fuerte o bloqueo seguro del dispositivo y contraseña maestra como fallback; validación real en teléfono pendiente.
-- **Siguiente bloque oficial: Cámara nativa.**
-- Después: integración nativa de archivos y compartir hacia OANIX.
+- Cámara nativa: implementada en PR #86 reutilizando el pipeline cifrado de imágenes; CI web y compilación APK/AAB pasaron, validación real en teléfono pendiente.
+- **Siguiente bloque oficial: Integración nativa de archivos.**
+- Después: compartir hacia OANIX.
 - No avanzar a V4 antes de cerrar V3 salvo preparación arquitectónica explícitamente justificada y registrada.
 
 La especificación exacta, deudas y decisiones de seguridad están en `docs/PROJECT_MEMORY.md` e issue #79.
