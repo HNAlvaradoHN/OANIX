@@ -2,6 +2,7 @@ import { Capacitor, registerPlugin } from '@capacitor/core'
 import { importTrustedDeviceVaultKey } from '../../security/crypto/trustedDeviceVaultKey'
 import { setActiveVaultKey } from '../../security/vault/vaultSession'
 import { readVaultMetadata } from '../../storage/repositories/vaultRepository'
+import { withAndroidSystemInteraction } from './systemInteractionGuard'
 
 export interface AndroidDeviceCredentialStatus {
   supported: boolean
@@ -55,9 +56,9 @@ export async function unlockLocalVaultWithDeviceCredential(): Promise<boolean> {
   const metadata = await readVaultMetadata()
   if (!metadata || metadata.protection === 'pending') return false
 
-  const result = await nativeDeviceCredential.unlock({
+  const result = await withAndroidSystemInteraction(() => nativeDeviceCredential.unlock({
     vaultBinding: vaultBinding(metadata.createdAt),
-  })
+  }))
   if (!result.unlocked || !result.vaultKey) return false
 
   let encodedVaultKey = result.vaultKey
