@@ -6,11 +6,12 @@ interface NativeCameraResult {
   cancelled: boolean
   mimeType?: string
   byteLength?: number
-  base64?: string
+  uri?: string
 }
 
 interface OanixCameraPlugin {
   takePhoto(): Promise<NativeCameraResult>
+  finishPhoto(): Promise<{ finished: boolean }>
 }
 
 const nativeCamera = registerPlugin<OanixCameraPlugin>('OanixCamera')
@@ -25,21 +26,6 @@ function requireAndroidRuntime(): void {
   }
 }
 
-function decodeBase64(value: string): Uint8Array {
-  let binary: string
-  try {
-    binary = atob(value)
-  } catch {
-    throw new Error('La cámara devolvió una foto ilegible.')
-  }
-
-  const bytes = new Uint8Array(binary.length)
-  for (let index = 0; index < binary.length; index += 1) {
-    bytes[index] = binary.charCodeAt(index)
-  }
-  return bytes
-}
-
 function cameraFileName(now = new Date()): string {
   const stamp = now.toISOString().replace(/[:.]/g, '-').replace('T', '_').replace('Z', '')
   return `Foto-OANIX-${stamp}.jpg`
@@ -50,29 +36,36 @@ export async function captureAndroidCameraPhoto(): Promise<File | null> {
   const result = await nativeCamera.takePhoto()
   if (result.cancelled) return null
 
-  if (
-    result.mimeType !== 'image/jpeg'
-    || typeof result.byteLength !== 'number'
-    || !Number.isSafeInteger(result.byteLength)
-    || result.byteLength <= 0
-    || result.byteLength > MAX_NATIVE_CAMERA_BYTES
-    || typeof result.base64 !== 'string'
-    || result.base64.length === 0
-  ) {
-    throw new Error('La cámara devolvió una foto con metadatos inválidos.')
-  }
-
-  const bytes = decodeBase64(result.base64)
   try {
-    if (bytes.byteLength !== result.byteLength) {
+    if (
+      result.mimeType !== 'image/jpeg'
+      || typeof result.byteLength !== 'number'
+      || !Number.isSafeInteger(result.byteLength)
+      || result.byteLength <= 0
+      || result.byteLength > MAX_NATIVE_CAMERA_BYTES
+      || typeof result.uri !== 'string'
+      || !result.uri.startsWith('content://')
+    ) {
+      throw new Error('La cámara devolvió una foto con metadatos inválidos.')
+    }
+
+    const response = await fetch(Capacitor.convertFileSrc(result.uri), { cache: 'no-store' })
+    if (!response.ok) throw new Error('No se pudo leer la foto temporal de la cámara.')
+
+    const blob = await response.blob()
+    if (blob.size !== result.byteLength) {
       throw new Error('La foto capturada quedó incompleta durante la transferencia.')
     }
 
-    return new File([bytes], cameraFileName(), {
+    return new File([blob], cameraFileName(), {
       type: 'image/jpeg',
       lastModified: Date.now(),
     })
   } finally {
-    bytes.fill(0)
+    try {
+      await nativeCamera.finishPhoto()
+    } catch {
+      // The native plugin also removes abandoned OANIX camera captures on later startup.
+    }
   }
 }
