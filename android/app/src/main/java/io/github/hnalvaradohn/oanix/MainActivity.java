@@ -9,6 +9,7 @@ public class MainActivity extends BridgeActivity {
     protected void onCreate(Bundle savedInstanceState) {
         registerPlugin(OanixKeystorePlugin.class);
         registerPlugin(OanixBiometricPlugin.class);
+        registerPlugin(OanixCameraPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

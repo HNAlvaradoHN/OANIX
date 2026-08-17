@@ -28,10 +28,11 @@ Su propósito es permitir que otra IA o colaborador continúe OANIX sin reconstr
 - El flujo Android online/bóveda sincronizada todavía no funciona o no está validado; mantenerlo como deuda visible y no declararlo probado.
 - Android Keystore: PR #83, compilación Android real de CI completada; prueba específica de sellar/abrir en dispositivo pendiente.
 - Biometría/credencial segura del dispositivo: PR #84, compilación Android real de CI completada; prueba funcional en teléfono pendiente.
+- Cámara nativa: PR #86, implementación y compilación APK/AAB completadas; prueba funcional en teléfono pendiente.
 
-**Bloque oficial activo:** Cámara nativa.
+**Bloque oficial activo:** Integración nativa de archivos.
 
-**Después:** integración nativa de archivos → compartir hacia OANIX → cierre/validación de V3 y preparación de publicación.
+**Después:** compartir hacia OANIX → cierre/validación de V3 y preparación de publicación.
 
 **No avanzar todavía:** V4 salvo preparación arquitectónica estrictamente necesaria y registrada.
 
@@ -189,6 +190,23 @@ La comodidad de recuperación por correo implica confiar en el proveedor de aute
 - Evitar candado grande, aspecto genérico o texto pequeño/ilegible dentro del icono.
 - Sustituir los assets provisionales antes de publicación, sin bloquear Cámara/Archivos/Compartir.
 
+### DEC-2026-08-16-011 — Cámara nativa usa temporales privados y el mismo cifrado de imágenes
+**Estado:** IMPLEMENTED / VALIDATION_DEBT
+
+**Referencia:** PR #86, issue #79.
+
+- La cámara nativa no crea una galería, base o store de imágenes paralelo.
+- OANIX usa `ACTION_IMAGE_CAPTURE` con un `FileProvider` y un JPEG temporal dentro de la caché privada de la aplicación.
+- El flujo no guarda la foto automáticamente en la galería y no añade permisos `CAMERA`, `READ_MEDIA_IMAGES` ni almacenamiento; se declara únicamente la visibilidad del intent de cámara.
+- La foto original no cruza el bridge como Base64: Android devuelve un URI `content://`, el WebView lo lee mediante `Capacitor.convertFileSrc` y construye un `File` JPEG.
+- `NativeCameraRuntime` entrega ese archivo al input de imágenes ya existente. La ruta autoritativa sigue siendo `insertFiles -> storeEncryptedImage`, incluyendo original cifrado y preview cifrada.
+- El límite específico de cámara es 24 MiB. El importador general conserva sus propias reglas existentes.
+- El temporal se elimina al cancelar o después de que JavaScript termina la importación; temporales abandonados se limpian en un arranque posterior después de una hora.
+- `saveInstanceState/restoreState` conserva ruta y URI de una captura activa frente a recreación de Activity.
+- La UI muestra `Cámara` dentro de Insertar y también en la toolbar nativa para anchos mayores; antes de abrir la cámara conserva el punto actual de inserción.
+- CI web, build, auditoría offline y compilación APK/AAB pasaron antes del merge.
+- Falta prueba real en teléfono: capturar, cancelar, insertar en la posición esperada, confirmar que la foto reaparece tras cerrar/abrir la nota y revisar que no se copie a la galería.
+
 ---
 
 ## 4. Ideas y funciones diferidas
@@ -207,10 +225,9 @@ Decisiones ya tomadas:
 No implementar esta función solo por existir biometría global; requiere su propio bloque/decisión de seguridad.
 
 ### V3 pendiente en orden
-1. Cámara nativa — ACTIVO.
-2. Integración nativa de archivos.
-3. Compartir hacia OANIX desde Android.
-4. Validaciones de campo restantes, identidad visual/firma/publicación cuando corresponda.
+1. Integración nativa de archivos — ACTIVO.
+2. Compartir hacia OANIX desde Android.
+3. Validaciones de campo restantes, identidad visual/firma/publicación cuando corresponda.
 
 ### DEFERRED — V4 funciones avanzadas
 PDF, audio, dibujos, tablas, OCR, compartir notas, personalización avanzada, avatar/foto opcional por nota e IA opcional con modelo de privacidad definido.
@@ -233,6 +250,7 @@ Se avanzó a V3 sin borrar las deudas reales de #69, #70 y #73. La implementaci�
 - Android online/sync: NO VALIDADO / actualmente no funciona o no se comprobó correctamente.
 - Keystore `seal/open`: implementación y build completos; prueba real pendiente.
 - Biometría/credencial: implementación y build completos; prueba real pendiente.
+- Cámara nativa: implementación y build completos; prueba real pendiente.
 
 ---
 

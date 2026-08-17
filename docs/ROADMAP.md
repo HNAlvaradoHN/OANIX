@@ -79,8 +79,8 @@ Objetivo: empaquetar la misma base de código como aplicación Android y añadir
 - [x] APK / AAB *(PR #82; APK instalada en Android real y modo local validado; firma final de Play Store pendiente para publicación)*
 - [x] Android Keystore *(PR #83; implementación/CI completos; prueba específica de campo pendiente)*
 - [x] Biometría / credencial segura del dispositivo *(PR #84; implementación/CI completos; prueba real pendiente)*
-- [ ] **Cámara nativa — BLOQUE ACTIVO**
-- [ ] Integración nativa de archivos
+- [x] Cámara nativa *(PR #86; implementación/CI completos; prueba real pendiente)*
+- [ ] **Integración nativa de archivos — BLOQUE ACTIVO**
 - [ ] Compartir hacia OANIX
 
 ### Capacitor / empaquetado
@@ -107,21 +107,31 @@ Objetivo: empaquetar la misma base de código como aplicación Android y añadir
 - La copia local para acceso rápido se conserva solo como ciphertext AES-GCM ligado a una bóveda concreta; tras autenticar se importa a Web Crypto como clave no extraíble.
 - Android anterior conserva el flujo de contraseña maestra.
 
+### Cámara nativa
+
+- OANIX abre la cámara del sistema mediante `ACTION_IMAGE_CAPTURE` y un `FileProvider` privado.
+- La captura original queda temporalmente en caché privada de OANIX; no se guarda automáticamente en la galería.
+- Android entrega un URI `content://` y el WebView lo lee mediante `Capacitor.convertFileSrc`; la foto no cruza el bridge como Base64.
+- El archivo resultante se entrega al mismo input de imágenes existente y sigue `insertFiles -> storeEncryptedImage`, por lo que original y preview usan el cifrado ya implementado.
+- No se solicitan permisos `CAMERA`, `READ_MEDIA_IMAGES` ni almacenamiento para este flujo de cámara externa.
+- Cada captura se limita a 24 MiB, se elimina tras importarla o cancelarla y existe limpieza de temporales abandonados.
+- El estado de una captura pendiente se conserva frente a recreación de Activity mediante `saveInstanceState/restoreState`.
+
 ### Deudas visibles de V3
 
 - APK/mode local: validado en teléfono real.
 - Cuenta/bóveda sincronizada dentro de Android: todavía no se declara funcional/validada.
 - Keystore `seal/open`: falta prueba específica en dispositivo.
 - Biometría: falta prueba real de enrolamiento, reapertura, cancelación, fallback e invalidación.
+- Cámara nativa: falta prueba real de captura, cancelación, inserción cifrada y reapertura de la nota.
 - Icono Android actual: provisional; dirección visual premium ya definida y debe aplicarse antes de publicación.
 
 ### Orden restante V3
 
-1. Cámara nativa.
-2. Integración nativa de archivos.
-3. Compartir hacia OANIX.
-4. Completar validaciones de campo pendientes.
-5. Identidad visual, firma y preparación de publicación cuando corresponda.
+1. Integración nativa de archivos.
+2. Compartir hacia OANIX.
+3. Completar validaciones de campo pendientes.
+4. Identidad visual, firma y preparación de publicación cuando corresponda.
 
 ---
 
@@ -147,6 +157,6 @@ Objetivo: empaquetar la misma base de código como aplicación Android y añadir
 
 **Versión activa: V3 — Android con Capacitor.**
 
-**Bloque oficial activo: Cámara nativa.**
+**Bloque oficial activo: Integración nativa de archivos.**
 
 No avanzar a V4 mientras V3 siga abierta, salvo preparación arquitectónica estrictamente necesaria y registrada.
