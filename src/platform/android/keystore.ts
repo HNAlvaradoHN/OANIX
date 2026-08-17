@@ -11,6 +11,7 @@ export interface AndroidKeystoreStatus {
   keyExists: boolean
   aliasVersion: number
   securityLevel?: number
+  insideSecureHardware?: boolean
   userAuthenticationRequired?: boolean
 }
 
