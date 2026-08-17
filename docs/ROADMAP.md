@@ -164,6 +164,7 @@ Objetivo: empaquetar la misma base de código como aplicación Android y añadir
 - Luego se hace el rediseño/pulido visual completo principalmente en la PWA, donde es más rápido validar móvil, tablet y PC.
 - Como Android empaqueta la misma base React, el rediseño PWA se hereda en la APK; solo las diferencias nativas se validan posteriormente en una build consolidada.
 - No entrar en V4 para retrasar indefinidamente el rediseño visual.
+- Los cambios puramente visuales —incluido el aspecto definitivo del botón Atrás y de los diálogos— se reservan para esta fase PWA, no para las iteraciones funcionales de APK.
 
 ### Deudas visibles / validación restante de V3
 
