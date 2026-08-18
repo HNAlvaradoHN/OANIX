@@ -32,6 +32,7 @@ interface OanixBiometricPlugin {
 }
 
 const nativeBiometric = registerPlugin<OanixBiometricPlugin>('OanixBiometric')
+const TRANSIENT_COLD_START_RETRY_MS = 180
 
 export function isAndroidBiometricRuntime(): boolean {
   return isAndroidKeystoreRuntime()
@@ -41,6 +42,10 @@ function requireAndroidRuntime(): void {
   if (!isAndroidBiometricRuntime()) {
     throw new Error('El acceso biométrico solo está disponible dentro de la aplicación Android de OANIX.')
   }
+}
+
+function waitForNativeActivity(milliseconds: number): Promise<void> {
+  return new Promise((resolve) => globalThis.setTimeout(resolve, milliseconds))
 }
 
 export async function getAndroidBiometricVaultStatus(): Promise<AndroidBiometricVaultStatus> {
@@ -60,6 +65,21 @@ export async function unlockAndroidBiometricVault(
   vaultBinding: string,
 ): Promise<AndroidBiometricUnlockResult> {
   requireAndroidRuntime()
+
+  const firstAttempt = await withAndroidSystemInteraction(() => nativeBiometric.unlock({ vaultBinding }))
+  if (
+    firstAttempt.unlocked
+    || firstAttempt.cancelled
+    || firstAttempt.reason !== 'unavailable'
+  ) {
+    return firstAttempt
+  }
+
+  // On a true cold start Capacitor can reach the plugin a fraction before the FragmentActivity
+  // is ready to host BiometricPrompt. Android reports that as "unavailable" even though the
+  // enrolled biometric envelope is valid. Retry exactly once after a short activity-settle
+  // window; never retry a user cancellation or an authentication failure.
+  await waitForNativeActivity(TRANSIENT_COLD_START_RETRY_MS)
   return withAndroidSystemInteraction(() => nativeBiometric.unlock({ vaultBinding }))
 }
 
