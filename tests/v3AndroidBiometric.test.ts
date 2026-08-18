@@ -14,6 +14,7 @@ const manifestSource = readFileSync('android/app/src/main/AndroidManifest.xml', 
 const variablesSource = readFileSync('android/variables.gradle', 'utf8')
 const gradleSource = readFileSync('android/app/build.gradle', 'utf8')
 const vaultServiceSource = readFileSync('src/security/vault/vaultService.ts', 'utf8')
+const biometricBridgeSource = readFileSync('src/platform/android/biometricVault.ts', 'utf8')
 const trustedKeySource = readFileSync('src/security/crypto/trustedDeviceVaultKey.ts', 'utf8')
 
 test('Android biometric unlock uses the stable AndroidX biometric dependency and system permission', () => {
@@ -57,6 +58,17 @@ test('Android startup can unlock with the device-authorized vault key while pass
   assert.match(vaultServiceSource, /importTrustedDeviceVaultKey\(encodedVaultKey\)/)
   assert.match(vaultServiceSource, /setActiveVaultKey\(vaultKey\)/)
   assert.match(vaultServiceSource, /maybeEnableAndroidBiometricUnlock\(password, metadata\)/)
+})
+
+test('cold-start biometric bridge retries only transient native activity unavailability', () => {
+  assert.match(biometricBridgeSource, /TRANSIENT_COLD_START_RETRY_MS = 180/)
+  assert.match(biometricBridgeSource, /const firstAttempt = await withAndroidSystemInteraction/)
+  assert.match(biometricBridgeSource, /firstAttempt\.cancelled/)
+  assert.match(biometricBridgeSource, /firstAttempt\.reason !== 'unavailable'/)
+  assert.match(biometricBridgeSource, /await waitForNativeActivity\(TRANSIENT_COLD_START_RETRY_MS\)/)
+
+  const nativeUnlockCalls = biometricBridgeSource.match(/nativeBiometric\.unlock\(\{ vaultBinding \}\)/g) ?? []
+  assert.equal(nativeUnlockCalls.length, 2)
 })
 
 test('vault key imported from Android is immediately converted to a nonextractable Web Crypto key', () => {
