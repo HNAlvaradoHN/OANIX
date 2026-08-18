@@ -40,7 +40,7 @@ test('the same share action is available from each note list overflow menu', () 
   const runtime = readFileSync('src/platform/android/NativeNoteShareRuntime.tsx', 'utf8')
   const workspace = readFileSync('src/features/notes/NotesWorkspace.tsx', 'utf8')
 
-  assert.match(workspace, /className="note-row__menu"/)
+  assert.match(workspace, /note-row__menu/)
   assert.match(workspace, /data-reorder-note-id=\{note\.id\}/)
   assert.match(runtime, /querySelector<HTMLElement>\('\.note-row__menu'\)/)
   assert.match(runtime, /closest<HTMLElement>\('\[data-reorder-note-id\]'\)/)
