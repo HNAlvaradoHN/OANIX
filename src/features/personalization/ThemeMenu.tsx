@@ -117,6 +117,7 @@ export function ThemeMenu() {
     <section
       className="oanix-theme-menu oanix-theme-menu--workspace"
       aria-label="Personalización de OANIX"
+      data-note-menu-root="true"
       ref={panelRef}
     >
       <header className="oanix-theme-menu__header">

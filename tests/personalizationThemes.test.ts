@@ -5,6 +5,7 @@ import test from 'node:test'
 const main = readFileSync('src/main.tsx', 'utf8')
 const catalog = readFileSync('src/features/personalization/themeCatalog.ts', 'utf8')
 const menu = readFileSync('src/features/personalization/ThemeMenu.tsx', 'utf8')
+const workspace = readFileSync('src/features/notes/NotesWorkspace.tsx', 'utf8')
 const menuCss = readFileSync('src/features/personalization/personalization.css', 'utf8')
 const workspaceMenuCss = readFileSync('src/features/personalization/personalization-workspace.css', 'utf8')
 const themesCss = readFileSync('src/styles/themes.css', 'utf8')
@@ -45,6 +46,12 @@ test('personalization lives inside the workspace three-dot menu instead of a flo
   assert.doesNotMatch(menu, /oanix-personalization__trigger-label/)
   assert.match(workspaceMenuCss, /\.oanix-personalization__workspace-entry/)
   assert.match(workspaceMenuCss, /\.workspace-menu > button:last-of-type/)
+})
+
+test('theme panel is part of the safe menu area so clicks cannot fall through to notes', () => {
+  assert.match(workspace, /target\.closest\('\[data-note-menu-root="true"\]'\)/)
+  assert.match(menu, /data-note-menu-root="true"/)
+  assert.match(menu, /panelRef\.current\?\.contains\(target\)/)
 })
 
 test('personalization panel still exposes dark and light options', () => {
