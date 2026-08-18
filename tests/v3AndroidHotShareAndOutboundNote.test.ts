@@ -36,6 +36,18 @@ test('outbound note sharing uses Android text share without exporting encrypted 
   assert.doesNotMatch(runtime, /deleteEncryptedImage|storeEncryptedImage|imageId\s*:/)
 })
 
+test('the same share action is available from each note list overflow menu', () => {
+  const runtime = readFileSync('src/platform/android/NativeNoteShareRuntime.tsx', 'utf8')
+  const workspace = readFileSync('src/features/notes/NotesWorkspace.tsx', 'utf8')
+
+  assert.match(workspace, /className="note-row__menu"/)
+  assert.match(workspace, /data-reorder-note-id=\{note\.id\}/)
+  assert.match(runtime, /querySelector<HTMLElement>\('\.note-row__menu'\)/)
+  assert.match(runtime, /closest<HTMLElement>\('\[data-reorder-note-id\]'\)/)
+  assert.match(runtime, /handleShare\(listTarget\.noteId\)/)
+  assert.match(runtime, /listTarget\.element/)
+})
+
 test('PDF export remains outside this V3 sharing path', () => {
   const runtime = readFileSync('src/platform/android/NativeNoteShareRuntime.tsx', 'utf8')
   const bridge = readFileSync('src/platform/android/outboundShare.ts', 'utf8')
