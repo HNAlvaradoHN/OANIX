@@ -60,11 +60,12 @@ async function deriveVerifier(code: string, salt: Uint8Array, iterations: number
     false,
     ['deriveBits'],
   )
+  const saltBuffer = Uint8Array.from(salt).buffer
   const bits = await cryptoApi.subtle.deriveBits(
     {
       name: 'PBKDF2',
       hash: 'SHA-256',
-      salt,
+      salt: saltBuffer,
       iterations,
     },
     keyMaterial,
