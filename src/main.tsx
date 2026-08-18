@@ -4,6 +4,7 @@ import { registerSW } from 'virtual:pwa-register'
 import { App } from './app/App'
 import { ThemeMenu } from './features/personalization/ThemeMenu'
 import { applyOanixTheme, readSavedOanixTheme } from './features/personalization/themeCatalog'
+import { NoteMenuScrollDismiss } from './features/notes/NoteMenuScrollDismiss'
 import './styles/global.css'
 import './styles/redesign.css'
 import './styles/redesign-polish.css'
@@ -51,5 +52,6 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />
     <ThemeMenu />
+    <NoteMenuScrollDismiss />
   </StrictMode>,
 )
