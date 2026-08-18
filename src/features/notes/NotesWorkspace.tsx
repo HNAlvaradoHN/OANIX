@@ -1276,6 +1276,8 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
           </div>
         </header>
 
+        <div className="oanix-personalization-slot" aria-label="Acceso a personalización" />
+
         {searchOpen && (
           <div className="notes-search" role="search" aria-label="Búsqueda local de notas">
             <div className="notes-search__field">
