@@ -17,8 +17,8 @@
 .notes-header__actions .account-header-action::before {
   content: '';
   display: block;
-  width: 1.16rem;
-  height: 1.16rem;
+  width: 1.24rem;
+  height: 1.24rem;
   background-color: currentColor;
   -webkit-mask-repeat: no-repeat;
   mask-repeat: no-repeat;
@@ -26,6 +26,7 @@
   mask-position: center;
   -webkit-mask-size: contain;
   mask-size: contain;
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--theme-accent, #6f61ee) 18%, transparent));
 }
 
 .notes-header__actions .icon-button[aria-label='Buscar en notas']::before,
@@ -49,13 +50,15 @@
   mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='8' r='4'/%3E%3Cpath d='M4.5 21a7.5 7.5 0 0 1 15 0'/%3E%3C/svg%3E");
 }
 
-/* The icon family uses one visual weight and lets the selected theme own the color. */
+/* Stronger than muted text, but still subordinate to the OANIX mark and note content. */
 .notes-header__actions .icon-button[aria-label='Buscar en notas'],
 .notes-header__actions .icon-button[aria-label='Cerrar búsqueda'],
 .notes-header__actions .icon-button[aria-label='Bloquear OANIX'],
 .notes-header__actions .version-history-launcher,
 .notes-header__actions .account-header-action {
-  color: var(--theme-muted, var(--oanix-muted, #8f99af));
+  color: color-mix(in srgb, var(--theme-text, #f6f8fd) 72%, var(--theme-accent, #6f61ee) 28%) !important;
+  opacity: .96;
+  transition: color .16s ease, opacity .16s ease, transform .16s ease, background-color .16s ease;
 }
 
 .notes-header__actions .icon-button:hover,
@@ -65,7 +68,9 @@
 .notes-header__actions .version-history-launcher:focus-visible,
 .notes-header__actions .account-header-action:hover,
 .notes-header__actions .account-header-action:focus-visible {
-  color: var(--theme-accent-soft, var(--oanix-accent-soft, #b9afff));
+  color: var(--theme-accent, var(--oanix-accent, #8d7aff)) !important;
+  opacity: 1;
+  background: color-mix(in srgb, var(--theme-accent, #6f61ee) 9%, transparent) !important;
 }
 
 @media (max-width: 760px) {
@@ -74,7 +79,7 @@
   .notes-header__actions .icon-button[aria-label='Bloquear OANIX']::before,
   .notes-header__actions .version-history-launcher::before,
   .notes-header__actions .account-header-action::before {
-    width: 1.08rem;
-    height: 1.08rem;
+    width: 1.16rem;
+    height: 1.16rem;
   }
 }

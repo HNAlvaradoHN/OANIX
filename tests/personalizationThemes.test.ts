@@ -62,6 +62,15 @@ test('theme panel is part of the safe menu area so clicks cannot fall through to
   assert.match(workspaceMenuCss, /\.oanix-theme-backdrop/)
 })
 
+test('closing personalization also closes the workspace menu left behind it', () => {
+  assert.match(menu, /function closeThemeAndWorkspaceMenu\(\)/)
+  assert.match(menu, /aria-label="Menú de OANIX"/)
+  assert.match(menu, /getAttribute\('aria-expanded'\) === 'true'/)
+  assert.match(menu, /opener\.click\(\)/)
+  assert.match(menu, /function chooseTheme[\s\S]*closeThemeAndWorkspaceMenu\(\)/)
+  assert.match(menu, /onClick=\{closeThemeAndWorkspaceMenu\}/)
+})
+
 test('personalization panel still exposes dark and light options', () => {
   assert.match(menu, /Elegí tu ambiente/)
   assert.match(menu, /theme\.mode === 'dark' \? 'Oscuro' : 'Claro'/)
