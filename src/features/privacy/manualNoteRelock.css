@@ -1,0 +1,52 @@
+.note-view[data-oanix-note-has-lock='true'] .note-view__identity strong::after {
+  content: none !important;
+}
+
+.oanix-note-session-lock {
+  width: 2.25rem;
+  height: 2.25rem;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--theme-accent, #3b82f6) 42%, var(--theme-border, #cbd5e1));
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--theme-accent, #3b82f6) 9%, var(--theme-surface, #fff));
+  color: var(--theme-text, #0f172a);
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--theme-accent, #3b82f6) 5%, transparent);
+  cursor: pointer;
+  transition: transform .14s ease, border-color .14s ease, background .14s ease, box-shadow .14s ease;
+}
+
+.oanix-note-session-lock:hover,
+.oanix-note-session-lock:focus-visible {
+  outline: none;
+  transform: translateY(-1px);
+  border-color: var(--theme-accent, #3b82f6);
+  background: color-mix(in srgb, var(--theme-accent, #3b82f6) 15%, var(--theme-surface, #fff));
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--theme-accent, #3b82f6) 10%, transparent),
+    0 8px 20px color-mix(in srgb, var(--theme-accent, #3b82f6) 12%, transparent);
+}
+
+.oanix-note-session-lock--unlocked {
+  border-color: color-mix(in srgb, var(--theme-accent-2, #22d3ee) 58%, var(--theme-border, #cbd5e1));
+  background: color-mix(in srgb, var(--theme-accent-2, #22d3ee) 10%, var(--theme-surface, #fff));
+}
+
+.oanix-note-session-lock:disabled {
+  cursor: not-allowed;
+  opacity: .5;
+  transform: none;
+}
+
+@media (max-width: 700px) {
+  .oanix-note-session-lock {
+    width: 2.15rem;
+    height: 2.15rem;
+    font-size: .95rem;
+  }
+}
