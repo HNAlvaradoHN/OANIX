@@ -32,7 +32,7 @@ interface OanixBiometricPlugin {
 }
 
 const nativeBiometric = registerPlugin<OanixBiometricPlugin>('OanixBiometric')
-const TRANSIENT_COLD_START_RETRY_MS = 180
+const TRANSIENT_COLD_START_RETRY_DELAYS_MS = [180, 420, 800] as const
 
 export function isAndroidBiometricRuntime(): boolean {
   return isAndroidKeystoreRuntime()
@@ -46,6 +46,12 @@ function requireAndroidRuntime(): void {
 
 function waitForNativeActivity(milliseconds: number): Promise<void> {
   return new Promise((resolve) => globalThis.setTimeout(resolve, milliseconds))
+}
+
+function shouldRetryTransientColdStart(result: AndroidBiometricUnlockResult): boolean {
+  return !result.unlocked
+    && !result.cancelled
+    && result.reason === 'unavailable'
 }
 
 export async function getAndroidBiometricVaultStatus(): Promise<AndroidBiometricVaultStatus> {
@@ -66,21 +72,19 @@ export async function unlockAndroidBiometricVault(
 ): Promise<AndroidBiometricUnlockResult> {
   requireAndroidRuntime()
 
-  const firstAttempt = await withAndroidSystemInteraction(() => nativeBiometric.unlock({ vaultBinding }))
-  if (
-    firstAttempt.unlocked
-    || firstAttempt.cancelled
-    || firstAttempt.reason !== 'unavailable'
-  ) {
-    return firstAttempt
+  let result = await withAndroidSystemInteraction(() => nativeBiometric.unlock({ vaultBinding }))
+
+  // A true Android cold start can reach Capacitor before the FragmentActivity is fully ready to
+  // host BiometricPrompt. The native bridge reports that transient state as "unavailable". Keep a
+  // short, bounded settle window instead of making the user reopen OANIX. Never retry a prompt
+  // that was shown and cancelled, nor any real authentication error/fallback condition.
+  for (const delay of TRANSIENT_COLD_START_RETRY_DELAYS_MS) {
+    if (!shouldRetryTransientColdStart(result)) return result
+    await waitForNativeActivity(delay)
+    result = await withAndroidSystemInteraction(() => nativeBiometric.unlock({ vaultBinding }))
   }
 
-  // On a true cold start Capacitor can reach the plugin a fraction before the FragmentActivity
-  // is ready to host BiometricPrompt. Android reports that as "unavailable" even though the
-  // enrolled biometric envelope is valid. Retry exactly once after a short activity-settle
-  // window; never retry a user cancellation or an authentication failure.
-  await waitForNativeActivity(TRANSIENT_COLD_START_RETRY_MS)
-  return withAndroidSystemInteraction(() => nativeBiometric.unlock({ vaultBinding }))
+  return result
 }
 
 export async function disableAndroidBiometricVault(): Promise<void> {
