@@ -49,6 +49,7 @@ test('main publishes an observable commit status only after stable signing verif
   assert.match(workflow, /context: 'oanix\/stable-debug-signing'/)
   assert.match(workflow, /state: 'success'/)
   assert.match(workflow, /Stable OANIX debug signing certificate verified/)
+  assert.match(workflow, /target_url: `\$\{context\.serverUrl\}\/\$\{context\.repo\.owner\}\/\$\{context\.repo\.repo\}\/actions\/runs\/\$\{context\.runId\}`/)
 })
 
 test('stable keystore material is removed from the runner workspace after signing', () => {
