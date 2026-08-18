@@ -4,6 +4,11 @@ import { loadNotes } from '../../features/notes/noteService'
 import { noteBlocksToFullPlainText } from '../../features/notes/noteTypes'
 import { sharePlainText } from './outboundShare'
 
+interface ListShareTarget {
+  element: HTMLElement
+  noteId: string
+}
+
 function wait(milliseconds: number) {
   return new Promise<void>((resolve) => window.setTimeout(resolve, milliseconds))
 }
@@ -34,12 +39,29 @@ async function waitForVisibleSave(): Promise<boolean> {
 }
 
 export function NativeNoteShareRuntime() {
-  const [target, setTarget] = useState<HTMLElement | null>(null)
+  const [noteViewTarget, setNoteViewTarget] = useState<HTMLElement | null>(null)
+  const [listTarget, setListTarget] = useState<ListShareTarget | null>(null)
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
     const refresh = () => {
-      setTarget(document.querySelector<HTMLElement>('.note-view__menu'))
+      const nextNoteViewTarget = document.querySelector<HTMLElement>('.note-view__menu')
+      setNoteViewTarget((current) => current === nextNoteViewTarget ? current : nextNoteViewTarget)
+
+      const listMenu = document.querySelector<HTMLElement>('.note-row__menu')
+      const listRow = listMenu?.closest<HTMLElement>('[data-reorder-note-id]') ?? null
+      const noteId = listRow?.dataset.reorderNoteId?.trim() ?? ''
+      const nextListTarget = listMenu && noteId
+        ? { element: listMenu, noteId }
+        : null
+
+      setListTarget((current) => {
+        if (!nextListTarget) return current === null ? current : null
+        if (current?.element === nextListTarget.element && current.noteId === nextListTarget.noteId) {
+          return current
+        }
+        return nextListTarget
+      })
     }
 
     refresh()
@@ -48,9 +70,7 @@ export function NativeNoteShareRuntime() {
     return () => observer.disconnect()
   }, [])
 
-  if (!target) return null
-
-  async function handleShare() {
+  async function handleShare(explicitNoteId?: string) {
     if (busy) return
     setBusy(true)
 
@@ -61,9 +81,9 @@ export function NativeNoteShareRuntime() {
         return
       }
 
-      const noteId = currentNoteId()
+      const noteId = explicitNoteId?.trim() || currentNoteId()
       if (!noteId) {
-        window.alert('No se pudo identificar la nota abierta.')
+        window.alert('No se pudo identificar la nota para compartir.')
         return
       }
 
@@ -86,15 +106,32 @@ export function NativeNoteShareRuntime() {
     }
   }
 
-  return createPortal(
-    <button
-      type="button"
-      role="menuitem"
-      disabled={busy}
-      onClick={() => void handleShare()}
-    >
-      <span aria-hidden="true">↗</span> {busy ? 'Preparando…' : 'Compartir nota'}
-    </button>,
-    target,
+  const buttonLabel = busy ? 'Preparando…' : 'Compartir nota'
+
+  return (
+    <>
+      {noteViewTarget && createPortal(
+        <button
+          type="button"
+          role="menuitem"
+          disabled={busy}
+          onClick={() => void handleShare()}
+        >
+          <span aria-hidden="true">↗</span> {buttonLabel}
+        </button>,
+        noteViewTarget,
+      )}
+      {listTarget && createPortal(
+        <button
+          type="button"
+          role="menuitem"
+          disabled={busy}
+          onClick={() => void handleShare(listTarget.noteId)}
+        >
+          <span aria-hidden="true">↗</span> {buttonLabel}
+        </button>,
+        listTarget.element,
+      )}
+    </>
   )
 }
