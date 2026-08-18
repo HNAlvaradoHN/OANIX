@@ -1,0 +1,80 @@
+/* Keep the primary OANIX header independent from each platform's emoji font.
+ * The underlying buttons and accessible labels remain unchanged; only their visible glyph changes.
+ */
+
+.notes-header__actions .icon-button[aria-label='Buscar en notas'],
+.notes-header__actions .icon-button[aria-label='Cerrar búsqueda'],
+.notes-header__actions .icon-button[aria-label='Bloquear OANIX'],
+.notes-header__actions .version-history-launcher,
+.notes-header__actions .account-header-action {
+  font-size: 0 !important;
+}
+
+.notes-header__actions .icon-button[aria-label='Buscar en notas']::before,
+.notes-header__actions .icon-button[aria-label='Cerrar búsqueda']::before,
+.notes-header__actions .icon-button[aria-label='Bloquear OANIX']::before,
+.notes-header__actions .version-history-launcher::before,
+.notes-header__actions .account-header-action::before {
+  content: '';
+  display: block;
+  width: 1.16rem;
+  height: 1.16rem;
+  background-color: currentColor;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}
+
+.notes-header__actions .icon-button[aria-label='Buscar en notas']::before,
+.notes-header__actions .icon-button[aria-label='Cerrar búsqueda']::before {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='6.5'/%3E%3Cpath d='m16 16 4 4'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='6.5'/%3E%3Cpath d='m16 16 4 4'/%3E%3C/svg%3E");
+}
+
+.notes-header__actions .icon-button[aria-label='Bloquear OANIX']::before {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='5' y='10' width='14' height='10' rx='2'/%3E%3Cpath d='M8 10V7a4 4 0 0 1 8 0v3'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='5' y='10' width='14' height='10' rx='2'/%3E%3Cpath d='M8 10V7a4 4 0 0 1 8 0v3'/%3E%3C/svg%3E");
+}
+
+.notes-header__actions .version-history-launcher::before {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='8'/%3E%3Cpath d='M12 7v5l3.5 2'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='8'/%3E%3Cpath d='M12 7v5l3.5 2'/%3E%3C/svg%3E");
+}
+
+.notes-header__actions .account-header-action::before {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='8' r='4'/%3E%3Cpath d='M4.5 21a7.5 7.5 0 0 1 15 0'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='8' r='4'/%3E%3Cpath d='M4.5 21a7.5 7.5 0 0 1 15 0'/%3E%3C/svg%3E");
+}
+
+/* The icon family uses one visual weight and lets the selected theme own the color. */
+.notes-header__actions .icon-button[aria-label='Buscar en notas'],
+.notes-header__actions .icon-button[aria-label='Cerrar búsqueda'],
+.notes-header__actions .icon-button[aria-label='Bloquear OANIX'],
+.notes-header__actions .version-history-launcher,
+.notes-header__actions .account-header-action {
+  color: var(--theme-muted, var(--oanix-muted, #8f99af));
+}
+
+.notes-header__actions .icon-button:hover,
+.notes-header__actions .icon-button:focus-visible,
+.notes-header__actions .icon-button--active,
+.notes-header__actions .version-history-launcher:hover,
+.notes-header__actions .version-history-launcher:focus-visible,
+.notes-header__actions .account-header-action:hover,
+.notes-header__actions .account-header-action:focus-visible {
+  color: var(--theme-accent-soft, var(--oanix-accent-soft, #b9afff));
+}
+
+@media (max-width: 760px) {
+  .notes-header__actions .icon-button[aria-label='Buscar en notas']::before,
+  .notes-header__actions .icon-button[aria-label='Cerrar búsqueda']::before,
+  .notes-header__actions .icon-button[aria-label='Bloquear OANIX']::before,
+  .notes-header__actions .version-history-launcher::before,
+  .notes-header__actions .account-header-action::before {
+    width: 1.08rem;
+    height: 1.08rem;
+  }
+}
