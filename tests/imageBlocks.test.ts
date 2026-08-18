@@ -6,7 +6,7 @@ import {
   isNoteRecord,
   normalizeImageAlignment,
   normalizeImageMimeType,
-  noteBlocksToPlainText,
+  noteBlocksToFullPlainText,
   type ImageMimeType,
   type NoteRecord,
 } from '../src/features/notes/noteTypes.ts'
@@ -67,15 +67,15 @@ test('older image blocks without layout metadata remain valid', () => {
   assert.equal(isNoteRecord(imageNote('image/jpeg')), true)
 })
 
-test('image previews respect description and filename visibility', () => {
-  assert.equal(noteBlocksToPlainText(imageNote('image/png', 'Recibo agosto').content.blocks), 'Recibo agosto')
-  assert.equal(noteBlocksToPlainText(imageNote('image/png').content.blocks), 'foto-prueba.png')
+test('explicit full plaintext respects image description and filename visibility', () => {
+  assert.equal(noteBlocksToFullPlainText(imageNote('image/png', 'Recibo agosto').content.blocks), 'Recibo agosto')
+  assert.equal(noteBlocksToFullPlainText(imageNote('image/png').content.blocks), 'foto-prueba.png')
 
   const hiddenName = imageNote('image/png')
   const block = hiddenName.content.blocks[0]
   if (block.type !== 'image') throw new Error('Expected image block')
   block.showName = false
-  assert.equal(noteBlocksToPlainText(hiddenName.content.blocks), 'Imagen')
+  assert.equal(noteBlocksToFullPlainText(hiddenName.content.blocks), 'Imagen')
 })
 
 test('SVG and malformed image metadata are rejected', () => {
