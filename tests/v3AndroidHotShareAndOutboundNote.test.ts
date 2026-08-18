@@ -32,7 +32,7 @@ test('outbound note sharing uses Android text share without exporting encrypted 
   assert.match(plugin, /setType\("text\/plain"\)/)
   assert.match(plugin, /Intent\.createChooser/)
   assert.match(runtime, /Compartir nota/)
-  assert.match(runtime, /noteBlocksToPlainText/)
+  assert.match(runtime, /noteBlocksToFullPlainText/)
   assert.doesNotMatch(runtime, /deleteEncryptedImage|storeEncryptedImage|imageId\s*:/)
 })
 
