@@ -60,15 +60,17 @@ test('Android startup can unlock with the device-authorized vault key while pass
   assert.match(vaultServiceSource, /maybeEnableAndroidBiometricUnlock\(password, metadata\)/)
 })
 
-test('cold-start biometric bridge retries only transient native activity unavailability', () => {
-  assert.match(biometricBridgeSource, /TRANSIENT_COLD_START_RETRY_MS = 180/)
-  assert.match(biometricBridgeSource, /const firstAttempt = await withAndroidSystemInteraction/)
-  assert.match(biometricBridgeSource, /firstAttempt\.cancelled/)
-  assert.match(biometricBridgeSource, /firstAttempt\.reason !== 'unavailable'/)
-  assert.match(biometricBridgeSource, /await waitForNativeActivity\(TRANSIENT_COLD_START_RETRY_MS\)/)
-
-  const nativeUnlockCalls = biometricBridgeSource.match(/nativeBiometric\.unlock\(\{ vaultBinding \}\)/g) ?? []
-  assert.equal(nativeUnlockCalls.length, 2)
+test('cold-start biometric bridge uses a bounded settle window only for transient unavailability', () => {
+  assert.match(biometricBridgeSource, /TRANSIENT_COLD_START_RETRY_DELAYS_MS = \[180, 420, 800\] as const/)
+  assert.match(biometricBridgeSource, /function shouldRetryTransientColdStart/)
+  assert.match(biometricBridgeSource, /!result\.unlocked/)
+  assert.match(biometricBridgeSource, /!result\.cancelled/)
+  assert.match(biometricBridgeSource, /result\.reason === 'unavailable'/)
+  assert.match(biometricBridgeSource, /for \(const delay of TRANSIENT_COLD_START_RETRY_DELAYS_MS\)/)
+  assert.match(biometricBridgeSource, /if \(!shouldRetryTransientColdStart\(result\)\) return result/)
+  assert.match(biometricBridgeSource, /await waitForNativeActivity\(delay\)/)
+  assert.match(biometricBridgeSource, /result = await withAndroidSystemInteraction/)
+  assert.doesNotMatch(biometricBridgeSource, /authentication-error[^\n]*retry/i)
 })
 
 test('vault key imported from Android is immediately converted to a nonextractable Web Crypto key', () => {
