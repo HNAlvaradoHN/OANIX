@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { isNoteRecord, noteBlocksToPlainText, type NoteRecord } from '../src/features/notes/noteTypes.ts'
+import { isNoteRecord, noteBlocksToFullPlainText, type NoteRecord } from '../src/features/notes/noteTypes.ts'
 
 function contactNote(): NoteRecord {
   return {
@@ -29,9 +29,9 @@ test('private contact blocks survive note validation', () => {
   assert.equal(isNoteRecord(contactNote()), true)
 })
 
-test('contact fields are available to local previews and future search', () => {
+test('contact fields remain available to explicit full plaintext and local search', () => {
   assert.equal(
-    noteBlocksToPlainText(contactNote().content.blocks),
+    noteBlocksToFullPlainText(contactNote().content.blocks),
     'Ana López\n+504 9999-0000\nana@example.com\nOANIX\nContacto de prueba',
   )
 })
@@ -51,5 +51,5 @@ test('empty optional contact text remains a valid private card', () => {
   block.organization = ''
   block.notes = ''
   assert.equal(isNoteRecord(note), true)
-  assert.equal(noteBlocksToPlainText(note.content.blocks), 'Ana López')
+  assert.equal(noteBlocksToFullPlainText(note.content.blocks), 'Ana López')
 })
