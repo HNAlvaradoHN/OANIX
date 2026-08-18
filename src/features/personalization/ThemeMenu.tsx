@@ -156,7 +156,7 @@ export function ThemeMenu() {
         <header className="oanix-theme-menu__header">
           <div>
             <span className="oanix-theme-menu__eyebrow">PERSONALIZACIÓN</span>
-            <strong>Ajustá OANIX a tu gusto</strong>
+            <strong>Elegí tu ambiente</strong>
             <p>El tema y el tiempo de bloqueo se guardan solo en este dispositivo.</p>
           </div>
           <button
