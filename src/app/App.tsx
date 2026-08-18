@@ -13,6 +13,7 @@ import { NativeShareRuntime } from '../platform/android/NativeShareRuntime'
 import { NativeNoteShareRuntime } from '../platform/android/NativeNoteShareRuntime'
 import { AndroidBackRuntime } from '../platform/android/AndroidBackRuntime'
 import { AndroidBiometricRetryRuntime } from '../platform/android/AndroidBiometricRetryRuntime'
+import { AndroidKeystoreDiagnosticRuntime } from '../platform/android/AndroidKeystoreDiagnosticRuntime'
 import { isAndroidBiometricRuntime } from '../platform/android/biometricVault'
 import { isAndroidSystemInteractionActive } from '../platform/android/systemInteractionGuard'
 import { lockLocalVault } from '../security/vault/vaultService'
@@ -63,6 +64,7 @@ function UnlockedApp({ lockVault }: { lockVault: () => void }) {
       <NativeCameraRuntime />
       <NativeShareRuntime onImported={() => setWorkspaceRevision((value) => value + 1)} />
       <NativeNoteShareRuntime />
+      <AndroidKeystoreDiagnosticRuntime />
       <NotesWorkspace key={workspaceRevision} onLock={lockVault} />
       <ConflictCenter onResolved={() => setWorkspaceRevision((value) => value + 1)} />
       <VersionHistoryCenter onRestored={() => setWorkspaceRevision((value) => value + 1)} />
