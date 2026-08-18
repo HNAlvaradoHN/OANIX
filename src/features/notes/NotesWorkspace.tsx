@@ -77,10 +77,6 @@ function formatNoteTime(isoDate: string): string {
   }).format(date)
 }
 
-function noteInitial(title: string): string {
-  const first = title.trim().charAt(0)
-  return first ? first.toUpperCase() : 'N'
-}
 
 function notePreview(note: NoteRecord): string {
   return noteBlocksToPlainText(note.content.blocks) || 'Nota vacía · empieza a escribir'

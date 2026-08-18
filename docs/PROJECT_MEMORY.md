@@ -10,32 +10,28 @@ Su propósito es permitir que otra IA o colaborador continúe OANIX sin reconstr
 
 ## 1. Estado actual
 
-**Última actualización:** 2026-08-16
+**Última actualización:** 2026-08-18
 
-**Versión activa:** V3 — Android con Capacitor
+**Fase activa:** rediseño/pulido visual post-V3.
 
-**V1 — Núcleo local:** CERRADA
+**V1 — Núcleo local:** CERRADA.
 
-**V2 — Cuenta y sincronización:** implementación funcional completada y se avanzó a V3. No borrar ni falsificar las deudas de validación restantes:
-- Resolución de conflictos: implementación completa; detección real comprobada; casos restantes en issue #69.
-- Historial cifrado de versiones: implementación publicada, retención de 5 puntos; validación real restante en issue #70.
-- Recuperación por Email OTP: implementación integrada; validación real/multidispositivo/offline restante documentada en issue #73.
+**V2 — Cuenta y sincronización:** CERRADA FUNCIONALMENTE. Mantener visibles las deudas de validación #69, #70 y #73.
 
-**V3 implementado hasta ahora:**
-- Capacitor 8.4.2 y proyecto Android: PR #81.
-- APK debug + AAB release de validación: PR #82.
-- APK instalada en teléfono Android real: aplicación nativa abre y el modo local funciona.
-- El flujo Android online/bóveda sincronizada todavía no funciona o no está validado; mantenerlo como deuda visible y no declararlo probado.
-- Android Keystore: PR #83, compilación Android real de CI completada; prueba específica de sellar/abrir en dispositivo pendiente.
-- Biometría/credencial segura del dispositivo: PR #84, compilación Android real de CI completada; prueba funcional en teléfono pendiente.
-- Cámara nativa: PR #86, implementación y compilación APK/AAB completadas; prueba funcional en teléfono pendiente.
-- Integración nativa de archivos: PR #87, implementación y compilación APK/AAB completadas; prueba funcional en teléfono pendiente.
+**V3 — Android con Capacitor:** CERRADA formalmente en issue #79. Las funciones principales se validaron en dispositivo real. La firma debug interna estable quedó configurada y verificada por CI con huella exacta; también se validó en teléfono una actualización APK `versionCode 1` → `versionCode 2` sin desinstalar. La clave definitiva de Play Store sigue siendo independiente.
 
-**Bloque oficial activo:** Compartir hacia OANIX.
+**Deuda Android diferida:** issue #105 — la huella puede tardar 2–3 cold starts. Se retoma durante el pulido Android/RC junto con pantalla de bloqueo, arranque y transiciones; no reducir requisitos de seguridad biométrica para ocultarlo.
 
-**Después:** cierre/validación de V3, identidad visual/firma y preparación de publicación.
+**Dirección visual aprobada:**
+- Base oscura premium; primer preset `Midnight Violet` (negro + morado, cian técnico secundario).
+- Tipografía con espacio suficiente para descendentes; no aceptar `g`, `p`, `q`, `y` o títulos recortados.
+- `O` de OANIX como núcleo tecnológico con anillos/orbita sutil, animación discreta y fallback de movimiento reducido.
+- Bordes definidos con glow suave controlado por variables de tema.
+- Notas visualmente separadas como tarjetas/papel digital tecnológico.
+- El círculo de nota puede mostrar automáticamente la primera imagen ya cifrada de esa nota; si no existe, conserva la inicial. No crear una copia plaintext ni persistencia paralela para la miniatura.
+- Construir el sistema de temas ahora; añadir presets/selector después de validar la base.
 
-**No avanzar todavía:** V4 salvo preparación arquitectónica estrictamente necesaria y registrada.
+**Regla actual:** no meter funciones de V4 para retrasar el rediseño. Primero consolidar PWA, luego Android + #105, luego identidad final/publicación.
 
 ---
 

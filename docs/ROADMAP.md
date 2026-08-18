@@ -177,29 +177,26 @@ Objetivo: empaquetar la misma base de código como aplicación Android y añadir
 - No entrar en V4 para retrasar indefinidamente el rediseño visual.
 - Se permiten pulidos visuales aislados necesarios para que un componente funcional nuevo no quede con apariencia provisional; el rediseño sistemático de botones, navegación, identidad y pantallas sigue reservado para la fase PWA.
 
-### Deudas visibles / validación restante de V3
+### Cierre de V3 y fase visual post-V3
 
-- APK / modo local: validado en teléfono real.
-- Cuenta/bóveda sincronizada dentro de Android: todavía no se declara funcional/validada.
-- Keystore `seal/open`: falta prueba específica en dispositivo.
-- Biometría: huella validada; acción unificada `Usar PIN, patrón o huella` de PR #95 pendiente de prueba real.
-- Cámara nativa: prueba funcional básica completada.
-- Archivos nativos: prueba funcional básica completada.
-- Compartir hacia OANIX: validar #95 con app ya abierta/en segundo plano, varias imágenes y progreso/apertura final.
-- Compartir nota saliente: validar sharesheet Android y contenido textual resultante.
-- Atrás/salida segura: validar comportamiento de nota → lista, confirmación y segundo Back; el pulido visual #95 también debe revisarse en dispositivo.
-- Firma estable de pruebas: pendiente; no comprometer una clave privada en el repositorio público.
-- Icono Android actual: provisional; dirección visual premium ya definida y debe aplicarse antes de publicación.
-- App ID: provisional hasta preparar publicación.
+- V3 Android con Capacitor quedó cerrada formalmente en issue #79 después de validar las funciones principales en teléfono real.
+- La firma debug interna estable se reconstruye solo desde GitHub Secret, Gradle la usa explícitamente y CI comprueba la huella SHA-256 exacta antes de publicar el APK.
+- La continuidad de actualización se validó físicamente instalando un APK `versionCode 1` y luego `versionCode 2` encima, sin desinstalar; Android aceptó la actualización.
+- La firma futura de Play Store permanece separada de la firma debug interna.
+- El problema conocido de huella en cold start permanece aislado en #105 y se retomará durante el pulido Android/RC, sin debilitar la seguridad biométrica.
+- `appId`, icono/splash finales e identidad de publicación permanecen como trabajo de la fase previa a publicación.
 
-### Orden restante V3
+### Rediseño visual activo
 
-1. Validar PR #95 en teléfono: share desde Google Photos con OANIX en segundo plano, acceso `PIN/patrón/huella`, compartir nota y diálogo de salida.
-2. Diagnosticar/validar cuenta y sincronización dentro del WebView Android.
-3. Resolver firma estable de builds de prueba sin exponer claves privadas.
-4. Congelar funcionalidad V3 y ejecutar el rediseño/pulido visual completo en la PWA.
-5. Validar una APK consolidada con el diseño final; completar icono/splash y confirmar `appId` antes de publicación.
-6. Revisar deudas de campo no bloqueantes y declarar cierre completo de V3 cuando corresponda.
+- [x] Arquitectura de tema basada en variables semánticas, comenzando por `Midnight Violet`.
+- [x] Tema oscuro base negro/morado con cian como acento técnico y contraste alto.
+- [x] Corrección preventiva de tipografía/descendentes para evitar letras cortadas en títulos grandes y campos de nota.
+- [x] Identidad de la `O` refinada como núcleo tecnológico con aro/orbita sutil y respeto a `prefers-reduced-motion`.
+- [x] Bordes/paneles más definidos con glow suave dependiente de tokens de tema.
+- [x] Lista de notas separada en tarjetas tipo papel digital/tech premium.
+- [x] Miniatura circular automática desde la primera imagen ya cifrada de la nota, con inicial como fallback y URL temporal revocada en memoria.
+- [ ] Selector visible de temas y presets adicionales después de validar visualmente el sistema base.
+- [ ] Aplicar el diseño consolidado a Android y retomar #105 dentro del pulido final/RC.
 
 ---
 
@@ -211,8 +208,8 @@ Objetivo: empaquetar la misma base de código como aplicación Android y añadir
 - [ ] Tablas
 - [ ] OCR
 - [ ] Compartir notas avanzado / formatos ricos
-- [ ] Temas y personalización avanzada
-- [ ] Avatar o foto opcional por nota, almacenada de forma privada
+- [ ] Temas y personalización avanzada *(la arquitectura de tema y Midnight Violet comienzan en la fase visual post-V3; V4 conserva personalización avanzada)*
+- [ ] Portada/avatar elegible explícitamente por nota *(el rediseño post-V3 ya usa de forma segura la primera imagen cifrada como miniatura automática)*
 - [ ] IA opcional con modelo de privacidad definido
 
 ---
@@ -223,8 +220,8 @@ Objetivo: empaquetar la misma base de código como aplicación Android y añadir
 
 **V2 — Cuenta y sincronización: CERRADA FUNCIONALMENTE ✅; deudas de validación #69, #70 y #73 continúan visibles.**
 
-**Versión activa: V3 — Android con Capacitor.**
+**V3 — Android con Capacitor: CERRADA ✅. Firma debug estable y actualización APK → APK validadas; #105 queda diferido al pulido Android/RC.**
 
-**Implementación funcional V3: completa. Bloque de validación activo: PR #95 y deudas Android restantes en dispositivo real.**
+**Fase activa: rediseño/pulido visual post-V3, empezando por la PWA compartida con Android.**
 
-No avanzar a V4 mientras V3 siga abierta, salvo preparación arquitectónica estrictamente necesaria y registrada.
+No iniciar funciones funcionales de V4 por impulso; el trabajo actual es identidad visual, temas base y preparación de publicación.
