@@ -4,6 +4,7 @@ import { registerSW } from 'virtual:pwa-register'
 import { App } from './app/App'
 import './styles/global.css'
 import './styles/redesign.css'
+import './styles/redesign-polish.css'
 
 type OanixUpdateWindow = Window & {
   __oanixApplyUpdate?: () => Promise<void>
