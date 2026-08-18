@@ -19,6 +19,16 @@ export function ThemeMenu() {
   const panelRef = useRef<HTMLElement | null>(null)
   const currentTheme = getOanixTheme(themeId)
 
+  function closeThemeAndWorkspaceMenu() {
+    setOpen(false)
+    window.requestAnimationFrame(() => {
+      const opener = document.querySelector<HTMLButtonElement>(
+        '.workspace-menu-wrap > button[aria-label="Menú de OANIX"]',
+      )
+      if (opener?.getAttribute('aria-expanded') === 'true') opener.click()
+    })
+  }
+
   useEffect(() => {
     function syncWorkspaceMenu() {
       const next = document.querySelector<HTMLElement>('.workspace-menu[role="menu"]')
@@ -49,7 +59,7 @@ export function ThemeMenu() {
     }
 
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') setOpen(false)
+      if (event.key === 'Escape') closeThemeAndWorkspaceMenu()
     }
 
     window.addEventListener('oanix:theme-change', handleThemeChange)
@@ -64,6 +74,7 @@ export function ThemeMenu() {
 
   function chooseTheme(nextThemeId: string) {
     setThemeId(applyOanixTheme(nextThemeId))
+    closeThemeAndWorkspaceMenu()
   }
 
   function renderThemeOption(theme: OanixThemePreset) {
@@ -121,7 +132,7 @@ export function ThemeMenu() {
         aria-label="Cerrar personalización"
         data-note-menu-root="true"
         onPointerDown={(event) => event.stopPropagation()}
-        onClick={() => setOpen(false)}
+        onClick={closeThemeAndWorkspaceMenu}
       />
       <section
         className="oanix-theme-menu oanix-theme-menu--workspace"
@@ -139,7 +150,7 @@ export function ThemeMenu() {
           <button
             className="oanix-theme-menu__close"
             type="button"
-            onClick={() => setOpen(false)}
+            onClick={closeThemeAndWorkspaceMenu}
             aria-label="Cerrar personalización"
           >
             ×
