@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
-import { compareNotesForList, isNoteRecord, noteBlocksToPlainText, type NoteRecord } from '../src/features/notes/noteTypes.ts'
+import { compareNotesForList, isNoteRecord, noteBlocksToFullPlainText, type NoteRecord } from '../src/features/notes/noteTypes.ts'
 
 test('one V1 note can contain every supported block without invalidating the record', () => {
   const note = {
@@ -100,7 +100,7 @@ test('one V1 note can contain every supported block without invalidating the rec
 
   assert.equal(isNoteRecord(note), true)
 
-  const searchableText = noteBlocksToPlainText(note.content.blocks)
+  const searchableText = noteBlocksToFullPlainText(note.content.blocks)
   for (const expected of [
     'Entrada del día',
     'Texto enriquecido seguro con enlace',

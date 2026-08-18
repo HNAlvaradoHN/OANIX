@@ -10,7 +10,7 @@ import {
   searchItemsByLocalFields,
   type LocalSearchField,
 } from '../src/features/search/localSearch.ts'
-import { noteBlocksToPlainText, type NoteRecord } from '../src/features/notes/noteTypes.ts'
+import { noteBlocksToFullPlainText, type NoteRecord } from '../src/features/notes/noteTypes.ts'
 
 function note(overrides: Partial<NoteRecord> = {}): NoteRecord {
   return {
@@ -42,7 +42,7 @@ function note(overrides: Partial<NoteRecord> = {}): NoteRecord {
 }
 
 function searchableText(item: NoteRecord): string {
-  return `${item.title}\n${noteBlocksToPlainText(item.content.blocks)}`
+  return `${item.title}\n${noteBlocksToFullPlainText(item.content.blocks)}`
 }
 
 test('normalizes case, accents and extra whitespace locally', () => {

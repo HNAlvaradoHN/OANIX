@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { loadNotes } from '../../features/notes/noteService'
-import { noteBlocksToPlainText } from '../../features/notes/noteTypes'
+import { noteBlocksToFullPlainText } from '../../features/notes/noteTypes'
 import { sharePlainText } from './outboundShare'
 
 function wait(milliseconds: number) {
@@ -74,7 +74,7 @@ export function NativeNoteShareRuntime() {
         return
       }
 
-      const plainContent = noteBlocksToPlainText(note.content.blocks)
+      const plainContent = noteBlocksToFullPlainText(note.content.blocks)
       const title = note.title.trim() || 'Nota de OANIX'
       const text = plainContent ? `${title}\n\n${plainContent}` : title
       await sharePlainText(title, text)

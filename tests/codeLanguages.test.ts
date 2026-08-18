@@ -4,7 +4,7 @@ import {
   CODE_LANGUAGES,
   isNoteRecord,
   normalizeCodeLanguage,
-  noteBlocksToPlainText,
+  noteBlocksToFullPlainText,
   type CodeLanguage,
   type NoteRecord,
 } from '../src/features/notes/noteTypes.ts'
@@ -70,14 +70,14 @@ test('the code selector exposes the complete expected language contract', () => 
   assert.deepEqual([...CODE_LANGUAGES], EXPECTED_LANGUAGES)
 })
 
-test('every code language survives validation with its text unchanged', () => {
+test('every code language survives validation with its full plaintext unchanged', () => {
   for (const language of CODE_LANGUAGES) {
     const sample = SAMPLE_CODE[language]
     const note = makeNote(language, sample)
 
     assert.equal(normalizeCodeLanguage(language), language)
     assert.equal(isNoteRecord(note), true, `${language} must be a valid persisted note`)
-    assert.equal(noteBlocksToPlainText(note.content.blocks), sample)
+    assert.equal(noteBlocksToFullPlainText(note.content.blocks), sample)
   }
 })
 
