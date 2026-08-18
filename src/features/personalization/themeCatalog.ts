@@ -1,10 +1,12 @@
 export type OanixThemeMode = 'dark' | 'light'
+export type OanixThemeKind = 'base' | 'style'
 
 export interface OanixThemePreset {
   id: string
   name: string
   description: string
   mode: OanixThemeMode
+  kind: OanixThemeKind
   swatches: readonly [string, string, string]
 }
 
@@ -13,10 +15,27 @@ export const DEFAULT_OANIX_THEME = 'midnight-violet'
 
 export const OANIX_THEMES: readonly OanixThemePreset[] = [
   {
+    id: 'classic-day',
+    name: 'Día',
+    description: 'Claro, limpio y familiar',
+    mode: 'light',
+    kind: 'base',
+    swatches: ['#f4f7fb', '#ffffff', '#2563eb'],
+  },
+  {
+    id: 'classic-night',
+    name: 'Noche',
+    description: 'Negro neutro y contraste alto',
+    mode: 'dark',
+    kind: 'base',
+    swatches: ['#05070b', '#10141c', '#dbe7ff'],
+  },
+  {
     id: 'midnight-violet',
     name: 'Midnight Violet',
     description: 'Grafito, violeta y cian',
     mode: 'dark',
+    kind: 'style',
     swatches: ['#0a0f18', '#6f61ee', '#67e8f9'],
   },
   {
@@ -24,6 +43,7 @@ export const OANIX_THEMES: readonly OanixThemePreset[] = [
     name: 'Cyber Blue',
     description: 'Azul noche y cian eléctrico',
     mode: 'dark',
+    kind: 'style',
     swatches: ['#07111f', '#3b82f6', '#22d3ee'],
   },
   {
@@ -31,6 +51,7 @@ export const OANIX_THEMES: readonly OanixThemePreset[] = [
     name: 'Graphite Neon',
     description: 'Grafito y verde turquesa',
     mode: 'dark',
+    kind: 'style',
     swatches: ['#0b1114', '#14b8a6', '#86efac'],
   },
   {
@@ -38,6 +59,7 @@ export const OANIX_THEMES: readonly OanixThemePreset[] = [
     name: 'Obsidian Gold',
     description: 'Negro premium y dorado',
     mode: 'dark',
+    kind: 'style',
     swatches: ['#0c0b09', '#d6a84b', '#f5d58b'],
   },
   {
@@ -45,6 +67,7 @@ export const OANIX_THEMES: readonly OanixThemePreset[] = [
     name: 'Crimson Core',
     description: 'Carbón y rojo profundo',
     mode: 'dark',
+    kind: 'style',
     swatches: ['#110b0f', '#ef4444', '#fb7185'],
   },
   {
@@ -52,6 +75,7 @@ export const OANIX_THEMES: readonly OanixThemePreset[] = [
     name: 'Aurora Rose',
     description: 'Ciruela oscura y rosa',
     mode: 'dark',
+    kind: 'style',
     swatches: ['#120b16', '#db4fa3', '#f9a8d4'],
   },
   {
@@ -59,6 +83,7 @@ export const OANIX_THEMES: readonly OanixThemePreset[] = [
     name: 'Pearl Violet',
     description: 'Blanco perla y violeta',
     mode: 'light',
+    kind: 'style',
     swatches: ['#f7f5fb', '#7658d6', '#9b87f5'],
   },
   {
@@ -66,6 +91,7 @@ export const OANIX_THEMES: readonly OanixThemePreset[] = [
     name: 'Blush Glass',
     description: 'Rosa cristal y ciruela',
     mode: 'light',
+    kind: 'style',
     swatches: ['#fff7fb', '#d9468f', '#f3a7c8'],
   },
   {
@@ -73,6 +99,7 @@ export const OANIX_THEMES: readonly OanixThemePreset[] = [
     name: 'Lavender Mist',
     description: 'Lavanda suave y violeta',
     mode: 'light',
+    kind: 'style',
     swatches: ['#f8f7ff', '#7c63d9', '#c4b5fd'],
   },
   {
@@ -80,16 +107,20 @@ export const OANIX_THEMES: readonly OanixThemePreset[] = [
     name: 'Ocean Pearl',
     description: 'Perla, azul y turquesa',
     mode: 'light',
+    kind: 'style',
     swatches: ['#f5fbfc', '#2387b8', '#2dd4bf'],
   },
 ] as const
+
+export const OANIX_BASE_THEMES = OANIX_THEMES.filter((theme) => theme.kind === 'base')
+export const OANIX_STYLE_THEMES = OANIX_THEMES.filter((theme) => theme.kind === 'style')
 
 export function isOanixThemeId(value: string | null): value is OanixThemePreset['id'] {
   return !!value && OANIX_THEMES.some((theme) => theme.id === value)
 }
 
 export function getOanixTheme(themeId: string): OanixThemePreset {
-  return OANIX_THEMES.find((theme) => theme.id === themeId) ?? OANIX_THEMES[0]
+  return OANIX_THEMES.find((theme) => theme.id === themeId) ?? OANIX_THEMES.find((theme) => theme.id === DEFAULT_OANIX_THEME) ?? OANIX_THEMES[0]
 }
 
 export function readSavedOanixTheme(): string {
