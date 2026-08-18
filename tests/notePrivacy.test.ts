@@ -46,7 +46,7 @@ test('privacy metadata is itself stored as an encrypted vault record', () => {
 
 test('protected notes hide content search locations while preserving title-only discovery', () => {
   assert.match(runtimeSource, /searchHidden = query\.length > 0 && locked && !titleMatches/)
-  assert.match(runtimeSource, /data-oanix-note-locked/)
+  assert.match(runtimeSource, /dataset\.oanixNoteLocked/)
   assert.match(runtimeSource, /Búsqueda privada/)
   assert.match(runtimeSource, /notas protegidas: solo título/)
 })
