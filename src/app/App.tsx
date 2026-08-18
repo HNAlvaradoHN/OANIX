@@ -14,8 +14,14 @@ import { NativeNoteShareRuntime } from '../platform/android/NativeNoteShareRunti
 import { AndroidBackRuntime } from '../platform/android/AndroidBackRuntime'
 import { AndroidBiometricRetryRuntime } from '../platform/android/AndroidBiometricRetryRuntime'
 import { AndroidKeystoreDiagnosticRuntime } from '../platform/android/AndroidKeystoreDiagnosticRuntime'
-import { isAndroidBiometricRuntime } from '../platform/android/biometricVault'
 import { isAndroidSystemInteractionActive } from '../platform/android/systemInteractionGuard'
+import {
+  AUTO_LOCK_CHANGE_EVENT,
+  autoLockDelayMs,
+  readSavedAutoLockMinutes,
+  shouldAutoLockAfterBackground,
+  type AutoLockMinutes,
+} from '../security/session/autoLockPolicy'
 import { lockLocalVault } from '../security/vault/vaultService'
 
 type OanixUpdateWindow = Window & {
@@ -90,7 +96,10 @@ export function App() {
   const [updating, setUpdating] = useState(false)
   const [updateError, setUpdateError] = useState('')
   const [vaultGateRevision, setVaultGateRevision] = useState(0)
-  const androidWasBackgrounded = useRef(false)
+  const backgroundedAt = useRef<number | null>(null)
+  const backgroundAutoLocked = useRef(false)
+  const autoLockTimer = useRef<number | null>(null)
+  const autoLockMinutes = useRef<AutoLockMinutes>(readSavedAutoLockMinutes())
 
   useEffect(() => {
     const updateWindow = window as OanixUpdateWindow
@@ -102,25 +111,76 @@ export function App() {
   }, [])
 
   useEffect(() => {
-    if (!isAndroidBiometricRuntime()) return
+    function clearAutoLockTimer() {
+      if (autoLockTimer.current === null) return
+      window.clearTimeout(autoLockTimer.current)
+      autoLockTimer.current = null
+    }
 
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden') {
-        if (isAndroidSystemInteractionActive()) return
+    function lockAfterGracePeriod() {
+      if (backgroundedAt.current === null) return
+      lockLocalVault()
+      backgroundAutoLocked.current = true
+      autoLockTimer.current = null
+    }
 
-        lockLocalVault()
-        androidWasBackgrounded.current = true
+    function scheduleAutoLock() {
+      clearAutoLockTimer()
+      const hiddenAt = backgroundedAt.current
+      if (hiddenAt === null) return
+
+      const remaining = autoLockDelayMs(autoLockMinutes.current) - Math.max(0, Date.now() - hiddenAt)
+      if (remaining <= 0) {
+        lockAfterGracePeriod()
         return
       }
 
-      if (document.visibilityState === 'visible' && androidWasBackgrounded.current) {
-        androidWasBackgrounded.current = false
+      autoLockTimer.current = window.setTimeout(lockAfterGracePeriod, remaining)
+    }
+
+    function handleVisibilityChange() {
+      if (document.visibilityState === 'hidden') {
+        if (isAndroidSystemInteractionActive()) return
+
+        backgroundedAt.current = Date.now()
+        backgroundAutoLocked.current = false
+        scheduleAutoLock()
+        return
+      }
+
+      if (document.visibilityState !== 'visible' || backgroundedAt.current === null) return
+
+      clearAutoLockTimer()
+      if (
+        !backgroundAutoLocked.current
+        && shouldAutoLockAfterBackground(backgroundedAt.current, Date.now(), autoLockMinutes.current)
+      ) {
+        lockLocalVault()
+        backgroundAutoLocked.current = true
+      }
+
+      const needsLockedGate = backgroundAutoLocked.current
+      backgroundedAt.current = null
+      backgroundAutoLocked.current = false
+
+      if (needsLockedGate) {
         setVaultGateRevision((value) => value + 1)
       }
     }
 
+    function handleAutoLockPreferenceChange(event: Event) {
+      const next = (event as CustomEvent<AutoLockMinutes>).detail
+      autoLockMinutes.current = next ?? readSavedAutoLockMinutes()
+      if (backgroundedAt.current !== null) scheduleAutoLock()
+    }
+
     document.addEventListener('visibilitychange', handleVisibilityChange)
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener(AUTO_LOCK_CHANGE_EVENT, handleAutoLockPreferenceChange)
+    return () => {
+      clearAutoLockTimer()
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener(AUTO_LOCK_CHANGE_EVENT, handleAutoLockPreferenceChange)
+    }
   }, [])
 
   async function handleApplyUpdate() {
