@@ -4,17 +4,20 @@ import test from 'node:test'
 
 const main = readFileSync('src/main.tsx', 'utf8')
 const redesign = readFileSync('src/styles/redesign.css', 'utf8')
+const themes = readFileSync('src/styles/themes.css', 'utf8')
 const avatar = readFileSync('src/features/notes/NoteAvatar.tsx', 'utf8')
 const workspace = readFileSync('src/features/notes/NotesWorkspace.tsx', 'utf8')
 const gate = readFileSync('src/app/VaultGate.tsx', 'utf8')
 
-test('Midnight Violet is a semantic theme layer rather than per-screen hardcoding', () => {
-  assert.match(main, /dataset\.oanixTheme \|\|= 'midnight-violet'/)
+test('Midnight Violet remains the semantic baseline while personalization may restore another preset', () => {
+  assert.match(main, /applyOanixTheme\(readSavedOanixTheme\(\), false\)/)
   assert.match(main, /styles\/redesign\.css/)
+  assert.match(main, /styles\/themes\.css/)
   assert.match(redesign, /:root\[data-oanix-theme='midnight-violet'\]/)
-  assert.match(redesign, /--oanix-accent:/)
-  assert.match(redesign, /--oanix-border:/)
-  assert.match(redesign, /--oanix-glow:/)
+  assert.match(themes, /:root\[data-oanix-theme='midnight-violet'\]/)
+  assert.match(themes, /--theme-accent:/)
+  assert.match(themes, /--theme-border:/)
+  assert.match(themes, /--theme-glow:/)
 })
 
 test('headline and title typography explicitly protect descenders from clipping', () => {
@@ -48,4 +51,5 @@ test('Google account label remains session-driven and no personal email is hardc
   assert.match(gate, /onlineSession\?\.email/)
   assert.doesNotMatch(gate, /geovaalvarado0@gmail\.com/i)
   assert.doesNotMatch(redesign, /geovaalvarado0@gmail\.com/i)
+  assert.doesNotMatch(themes, /geovaalvarado0@gmail\.com/i)
 })
