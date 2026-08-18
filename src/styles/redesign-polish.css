@@ -1,0 +1,208 @@
+/* OANIX post-V3 visual polish
+ * Loaded after redesign.css so this file can refine the first preset without
+ * weakening the semantic theme layer or touching functional code.
+ */
+
+:root[data-oanix-theme='midnight-violet'] {
+  --oanix-bg: #0a0f18;
+  --oanix-bg-deep: #070a10;
+  --oanix-panel: #111827;
+  --oanix-panel-2: #172033;
+  --oanix-panel-3: #1d293c;
+  --oanix-paper: #141c2a;
+  --oanix-paper-hover: #1a2537;
+  --oanix-accent: #8d7aff;
+  --oanix-accent-strong: #6f61ee;
+  --oanix-accent-soft: #b9afff;
+  --oanix-border: rgba(128, 148, 190, .28);
+  --oanix-border-strong: rgba(143, 159, 205, .5);
+  --oanix-border-muted: rgba(143, 159, 190, .18);
+  --oanix-glow: rgba(111, 97, 238, .18);
+  --oanix-glow-cyan: rgba(74, 222, 255, .12);
+  --oanix-shadow: rgba(0, 0, 0, .48);
+  --oanix-grid: rgba(154, 174, 205, .035);
+}
+
+/* The preset stays dark, but graphite/navy becomes the dominant surface.
+ * Violet is reserved for active/identity accents rather than the whole canvas.
+ */
+.vault-shell {
+  background:
+    linear-gradient(var(--oanix-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--oanix-grid) 1px, transparent 1px),
+    radial-gradient(circle at 10% 8%, rgba(79, 103, 255, .16), transparent 32rem),
+    radial-gradient(circle at 86% 72%, rgba(111, 97, 238, .08), transparent 34rem),
+    radial-gradient(circle at 64% 40%, rgba(34, 211, 238, .08), transparent 22rem),
+    var(--oanix-bg-deep) !important;
+  background-size: 46px 46px, 46px 46px, auto, auto, auto, auto !important;
+}
+
+.vault-glow--one { background: #4f67ff !important; opacity: .14 !important; }
+.vault-glow--two { background: #6f61ee !important; opacity: .09 !important; }
+.vault-glow--three { background: #22d3ee !important; opacity: .11 !important; }
+
+.vault-assurances > div {
+  background: linear-gradient(150deg, rgba(24, 33, 48, .76), rgba(12, 17, 27, .68)) !important;
+}
+
+.vault-card {
+  background: linear-gradient(155deg, rgba(24, 32, 48, .97), rgba(10, 14, 23, .97)) !important;
+  box-shadow:
+    0 28px 78px var(--oanix-shadow),
+    0 0 28px rgba(79, 103, 255, .09),
+    0 0 1px 1px rgba(98, 226, 255, .08),
+    inset 0 1px rgba(255,255,255,.055) !important;
+}
+
+.vault-state,
+.vault-access__lock,
+.vault-restore__button,
+.field input {
+  background: rgba(8, 13, 22, .72) !important;
+}
+
+.notes-sidebar {
+  border-right-color: rgba(128,148,190,.28) !important;
+  background:
+    linear-gradient(var(--oanix-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--oanix-grid) 1px, transparent 1px),
+    linear-gradient(170deg, #121927, #0b111b) !important;
+  background-size: 38px 38px, 38px 38px, auto !important;
+  box-shadow: 14px 0 48px rgba(0,0,0,.18), 1px 0 18px rgba(79,103,255,.06) !important;
+}
+
+.notes-header,
+.note-view__header {
+  border-bottom-color: rgba(128,148,190,.2) !important;
+  background: rgba(11,16,26,.92) !important;
+}
+
+.workspace-menu,
+.note-view__menu,
+.note-row__menu {
+  border-color: rgba(137,151,193,.3) !important;
+  background: rgba(18,24,36,.99) !important;
+  box-shadow: 0 20px 55px rgba(0,0,0,.42), 0 0 22px rgba(79,103,255,.06) !important;
+}
+
+.notes-tabs-shell,
+.notes-tabs,
+.notes-tabs-scroll-button,
+.notes-tag-filter,
+.notes-search {
+  background: rgba(12,17,27,.95) !important;
+  border-color: rgba(128,148,190,.16) !important;
+}
+
+.tag-filter-button,
+.tag-manage-button,
+.notes-search__field {
+  border-color: rgba(128,148,190,.24) !important;
+  background: rgba(19,26,40,.88) !important;
+}
+
+.notes-list {
+  scrollbar-color: rgba(112,132,190,.5) transparent !important;
+}
+
+/* Keep every card in a predictable stacking layer. Hover uses transform in the
+ * base redesign, which creates a stacking context; an open menu must outrank it.
+ */
+.note-row { z-index: 0; }
+.note-row:hover { z-index: 2; }
+.note-row--menu-open { z-index: 120 !important; }
+.note-row__menu-wrap { z-index: 4; }
+.note-row__menu { z-index: 130 !important; }
+
+.note-row {
+  border-color: rgba(128,148,190,.24) !important;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.035), transparent 38%),
+    linear-gradient(150deg, rgba(24,32,47,.96), rgba(13,18,29,.98)) !important;
+}
+
+.note-row:hover {
+  border-color: rgba(133,151,202,.4) !important;
+  background: linear-gradient(150deg, rgba(31,41,59,.98), rgba(16,22,34,.99)) !important;
+  box-shadow: 0 11px 30px rgba(0,0,0,.24), 0 0 22px rgba(79,103,255,.06) !important;
+}
+
+.note-row--selected,
+.note-row--menu-open {
+  border-color: rgba(141,122,255,.56) !important;
+  background: linear-gradient(145deg, rgba(83,79,177,.16), rgba(15,22,35,.99)) !important;
+  box-shadow: 0 12px 34px rgba(0,0,0,.26), 0 0 26px rgba(111,97,238,.09), inset 0 0 0 1px rgba(103,232,249,.05) !important;
+}
+
+.note-row__avatar,
+.note-view__avatar {
+  border-color: rgba(137,153,218,.58) !important;
+  background:
+    radial-gradient(circle at 35% 25%, rgba(255,255,255,.14), transparent 20%),
+    linear-gradient(145deg,#6257c7,#2f579a) !important;
+  box-shadow: 0 0 0 3px rgba(111,97,238,.045), 0 0 16px rgba(79,103,255,.13) !important;
+}
+
+/* Long labels never escape the digital-paper card. The earlier redesign's
+ * descender protection accidentally overrode the list's original ellipsis.
+ */
+.note-row__open,
+.note-row__body,
+.note-row__topline,
+.note-view__identity > div {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.note-row__topline strong,
+.note-view__identity strong {
+  min-width: 0;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.note-row__preview {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.note-view {
+  background:
+    linear-gradient(var(--oanix-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--oanix-grid) 1px, transparent 1px),
+    radial-gradient(circle at 78% 12%, rgba(79,103,255,.09), transparent 28rem),
+    var(--oanix-bg) !important;
+  background-size: 46px 46px, 46px 46px, auto, auto !important;
+}
+
+.note-canvas::before {
+  background: radial-gradient(circle at 20% 0%, rgba(79,103,255,.045), transparent 22rem) !important;
+}
+
+.editor-frame {
+  border-color: rgba(128,148,190,.28) !important;
+  background: linear-gradient(180deg, rgba(24,33,48,.97), rgba(13,18,29,.99)) !important;
+  box-shadow: 0 20px 55px rgba(0,0,0,.28), 0 0 30px rgba(79,103,255,.055), inset 0 1px rgba(255,255,255,.035) !important;
+}
+
+.editor-contact-card,
+.editor-daily-entry__date,
+.note-tag-chip {
+  border-color: rgba(128,148,190,.24) !important;
+}
+
+.folder-dialog__panel,
+.note-info-dialog__panel,
+.account-panel {
+  border-color: rgba(128,148,190,.32) !important;
+  background: linear-gradient(160deg,#182133,#0d131f) !important;
+  box-shadow: 0 28px 80px rgba(0,0,0,.5), 0 0 30px rgba(79,103,255,.07) !important;
+}
+
+* {
+  scrollbar-color: rgba(112,132,190,.42) transparent !important;
+}
+*::-webkit-scrollbar-thumb { background: rgba(112,132,190,.3) !important; background-clip: padding-box !important; }
+*::-webkit-scrollbar-thumb:hover { background: rgba(141,122,255,.42) !important; background-clip: padding-box !important; }
