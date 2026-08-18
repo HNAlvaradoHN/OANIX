@@ -1,3 +1,5 @@
+import { syncOanixSystemTheme } from './systemThemeBridge'
+
 export type OanixThemeMode = 'dark' | 'light'
 export type OanixThemeKind = 'base' | 'style'
 
@@ -17,7 +19,7 @@ export const OANIX_THEMES: readonly OanixThemePreset[] = [
   {
     id: 'classic-day',
     name: 'Día',
-    description: 'Claro, limpio y familiar',
+    description: 'Blanco, azul y luz limpia',
     mode: 'light',
     kind: 'base',
     swatches: ['#f4f7fb', '#ffffff', '#2563eb'],
@@ -137,6 +139,7 @@ export function applyOanixTheme(themeId: string, persist = true): string {
   document.documentElement.dataset.oanixTheme = theme.id
   document.documentElement.dataset.oanixThemeMode = theme.mode
   document.documentElement.style.colorScheme = theme.mode
+  syncOanixSystemTheme(theme.swatches[0], theme.mode)
 
   if (persist) {
     try {
