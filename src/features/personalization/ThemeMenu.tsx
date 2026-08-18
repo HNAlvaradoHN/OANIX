@@ -22,36 +22,26 @@ export function ThemeMenu() {
   const [open, setOpen] = useState(false)
   const [themeId, setThemeId] = useState(() => readSavedOanixTheme())
   const [autoLockMinutes, setAutoLockMinutes] = useState<AutoLockMinutes>(() => readSavedAutoLockMinutes())
-  const [workspaceMenu, setWorkspaceMenu] = useState<HTMLElement | null>(null)
-  const entryRef = useRef<HTMLDivElement | null>(null)
+  const [host, setHost] = useState<HTMLElement | null>(null)
   const panelRef = useRef<HTMLElement | null>(null)
+  const triggerRef = useRef<HTMLButtonElement | null>(null)
   const currentTheme = getOanixTheme(themeId)
 
-  function closeThemeAndWorkspaceMenu() {
-    setOpen(false)
-    window.requestAnimationFrame(() => {
-      const opener = document.querySelector<HTMLButtonElement>(
-        '.workspace-menu-wrap > button[aria-label="Menú de OANIX"]',
-      )
-      if (opener?.getAttribute('aria-expanded') === 'true') opener.click()
-    })
-  }
-
   useEffect(() => {
-    function syncWorkspaceMenu() {
-      const next = document.querySelector<HTMLElement>('.workspace-menu[role="menu"]')
-      setWorkspaceMenu((current) => current === next ? current : next)
+    function syncHost() {
+      const next = document.querySelector<HTMLElement>('.oanix-personalization-slot')
+      setHost((current) => current === next ? current : next)
     }
 
-    syncWorkspaceMenu()
-    const observer = new MutationObserver(syncWorkspaceMenu)
+    syncHost()
+    const observer = new MutationObserver(syncHost)
     observer.observe(document.body, { childList: true, subtree: true })
     return () => observer.disconnect()
   }, [])
 
   useEffect(() => {
-    if (!workspaceMenu) setOpen(false)
-  }, [workspaceMenu])
+    if (!host) setOpen(false)
+  }, [host])
 
   useEffect(() => {
     function handleThemeChange(event: Event) {
@@ -62,12 +52,12 @@ export function ThemeMenu() {
     function handlePointerDown(event: PointerEvent) {
       const target = event.target
       if (!(target instanceof Node)) return
-      if (entryRef.current?.contains(target) || panelRef.current?.contains(target)) return
+      if (triggerRef.current?.contains(target) || panelRef.current?.contains(target)) return
       setOpen(false)
     }
 
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') closeThemeAndWorkspaceMenu()
+      if (event.key === 'Escape') setOpen(false)
     }
 
     window.addEventListener('oanix:theme-change', handleThemeChange)
@@ -82,7 +72,7 @@ export function ThemeMenu() {
 
   function chooseTheme(nextThemeId: string) {
     setThemeId(applyOanixTheme(nextThemeId))
-    closeThemeAndWorkspaceMenu()
+    setOpen(false)
   }
 
   function chooseAutoLock(nextMinutes: AutoLockMinutes) {
@@ -101,9 +91,7 @@ export function ThemeMenu() {
         role="listitem"
       >
         <span className="oanix-theme-option__swatches" aria-hidden="true">
-          {theme.swatches.map((color) => (
-            <span key={color} style={{ background: color }} />
-          ))}
+          {theme.swatches.map((color) => <span key={color} style={{ background: color }} />)}
         </span>
         <span className="oanix-theme-option__copy">
           <strong>{theme.name}</strong>
@@ -115,75 +103,75 @@ export function ThemeMenu() {
     )
   }
 
-  const menuEntry = workspaceMenu ? createPortal(
-    <div className="oanix-personalization__workspace-entry" ref={entryRef}>
-      <button
-        className="oanix-personalization__menuitem"
-        type="button"
-        role="menuitem"
-        onClick={() => setOpen((value) => !value)}
-        aria-expanded={open}
-        aria-haspopup="dialog"
-      >
-        <span className="oanix-personalization__menuitem-icon" aria-hidden="true">✦</span>
-        <span className="oanix-personalization__menuitem-copy">
-          <strong>Personalización</strong>
-          <small>{currentTheme.name}</small>
-        </span>
-        <span className="oanix-personalization__menuitem-chevron" aria-hidden="true">›</span>
-      </button>
-    </div>,
-    workspaceMenu,
+  const entry = host ? createPortal(
+    <button
+      ref={triggerRef}
+      className="oanix-personalization-trigger"
+      type="button"
+      onClick={() => setOpen((value) => !value)}
+      aria-expanded={open}
+      aria-haspopup="dialog"
+      title="Personalización"
+    >
+      <span className="oanix-personalization-trigger__icon" aria-hidden="true">✦</span>
+      <span className="oanix-personalization-trigger__copy">
+        <strong>Personalización</strong>
+        <small>{currentTheme.name}</small>
+      </span>
+      <span className="oanix-personalization-trigger__chevron" aria-hidden="true">⌄</span>
+    </button>,
+    host,
   ) : null
 
-  const themePanel = open ? createPortal(
+  const panel = open ? createPortal(
     <Fragment>
       <button
         className="oanix-theme-backdrop"
         type="button"
         aria-label="Cerrar personalización"
         data-note-menu-root="true"
-        onPointerDown={(event) => event.stopPropagation()}
-        onClick={closeThemeAndWorkspaceMenu}
+        onClick={() => setOpen(false)}
       />
       <section
         className="oanix-theme-menu oanix-theme-menu--workspace"
         aria-label="Personalización de OANIX"
         data-note-menu-root="true"
         ref={panelRef}
-        onPointerDown={(event) => event.stopPropagation()}
       >
         <header className="oanix-theme-menu__header">
           <div>
             <span className="oanix-theme-menu__eyebrow">PERSONALIZACIÓN</span>
             <strong>Elegí tu ambiente</strong>
-            <p>El tema y el tiempo de bloqueo se guardan solo en este dispositivo.</p>
+            <p>El tema se aplica al instante y se guarda solo en este dispositivo.</p>
           </div>
-          <button
-            className="oanix-theme-menu__close"
-            type="button"
-            onClick={closeThemeAndWorkspaceMenu}
-            aria-label="Cerrar personalización"
-          >
-            ×
-          </button>
+          <button className="oanix-theme-menu__close" type="button" onClick={() => setOpen(false)} aria-label="Cerrar personalización">×</button>
         </header>
 
         <div className="oanix-theme-menu__content">
           <section className="oanix-theme-section" aria-labelledby="oanix-theme-base-title">
             <div className="oanix-theme-section__heading">
               <strong id="oanix-theme-base-title">Base</strong>
-              <span>Día y noche sin estilo dominante</span>
+              <span>Día y noche neutrales</span>
             </div>
             <div className="oanix-theme-menu__grid oanix-theme-menu__grid--base" role="list" aria-label="Temas base">
               {OANIX_BASE_THEMES.map(renderThemeOption)}
             </div>
           </section>
 
+          <section className="oanix-theme-section" aria-labelledby="oanix-theme-style-title">
+            <div className="oanix-theme-section__heading">
+              <strong id="oanix-theme-style-title">10 ambientes</strong>
+              <span>Colores con personalidad propia</span>
+            </div>
+            <div className="oanix-theme-menu__grid" role="list" aria-label="Diez temas especiales">
+              {OANIX_STYLE_THEMES.map(renderThemeOption)}
+            </div>
+          </section>
+
           <section className="oanix-theme-section oanix-security-section" aria-labelledby="oanix-auto-lock-title">
             <div className="oanix-theme-section__heading">
               <strong id="oanix-auto-lock-title">Seguridad</strong>
-              <span>Bloqueo automático al dejar OANIX en segundo plano</span>
+              <span>Bloqueo automático al dejar OANIX</span>
             </div>
             <div className="oanix-auto-lock" role="radiogroup" aria-label="Tiempo de bloqueo automático">
               {AUTO_LOCK_OPTIONS.map((option) => {
@@ -204,19 +192,7 @@ export function ThemeMenu() {
                 )
               })}
             </div>
-            <p className="oanix-auto-lock__hint">
-              Si volvés antes del tiempo elegido, seguís donde estabas. El botón 🔒 siempre bloquea de inmediato.
-            </p>
-          </section>
-
-          <section className="oanix-theme-section" aria-labelledby="oanix-theme-style-title">
-            <div className="oanix-theme-section__heading">
-              <strong id="oanix-theme-style-title">Ambientes</strong>
-              <span>Presets con personalidad propia</span>
-            </div>
-            <div className="oanix-theme-menu__grid" role="list" aria-label="Temas especiales">
-              {OANIX_STYLE_THEMES.map(renderThemeOption)}
-            </div>
+            <p className="oanix-auto-lock__hint">El botón 🔒 siempre bloquea de inmediato.</p>
           </section>
         </div>
       </section>
@@ -224,5 +200,5 @@ export function ThemeMenu() {
     document.body,
   ) : null
 
-  return <>{menuEntry}{themePanel}</>
+  return <>{entry}{panel}</>
 }
