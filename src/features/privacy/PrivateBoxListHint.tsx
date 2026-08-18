@@ -54,8 +54,8 @@ export function PrivateBoxListHint() {
   if (!host || !show) return null
 
   return createPortal(
-    <div className="oanix-private-list-hint" role="status">
-      <span aria-hidden="true">🗄️</span>
+    <div className="notes-empty oanix-private-list-hint" role="status">
+      <div className="notes-empty__icon" aria-hidden="true">🗄️</div>
       <strong>No hay notas visibles aquí</strong>
       <p>Las notas de Caja privada permanecen apartadas de la lista normal.</p>
     </div>,
