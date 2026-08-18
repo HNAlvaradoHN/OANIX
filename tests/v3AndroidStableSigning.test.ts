@@ -42,7 +42,15 @@ test('main verifies the exact expected OANIX debug signing certificate', () => {
   assert.match(workflow, /Stable OANIX debug signing certificate verified/)
 })
 
-test('main publishes an observable commit status only after stable signing verification', () => {
+test('main publishes a pending observable status before Android signing work begins', () => {
+  assert.match(workflow, /Publish stable signing verification pending status/)
+  assert.match(workflow, /state: 'pending'/)
+  assert.match(workflow, /context: 'oanix\/stable-debug-signing'/)
+  assert.match(workflow, /Android stable signing verification is running/)
+  assert.match(workflow, /target_url: `\$\{context\.serverUrl\}\/\$\{context\.repo\.owner\}\/\$\{context\.repo\.repo\}\/actions\/runs\/\$\{context\.runId\}`/)
+})
+
+test('main upgrades the observable status to success only after stable signing verification', () => {
   assert.match(workflow, /statuses: write/)
   assert.match(workflow, /Publish stable signing verification status/)
   assert.match(workflow, /repos\.createCommitStatus/)
@@ -50,6 +58,14 @@ test('main publishes an observable commit status only after stable signing verif
   assert.match(workflow, /state: 'success'/)
   assert.match(workflow, /Stable OANIX debug signing certificate verified/)
   assert.match(workflow, /target_url: `\$\{context\.serverUrl\}\/\$\{context\.repo\.owner\}\/\$\{context\.repo\.repo\}\/actions\/runs\/\$\{context\.runId\}`/)
+})
+
+test('Gradle retries only transient Maven HTTP 429 failures', () => {
+  assert.match(workflow, /for attempt in 1 2 3/)
+  assert.match(workflow, /grep -Eq '429\|Too Many Requests'/)
+  assert.match(workflow, /Gradle failed for a non-rate-limit reason; not retrying/)
+  assert.match(workflow, /Maven rate limiting persisted after 3 attempts/)
+  assert.match(workflow, /retrying Gradle in/)
 })
 
 test('stable keystore material is removed from the runner workspace after signing', () => {
