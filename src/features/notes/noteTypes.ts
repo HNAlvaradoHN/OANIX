@@ -352,7 +352,18 @@ function runsToPlainText(runs: RichTextRun[]): string {
   return runs.map((run) => run.text).join('')
 }
 
+/**
+ * List-safe secondary label. It intentionally exposes only the title of the most
+ * recent daily entry. Note body text, contacts, code and image metadata never
+ * become a list preview.
+ */
 export function noteBlocksToPlainText(blocks: StoredNoteBlock[]): string {
+  const latestEntry = [...blocks].reverse().find((block) => block.type === 'dailyEntry')
+  return latestEntry?.type === 'dailyEntry' ? latestEntry.title.trim() : ''
+}
+
+/** Full plaintext representation for explicit user actions such as Share note. */
+export function noteBlocksToFullPlainText(blocks: StoredNoteBlock[]): string {
   return blocks
     .flatMap((block) => {
       if (block.type === 'divider') return []
