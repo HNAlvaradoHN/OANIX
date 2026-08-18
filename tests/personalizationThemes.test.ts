@@ -4,6 +4,7 @@ import test from 'node:test'
 
 const main = readFileSync('src/main.tsx', 'utf8')
 const catalog = readFileSync('src/features/personalization/themeCatalog.ts', 'utf8')
+const systemBridge = readFileSync('src/features/personalization/systemThemeBridge.ts', 'utf8')
 const menu = readFileSync('src/features/personalization/ThemeMenu.tsx', 'utf8')
 const workspace = readFileSync('src/features/notes/NotesWorkspace.tsx', 'utf8')
 const menuCss = readFileSync('src/features/personalization/personalization.css', 'utf8')
@@ -11,6 +12,10 @@ const workspaceMenuCss = readFileSync('src/features/personalization/personalizat
 const themesCss = readFileSync('src/styles/themes.css', 'utf8')
 const baseThemesCss = readFileSync('src/styles/base-themes.css', 'utf8')
 const notebookCss = readFileSync('src/styles/notebook-polish.css', 'utf8')
+const finalPolishCss = readFileSync('src/styles/final-visual-polish.css', 'utf8')
+const androidStyles = readFileSync('android/app/src/main/res/values/styles.xml', 'utf8')
+const mainActivity = readFileSync('android/app/src/main/java/io/github/hnalvaradohn/oanix/MainActivity.java', 'utf8')
+const systemUiPlugin = readFileSync('android/app/src/main/java/io/github/hnalvaradohn/oanix/OanixSystemUiPlugin.java', 'utf8')
 
 test('personalization keeps ten styled presets plus classic day and night bases', () => {
   const styledIds = [
@@ -34,6 +39,7 @@ test('theme choice is only a local UI preference and applies before React paints
   assert.match(main, /<ThemeMenu \/>/)
   assert.match(main, /styles\/themes\.css/)
   assert.match(main, /styles\/base-themes\.css/)
+  assert.match(main, /styles\/final-visual-polish\.css/)
 })
 
 test('personalization lives inside the workspace three-dot menu instead of a floating header trigger', () => {
@@ -52,6 +58,8 @@ test('theme panel is part of the safe menu area so clicks cannot fall through to
   assert.match(workspace, /target\.closest\('\[data-note-menu-root="true"\]'\)/)
   assert.match(menu, /data-note-menu-root="true"/)
   assert.match(menu, /panelRef\.current\?\.contains\(target\)/)
+  assert.match(menu, /oanix-theme-backdrop/)
+  assert.match(workspaceMenuCss, /\.oanix-theme-backdrop/)
 })
 
 test('personalization panel still exposes dark and light options', () => {
@@ -71,10 +79,28 @@ test('classic day and night define neutral semantic palettes', () => {
 
 test('classic day explicitly neutralizes dark-first legacy surfaces', () => {
   assert.match(baseThemesCss, /data-oanix-theme='classic-day'[^\n]*\{[\s\S]*color-scheme: light !important/)
-  assert.match(baseThemesCss, /data-oanix-theme='classic-day'\] \.notes-sidebar[\s\S]*#ffffff !important/)
-  assert.match(baseThemesCss, /data-oanix-theme='classic-day'\] \.note-row[\s\S]*#ffffff/)
-  assert.match(baseThemesCss, /data-oanix-theme='classic-day'\] \.editor-frame[\s\S]*#ffffff/)
-  assert.match(baseThemesCss, /data-oanix-theme='classic-day'\] \.oanix-theme-menu--workspace[\s\S]*rgba\(255,255,255,\.98\) !important/)
+  assert.match(finalPolishCss, /data-oanix-theme='classic-day'[\s\S]*--theme-bg: #f4f7fb/)
+  assert.match(finalPolishCss, /data-oanix-theme='classic-day'\] \.notes-sidebar[\s\S]*#ffffff !important/)
+  assert.match(finalPolishCss, /data-oanix-theme='classic-day'\] \.note-row[\s\S]*#ffffff/)
+  assert.match(finalPolishCss, /data-oanix-theme='classic-day'\] \.editor-frame[\s\S]*#ffffff/)
+  assert.match(finalPolishCss, /data-oanix-theme='classic-day'\] \.oanix-theme-menu--workspace[\s\S]*rgba\(255,255,255,\.98\) !important/)
+})
+
+test('selected theme also controls browser and Android system chrome', () => {
+  assert.match(catalog, /syncOanixSystemTheme\(theme\.swatches\[0\], theme\.mode\)/)
+  assert.match(systemBridge, /meta\[name="theme-color"\]/)
+  assert.match(systemBridge, /Capacitor\.isNativePlatform\(\)/)
+  assert.match(systemBridge, /registerPlugin<OanixSystemUiPlugin>\('OanixSystemUi'\)/)
+  assert.match(mainActivity, /registerPlugin\(OanixSystemUiPlugin\.class\)/)
+  assert.match(systemUiPlugin, /setNavigationBarColor\(color\)/)
+  assert.match(systemUiPlugin, /setStatusBarColor\(color\)/)
+  assert.match(systemUiPlugin, /setBackgroundColor\(color\)/)
+})
+
+test('Android host never force-darkens web presets', () => {
+  assert.match(androidStyles, /Theme\.AppCompat\.Light\.NoActionBar/)
+  assert.match(androidStyles, /android:forceDarkAllowed">false/)
+  assert.doesNotMatch(androidStyles, /Theme\.AppCompat\.DayNight\.NoActionBar/)
 })
 
 test('theme layer fixes the three visual details found during review', () => {
