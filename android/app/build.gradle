@@ -1,5 +1,7 @@
 apply plugin: 'com.android.application'
 
+def oanixStableDebugKeystore = file('oanix-stable-debug.keystore')
+
 android {
     namespace = "io.github.hnalvaradohn.oanix"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -16,7 +18,20 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        debug {
+            if (oanixStableDebugKeystore.exists()) {
+                storeFile oanixStableDebugKeystore
+                storePassword 'android'
+                keyAlias 'androiddebugkey'
+                keyPassword 'android'
+            }
+        }
+    }
     buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
@@ -39,7 +54,7 @@ dependencies {
     implementation project(':capacitor-android')
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
-    androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
+    androidTestImplementation "androidx.test.espresso:espresso-core:$espressoCoreVersion"
     implementation project(':capacitor-cordova-android-plugins')
 }
 
