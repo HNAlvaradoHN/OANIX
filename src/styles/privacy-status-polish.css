@@ -1,99 +1,79 @@
 .oanix-privacy-status {
-  display: flex;
-  flex-direction: column;
-  gap: .5rem;
-  padding: 1rem;
-}
-
-.oanix-privacy-status > div:not(.oanix-privacy-status__heading) {
-  display: flex;
-  align-items: center;
-  gap: .7rem;
-  padding: .58rem .7rem;
-  border: 1px solid color-mix(in srgb, var(--theme-border, #dbe2ea) 82%, transparent);
-  border-radius: .75rem;
-  background: color-mix(in srgb, var(--theme-surface-2, #f8fafc) 72%, transparent);
-  box-shadow: none;
-}
-
-.oanix-privacy-status > div:not(.oanix-privacy-status__heading) > span {
   display: grid;
-  place-items: center;
-  width: 1.8rem;
-  height: 1.8rem;
-  flex: 0 0 1.8rem;
-  font-size: 1rem;
+  gap: 0;
+  padding: .72rem 1rem .3rem;
 }
 
-.oanix-privacy-status > div:not(.oanix-privacy-status__heading) p {
-  display: flex;
-  min-width: 0;
-  flex: 1;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: .75rem;
-}
-
-.oanix-privacy-status > div:not(.oanix-privacy-status__heading) strong {
-  font-size: .86rem;
-}
-
-.oanix-privacy-status > div:not(.oanix-privacy-status__heading) small {
-  text-align: right;
-  font-size: .75rem;
-  font-weight: 700;
-}
-
-.oanix-privacy-status > .oanix-privacy-status__heading {
-  order: -1;
-  display: flex;
+.oanix-privacy-status > div {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
-  gap: .75rem;
-  padding: 0 .08rem .3rem;
+  gap: .62rem;
+  min-height: 2.85rem;
+  padding: .52rem .08rem;
   border: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--theme-border, #dbe2ea) 72%, transparent);
   border-radius: 0;
   background: transparent;
   box-shadow: none;
 }
 
-.oanix-privacy-status__heading > div {
-  display: grid;
-  gap: .08rem;
+.oanix-privacy-status > div:last-child {
+  border-bottom: 0;
 }
 
-.oanix-privacy-status__heading span {
-  color: var(--theme-accent, #2563eb);
-  font-size: .62rem;
-  font-weight: 900;
-  letter-spacing: .1em;
-}
-
-.oanix-privacy-status__heading strong {
-  color: var(--theme-text, #0f172a);
-  font-size: .92rem;
-}
-
-.oanix-privacy-status__heading > button {
+.oanix-privacy-status > div > span {
   display: grid;
   place-items: center;
-  width: 2rem;
-  height: 2rem;
-  flex: 0 0 2rem;
+  width: 1.65rem;
+  height: 1.65rem;
+  flex: 0 0 1.65rem;
+  font-size: .98rem;
+}
+
+.oanix-privacy-status > div p {
+  display: grid;
+  gap: .06rem;
+  min-width: 0;
+  margin: 0;
+}
+
+.oanix-privacy-status > div p strong {
+  color: var(--theme-text, #0f172a);
+  font-size: .86rem;
+  line-height: 1.2;
+}
+
+.oanix-privacy-status > div p small {
+  color: var(--theme-text-muted, #64748b);
+  font-size: .73rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.oanix-privacy-status__help-button {
+  display: grid;
+  place-items: center;
+  width: 1.55rem;
+  height: 1.55rem;
+  min-width: 1.55rem;
   padding: 0;
   border: 1px solid color-mix(in srgb, var(--theme-accent, #2563eb) 42%, var(--theme-border, #dbe2ea));
   border-radius: 999px;
-  background: color-mix(in srgb, var(--theme-accent, #2563eb) 9%, var(--theme-surface-2, #f8fafc));
+  background: color-mix(in srgb, var(--theme-accent, #2563eb) 8%, transparent);
   color: var(--theme-accent, #2563eb);
   font: inherit;
-  font-size: .9rem;
+  font-size: .72rem;
   font-weight: 950;
+  line-height: 1;
 }
 
-.oanix-privacy-status__heading > button:focus-visible,
-.oanix-privacy-status__heading > button:hover {
+.oanix-privacy-status__help-button:hover,
+.oanix-privacy-status__help-button:focus-visible {
   border-color: var(--theme-accent, #2563eb);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--theme-accent, #2563eb) 14%, transparent);
+  background: color-mix(in srgb, var(--theme-accent, #2563eb) 13%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--theme-accent, #2563eb) 12%, transparent);
+  outline: none;
 }
 
 .oanix-privacy-help {
@@ -116,6 +96,10 @@
   background: color-mix(in srgb, var(--theme-surface, #fff) 98%, transparent);
   color: var(--theme-text, #0f172a);
   box-shadow: 0 24px 80px rgba(2, 6, 23, .38);
+}
+
+.oanix-privacy-help__panel--single {
+  width: min(27rem, 100%);
 }
 
 .oanix-privacy-help__panel > header {
@@ -162,6 +146,10 @@
   padding: 1rem;
 }
 
+.oanix-privacy-help__content--single {
+  gap: .6rem;
+}
+
 .oanix-privacy-help__content article {
   display: flex;
   align-items: flex-start;
@@ -196,15 +184,4 @@
 
 .oanix-privacy-help__note {
   padding: .15rem .15rem 0;
-}
-
-@media (max-width: 560px) {
-  .oanix-privacy-status > div:not(.oanix-privacy-status__heading) p {
-    display: grid;
-    gap: .08rem;
-  }
-
-  .oanix-privacy-status > div:not(.oanix-privacy-status__heading) small {
-    text-align: left;
-  }
 }
