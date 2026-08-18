@@ -29,6 +29,7 @@ import {
 } from './noteService'
 import { searchItemsByLocalFields, type LocalSearchField } from '../search/localSearch'
 import { prepareDailyEntriesForEditing } from './dailyEntries'
+import { NoteAvatar } from './NoteAvatar'
 import { compareNotesForList, noteBlocksToPlainText, type NoteRecord, type StoredNoteBlock } from './noteTypes'
 import './notes.css'
 
@@ -76,10 +77,6 @@ function formatNoteTime(isoDate: string): string {
   }).format(date)
 }
 
-function noteInitial(title: string): string {
-  const first = title.trim().charAt(0)
-  return first ? first.toUpperCase() : 'N'
-}
 
 function notePreview(note: NoteRecord): string {
   return noteBlocksToPlainText(note.content.blocks) || 'Nota vacía · empieza a escribir'
@@ -1504,7 +1501,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
                     aria-disabled={reorderMode}
                     tabIndex={reorderMode ? -1 : undefined}
                   >
-                    <span className="note-row__avatar" aria-hidden="true">{noteInitial(note.title)}</span>
+                    <NoteAvatar note={note} className="note-row__avatar" />
                     <span className="note-row__body">
                       <span className="note-row__topline">
                         <strong>{note.pinned === true && <span aria-hidden="true">📌 </span>}{note.title}</strong>
@@ -1668,7 +1665,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
                 ←
               </button>
               <div className="note-view__identity">
-                <span className="note-view__avatar" aria-hidden="true">{noteInitial(selectedNote.title)}</span>
+                <NoteAvatar note={selectedNote} className="note-view__avatar" />
                 <div>
                   <strong>{selectedNote.pinned === true && <span aria-hidden="true">📌 </span>}{selectedNote.title}</strong>
                   <span className={saveState === 'error' ? 'save-status save-status--error' : 'save-status'}>

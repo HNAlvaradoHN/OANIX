@@ -3,12 +3,17 @@ import { createRoot } from 'react-dom/client'
 import { registerSW } from 'virtual:pwa-register'
 import { App } from './app/App'
 import './styles/global.css'
+import './styles/redesign.css'
 
 type OanixUpdateWindow = Window & {
   __oanixApplyUpdate?: () => Promise<void>
 }
 
 const oanixWindow = window as OanixUpdateWindow
+
+// Midnight Violet is the first visual preset. Keeping the theme name on the root
+// lets future personalization swap semantic color tokens without duplicating UI.
+document.documentElement.dataset.oanixTheme ||= 'midnight-violet'
 
 if (import.meta.env.MODE !== 'capacitor') {
   // Keep the existing prompt-based update strategy on the PWA: a new service worker is discovered
