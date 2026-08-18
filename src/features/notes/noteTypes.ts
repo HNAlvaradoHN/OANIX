@@ -355,11 +355,13 @@ function runsToPlainText(runs: RichTextRun[]): string {
 /**
  * List-safe secondary label. It intentionally exposes only the title of the most
  * recent daily entry. Note body text, contacts, code and image metadata never
- * become a list preview.
+ * become a list preview. The non-breaking space keeps the legacy empty-note
+ * fallback from adding a second piece of information when no entry title exists.
  */
 export function noteBlocksToPlainText(blocks: StoredNoteBlock[]): string {
   const latestEntry = [...blocks].reverse().find((block) => block.type === 'dailyEntry')
-  return latestEntry?.type === 'dailyEntry' ? latestEntry.title.trim() : ''
+  const title = latestEntry?.type === 'dailyEntry' ? latestEntry.title.trim() : ''
+  return title || '\u00a0'
 }
 
 /** Full plaintext representation for explicit user actions such as Share note. */
