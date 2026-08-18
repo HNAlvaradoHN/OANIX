@@ -11,6 +11,8 @@ const mainActivitySource = readFileSync(
   'utf8',
 )
 const bridgeSource = readFileSync('src/platform/android/keystore.ts', 'utf8')
+const diagnosticSource = readFileSync('src/platform/android/AndroidKeystoreDiagnosticRuntime.tsx', 'utf8')
+const appSource = readFileSync('src/app/App.tsx', 'utf8')
 
 test('Android device sealing key is generated inside AndroidKeyStore as AES-256-GCM', () => {
   assert.match(pluginSource, /KeyGenerator\.getInstance\(KeyProperties\.KEY_ALGORITHM_AES, PROVIDER\)/)
@@ -35,4 +37,23 @@ test('generic device sealing remains separate from the user-authenticated biomet
   assert.match(bridgeSource, /Capacitor\.getPlatform\(\) === 'android'/)
   assert.doesNotMatch(bridgeSource, /exportVaultKeyForRecovery/)
   assert.doesNotMatch(bridgeSource, /masterPassword/i)
+})
+
+test('Android exposes an explicit in-device seal/open self-test from the unlocked workspace', () => {
+  assert.match(appSource, /AndroidKeystoreDiagnosticRuntime/)
+  assert.match(diagnosticSource, /Verificar protección Android/)
+  assert.match(diagnosticSource, /ensureAndroidDeviceKey\(\)/)
+  assert.match(diagnosticSource, /sealWithAndroidKeystore\(challenge, SELF_TEST_PURPOSE\)/)
+  assert.match(diagnosticSource, /openWithAndroidKeystore\(envelope, SELF_TEST_PURPOSE\)/)
+  assert.match(diagnosticSource, /opened !== challenge/)
+  assert.match(diagnosticSource, /getAndroidKeystoreStatus\(\)/)
+})
+
+test('Keystore self-test verifies AAD rejection and never persists its temporary challenge', () => {
+  assert.match(diagnosticSource, /crypto\.randomUUID|crypto\?\.randomUUID/)
+  assert.match(diagnosticSource, /crypto\?\.getRandomValues|crypto\.getRandomValues/)
+  assert.match(diagnosticSource, /openWithAndroidKeystore\(envelope, WRONG_PURPOSE\)/)
+  assert.match(diagnosticSource, /wrongPurposeRejected/)
+  assert.doesNotMatch(diagnosticSource, /localStorage|sessionStorage|indexedDB|fetch\(|supabase|writeEncryptedRecord/)
+  assert.doesNotMatch(diagnosticSource, /deleteAndroidDeviceKey/)
 })
