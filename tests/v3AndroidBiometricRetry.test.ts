@@ -13,8 +13,8 @@ test('locked Android vault exposes one device-security retry without requiring t
   assert.doesNotMatch(runtimeSource, /masterPassword|password\s*:/)
 })
 
-test('device-security retry appears only beside the local master-password form when native quick unlock is available', () => {
-  assert.match(runtimeSource, /querySelector<HTMLInputElement>\('#master-password'\)/)
+test('device-security retry appears beside local or synchronized master-password forms when available', () => {
+  assert.match(runtimeSource, /#master-password, #cloud-master-password/)
   assert.match(runtimeSource, /canUseAndroidBiometricUnlock\(\)/)
   assert.match(runtimeSource, /Usar PIN, patrón o huella/)
   assert.match(runtimeSource, /<svg/)
