@@ -2,9 +2,12 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { registerSW } from 'virtual:pwa-register'
 import { App } from './app/App'
+import { ThemeMenu } from './features/personalization/ThemeMenu'
+import { applyOanixTheme, readSavedOanixTheme } from './features/personalization/themeCatalog'
 import './styles/global.css'
 import './styles/redesign.css'
 import './styles/redesign-polish.css'
+import './styles/themes.css'
 
 type OanixUpdateWindow = Window & {
   __oanixApplyUpdate?: () => Promise<void>
@@ -12,9 +15,9 @@ type OanixUpdateWindow = Window & {
 
 const oanixWindow = window as OanixUpdateWindow
 
-// Midnight Violet is the first visual preset. Keeping the theme name on the root
-// lets future personalization swap semantic color tokens without duplicating UI.
-document.documentElement.dataset.oanixTheme ||= 'midnight-violet'
+// Theme is a non-sensitive local UI preference. Apply it before React paints to avoid a flash
+// of the default palette when the user already selected another preset on this device.
+applyOanixTheme(readSavedOanixTheme(), false)
 
 if (import.meta.env.MODE !== 'capacitor') {
   // Keep the existing prompt-based update strategy on the PWA: a new service worker is discovered
@@ -42,5 +45,6 @@ if (import.meta.env.MODE !== 'capacitor') {
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />
+    <ThemeMenu />
   </StrictMode>,
 )
