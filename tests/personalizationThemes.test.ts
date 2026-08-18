@@ -69,6 +69,14 @@ test('classic day and night define neutral semantic palettes', () => {
   assert.match(baseThemesCss, /--theme-text:/)
 })
 
+test('classic day explicitly neutralizes dark-first legacy surfaces', () => {
+  assert.match(baseThemesCss, /data-oanix-theme='classic-day'[^\n]*\{[\s\S]*color-scheme: light !important/)
+  assert.match(baseThemesCss, /data-oanix-theme='classic-day'\] \.notes-sidebar[\s\S]*#ffffff !important/)
+  assert.match(baseThemesCss, /data-oanix-theme='classic-day'\] \.note-row[\s\S]*#ffffff/)
+  assert.match(baseThemesCss, /data-oanix-theme='classic-day'\] \.editor-frame[\s\S]*#ffffff/)
+  assert.match(baseThemesCss, /data-oanix-theme='classic-day'\] \.oanix-theme-menu--workspace[\s\S]*rgba\(255,255,255,\.98\) !important/)
+})
+
 test('theme layer fixes the three visual details found during review', () => {
   assert.match(themesCss, /\.mobile-editor-dock[\s\S]*background: color-mix/)
   assert.match(themesCss, /\.notes-tab[\s\S]*text-overflow: ellipsis/)
