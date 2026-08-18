@@ -29,11 +29,13 @@ test('visible header emoji actions are visually replaced by one vector icon fami
   assert.match(icons, /background-color: currentColor/)
 })
 
-test('icon replacement preserves accessible button labels and theme-driven color', () => {
+test('icon replacement preserves accessible labels and now has stronger theme-aware contrast', () => {
   assert.match(notes, /aria-label=\{searchOpen \? 'Cerrar búsqueda' : 'Buscar en notas'\}/)
   assert.match(notes, /aria-label="Bloquear OANIX"/)
   assert.match(history, /aria-label="Historial de versiones"/)
   assert.match(app, /aria-label="Cuenta de OANIX"/)
-  assert.match(icons, /var\(--theme-muted/)
-  assert.match(icons, /var\(--theme-accent-soft/)
+  assert.match(icons, /color-mix\(in srgb, var\(--theme-text/)
+  assert.match(icons, /var\(--theme-accent/)
+  assert.match(icons, /drop-shadow/)
+  assert.match(icons, /width: 1\.24rem/)
 })
