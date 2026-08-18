@@ -2,16 +2,21 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import {
   canUseAndroidBiometricUnlock,
+  lockLocalVault,
   unlockLocalVaultWithBiometrics,
   verifyLocalEncryption,
 } from '../../security/vault/vaultService'
+import { ensureRemoteVaultBootstrap } from '../../features/sync/syncService'
 
 interface AndroidBiometricRetryRuntimeProps {
   onUnlocked: () => void
 }
 
+type QuickUnlockMode = 'local' | 'synced'
+
 export function AndroidBiometricRetryRuntime({ onUnlocked }: AndroidBiometricRetryRuntimeProps) {
   const [target, setTarget] = useState<HTMLFormElement | null>(null)
+  const [mode, setMode] = useState<QuickUnlockMode>('local')
   const [available, setAvailable] = useState(false)
   const [busy, setBusy] = useState(false)
 
@@ -19,9 +24,12 @@ export function AndroidBiometricRetryRuntime({ onUnlocked }: AndroidBiometricRet
     let active = true
 
     const refresh = () => {
-      const passwordInput = document.querySelector<HTMLInputElement>('#master-password')
+      const passwordInput = document.querySelector<HTMLInputElement>(
+        '#master-password, #cloud-master-password',
+      )
       const form = passwordInput?.closest('form') ?? null
       setTarget(form)
+      setMode(passwordInput?.id === 'cloud-master-password' ? 'synced' : 'local')
 
       if (!form) {
         setAvailable(false)
@@ -63,7 +71,30 @@ export function AndroidBiometricRetryRuntime({ onUnlocked }: AndroidBiometricRet
       if (result.status === 'error') return
 
       const verification = await verifyLocalEncryption()
-      if (verification.status === 'error') return
+      if (verification.status === 'error') {
+        lockLocalVault()
+        return
+      }
+
+      if (mode === 'synced') {
+        try {
+          // Device quick unlock can only open the local copy of this vault. Before presenting that
+          // as the synchronized vault, prove that the connected account is linked to the exact
+          // same vault metadata. A different local vault must still use the explicit replacement
+          // flow with its master password; never silently open the wrong vault under Google UI.
+          await ensureRemoteVaultBootstrap()
+        } catch (error) {
+          lockLocalVault()
+          window.dispatchEvent(new CustomEvent('oanix:device-unlock-error', {
+            detail: {
+              message: error instanceof Error
+                ? error.message
+                : 'La seguridad del teléfono abrió otra bóveda local. Usa la contraseña maestra para abrir la bóveda sincronizada.',
+            },
+          }))
+          return
+        }
+      }
 
       onUnlocked()
     } finally {
