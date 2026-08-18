@@ -15,6 +15,27 @@ export interface OanixThemePreset {
 export const OANIX_THEME_STORAGE_KEY = 'oanix.theme'
 export const DEFAULT_OANIX_THEME = 'midnight-violet'
 
+const CLASSIC_DAY_TOKENS: Record<string, string> = {
+  '--theme-bg': '#ffffff',
+  '--theme-bg-deep': '#f7f9fc',
+  '--theme-surface': '#ffffff',
+  '--theme-surface-2': '#f8fbff',
+  '--theme-surface-3': '#edf4fb',
+  '--theme-surface-hover': '#eef5ff',
+  '--theme-text': '#101828',
+  '--theme-text-soft': '#344054',
+  '--theme-muted': '#667085',
+  '--theme-muted-2': '#98a2b3',
+  '--theme-accent': '#2563eb',
+  '--theme-accent-2': '#38bdf8',
+  '--theme-accent-soft': '#3b82f6',
+  '--theme-border': 'rgba(52,64,84,.16)',
+  '--theme-border-strong': 'rgba(37,99,235,.36)',
+  '--theme-glow': 'rgba(37,99,235,.09)',
+  '--theme-grid': 'rgba(71,85,105,.025)',
+  '--theme-danger': '#b42318',
+}
+
 export const OANIX_THEMES: readonly OanixThemePreset[] = [
   {
     id: 'classic-day',
@@ -22,7 +43,7 @@ export const OANIX_THEMES: readonly OanixThemePreset[] = [
     description: 'Blanco, azul y luz limpia',
     mode: 'light',
     kind: 'base',
-    swatches: ['#f4f7fb', '#ffffff', '#2563eb'],
+    swatches: ['#ffffff', '#f4f7fb', '#2563eb'],
   },
   {
     id: 'classic-night',
@@ -134,11 +155,25 @@ export function readSavedOanixTheme(): string {
   }
 }
 
+function applyClassicDayHardening(enabled: boolean) {
+  const root = document.documentElement
+  root.classList.toggle('oanix-classic-day', enabled)
+  document.body?.classList.toggle('oanix-classic-day', enabled)
+
+  for (const [property, value] of Object.entries(CLASSIC_DAY_TOKENS)) {
+    if (enabled) root.style.setProperty(property, value)
+    else root.style.removeProperty(property)
+  }
+}
+
 export function applyOanixTheme(themeId: string, persist = true): string {
   const theme = getOanixTheme(themeId)
   document.documentElement.dataset.oanixTheme = theme.id
   document.documentElement.dataset.oanixThemeMode = theme.mode
   document.documentElement.style.colorScheme = theme.mode
+  document.body?.setAttribute('data-oanix-theme', theme.id)
+  document.body?.setAttribute('data-oanix-theme-mode', theme.mode)
+  applyClassicDayHardening(theme.id === 'classic-day')
   syncOanixSystemTheme(theme.swatches[0], theme.mode)
 
   if (persist) {
