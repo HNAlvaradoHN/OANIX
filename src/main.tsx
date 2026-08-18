@@ -8,6 +8,8 @@ import './styles/global.css'
 import './styles/redesign.css'
 import './styles/redesign-polish.css'
 import './styles/themes.css'
+import './styles/base-themes.css'
+import './styles/notebook-polish.css'
 
 type OanixUpdateWindow = Window & {
   __oanixApplyUpdate?: () => Promise<void>

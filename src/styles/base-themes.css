@@ -1,0 +1,42 @@
+/* Neutral base themes kept alongside the styled presets. */
+:root[data-oanix-theme='classic-day'] {
+  --theme-bg: #eef2f5;
+  --theme-bg-deep: #e7edf3;
+  --theme-surface: #ffffff;
+  --theme-surface-2: #f8fafc;
+  --theme-surface-3: #eef2f7;
+  --theme-surface-hover: #f1f5f9;
+  --theme-text: #111827;
+  --theme-text-soft: #334155;
+  --theme-muted: #6f7c8c;
+  --theme-muted-2: #94a3b8;
+  --theme-accent: #2563eb;
+  --theme-accent-2: #60a5fa;
+  --theme-accent-soft: #3b82f6;
+  --theme-border: rgba(71,85,105,.18);
+  --theme-border-strong: rgba(37,99,235,.34);
+  --theme-glow: rgba(37,99,235,.09);
+  --theme-grid: rgba(71,85,105,.035);
+  --theme-danger: #b42318;
+}
+
+:root[data-oanix-theme='classic-night'] {
+  --theme-bg: #05070b;
+  --theme-bg-deep: #020306;
+  --theme-surface: #0d1118;
+  --theme-surface-2: #121821;
+  --theme-surface-3: #18202b;
+  --theme-surface-hover: #1c2531;
+  --theme-text: #f7f9fc;
+  --theme-text-soft: #d6dde8;
+  --theme-muted: #8e9aab;
+  --theme-muted-2: #667282;
+  --theme-accent: #8aaeff;
+  --theme-accent-2: #d5dfef;
+  --theme-accent-soft: #b8ccff;
+  --theme-border: rgba(151,164,184,.2);
+  --theme-border-strong: rgba(180,194,214,.34);
+  --theme-glow: rgba(138,174,255,.08);
+  --theme-grid: rgba(180,194,214,.025);
+  --theme-danger: #ff7d91;
+}
