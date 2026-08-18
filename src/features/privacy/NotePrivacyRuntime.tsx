@@ -18,6 +18,7 @@ import {
   reauthenticatePrivateBoxWithPassword,
 } from './privateBoxAuth'
 import './notePrivacy.css'
+import './manualNoteRelock.css'
 
 type LockDialogMode = 'set' | 'unlock' | 'remove'
 
@@ -187,6 +188,11 @@ export function NotePrivacyRuntime() {
     return document.querySelector<HTMLElement>('.note-canvas')
   }, [domRevision])
 
+  const noteIdentityHost = useMemo(() => {
+    void domRevision
+    return document.querySelector<HTMLElement>('.note-view__identity')
+  }, [domRevision])
+
   const selectedNoteId = selectedNoteIdFromDom()
   const selectedPrivacy = selectedNoteId ? privacyById.get(selectedNoteId) ?? null : null
   const selectedNeedsPrivateAuth = !!selectedNoteId && selectedPrivacy?.privateBox === true && !privateSession
@@ -227,6 +233,7 @@ export function NotePrivacyRuntime() {
     const noteView = document.querySelector<HTMLElement>('.note-view')
     if (noteView) {
       noteView.dataset.oanixNoteLocked = selectedNeedsNoteCode ? 'true' : 'false'
+      noteView.dataset.oanixNoteHasLock = selectedPrivacy?.lock ? 'true' : 'false'
       noteView.dataset.oanixPrivateNote = selectedPrivacy?.privateBox === true ? 'true' : 'false'
       noteView.dataset.oanixPrivateAuthorized = selectedPrivacy?.privateBox === true && privateSession ? 'true' : 'false'
     }
@@ -294,6 +301,18 @@ export function NotePrivacyRuntime() {
     document.addEventListener('click', captureWorkspaceClick, true)
     return () => document.removeEventListener('click', captureWorkspaceClick, true)
   }, [privacyById, privateSession, selectedNoteId, unlockedNoteIds, visiblePrivateNoteId])
+
+  function manuallyRelockNote(noteId: string) {
+    const focused = document.activeElement
+    const noteView = document.querySelector<HTMLElement>('.note-view')
+    if (focused instanceof HTMLElement && noteView?.contains(focused)) focused.blur()
+
+    setUnlockedNoteIds((current) => {
+      const next = new Set(current)
+      next.delete(noteId)
+      return next
+    })
+  }
 
   function openLockDialog(mode: LockDialogMode, noteId: string, openAfterUnlock = false) {
     setPrivacyManagerNoteId(null)
@@ -539,6 +558,26 @@ export function NotePrivacyRuntime() {
           </span>
         </button>,
         workspaceMenuHost,
+      )}
+
+      {noteIdentityHost && selectedNoteId && selectedPrivacy?.lock && createPortal(
+        <button
+          className={`oanix-note-session-lock${unlockedNoteIds.has(selectedNoteId) ? ' oanix-note-session-lock--unlocked' : ''}`}
+          type="button"
+          aria-label={unlockedNoteIds.has(selectedNoteId) ? 'Bloquear esta nota ahora' : 'Desbloquear esta nota'}
+          title={unlockedNoteIds.has(selectedNoteId) ? 'Bloquear nota ahora' : 'Desbloquear nota'}
+          disabled={selectedNeedsPrivateAuth}
+          onClick={() => {
+            if (unlockedNoteIds.has(selectedNoteId)) {
+              manuallyRelockNote(selectedNoteId)
+              return
+            }
+            if (!selectedNeedsPrivateAuth) openLockDialog('unlock', selectedNoteId)
+          }}
+        >
+          <span aria-hidden="true">{unlockedNoteIds.has(selectedNoteId) ? '🔓' : '🔒'}</span>
+        </button>,
+        noteIdentityHost,
       )}
 
       {noteCanvasHost && (selectedNeedsPrivateAuth || selectedNeedsNoteCode) && createPortal(
