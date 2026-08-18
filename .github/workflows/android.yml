@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: read
+  statuses: write
 
 jobs:
   build-android-packages:
@@ -75,6 +76,20 @@ jobs:
           fi
 
           echo "Stable OANIX debug signing certificate verified."
+
+      - name: Publish stable signing verification status
+        if: github.event_name == 'push'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.sha,
+              state: 'success',
+              context: 'oanix/stable-debug-signing',
+              description: 'Stable OANIX debug signing certificate verified'
+            })
 
       - name: Remove stable signing material from workspace
         if: always() && github.event_name == 'push'
