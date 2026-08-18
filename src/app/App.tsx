@@ -14,6 +14,7 @@ import { NativeNoteShareRuntime } from '../platform/android/NativeNoteShareRunti
 import { AndroidBackRuntime } from '../platform/android/AndroidBackRuntime'
 import { AndroidBiometricRetryRuntime } from '../platform/android/AndroidBiometricRetryRuntime'
 import { AndroidKeystoreDiagnosticRuntime } from '../platform/android/AndroidKeystoreDiagnosticRuntime'
+import { isAndroidBiometricRuntime } from '../platform/android/biometricVault'
 import { isAndroidSystemInteractionActive } from '../platform/android/systemInteractionGuard'
 import {
   AUTO_LOCK_CHANGE_EVENT,
@@ -111,6 +112,8 @@ export function App() {
   }, [])
 
   useEffect(() => {
+    if (!isAndroidBiometricRuntime()) return
+
     function clearAutoLockTimer() {
       if (autoLockTimer.current === null) return
       window.clearTimeout(autoLockTimer.current)
