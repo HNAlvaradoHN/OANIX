@@ -18,8 +18,15 @@ test('pull request validation remains available without exposing a committed pri
   assert.doesNotMatch(workflow, /\.jks|\.keystore\.base64/)
 })
 
-test('missing signing secret falls back to the runner debug key instead of failing CI', () => {
-  assert.match(workflow, /Stable debug signing secret is not configured/)
-  assert.match(workflow, /exit 0/)
-  assert.match(workflow, /\.\/gradlew assembleDebug bundleRelease/)
+test('main Android builds fail closed when the stable signing secret is missing', () => {
+  assert.match(workflow, /OANIX_DEBUG_KEYSTORE_BASE64 is required for main Android builds/)
+  assert.match(workflow, /exit 1/)
+  assert.doesNotMatch(workflow, /runner-generated debug key/)
+})
+
+test('main reports the produced debug APK signing certificate for verification', () => {
+  assert.match(workflow, /Report debug APK signing certificate/)
+  assert.match(workflow, /apksigner/)
+  assert.match(workflow, /verify --print-certs/)
+  assert.match(workflow, /app\/build\/outputs\/apk\/debug\/app-debug\.apk/)
 })
