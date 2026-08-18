@@ -5,6 +5,7 @@ import { App } from './app/App'
 import { ThemeMenu } from './features/personalization/ThemeMenu'
 import { applyOanixTheme, readSavedOanixTheme } from './features/personalization/themeCatalog'
 import { NoteMenuScrollDismiss } from './features/notes/NoteMenuScrollDismiss'
+import { PrivacyStatusHelp } from './features/privacy/PrivacyStatusHelp'
 import './styles/global.css'
 import './styles/redesign.css'
 import './styles/redesign-polish.css'
@@ -14,6 +15,7 @@ import './styles/notebook-polish.css'
 import './styles/final-visual-polish.css'
 import './styles/header-icon-polish.css'
 import './styles/classic-day-hard-fix.css'
+import './styles/privacy-status-polish.css'
 
 type OanixUpdateWindow = Window & {
   __oanixApplyUpdate?: () => Promise<void>
@@ -53,5 +55,6 @@ createRoot(document.getElementById('root')!).render(
     <App />
     <ThemeMenu />
     <NoteMenuScrollDismiss />
+    <PrivacyStatusHelp />
   </StrictMode>,
 )
