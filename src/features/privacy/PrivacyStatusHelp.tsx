@@ -1,36 +1,60 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 
-type PrivacyHelpTopic = 'lock' | 'private-box'
+type HelpTopic = 'lock' | 'box'
 
-interface StatusHosts {
-  lock: HTMLElement | null
-  privateBox: HTMLElement | null
+interface HelpAnchor {
+  top: number
+  topic: HelpTopic
 }
 
-const EMPTY_HOSTS: StatusHosts = { lock: null, privateBox: null }
+function actionTopic(button: HTMLButtonElement): HelpTopic | null {
+  const text = button.textContent ?? ''
+  if (/Proteger nota|Desbloquear temporalmente|Quitar protección/.test(text)) return 'lock'
+  if (/Caja privada/.test(text)) return 'box'
+  return null
+}
 
 export function PrivacyStatusHelp() {
-  const [hosts, setHosts] = useState<StatusHosts>(EMPTY_HOSTS)
-  const [helpTopic, setHelpTopic] = useState<PrivacyHelpTopic | null>(null)
+  const [actionsHost, setActionsHost] = useState<HTMLElement | null>(null)
+  const [anchors, setAnchors] = useState<HelpAnchor[]>([])
+  const [helpOpen, setHelpOpen] = useState<HelpTopic | null>(null)
 
   useEffect(() => {
     let frame = 0
+    let resizeObserver: ResizeObserver | null = null
 
     function inspect() {
-      const status = document.querySelector<HTMLElement>('.oanix-privacy-status')
-      const rows = status
-        ? Array.from(status.children).filter((child): child is HTMLElement => child instanceof HTMLElement)
-        : []
-      const next: StatusHosts = {
-        lock: rows[0] ?? null,
-        privateBox: rows[1] ?? null,
+      const nextHost = document.querySelector<HTMLElement>('.oanix-privacy-actions')
+      setActionsHost((current) => current === nextHost ? current : nextHost)
+      if (!nextHost) {
+        setAnchors([])
+        setHelpOpen(null)
+        return
       }
 
-      setHosts((current) => (
-        current.lock === next.lock && current.privateBox === next.privateBox ? current : next
-      ))
-      if (!status) setHelpTopic(null)
+      resizeObserver?.disconnect()
+      resizeObserver = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(scheduleInspect)
+      resizeObserver?.observe(nextHost)
+
+      const nextAnchors = Array.from(nextHost.querySelectorAll<HTMLButtonElement>(':scope > button:not(.oanix-privacy-action-help)'))
+        .flatMap((button) => {
+          const topic = actionTopic(button)
+          if (!topic) return []
+          resizeObserver?.observe(button)
+          return [{
+            topic,
+            top: button.offsetTop + Math.max(0, (button.offsetHeight - 28) / 2),
+          }]
+        })
+
+      setAnchors((current) => {
+        if (
+          current.length === nextAnchors.length
+          && current.every((item, index) => item.topic === nextAnchors[index]?.topic && Math.abs(item.top - (nextAnchors[index]?.top ?? 0)) < 1)
+        ) return current
+        return nextAnchors
+      })
     }
 
     function scheduleInspect() {
@@ -43,48 +67,44 @@ export function PrivacyStatusHelp() {
 
     inspect()
     const observer = new MutationObserver(scheduleInspect)
-    observer.observe(document.body, { childList: true, subtree: true })
+    observer.observe(document.body, { childList: true, subtree: true, characterData: true })
+    window.addEventListener('resize', scheduleInspect)
 
     return () => {
       observer.disconnect()
+      resizeObserver?.disconnect()
+      window.removeEventListener('resize', scheduleInspect)
       if (frame) window.cancelAnimationFrame(frame)
     }
   }, [])
 
-  const topicIsLock = helpTopic === 'lock'
+  const helpTitle = helpOpen === 'lock' ? '¿Qué hace Proteger nota?' : '¿Qué hace Caja privada?'
 
   return (
     <>
-      {hosts.lock && createPortal(
+      {actionsHost && anchors.map((anchor, index) => createPortal(
         <button
-          className="oanix-privacy-status__help-button"
+          className="oanix-privacy-action-help"
           type="button"
-          aria-label="Ayuda sobre Protección individual"
-          title="¿Qué hace Protección individual?"
-          onClick={() => setHelpTopic('lock')}
+          aria-label={anchor.topic === 'lock' ? 'Ayuda sobre protección individual de la nota' : 'Ayuda sobre Caja privada'}
+          title="Más información"
+          style={{ top: `${anchor.top}px` }}
+          onClick={(event) => {
+            event.preventDefault()
+            event.stopPropagation()
+            setHelpOpen(anchor.topic)
+          }}
         >
           ?
         </button>,
-        hosts.lock,
-      )}
+        actionsHost,
+        `${anchor.topic}-${index}`,
+      ))}
 
-      {hosts.privateBox && createPortal(
-        <button
-          className="oanix-privacy-status__help-button"
-          type="button"
-          aria-label="Ayuda sobre Caja privada"
-          title="¿Qué hace Caja privada?"
-          onClick={() => setHelpTopic('private-box')}
-        >
-          ?
-        </button>,
-        hosts.privateBox,
-      )}
-
-      {helpTopic && createPortal(
-        <div className="oanix-privacy-help" role="presentation" onClick={() => setHelpTopic(null)}>
+      {helpOpen && createPortal(
+        <div className="oanix-privacy-help" role="presentation" onClick={() => setHelpOpen(null)}>
           <section
-            className="oanix-privacy-help__panel oanix-privacy-help__panel--single"
+            className="oanix-privacy-help__panel"
             role="dialog"
             aria-modal="true"
             aria-labelledby="oanix-privacy-help-title"
@@ -93,21 +113,19 @@ export function PrivacyStatusHelp() {
             <header>
               <div>
                 <span>AYUDA</span>
-                <strong id="oanix-privacy-help-title">
-                  {topicIsLock ? 'Protección individual' : 'Caja privada'}
-                </strong>
+                <strong id="oanix-privacy-help-title">{helpTitle}</strong>
               </div>
-              <button type="button" onClick={() => setHelpTopic(null)} aria-label="Cerrar ayuda">×</button>
+              <button type="button" onClick={() => setHelpOpen(null)} aria-label="Cerrar ayuda">×</button>
             </header>
 
-            <div className="oanix-privacy-help__content oanix-privacy-help__content--single">
-              {topicIsLock ? (
+            <div className="oanix-privacy-help__content">
+              {helpOpen === 'lock' ? (
                 <article>
                   <span aria-hidden="true">🔒</span>
                   <div>
-                    <strong>Una barrera adicional para esta nota</strong>
+                    <strong>Protección individual</strong>
                     <p>
-                      Indica si la nota tiene un código propio. Al activarlo, el título puede seguir visible, pero el contenido queda oculto hasta introducir ese código. Es una protección adicional dentro de la bóveda cifrada de OANIX y no sustituye tu contraseña maestra.
+                      Añade un código propio de 1 a 20 caracteres a esta nota. El título puede seguir visible, pero el contenido queda oculto hasta introducir ese código. Es una barrera adicional dentro de la bóveda cifrada y no reemplaza tu contraseña maestra.
                     </p>
                   </div>
                 </article>
@@ -115,17 +133,13 @@ export function PrivacyStatusHelp() {
                 <article>
                   <span aria-hidden="true">🗄️</span>
                   <div>
-                    <strong>Un espacio apartado de la vista normal</strong>
+                    <strong>Caja privada</strong>
                     <p>
-                      Indica si la nota está dentro de Caja privada. Allí deja de aparecer en las listas y búsquedas normales, y OANIX vuelve a pedir autenticación para entrar a ese espacio.
+                      Saca esta nota de las listas y búsquedas normales. Para volver a verla tendrás que entrar a Caja privada y confirmar tu identidad. También puedes combinar Caja privada con un código individual para tener las dos barreras.
                     </p>
                   </div>
                 </article>
               )}
-
-              <p className="oanix-privacy-help__note">
-                Este renglón solo informa el estado actual. Para cambiarlo, usa el botón de acción correspondiente que aparece debajo.
-              </p>
             </div>
           </section>
         </div>,

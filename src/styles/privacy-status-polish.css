@@ -1,77 +1,41 @@
 .oanix-privacy-status {
-  display: grid;
-  gap: 0;
-  padding: .72rem 1rem .3rem;
+  display: none !important;
 }
 
-.oanix-privacy-status > div {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: .62rem;
-  min-height: 2.85rem;
-  padding: .52rem .08rem;
-  border: 0;
-  border-bottom: 1px solid color-mix(in srgb, var(--theme-border, #dbe2ea) 72%, transparent);
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
+.oanix-privacy-actions {
+  position: relative;
 }
 
-.oanix-privacy-status > div:last-child {
-  border-bottom: 0;
+.oanix-privacy-actions > button:not(.oanix-privacy-action-help) {
+  padding-right: 3.1rem;
 }
 
-.oanix-privacy-status > div > span {
+.oanix-privacy-action-help {
+  position: absolute;
+  z-index: 4;
+  right: 1.55rem;
   display: grid;
   place-items: center;
-  width: 1.65rem;
+  width: 1.65rem !important;
   height: 1.65rem;
-  flex: 0 0 1.65rem;
-  font-size: .98rem;
+  min-width: 1.65rem !important;
+  min-height: 1.65rem !important;
+  padding: 0 !important;
+  border: 1px solid color-mix(in srgb, var(--theme-accent, #2563eb) 52%, var(--theme-border, #dbe2ea)) !important;
+  border-radius: 999px !important;
+  background: color-mix(in srgb, var(--theme-accent, #2563eb) 9%, var(--theme-surface-2, #f8fafc)) !important;
+  color: var(--theme-accent, #2563eb) !important;
+  font: inherit !important;
+  font-size: .74rem !important;
+  font-weight: 950 !important;
+  line-height: 1 !important;
+  text-align: center !important;
 }
 
-.oanix-privacy-status > div p {
-  display: grid;
-  gap: .06rem;
-  min-width: 0;
-  margin: 0;
-}
-
-.oanix-privacy-status > div p strong {
-  color: var(--theme-text, #0f172a);
-  font-size: .86rem;
-  line-height: 1.2;
-}
-
-.oanix-privacy-status > div p small {
-  color: var(--theme-text-muted, #64748b);
-  font-size: .73rem;
-  font-weight: 700;
-  line-height: 1.25;
-}
-
-.oanix-privacy-status__help-button {
-  display: grid;
-  place-items: center;
-  width: 1.55rem;
-  height: 1.55rem;
-  min-width: 1.55rem;
-  padding: 0;
-  border: 1px solid color-mix(in srgb, var(--theme-accent, #2563eb) 42%, var(--theme-border, #dbe2ea));
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--theme-accent, #2563eb) 8%, transparent);
-  color: var(--theme-accent, #2563eb);
-  font: inherit;
-  font-size: .72rem;
-  font-weight: 950;
-  line-height: 1;
-}
-
-.oanix-privacy-status__help-button:hover,
-.oanix-privacy-status__help-button:focus-visible {
-  border-color: var(--theme-accent, #2563eb);
-  background: color-mix(in srgb, var(--theme-accent, #2563eb) 13%, transparent);
+.oanix-privacy-action-help:hover,
+.oanix-privacy-action-help:focus-visible {
+  border-color: var(--theme-accent, #2563eb) !important;
+  background: color-mix(in srgb, var(--theme-accent, #2563eb) 15%, var(--theme-surface-2, #f8fafc)) !important;
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--theme-accent, #2563eb) 12%, transparent);
   outline: none;
 }
@@ -88,7 +52,7 @@
 }
 
 .oanix-privacy-help__panel {
-  width: min(29rem, 100%);
+  width: min(28rem, 100%);
   max-height: min(78dvh, 42rem);
   overflow: auto;
   border: 1px solid color-mix(in srgb, var(--theme-border, #dbe2ea) 84%, var(--theme-accent, #2563eb));
@@ -96,10 +60,6 @@
   background: color-mix(in srgb, var(--theme-surface, #fff) 98%, transparent);
   color: var(--theme-text, #0f172a);
   box-shadow: 0 24px 80px rgba(2, 6, 23, .38);
-}
-
-.oanix-privacy-help__panel--single {
-  width: min(27rem, 100%);
 }
 
 .oanix-privacy-help__panel > header {
@@ -146,10 +106,6 @@
   padding: 1rem;
 }
 
-.oanix-privacy-help__content--single {
-  gap: .6rem;
-}
-
 .oanix-privacy-help__content article {
   display: flex;
   align-items: flex-start;
@@ -174,14 +130,9 @@
   font-size: .9rem;
 }
 
-.oanix-privacy-help__content article p,
-.oanix-privacy-help__note {
+.oanix-privacy-help__content article p {
   margin: 0;
   color: var(--theme-text-muted, #64748b);
   font-size: .8rem;
   line-height: 1.5;
-}
-
-.oanix-privacy-help__note {
-  padding: .15rem .15rem 0;
 }

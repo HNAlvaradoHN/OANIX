@@ -1,0 +1,15 @@
+.note-row__menu {
+  max-height: var(--oanix-note-menu-max-height, calc(100dvh - 1rem));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.note-row__menu[data-oanix-menu-placement='down'] {
+  top: calc(100% - .15rem) !important;
+  bottom: auto !important;
+}
+
+.note-row__menu[data-oanix-menu-placement='up'] {
+  top: auto !important;
+  bottom: calc(100% - .15rem) !important;
+}
