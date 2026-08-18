@@ -42,6 +42,15 @@ test('main verifies the exact expected OANIX debug signing certificate', () => {
   assert.match(workflow, /Stable OANIX debug signing certificate verified/)
 })
 
+test('main publishes an observable commit status only after stable signing verification', () => {
+  assert.match(workflow, /statuses: write/)
+  assert.match(workflow, /Publish stable signing verification status/)
+  assert.match(workflow, /repos\.createCommitStatus/)
+  assert.match(workflow, /context: 'oanix\/stable-debug-signing'/)
+  assert.match(workflow, /state: 'success'/)
+  assert.match(workflow, /Stable OANIX debug signing certificate verified/)
+})
+
 test('stable keystore material is removed from the runner workspace after signing', () => {
   assert.match(workflow, /Remove stable signing material from workspace/)
   assert.match(workflow, /rm -f .*oanix-stable-debug\.keystore/)
