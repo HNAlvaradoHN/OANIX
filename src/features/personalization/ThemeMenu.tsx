@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import {
   applyOanixTheme,
@@ -114,50 +114,61 @@ export function ThemeMenu() {
   ) : null
 
   const themePanel = open ? createPortal(
-    <section
-      className="oanix-theme-menu oanix-theme-menu--workspace"
-      aria-label="Personalización de OANIX"
-      data-note-menu-root="true"
-      ref={panelRef}
-    >
-      <header className="oanix-theme-menu__header">
-        <div>
-          <span className="oanix-theme-menu__eyebrow">PERSONALIZACIÓN</span>
-          <strong>Elegí tu ambiente</strong>
-          <p>El tema se guarda solo en este dispositivo.</p>
+    <Fragment>
+      <button
+        className="oanix-theme-backdrop"
+        type="button"
+        aria-label="Cerrar personalización"
+        data-note-menu-root="true"
+        onPointerDown={(event) => event.stopPropagation()}
+        onClick={() => setOpen(false)}
+      />
+      <section
+        className="oanix-theme-menu oanix-theme-menu--workspace"
+        aria-label="Personalización de OANIX"
+        data-note-menu-root="true"
+        ref={panelRef}
+        onPointerDown={(event) => event.stopPropagation()}
+      >
+        <header className="oanix-theme-menu__header">
+          <div>
+            <span className="oanix-theme-menu__eyebrow">PERSONALIZACIÓN</span>
+            <strong>Elegí tu ambiente</strong>
+            <p>El tema se guarda solo en este dispositivo.</p>
+          </div>
+          <button
+            className="oanix-theme-menu__close"
+            type="button"
+            onClick={() => setOpen(false)}
+            aria-label="Cerrar personalización"
+          >
+            ×
+          </button>
+        </header>
+
+        <div className="oanix-theme-menu__content">
+          <section className="oanix-theme-section" aria-labelledby="oanix-theme-base-title">
+            <div className="oanix-theme-section__heading">
+              <strong id="oanix-theme-base-title">Base</strong>
+              <span>Día y noche sin estilo dominante</span>
+            </div>
+            <div className="oanix-theme-menu__grid oanix-theme-menu__grid--base" role="list" aria-label="Temas base">
+              {OANIX_BASE_THEMES.map(renderThemeOption)}
+            </div>
+          </section>
+
+          <section className="oanix-theme-section" aria-labelledby="oanix-theme-style-title">
+            <div className="oanix-theme-section__heading">
+              <strong id="oanix-theme-style-title">Ambientes</strong>
+              <span>Presets con personalidad propia</span>
+            </div>
+            <div className="oanix-theme-menu__grid" role="list" aria-label="Temas especiales">
+              {OANIX_STYLE_THEMES.map(renderThemeOption)}
+            </div>
+          </section>
         </div>
-        <button
-          className="oanix-theme-menu__close"
-          type="button"
-          onClick={() => setOpen(false)}
-          aria-label="Cerrar personalización"
-        >
-          ×
-        </button>
-      </header>
-
-      <div className="oanix-theme-menu__content">
-        <section className="oanix-theme-section" aria-labelledby="oanix-theme-base-title">
-          <div className="oanix-theme-section__heading">
-            <strong id="oanix-theme-base-title">Base</strong>
-            <span>Día y noche sin estilo dominante</span>
-          </div>
-          <div className="oanix-theme-menu__grid oanix-theme-menu__grid--base" role="list" aria-label="Temas base">
-            {OANIX_BASE_THEMES.map(renderThemeOption)}
-          </div>
-        </section>
-
-        <section className="oanix-theme-section" aria-labelledby="oanix-theme-style-title">
-          <div className="oanix-theme-section__heading">
-            <strong id="oanix-theme-style-title">Ambientes</strong>
-            <span>Presets con personalidad propia</span>
-          </div>
-          <div className="oanix-theme-menu__grid" role="list" aria-label="Temas especiales">
-            {OANIX_STYLE_THEMES.map(renderThemeOption)}
-          </div>
-        </section>
-      </div>
-    </section>,
+      </section>
+    </Fragment>,
     document.body,
   ) : null
 
