@@ -6,22 +6,27 @@ const runtimeSource = readFileSync('src/platform/android/AndroidBiometricRetryRu
 const vaultSource = readFileSync('src/security/vault/vaultService.ts', 'utf8')
 const appSource = readFileSync('src/app/App.tsx', 'utf8')
 
-test('locked Android vault exposes one device-security retry without requiring the master password', () => {
+test('locked Android vault exposes device-security unlock without requiring the master password', () => {
   assert.match(vaultSource, /export async function canUseAndroidBiometricUnlock/)
   assert.match(vaultSource, /export async function unlockLocalVaultWithBiometrics/)
   assert.match(vaultSource, /await tryAndroidBiometricUnlock\(metadata\)/)
   assert.doesNotMatch(runtimeSource, /masterPassword|password\s*:/)
 })
 
-test('device-security retry appears beside local or synchronized master-password forms when available', () => {
+test('device security exposes PIN-pattern-password above fingerprint on local or synchronized forms', () => {
   assert.match(runtimeSource, /#master-password, #cloud-master-password/)
   assert.match(runtimeSource, /canUseAndroidBiometricUnlock\(\)/)
-  assert.match(runtimeSource, /Usar PIN, patrón o huella/)
+  assert.match(runtimeSource, /canUseAndroidDeviceCredentialUnlock\(\)/)
+  assert.match(runtimeSource, /PIN, patrón o contraseña/)
+  assert.match(runtimeSource, /Usar huella/)
+  assert.ok(runtimeSource.indexOf('PIN, patrón o contraseña') < runtimeSource.indexOf('Usar huella'))
+  assert.match(runtimeSource, /unlockLocalVaultWithDeviceCredential\(\)/)
+  assert.match(runtimeSource, /unlockLocalVaultWithBiometrics\(\)/)
   assert.match(runtimeSource, /<svg/)
 })
 
-test('successful retry verifies encrypted storage and remounts VaultGate', () => {
-  assert.match(runtimeSource, /unlockLocalVaultWithBiometrics\(\)/)
+test('both device-security methods verify encrypted storage and remount VaultGate', () => {
+  assert.match(runtimeSource, /verifyUnlockedDeviceVault\(\)/)
   assert.match(runtimeSource, /verifyLocalEncryption\(\)/)
   assert.match(runtimeSource, /onUnlocked\(\)/)
   assert.match(appSource, /<AndroidBiometricRetryRuntime/)

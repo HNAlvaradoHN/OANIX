@@ -10,6 +10,7 @@ test('MainActivity registers Android back and device-security plugins', () => {
 
   assert.match(activity, /registerPlugin\(OanixBackPlugin\.class\)/)
   assert.match(activity, /registerPlugin\(OanixBiometricPlugin\.class\)/)
+  assert.match(activity, /registerPlugin\(OanixDeviceCredentialPlugin\.class\)/)
 })
 
 test('Android back runtime returns from an open note through the existing safe back action', () => {
@@ -42,9 +43,13 @@ test('Android back runtime confirms exit professionally and exits on the second 
   assert.match(plugin, /activity::finish/)
 })
 
-test('one quick-unlock action delegates PIN pattern password or strong biometric to Android', () => {
+test('quick unlock presents explicit device credential and biometric actions without collecting either secret', () => {
   const biometricPlugin = readFileSync(
     'android/app/src/main/java/io/github/hnalvaradohn/oanix/OanixBiometricPlugin.java',
+    'utf8',
+  )
+  const credentialPlugin = readFileSync(
+    'android/app/src/main/java/io/github/hnalvaradohn/oanix/OanixDeviceCredentialPlugin.java',
     'utf8',
   )
   const runtime = readFileSync(
@@ -54,10 +59,13 @@ test('one quick-unlock action delegates PIN pattern password or strong biometric
   const app = readFileSync('src/app/App.tsx', 'utf8')
 
   assert.match(biometricPlugin, /BIOMETRIC_STRONG\s*\|\s*BiometricManager\.Authenticators\.DEVICE_CREDENTIAL/)
-  assert.match(runtime, /Usar PIN, patrón o huella/)
+  assert.match(credentialPlugin, /Authenticators\.DEVICE_CREDENTIAL/)
+  assert.match(runtime, /PIN, patrón o contraseña/)
+  assert.match(runtime, /Usar huella/)
+  assert.match(runtime, /unlockLocalVaultWithDeviceCredential\(\)/)
   assert.match(runtime, /unlockLocalVaultWithBiometrics\(\)/)
   assert.match(app, /<AndroidBiometricRetryRuntime/)
-  assert.doesNotMatch(app, /<AndroidDeviceCredentialRetryRuntime/)
+  assert.doesNotMatch(runtime, /pin\s*[:=]|pattern\s*[:=]|devicePassword\s*[:=]/i)
 })
 
 test('quick unlock is exposed on both local and synchronized vault password forms', () => {
@@ -86,7 +94,7 @@ test('synchronized quick unlock proves the local vault matches the connected acc
   assert.match(runtime, /form-message/)
 })
 
-test('legacy explicit device credential path remains secure but is not exposed as a second UI action', () => {
+test('explicit device credential reuses the same authenticated Keystore envelope and never stores the phone secret', () => {
   const plugin = readFileSync(
     'android/app/src/main/java/io/github/hnalvaradohn/oanix/OanixDeviceCredentialPlugin.java',
     'utf8',
