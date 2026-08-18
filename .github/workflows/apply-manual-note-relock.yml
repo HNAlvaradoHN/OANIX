@@ -1,0 +1,205 @@
+name: Apply manual note relock
+
+on:
+  push:
+    branches: [feat/manual-note-relock]
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: ${{ !contains(github.event.head_commit.message, '[manual-relock-applied]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/manual-note-relock
+          fetch-depth: 0
+
+      - name: Apply manual relock UX
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          runtime_path = Path('src/features/privacy/NotePrivacyRuntime.tsx')
+          runtime = runtime_path.read_text()
+
+          host_anchor = """  const noteCanvasHost = useMemo(() => {
+    void domRevision
+    return document.querySelector<HTMLElement>('.note-canvas')
+  }, [domRevision])
+"""
+          host_replacement = host_anchor + """
+  const noteIdentityHost = useMemo(() => {
+    void domRevision
+    return document.querySelector<HTMLElement>('.note-view__identity')
+  }, [domRevision])
+"""
+          if "const noteIdentityHost = useMemo" not in runtime:
+              if host_anchor not in runtime:
+                  raise SystemExit('noteCanvasHost anchor not found')
+              runtime = runtime.replace(host_anchor, host_replacement, 1)
+
+          dataset_anchor = """      noteView.dataset.oanixNoteLocked = selectedNeedsNoteCode ? 'true' : 'false'
+      noteView.dataset.oanixPrivateNote = selectedPrivacy?.privateBox === true ? 'true' : 'false'
+"""
+          dataset_replacement = """      noteView.dataset.oanixNoteLocked = selectedNeedsNoteCode ? 'true' : 'false'
+      noteView.dataset.oanixNoteHasLock = selectedPrivacy?.lock ? 'true' : 'false'
+      noteView.dataset.oanixPrivateNote = selectedPrivacy?.privateBox === true ? 'true' : 'false'
+"""
+          if "dataset.oanixNoteHasLock" not in runtime:
+              if dataset_anchor not in runtime:
+                  raise SystemExit('noteView dataset anchor not found')
+              runtime = runtime.replace(dataset_anchor, dataset_replacement, 1)
+
+          dialog_anchor = """  function openLockDialog(mode: LockDialogMode, noteId: string, openAfterUnlock = false) {
+"""
+          relock_function = """  function manuallyRelockNote(noteId: string) {
+    const focused = document.activeElement
+    const noteView = document.querySelector<HTMLElement>('.note-view')
+    if (focused instanceof HTMLElement && noteView?.contains(focused)) focused.blur()
+
+    setUnlockedNoteIds((current) => {
+      const next = new Set(current)
+      next.delete(noteId)
+      return next
+    })
+  }
+
+"""
+          if "function manuallyRelockNote" not in runtime:
+              if dialog_anchor not in runtime:
+                  raise SystemExit('openLockDialog anchor not found')
+              runtime = runtime.replace(dialog_anchor, relock_function + dialog_anchor, 1)
+
+          render_anchor = """      {noteCanvasHost && (selectedNeedsPrivateAuth || selectedNeedsNoteCode) && createPortal(
+"""
+          lock_portal = """      {noteIdentityHost && selectedNoteId && selectedPrivacy?.lock && createPortal(
+        <button
+          className={`oanix-note-session-lock${unlockedNoteIds.has(selectedNoteId) ? ' oanix-note-session-lock--unlocked' : ''}`}
+          type="button"
+          aria-label={unlockedNoteIds.has(selectedNoteId) ? 'Bloquear esta nota ahora' : 'Desbloquear esta nota'}
+          title={unlockedNoteIds.has(selectedNoteId) ? 'Bloquear nota ahora' : 'Desbloquear nota'}
+          disabled={selectedNeedsPrivateAuth}
+          onClick={() => {
+            if (unlockedNoteIds.has(selectedNoteId)) {
+              manuallyRelockNote(selectedNoteId)
+              return
+            }
+            if (!selectedNeedsPrivateAuth) openLockDialog('unlock', selectedNoteId)
+          }}
+        >
+          <span aria-hidden="true">{unlockedNoteIds.has(selectedNoteId) ? '🔓' : '🔒'}</span>
+        </button>,
+        noteIdentityHost,
+      )}
+
+"""
+          if "className={`oanix-note-session-lock" not in runtime:
+              if render_anchor not in runtime:
+                  raise SystemExit('privacy gate render anchor not found')
+              runtime = runtime.replace(render_anchor, lock_portal + render_anchor, 1)
+
+          runtime_path.write_text(runtime)
+
+          css_path = Path('src/features/privacy/notePrivacy.css')
+          css = css_path.read_text()
+          old_pseudo = """.note-view[data-oanix-note-locked='true'] .note-view__identity strong::after,
+.note-view[data-oanix-private-note='true'] .note-view__identity strong::after {
+  content: '  🔒';
+  font-size: .7em;
+  opacity: .85;
+}
+"""
+          new_pseudo = """.note-view[data-oanix-private-note='true'][data-oanix-note-has-lock='false'] .note-view__identity strong::after {
+  content: '  🔒';
+  font-size: .7em;
+  opacity: .85;
+}
+
+.oanix-note-session-lock {
+  width: 2.25rem;
+  height: 2.25rem;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--theme-accent, #3b82f6) 42%, var(--theme-border, #cbd5e1));
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--theme-accent, #3b82f6) 9%, var(--theme-surface, #fff));
+  color: var(--theme-text, #0f172a);
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--theme-accent, #3b82f6) 5%, transparent);
+  cursor: pointer;
+  transition: transform .14s ease, border-color .14s ease, background .14s ease, box-shadow .14s ease;
+}
+
+.oanix-note-session-lock:hover,
+.oanix-note-session-lock:focus-visible {
+  outline: none;
+  transform: translateY(-1px);
+  border-color: var(--theme-accent, #3b82f6);
+  background: color-mix(in srgb, var(--theme-accent, #3b82f6) 15%, var(--theme-surface, #fff));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--theme-accent, #3b82f6) 10%, transparent), 0 8px 20px color-mix(in srgb, var(--theme-accent, #3b82f6) 12%, transparent);
+}
+
+.oanix-note-session-lock--unlocked {
+  border-color: color-mix(in srgb, var(--theme-accent-2, #22d3ee) 58%, var(--theme-border, #cbd5e1));
+  background: color-mix(in srgb, var(--theme-accent-2, #22d3ee) 10%, var(--theme-surface, #fff));
+}
+
+.oanix-note-session-lock:disabled {
+  cursor: not-allowed;
+  opacity: .5;
+  transform: none;
+}
+"""
+          if ".oanix-note-session-lock {" not in css:
+              if old_pseudo not in css:
+                  raise SystemExit('note-view lock pseudo anchor not found')
+              css = css.replace(old_pseudo, new_pseudo, 1)
+          css_path.write_text(css)
+
+          test_path = Path('tests/notePrivacy.test.ts')
+          tests = test_path.read_text()
+          if "const privacyCssSource" not in tests:
+              tests = tests.replace(
+                  "const appSource = readFileSync('src/app/App.tsx', 'utf8')\n",
+                  "const appSource = readFileSync('src/app/App.tsx', 'utf8')\nconst privacyCssSource = readFileSync('src/features/privacy/notePrivacy.css', 'utf8')\n",
+                  1,
+              )
+
+          test_block = """
+
+test('protected note unlock session can be manually closed without changing stored protection', () => {
+  assert.match(runtimeSource, /function manuallyRelockNote\(noteId: string\)/)
+  assert.match(runtimeSource, /next\.delete\(noteId\)/)
+  assert.match(runtimeSource, /className=\{`oanix-note-session-lock/)
+  assert.match(runtimeSource, /Bloquear esta nota ahora/)
+  assert.match(runtimeSource, /openLockDialog\('unlock', selectedNoteId\)/)
+  assert.match(runtimeSource, /unlockedNoteIds\.has\(selectedNoteId\) \? '🔓' : '🔒'/)
+
+  const relockBody = runtimeSource.match(/function manuallyRelockNote[\s\S]*?(?=\n  function openLockDialog)/)?.[0] ?? ''
+  assert.doesNotMatch(relockBody, /setNotePrivacyLock|setNotePrivateBox|createNotePrivacyLock/)
+  assert.match(privacyCssSource, /\.oanix-note-session-lock/)
+})
+"""
+          if "protected note unlock session can be manually closed" not in tests:
+              tests += test_block
+          test_path.write_text(tests)
+          PY
+
+      - name: Commit implementation
+        run: |
+          if git diff --quiet; then
+            echo "No changes required."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/features/privacy/NotePrivacyRuntime.tsx src/features/privacy/notePrivacy.css tests/notePrivacy.test.ts
+          git commit -m "Privacy: add manual protected-note relock [manual-relock-applied]"
+          git push origin HEAD:feat/manual-note-relock
