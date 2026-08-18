@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { isNoteRecord, noteBlocksToPlainText, type NoteRecord } from '../src/features/notes/noteTypes.ts'
+import { isNoteRecord, noteBlocksToFullPlainText, type NoteRecord } from '../src/features/notes/noteTypes.ts'
 
 function checklistNote(): NoteRecord {
   return {
@@ -28,9 +28,9 @@ test('checklist blocks survive note validation', () => {
   assert.equal(isNoteRecord(checklistNote()), true)
 })
 
-test('checklist state is represented in note previews and search text', () => {
+test('checklist state remains available to explicit full plaintext and search helpers', () => {
   assert.equal(
-    noteBlocksToPlainText(checklistNote().content.blocks),
+    noteBlocksToFullPlainText(checklistNote().content.blocks),
     '☐ Comprar café\n☑ Pagar recibo',
   )
 })
