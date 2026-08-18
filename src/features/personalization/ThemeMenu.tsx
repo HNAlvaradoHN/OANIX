@@ -16,6 +16,7 @@ import {
 } from './themeCatalog'
 import './personalization.css'
 import './personalization-workspace.css'
+import './session-auto-lock.css'
 
 export function ThemeMenu() {
   const [open, setOpen] = useState(false)
