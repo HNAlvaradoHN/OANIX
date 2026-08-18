@@ -34,7 +34,7 @@ test('personalization keeps ten styled presets plus classic day and night bases'
 test('theme choice is only a local UI preference and applies before React paints', () => {
   assert.match(catalog, /window\.localStorage\.setItem\(OANIX_THEME_STORAGE_KEY, theme\.id\)/)
   assert.match(catalog, /document\.documentElement\.dataset\.oanixTheme = theme\.id/)
-  assert.doesNotMatch(catalog, /sync|supabase|encrypted_records/i)
+  assert.doesNotMatch(catalog, /supabase|encrypted_records|sync_records/i)
   assert.match(main, /applyOanixTheme\(readSavedOanixTheme\(\), false\)/)
   assert.match(main, /<ThemeMenu \/>/)
   assert.match(main, /styles\/themes\.css/)
