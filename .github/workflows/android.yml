@@ -88,7 +88,8 @@ jobs:
               sha: context.sha,
               state: 'success',
               context: 'oanix/stable-debug-signing',
-              description: 'Stable OANIX debug signing certificate verified'
+              description: 'Stable OANIX debug signing certificate verified',
+              target_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
             })
 
       - name: Remove stable signing material from workspace
