@@ -60,6 +60,32 @@ test('one quick-unlock action delegates PIN pattern password or strong biometric
   assert.doesNotMatch(app, /<AndroidDeviceCredentialRetryRuntime/)
 })
 
+test('quick unlock is exposed on both local and synchronized vault password forms', () => {
+  const runtime = readFileSync(
+    'src/platform/android/AndroidBiometricRetryRuntime.tsx',
+    'utf8',
+  )
+  const vaultGate = readFileSync('src/app/VaultGate.tsx', 'utf8')
+
+  assert.match(vaultGate, /id="master-password"/)
+  assert.match(vaultGate, /id="cloud-master-password"/)
+  assert.match(runtime, /#master-password, #cloud-master-password/)
+  assert.match(runtime, /passwordInput\?\.id === 'cloud-master-password' \? 'synced' : 'local'/)
+})
+
+test('synchronized quick unlock proves the local vault matches the connected account before opening', () => {
+  const runtime = readFileSync(
+    'src/platform/android/AndroidBiometricRetryRuntime.tsx',
+    'utf8',
+  )
+
+  assert.match(runtime, /mode === 'synced'/)
+  assert.match(runtime, /await ensureRemoteVaultBootstrap\(\)/)
+  assert.match(runtime, /lockLocalVault\(\)/)
+  assert.match(runtime, /otra bóveda local|otra clave de bóveda/)
+  assert.match(runtime, /form-message/)
+})
+
 test('legacy explicit device credential path remains secure but is not exposed as a second UI action', () => {
   const plugin = readFileSync(
     'android/app/src/main/java/io/github/hnalvaradohn/oanix/OanixDeviceCredentialPlugin.java',
