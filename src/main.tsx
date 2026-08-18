@@ -11,6 +11,7 @@ import './styles/themes.css'
 import './styles/base-themes.css'
 import './styles/notebook-polish.css'
 import './styles/final-visual-polish.css'
+import './styles/header-icon-polish.css'
 
 type OanixUpdateWindow = Window & {
   __oanixApplyUpdate?: () => Promise<void>
