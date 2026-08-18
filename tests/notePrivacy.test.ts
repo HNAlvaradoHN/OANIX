@@ -6,7 +6,7 @@ import {
   NOTE_LOCK_MAX_CHARACTERS,
   validateNotePrivacyCode,
   verifyNotePrivacyLock,
-} from '../src/features/privacy/notePrivacyService.ts'
+} from '../src/features/privacy/notePrivacyCrypto.ts'
 
 const runtimeSource = readFileSync('src/features/privacy/NotePrivacyRuntime.tsx', 'utf8')
 const privacySource = readFileSync('src/features/privacy/notePrivacyService.ts', 'utf8')
