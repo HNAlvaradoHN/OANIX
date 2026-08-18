@@ -1,0 +1,62 @@
+name: Apply redesign codemod
+
+on:
+  push:
+    branches: [design/post-v3-midnight-violet]
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: ${{ !contains(github.event.head_commit.message, '[redesign-codemod]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: design/post-v3-midnight-violet
+          fetch-depth: 0
+
+      - name: Apply narrow NotesWorkspace changes
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('src/features/notes/NotesWorkspace.tsx')
+          text = path.read_text()
+
+          import_anchor = "import { prepareDailyEntriesForEditing } from './dailyEntries'\n"
+          import_line = "import { NoteAvatar } from './NoteAvatar'\n"
+          if import_line not in text:
+              if import_anchor not in text:
+                  raise SystemExit('NotesWorkspace import anchor not found')
+              text = text.replace(import_anchor, import_anchor + import_line, 1)
+
+          old_list_avatar = '<span className="note-row__avatar" aria-hidden="true">{noteInitial(note.title)}</span>'
+          new_list_avatar = '<NoteAvatar note={note} className="note-row__avatar" />'
+          if old_list_avatar in text:
+              text = text.replace(old_list_avatar, new_list_avatar, 1)
+          elif new_list_avatar not in text:
+              raise SystemExit('List avatar anchor not found')
+
+          old_open_avatar = '<span className="note-view__avatar" aria-hidden="true">{noteInitial(selectedNote.title)}</span>'
+          new_open_avatar = '<NoteAvatar note={selectedNote} className="note-view__avatar" />'
+          if old_open_avatar in text:
+              text = text.replace(old_open_avatar, new_open_avatar, 1)
+          elif new_open_avatar not in text:
+              raise SystemExit('Open-note avatar anchor not found')
+
+          path.write_text(text)
+          PY
+
+      - name: Commit codemod result
+        run: |
+          if git diff --quiet; then
+            echo "No changes required."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/features/notes/NotesWorkspace.tsx
+          git commit -m "Design: connect encrypted note thumbnails [redesign-codemod]"
+          git push origin HEAD:design/post-v3-midnight-violet
