@@ -1,61 +1,72 @@
-.workspace-menu {
+.oanix-personalization-slot {
+  min-height: 2.8rem;
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  padding: .35rem .55rem .4rem;
+  border-bottom: 1px solid var(--theme-border, rgba(128,148,190,.16));
+  background: color-mix(in srgb, var(--theme-surface, #111827) 92%, transparent);
 }
 
-/* Keep About last while Personalization sits with the workspace settings. */
-.workspace-menu > button:last-of-type { order: 2; }
-.oanix-personalization__workspace-entry {
-  order: 1;
-  margin-top: .25rem;
-  padding-top: .25rem;
-  border-top: 1px solid var(--theme-border, rgba(128,148,190,.2));
+.oanix-personalization-trigger {
+  min-width: 0;
+  max-width: 100%;
+  min-height: 2.15rem;
+  display: inline-flex;
+  align-items: center;
+  gap: .48rem;
+  padding: .28rem .62rem .28rem .38rem;
+  border: 1px solid var(--theme-border, rgba(128,148,190,.24));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--theme-surface-2, #172033) 88%, transparent);
+  color: var(--theme-text-soft, #d7deeb);
+  box-shadow: inset 0 1px rgba(255,255,255,.035), 0 6px 18px rgba(0,0,0,.12);
+  font: inherit;
+  cursor: pointer;
 }
 
-.workspace-menu .oanix-personalization__menuitem {
-  min-height: 3rem;
+.oanix-personalization-trigger:hover,
+.oanix-personalization-trigger:focus-visible,
+.oanix-personalization-trigger[aria-expanded='true'] {
+  outline: none;
+  border-color: var(--theme-border-strong, rgba(143,159,205,.5));
+  background: color-mix(in srgb, var(--theme-accent, #8d7aff) 10%, var(--theme-surface-2, #172033));
+  box-shadow: 0 0 18px var(--theme-glow, rgba(111,97,238,.18)), inset 0 1px rgba(255,255,255,.05);
 }
 
-.oanix-personalization__menuitem-icon {
+.oanix-personalization-trigger__icon {
   width: 1.55rem;
   height: 1.55rem;
   display: grid;
   flex: 0 0 auto;
   place-items: center;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--theme-accent, #6f61ee), var(--theme-accent-2, #67e8f9));
+  background: linear-gradient(135deg, var(--theme-accent, #8d7aff), var(--theme-accent-2, #67e8f9));
   color: #fff;
   box-shadow: 0 0 12px var(--theme-glow, rgba(111,97,238,.2));
   font-size: .72rem;
 }
 
-.oanix-personalization__menuitem-copy {
+.oanix-personalization-trigger__copy {
   min-width: 0;
-  flex: 1;
+  display: flex;
+  align-items: baseline;
+  gap: .38rem;
 }
-
-.oanix-personalization__menuitem-copy strong,
-.oanix-personalization__menuitem-copy small {
-  display: block;
+.oanix-personalization-trigger__copy strong,
+.oanix-personalization-trigger__copy small {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-
-.oanix-personalization__menuitem-copy strong { font-size: .84rem; }
-.oanix-personalization__menuitem-copy small {
-  margin-top: .08rem;
+.oanix-personalization-trigger__copy strong { font-size: .72rem; }
+.oanix-personalization-trigger__copy small {
   color: var(--theme-muted, #8d9aaf);
-  font-size: .64rem;
+  font-size: .62rem;
   font-weight: 700;
 }
-
-.oanix-personalization__menuitem-chevron {
-  flex: 0 0 auto;
-  opacity: .55;
-  font-size: 1.05rem;
-}
+.oanix-personalization-trigger__chevron { flex: 0 0 auto; opacity: .7; }
 
 .oanix-theme-backdrop {
   position: fixed;
@@ -67,27 +78,23 @@
   padding: 0;
   border: 0;
   border-radius: 0;
-  background: rgba(3, 7, 18, .38);
-  backdrop-filter: blur(5px) saturate(.88);
-  -webkit-backdrop-filter: blur(5px) saturate(.88);
+  background: rgba(3,7,18,.38);
+  backdrop-filter: blur(5px) saturate(.9);
+  -webkit-backdrop-filter: blur(5px) saturate(.9);
   cursor: default;
 }
-
-:root[data-oanix-theme-mode='light'] .oanix-theme-backdrop {
-  background: rgba(30, 41, 59, .2);
-}
+:root[data-oanix-theme-mode='light'] .oanix-theme-backdrop { background: rgba(30,41,59,.2); }
 
 .oanix-theme-menu--workspace {
   position: fixed;
   z-index: 1700;
-  top: max(4.7rem, calc(env(safe-area-inset-top) + 4.1rem));
+  top: max(4.6rem, calc(env(safe-area-inset-top) + 4rem));
   right: max(.8rem, env(safe-area-inset-right));
-  width: min(38rem, calc(100vw - 1.6rem));
-  max-height: min(82dvh, 44rem);
+  width: min(42rem, calc(100vw - 1.6rem));
+  max-height: min(84dvh, 46rem);
 }
-
 .oanix-theme-menu--workspace .oanix-theme-menu__content {
-  max-height: min(68dvh, 36rem);
+  max-height: min(70dvh, 38rem);
   overflow: auto;
   overscroll-behavior: contain;
   padding: .15rem 0 max(.8rem, env(safe-area-inset-bottom));
@@ -99,7 +106,6 @@
   padding-top: .75rem;
   border-top: 1px solid var(--theme-border, rgba(128,148,190,.16));
 }
-
 .oanix-theme-section__heading {
   display: flex;
   align-items: baseline;
@@ -107,13 +113,7 @@
   gap: 1rem;
   padding: .25rem .85rem .1rem;
 }
-
-.oanix-theme-section__heading strong {
-  color: var(--theme-text, #f6f8fd);
-  font-size: .75rem;
-  letter-spacing: .03em;
-}
-
+.oanix-theme-section__heading strong { color: var(--theme-text, #f6f8fd); font-size: .75rem; letter-spacing: .03em; }
 .oanix-theme-section__heading span {
   min-width: 0;
   overflow: hidden;
@@ -122,17 +122,17 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-
-.oanix-theme-menu--workspace .oanix-theme-menu__grid {
-  max-height: none;
-  overflow: visible;
-}
-
-.oanix-theme-menu__grid--base .oanix-theme-option {
-  min-height: 4.25rem;
-}
+.oanix-theme-menu--workspace .oanix-theme-menu__grid { max-height: none; overflow: visible; }
+.oanix-theme-menu__grid--base .oanix-theme-option { min-height: 4.25rem; }
 
 @media (max-width: 760px) {
+  .oanix-personalization-slot {
+    min-height: 2.6rem;
+    padding: .3rem .45rem;
+  }
+  .oanix-personalization-trigger { width: 100%; justify-content: center; }
+  .oanix-personalization-trigger__copy { flex: 1; justify-content: center; }
+
   .oanix-theme-menu--workspace {
     top: auto;
     right: max(.55rem, env(safe-area-inset-right));
@@ -142,25 +142,18 @@
     max-height: calc(100dvh - max(1.1rem, env(safe-area-inset-top)) - max(1.1rem, env(safe-area-inset-bottom)));
     border-radius: 1.15rem;
   }
-
   .oanix-theme-menu--workspace .oanix-theme-menu__content {
     max-height: calc(100dvh - 10.2rem - env(safe-area-inset-top) - env(safe-area-inset-bottom));
   }
+  .oanix-theme-section__heading { align-items: flex-start; flex-direction: column; gap: .15rem; }
+  .oanix-theme-option { min-height: 4.3rem; }
+}
 
-  .oanix-theme-section__heading {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: .15rem;
-  }
-
-  .oanix-theme-option {
-    min-height: 4.3rem;
-  }
+@media (max-width: 420px) {
+  .oanix-personalization-trigger__copy strong { font-size: .69rem; }
+  .oanix-personalization-trigger__copy small { max-width: 7rem; }
 }
 
 @media (prefers-reduced-transparency: reduce) {
-  .oanix-theme-backdrop {
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-  }
+  .oanix-theme-backdrop { backdrop-filter: none; -webkit-backdrop-filter: none; }
 }
