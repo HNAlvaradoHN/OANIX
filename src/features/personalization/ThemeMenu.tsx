@@ -1,6 +1,12 @@
 import { Fragment, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import {
+  AUTO_LOCK_OPTIONS,
+  readSavedAutoLockMinutes,
+  saveAutoLockMinutes,
+  type AutoLockMinutes,
+} from '../../security/session/autoLockPolicy'
+import {
   applyOanixTheme,
   getOanixTheme,
   OANIX_BASE_THEMES,
@@ -14,6 +20,7 @@ import './personalization-workspace.css'
 export function ThemeMenu() {
   const [open, setOpen] = useState(false)
   const [themeId, setThemeId] = useState(() => readSavedOanixTheme())
+  const [autoLockMinutes, setAutoLockMinutes] = useState<AutoLockMinutes>(() => readSavedAutoLockMinutes())
   const [workspaceMenu, setWorkspaceMenu] = useState<HTMLElement | null>(null)
   const entryRef = useRef<HTMLDivElement | null>(null)
   const panelRef = useRef<HTMLElement | null>(null)
@@ -75,6 +82,10 @@ export function ThemeMenu() {
   function chooseTheme(nextThemeId: string) {
     setThemeId(applyOanixTheme(nextThemeId))
     closeThemeAndWorkspaceMenu()
+  }
+
+  function chooseAutoLock(nextMinutes: AutoLockMinutes) {
+    setAutoLockMinutes(saveAutoLockMinutes(nextMinutes))
   }
 
   function renderThemeOption(theme: OanixThemePreset) {
@@ -144,8 +155,8 @@ export function ThemeMenu() {
         <header className="oanix-theme-menu__header">
           <div>
             <span className="oanix-theme-menu__eyebrow">PERSONALIZACIÓN</span>
-            <strong>Elegí tu ambiente</strong>
-            <p>El tema se guarda solo en este dispositivo.</p>
+            <strong>Ajustá OANIX a tu gusto</strong>
+            <p>El tema y el tiempo de bloqueo se guardan solo en este dispositivo.</p>
           </div>
           <button
             className="oanix-theme-menu__close"
@@ -166,6 +177,35 @@ export function ThemeMenu() {
             <div className="oanix-theme-menu__grid oanix-theme-menu__grid--base" role="list" aria-label="Temas base">
               {OANIX_BASE_THEMES.map(renderThemeOption)}
             </div>
+          </section>
+
+          <section className="oanix-theme-section oanix-security-section" aria-labelledby="oanix-auto-lock-title">
+            <div className="oanix-theme-section__heading">
+              <strong id="oanix-auto-lock-title">Seguridad</strong>
+              <span>Bloqueo automático al dejar OANIX en segundo plano</span>
+            </div>
+            <div className="oanix-auto-lock" role="radiogroup" aria-label="Tiempo de bloqueo automático">
+              {AUTO_LOCK_OPTIONS.map((option) => {
+                const selected = option.minutes === autoLockMinutes
+                return (
+                  <button
+                    key={option.minutes}
+                    className={`oanix-auto-lock__option${selected ? ' oanix-auto-lock__option--selected' : ''}`}
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    onClick={() => chooseAutoLock(option.minutes)}
+                  >
+                    <span>{option.label}</span>
+                    {option.minutes === 5 && <small>Recomendado</small>}
+                    {selected && <strong aria-hidden="true">✓</strong>}
+                  </button>
+                )
+              })}
+            </div>
+            <p className="oanix-auto-lock__hint">
+              Si volvés antes del tiempo elegido, seguís donde estabas. El botón 🔒 siempre bloquea de inmediato.
+            </p>
           </section>
 
           <section className="oanix-theme-section" aria-labelledby="oanix-theme-style-title">
