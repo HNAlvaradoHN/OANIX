@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">OANIX</title>
+  <desc id="desc">Marca compacta PWA de OANIX: bloc grafito con renglones naranja, candado y píxeles sobre negro mate.</desc>
+  <defs>
+    <radialGradient id="bg" cx="36%" cy="18%" r="96%">
+      <stop offset="0" stop-color="#202328"/>
+      <stop offset="0.5" stop-color="#121419"/>
+      <stop offset="1" stop-color="#07080a"/>
+    </radialGradient>
+    <linearGradient id="page" x1="0.08" y1="0" x2="0.94" y2="1">
+      <stop offset="0" stop-color="#555b64"/>
+      <stop offset="0.42" stop-color="#343941"/>
+      <stop offset="1" stop-color="#1d2025"/>
+    </linearGradient>
+    <linearGradient id="orange" x1="0.12" y1="0" x2="0.88" y2="1">
+      <stop offset="0" stop-color="#ffc16d"/>
+      <stop offset="0.34" stop-color="#ff9a32"/>
+      <stop offset="0.72" stop-color="#f27617"/>
+      <stop offset="1" stop-color="#c9560d"/>
+    </linearGradient>
+    <linearGradient id="orangeBright" x1="0" y1="0" x2="1" y2="0.9">
+      <stop offset="0" stop-color="#ffd79f"/>
+      <stop offset="0.35" stop-color="#ff9b33"/>
+      <stop offset="1" stop-color="#ef6b0d"/>
+    </linearGradient>
+    <filter id="shadow" x="-35%" y="-35%" width="180%" height="190%">
+      <feDropShadow dx="0" dy="12" stdDeviation="10" flood-color="#000" flood-opacity="0.74"/>
+    </filter>
+    <filter id="orangeGlow" x="-55%" y="-55%" width="210%" height="210%">
+      <feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#ff7d19" flood-opacity="0.46"/>
+    </filter>
+  </defs>
+
+  <rect x="18" y="18" width="476" height="476" rx="112" fill="url(#bg)" stroke="#3d4148" stroke-width="5"/>
+  <rect x="29" y="29" width="454" height="454" rx="101" fill="none" stroke="#fff" stroke-opacity="0.05" stroke-width="2"/>
+
+  <g filter="url(#shadow)">
+    <path d="M98 115 Q98 94 119 94 H324 L402 172 V356 Q402 377 381 377 H119 Q98 377 98 356Z"
+      fill="url(#page)" stroke="#6f7680" stroke-width="5"/>
+    <path d="M324 94 V155 Q324 172 341 172 H402Z" fill="url(#orange)" stroke="#ffb35b" stroke-width="3"/>
+    <path d="M122 118 H300" stroke="#fff" stroke-opacity="0.13" stroke-width="3" stroke-linecap="round"/>
+  </g>
+
+  <g filter="url(#shadow)">
+    <path d="M77 145 H111 M77 211 H111 M77 277 H111 M77 343 H111" stroke="#d7dbe0" stroke-width="12" stroke-linecap="round"/>
+    <path d="M77 145 H105 M77 211 H105 M77 277 H105 M77 343 H105" stroke="#202329" stroke-width="7" stroke-linecap="round"/>
+  </g>
+
+  <g filter="url(#orangeGlow)">
+    <rect x="151" y="164" width="163" height="18" rx="9" fill="url(#orangeBright)"/>
+    <rect x="151" y="219" width="163" height="18" rx="9" fill="url(#orangeBright)"/>
+    <rect x="151" y="274" width="137" height="18" rx="9" fill="url(#orangeBright)"/>
+    <rect x="151" y="329" width="94" height="18" rx="9" fill="url(#orangeBright)"/>
+  </g>
+
+  <g filter="url(#shadow)">
+    <path d="M286 341 V306 C286 260 315 231 356 231 C397 231 426 260 426 306 V341"
+      fill="none" stroke="#d5d8dd" stroke-width="20" stroke-linecap="round"/>
+    <path d="M289 341 V306 C289 268 316 242 356 242 C396 242 423 268 423 306 V341"
+      fill="none" stroke="#30343a" stroke-width="11" stroke-linecap="round"/>
+    <rect x="270" y="326" width="172" height="124" rx="28" fill="url(#orange)" stroke="#ffb057" stroke-width="4"/>
+    <circle cx="356" cy="378" r="18" fill="#090b0d"/>
+    <path d="M346 392 H366 L374 431 H338Z" fill="#090b0d"/>
+  </g>
+
+  <g fill="url(#orangeBright)" filter="url(#orangeGlow)">
+    <rect x="366" y="90" width="17" height="17" rx="3"/>
+    <rect x="402" y="66" width="23" height="23" rx="4"/>
+    <rect x="443" y="94" width="15" height="15" rx="3"/>
+    <rect x="391" y="121" width="14" height="14" rx="3"/>
+    <rect x="423" y="124" width="22" height="22" rx="4"/>
+    <rect x="458" y="151" width="11" height="11" rx="2"/>
+  </g>
+</svg>
