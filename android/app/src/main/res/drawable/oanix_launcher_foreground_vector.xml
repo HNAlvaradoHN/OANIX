@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Scale the complete composition into Android's adaptive-icon safe zone. -->
+    <group
+        android:pivotX="54"
+        android:pivotY="54"
+        android:scaleX="0.78"
+        android:scaleY="0.78">
+
+        <!-- Soft depth behind the brushed-silver C. -->
+        <path
+            android:pathData="M62,27 C54,21 42,20 33,25 C22,31 18,44 21,55 C24,67 35,74 47,74 C53,74 58,72 63,68"
+            android:fillColor="#00000000"
+            android:strokeColor="#0B0D10"
+            android:strokeWidth="10"
+            android:strokeLineCap="butt"
+            android:strokeLineJoin="round"
+            android:strokeAlpha="0.72" />
+
+        <path
+            android:pathData="M62,25 C54,19 42,18 33,23 C22,29 18,42 21,53 C24,65 35,72 47,72 C53,72 58,70 63,66"
+            android:fillColor="#00000000"
+            android:strokeColor="#BFC2C7"
+            android:strokeWidth="8"
+            android:strokeLineCap="butt"
+            android:strokeLineJoin="round" />
+
+        <path
+            android:pathData="M61,24 C53,20 43,20 35,24 C25,30 21,41 24,51"
+            android:fillColor="#00000000"
+            android:strokeColor="#E7E7E7"
+            android:strokeWidth="2.1"
+            android:strokeLineCap="round"
+            android:strokeAlpha="0.88" />
+
+        <!-- Copper notepad outline, folded upper corner and lower page/leaf turn. -->
+        <path
+            android:pathData="M61,31 C67,27 76,28 82,32 L88,38 C89,40 89,42 89,45 L89,61 C89,69 84,74 74,77"
+            android:fillColor="#00000000"
+            android:strokeColor="#E88732"
+            android:strokeWidth="2.5"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+
+        <path
+            android:pathData="M81,31 L81,39 L89,39"
+            android:fillColor="#00000000"
+            android:strokeColor="#F29A45"
+            android:strokeWidth="2.3"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+
+        <path
+            android:pathData="M74,77 C79,72 81,67 81,61 C86,64 88,69 85,73 C82,76 78,77 74,77 Z"
+            android:fillColor="#E88732" />
+
+        <path
+            android:pathData="M75,76 C79,72 81,68 81,64"
+            android:fillColor="#00000000"
+            android:strokeColor="#F6B35F"
+            android:strokeWidth="0.7"
+            android:strokeLineCap="round"
+            android:strokeAlpha="0.75" />
+
+        <!-- Copper notebook rulings. -->
+        <path
+            android:pathData="M64,44 L80,44 M64,50 L80,50 M64,56 L80,56 M64,62 L75,62"
+            android:fillColor="#00000000"
+            android:strokeColor="#E88732"
+            android:strokeWidth="2.2"
+            android:strokeLineCap="round" />
+
+        <!-- Security lock. -->
+        <path
+            android:pathData="M35,47 L35,42 C35,35 39,31 45,31 C51,31 55,35 55,42 L55,47"
+            android:fillColor="#00000000"
+            android:strokeColor="#F29A45"
+            android:strokeWidth="3.8"
+            android:strokeLineCap="round" />
+
+        <path
+            android:pathData="M33,46 L57,46 C59,46 60,48 60,50 L60,62 C60,65 58,66 56,66 L34,66 C31,66 30,64 30,62 L30,50 C30,48 31,46 33,46 Z"
+            android:fillColor="#E88732" />
+
+        <path
+            android:pathData="M33,47 L57,47"
+            android:fillColor="#00000000"
+            android:strokeColor="#F6B35F"
+            android:strokeWidth="1"
+            android:strokeLineCap="round"
+            android:strokeAlpha="0.8" />
+
+        <path
+            android:pathData="M45,52 C47.5,52 49,54 49,56 C49,57.5 48,59 47,59.5 L48,64 L42,64 L43,59.5 C42,59 41,57.5 41,56 C41,54 42.5,52 45,52 Z"
+            android:fillColor="#0B0D10" />
+
+        <!-- Digital copper pixels. -->
+        <path android:pathData="M76,23 L79,23 L79,26 L76,26 Z" android:fillColor="#E88732" />
+        <path android:pathData="M82,19 L86,19 L86,23 L82,23 Z" android:fillColor="#F29A45" />
+        <path android:pathData="M89,23 L92,23 L92,26 L89,26 Z" android:fillColor="#E88732" />
+        <path android:pathData="M79,28 L82,28 L82,31 L79,31 Z" android:fillColor="#E88732" />
+        <path android:pathData="M85,27 L89,27 L89,31 L85,31 Z" android:fillColor="#F29A45" />
+        <path android:pathData="M92,30 L95,30 L95,33 L92,33 Z" android:fillColor="#E88732" />
+        <path android:pathData="M86,33 L89,33 L89,36 L86,36 Z" android:fillColor="#E88732" />
+
+        <!-- OANIX wordmark, drawn as geometry so no device font can alter it. -->
+        <path
+            android:pathData="M23,86 C19,86 17,88.5 17,92 C17,95.5 19,98 23,98 C27,98 29,95.5 29,92 C29,88.5 27,86 23,86 Z"
+            android:fillColor="#00000000"
+            android:strokeColor="#D8DADD"
+            android:strokeWidth="1.9"
+            android:strokeLineJoin="round" />
+        <path
+            android:pathData="M34,98 L40,86 L46,98 M36,94 L44,94"
+            android:fillColor="#00000000"
+            android:strokeColor="#D8DADD"
+            android:strokeWidth="1.9"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+        <path
+            android:pathData="M51,98 L51,86 L63,98 L63,86"
+            android:fillColor="#00000000"
+            android:strokeColor="#D8DADD"
+            android:strokeWidth="1.9"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+        <path
+            android:pathData="M69,86 L69,98"
+            android:fillColor="#00000000"
+            android:strokeColor="#D8DADD"
+            android:strokeWidth="2.1"
+            android:strokeLineCap="round" />
+        <path
+            android:pathData="M77,86 L89,98 M89,86 L77,98"
+            android:fillColor="#00000000"
+            android:strokeColor="#E88732"
+            android:strokeWidth="2.2"
+            android:strokeLineCap="round" />
+    </group>
+</vector>
