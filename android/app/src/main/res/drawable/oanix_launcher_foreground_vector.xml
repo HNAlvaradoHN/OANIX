@@ -5,140 +5,177 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- Scale the complete composition into Android's adaptive-icon safe zone. -->
+    <!-- Keep the complete OANIX composition inside the adaptive-icon safe zone. -->
     <group
         android:pivotX="54"
         android:pivotY="54"
         android:scaleX="0.78"
         android:scaleY="0.78">
 
-        <!-- Soft depth behind the brushed-silver C. -->
+        <!-- Deep shadow behind the unmistakable open-right C. -->
         <path
-            android:pathData="M62,27 C54,21 42,20 33,25 C22,31 18,44 21,55 C24,67 35,74 47,74 C53,74 58,72 63,68"
+            android:pathData="M72,28 C65,22 55,20 45,22 C32,25 23,36 23,49 C23,63 33,74 46,77 C56,79 66,76 72,70"
             android:fillColor="#00000000"
-            android:strokeColor="#0B0D10"
-            android:strokeWidth="10"
+            android:strokeColor="#07090B"
+            android:strokeWidth="12.5"
             android:strokeLineCap="butt"
             android:strokeLineJoin="round"
-            android:strokeAlpha="0.72" />
+            android:strokeAlpha="0.78" />
 
+        <!-- Mostly white/silver C with dark depth. -->
         <path
-            android:pathData="M62,25 C54,19 42,18 33,23 C22,29 18,42 21,53 C24,65 35,72 47,72 C53,72 58,70 63,66"
+            android:pathData="M72,26 C65,20 55,18 45,20 C32,23 23,34 23,47 C23,61 33,72 46,75 C56,77 66,74 72,68"
             android:fillColor="#00000000"
-            android:strokeColor="#BFC2C7"
-            android:strokeWidth="8"
+            android:strokeColor="#ECEDEF"
+            android:strokeWidth="10.5"
             android:strokeLineCap="butt"
             android:strokeLineJoin="round" />
 
+        <!-- Secondary metallic shading. -->
         <path
-            android:pathData="M61,24 C53,20 43,20 35,24 C25,30 21,41 24,51"
+            android:pathData="M72,27 C65,22 57,20 48,21 C36,23 27,32 25,43"
             android:fillColor="#00000000"
-            android:strokeColor="#E7E7E7"
-            android:strokeWidth="2.1"
-            android:strokeLineCap="round"
-            android:strokeAlpha="0.88" />
-
-        <!-- Copper notepad outline, folded upper corner and lower page/leaf turn. -->
-        <path
-            android:pathData="M61,31 C67,27 76,28 82,32 L88,38 C89,40 89,42 89,45 L89,61 C89,69 84,74 74,77"
-            android:fillColor="#00000000"
-            android:strokeColor="#E88732"
-            android:strokeWidth="2.5"
-            android:strokeLineCap="round"
-            android:strokeLineJoin="round" />
-
-        <path
-            android:pathData="M81,31 L81,39 L89,39"
-            android:fillColor="#00000000"
-            android:strokeColor="#F29A45"
-            android:strokeWidth="2.3"
-            android:strokeLineCap="round"
-            android:strokeLineJoin="round" />
-
-        <path
-            android:pathData="M74,77 C79,72 81,67 81,61 C86,64 88,69 85,73 C82,76 78,77 74,77 Z"
-            android:fillColor="#E88732" />
-
-        <path
-            android:pathData="M75,76 C79,72 81,68 81,64"
-            android:fillColor="#00000000"
-            android:strokeColor="#F6B35F"
-            android:strokeWidth="0.7"
-            android:strokeLineCap="round"
-            android:strokeAlpha="0.75" />
-
-        <!-- Copper notebook rulings. -->
-        <path
-            android:pathData="M64,44 L80,44 M64,50 L80,50 M64,56 L80,56 M64,62 L75,62"
-            android:fillColor="#00000000"
-            android:strokeColor="#E88732"
+            android:strokeColor="#FFFFFF"
             android:strokeWidth="2.2"
-            android:strokeLineCap="round" />
-
-        <!-- Security lock. -->
-        <path
-            android:pathData="M35,47 L35,42 C35,35 39,31 45,31 C51,31 55,35 55,42 L55,47"
-            android:fillColor="#00000000"
-            android:strokeColor="#F29A45"
-            android:strokeWidth="3.8"
-            android:strokeLineCap="round" />
-
-        <path
-            android:pathData="M33,46 L57,46 C59,46 60,48 60,50 L60,62 C60,65 58,66 56,66 L34,66 C31,66 30,64 30,62 L30,50 C30,48 31,46 33,46 Z"
-            android:fillColor="#E88732" />
-
-        <path
-            android:pathData="M33,47 L57,47"
-            android:fillColor="#00000000"
-            android:strokeColor="#F6B35F"
-            android:strokeWidth="1"
             android:strokeLineCap="round"
-            android:strokeAlpha="0.8" />
-
+            android:strokeAlpha="0.92" />
         <path
-            android:pathData="M45,52 C47.5,52 49,54 49,56 C49,57.5 48,59 47,59.5 L48,64 L42,64 L43,59.5 C42,59 41,57.5 41,56 C41,54 42.5,52 45,52 Z"
+            android:pathData="M25,50 C26,62 34,70 46,73 C55,75 64,73 70,68"
+            android:fillColor="#00000000"
+            android:strokeColor="#BFC2C7"
+            android:strokeWidth="1.25"
+            android:strokeLineCap="round"
+            android:strokeAlpha="0.72" />
+
+        <!-- Orange inner signature rim. -->
+        <path
+            android:pathData="M69,30 C62,25 55,23 47,24 C36,26 29,35 29,47 C29,58 37,67 47,69 C55,71 63,69 69,64"
+            android:fillColor="#00000000"
+            android:strokeColor="#FF7D17"
+            android:strokeWidth="0.95"
+            android:strokeLineCap="round" />
+
+        <!-- Small light flare on the C. -->
+        <path
+            android:pathData="M36,24 L36,31 M32.5,27.5 L39.5,27.5"
+            android:fillColor="#00000000"
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="1.1"
+            android:strokeLineCap="round" />
+        <path
+            android:pathData="M35,26.5 L37,26.5 L37,28.5 L35,28.5 Z"
+            android:fillColor="#FFFFFF" />
+
+        <!-- Raised graphite notebook with orange fold. -->
+        <path
+            android:pathData="M45,34 C45,32 46,31 48,31 L69,31 L78,40 L78,62 C78,65 77,66 74,66 L48,66 C46,66 45,65 45,63 Z"
+            android:fillColor="#33373D"
+            android:strokeColor="#5B6067"
+            android:strokeWidth="0.9" />
+        <path
+            android:pathData="M69,31 L69,39 C69,40 70,40 71,40 L78,40 Z"
+            android:fillColor="#F07816"
+            android:strokeColor="#FFAD54"
+            android:strokeWidth="0.6" />
+        <path
+            android:pathData="M49,34 L67,34"
+            android:fillColor="#00000000"
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="0.5"
+            android:strokeAlpha="0.16"
+            android:strokeLineCap="round" />
+
+        <!-- Notebook binding rings. -->
+        <path
+            android:pathData="M42,37 L47,37 M42,46 L47,46 M42,55 L47,55"
+            android:fillColor="#00000000"
+            android:strokeColor="#AEB2B8"
+            android:strokeWidth="1.9"
+            android:strokeLineCap="round" />
+        <path
+            android:pathData="M42,37 L46,37 M42,46 L46,46 M42,55 L46,55"
+            android:fillColor="#00000000"
+            android:strokeColor="#1A1C20"
+            android:strokeWidth="1.05"
+            android:strokeLineCap="round" />
+
+        <!-- Bright orange note rulings. -->
+        <path
+            android:pathData="M52,41 L70,41 M52,48 L70,48 M52,55 L67,55 M52,61 L61,61"
+            android:fillColor="#00000000"
+            android:strokeColor="#FF8A24"
+            android:strokeWidth="1.8"
+            android:strokeLineCap="round" />
+        <path
+            android:pathData="M52,40.6 L69,40.6 M52,47.6 L69,47.6"
+            android:fillColor="#00000000"
+            android:strokeColor="#FFD18D"
+            android:strokeWidth="0.45"
+            android:strokeLineCap="round"
+            android:strokeAlpha="0.9" />
+
+        <!-- Security lock overlapping lower-right notebook corner. -->
+        <path
+            android:pathData="M66,60 L66,56 C66,50 70,47 75,47 C80,47 84,50 84,56 L84,60"
+            android:fillColor="#00000000"
+            android:strokeColor="#C9CCD1"
+            android:strokeWidth="3.4"
+            android:strokeLineCap="round" />
+        <path
+            android:pathData="M66.5,60 L66.5,56 C66.5,51 70,48.5 75,48.5 C80,48.5 83.5,51 83.5,56 L83.5,60"
+            android:fillColor="#00000000"
+            android:strokeColor="#33363B"
+            android:strokeWidth="1.9"
+            android:strokeLineCap="round" />
+        <path
+            android:pathData="M65,58 L85,58 C87,58 88,60 88,62 L88,73 C88,75 87,76 85,76 L65,76 C63,76 62,75 62,73 L62,62 C62,60 63,58 65,58 Z"
+            android:fillColor="#F07816"
+            android:strokeColor="#FFAC50"
+            android:strokeWidth="0.8" />
+        <path
+            android:pathData="M75,65 C77,65 78,66.5 78,68 C78,69 77.4,70 76.5,70.5 L77.5,75 L72.5,75 L73.5,70.5 C72.6,70 72,69 72,68 C72,66.5 73,65 75,65 Z"
             android:fillColor="#0B0D10" />
 
-        <!-- Digital copper pixels. -->
-        <path android:pathData="M76,23 L79,23 L79,26 L76,26 Z" android:fillColor="#E88732" />
-        <path android:pathData="M82,19 L86,19 L86,23 L82,23 Z" android:fillColor="#F29A45" />
-        <path android:pathData="M89,23 L92,23 L92,26 L89,26 Z" android:fillColor="#E88732" />
-        <path android:pathData="M79,28 L82,28 L82,31 L79,31 Z" android:fillColor="#E88732" />
-        <path android:pathData="M85,27 L89,27 L89,31 L85,31 Z" android:fillColor="#F29A45" />
-        <path android:pathData="M92,30 L95,30 L95,33 L92,33 Z" android:fillColor="#E88732" />
-        <path android:pathData="M86,33 L89,33 L89,36 L86,36 Z" android:fillColor="#E88732" />
+        <!-- Digital orange pixels. -->
+        <path android:pathData="M80,24 L83,24 L83,27 L80,27 Z" android:fillColor="#F07816" />
+        <path android:pathData="M86,20 L90,20 L90,24 L86,24 Z" android:fillColor="#FF982F" />
+        <path android:pathData="M93,23 L96,23 L96,26 L93,26 Z" android:fillColor="#F07816" />
+        <path android:pathData="M83,29 L86,29 L86,32 L83,32 Z" android:fillColor="#F07816" />
+        <path android:pathData="M89,28 L93,28 L93,32 L89,32 Z" android:fillColor="#FF982F" />
+        <path android:pathData="M96,32 L99,32 L99,35 L96,35 Z" android:fillColor="#F07816" />
+        <path android:pathData="M90,35 L93,35 L93,38 L90,38 Z" android:fillColor="#F07816" />
 
-        <!-- OANIX wordmark, drawn as geometry so no device font can alter it. -->
+        <!-- OANIX wordmark, geometry only: OANI silver and X orange. -->
         <path
             android:pathData="M23,86 C19,86 17,88.5 17,92 C17,95.5 19,98 23,98 C27,98 29,95.5 29,92 C29,88.5 27,86 23,86 Z"
             android:fillColor="#00000000"
-            android:strokeColor="#D8DADD"
+            android:strokeColor="#DFE1E4"
             android:strokeWidth="1.9"
             android:strokeLineJoin="round" />
         <path
             android:pathData="M34,98 L40,86 L46,98 M36,94 L44,94"
             android:fillColor="#00000000"
-            android:strokeColor="#D8DADD"
+            android:strokeColor="#DFE1E4"
             android:strokeWidth="1.9"
             android:strokeLineCap="round"
             android:strokeLineJoin="round" />
         <path
             android:pathData="M51,98 L51,86 L63,98 L63,86"
             android:fillColor="#00000000"
-            android:strokeColor="#D8DADD"
+            android:strokeColor="#DFE1E4"
             android:strokeWidth="1.9"
             android:strokeLineCap="round"
             android:strokeLineJoin="round" />
         <path
             android:pathData="M69,86 L69,98"
             android:fillColor="#00000000"
-            android:strokeColor="#D8DADD"
+            android:strokeColor="#DFE1E4"
             android:strokeWidth="2.1"
             android:strokeLineCap="round" />
         <path
             android:pathData="M77,86 L89,98 M89,86 L77,98"
             android:fillColor="#00000000"
-            android:strokeColor="#E88732"
+            android:strokeColor="#F07816"
             android:strokeWidth="2.2"
             android:strokeLineCap="round" />
     </group>
