@@ -65,13 +65,14 @@ Validación física completada con PC + Android:
 - Día, Noche y varios ambientes ✅;
 - contraseña maestra: bloqueo manual, rechazo de contraseña incorrecta y apertura correcta con contraseña válida ✅;
 - backup cifrado: exportación usando selector Android, guardado de archivo, selección del backup, verificación con contraseña maestra y restauración correcta de la bóveda ✅;
+- sincronización Google + recuperación tras relanzar: nota de prueba sincronizada, cuenta Google conectada/E2EE al día, cierre completo de la APK, reapertura por bóveda sincronizada y recuperación correcta de la nota/contenido ✅;
 - revisión de logs/artefactos CI ✅.
 
 ### Smoke test aún pendiente
 
-1. Sincronización Google y recuperación tras relanzar.
-2. Compartir nota / recepción de contenido Android si aplica.
-3. Cámara/documentos y permisos relevantes.
+1. Compartir nota / recepción de contenido Android si aplica.
+2. Cámara/documentos y permisos relevantes.
+3. Revisar #73 recuperación Email OTP antes de salida RC/publicación.
 
 ## Otros pendientes importantes
 
@@ -90,8 +91,8 @@ Validación física completada con PC + Android:
 
 ## Próximo paso exacto
 
-1. Validar sincronización Google + recuperación tras relanzar usando solo Android si es posible.
-2. Después validar compartir/recibir contenido Android.
-3. Finalmente validar cámara/documentos y permisos relevantes.
+1. Validar compartir una nota hacia otra app y recibir contenido en OANIX si aplica.
+2. Validar cámara/documentos y permisos relevantes.
+3. Revisar y cerrar/encuadrar #73 recuperación Email OTP antes de salida RC.
 4. Si todo queda verde, cerrar #124, generar/nombrar APK RC y usarla varios días.
 5. Solo después avanzar a #125: appId/version final, icono/splash, firma release, política/ficha y AAB de publicación.
