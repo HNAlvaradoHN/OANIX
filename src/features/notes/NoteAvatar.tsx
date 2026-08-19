@@ -182,7 +182,8 @@ export function NoteAvatar({ note, className }: NoteAvatarProps) {
       return
     }
 
-    setMenuPosition((current) => current ? null : menuPositionFor(event.currentTarget))
+    const nextPosition = menuPositionFor(event.currentTarget)
+    setMenuPosition((current) => current ? null : nextPosition)
   }
 
   function handleView() {
