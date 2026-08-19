@@ -11,7 +11,7 @@ test('paper style is controlled per note instead of from global personalization'
   assert.doesNotMatch(main, /applyNotebookPaperMode/)
   assert.match(runtime, /oanix\.note\.paper\.v1/)
   assert.match(runtime, /noteKeyForEditor/)
-  assert.match(runtime, /data-oanix-note-paper-toggle/)
+  assert.match(runtime, /oanixNotePaperToggle/)
   assert.match(css, /data-oanix-paper-mode='ruled'/)
   assert.match(css, /data-oanix-paper-mode='plain'/)
 })
