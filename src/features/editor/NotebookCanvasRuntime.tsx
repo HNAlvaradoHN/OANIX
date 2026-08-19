@@ -2,8 +2,9 @@ import { useEffect } from 'react'
 
 const ROW_HEIGHT_PX = 32
 const MAX_LEADING_ROWS = 80
-const LAYOUT_STORAGE_KEY = 'oanix.notebook.layout.v1'
+const LAYOUT_STORAGE_KEY = 'oanix.notebook.layout.v2'
 const MAX_LAYOUT_ENTRIES = 500
+const MOBILE_DOCK_ALLOWANCE_PX = 86
 
 interface StoredAnchor {
   rows: number
@@ -123,6 +124,11 @@ function rowGapFrom(baseY: number, clientY: number, rowHeight: number): number {
   return Math.max(0, Math.min(MAX_LEADING_ROWS, Math.round((clientY - baseY) / rowHeight) - 1))
 }
 
+function previousBlockBottom(paragraph: HTMLParagraphElement, fallback: number): number {
+  const previous = paragraph.previousElementSibling
+  return previous instanceof HTMLElement ? previous.getBoundingClientRect().bottom : fallback
+}
+
 function insertCaretAtBackgroundPoint(editor: HTMLElement, clientY: number, anchors: StoredAnchorMap) {
   const blocks = directBlocks(editor)
   const rowHeight = editorRowHeight(editor)
@@ -130,7 +136,16 @@ function insertCaretAtBackgroundPoint(editor: HTMLElement, clientY: number, anch
   let paragraph: HTMLParagraphElement
   let leadingRows = 0
 
-  if (blocks.length === 0) {
+  const blankAtPoint = blocks.find((block) => {
+    if (!emptyParagraph(block)) return false
+    const rect = block.getBoundingClientRect()
+    return clientY >= rect.top && clientY <= rect.bottom
+  })
+
+  if (blankAtPoint && emptyParagraph(blankAtPoint)) {
+    paragraph = blankAtPoint
+    leadingRows = rowGapFrom(previousBlockBottom(paragraph, contentTop), clientY, rowHeight)
+  } else if (blocks.length === 0) {
     paragraph = createCaretParagraph()
     editor.append(paragraph)
     leadingRows = Math.max(0, Math.round((clientY - contentTop) / rowHeight))
@@ -160,9 +175,7 @@ function insertCaretAtBackgroundPoint(editor: HTMLElement, clientY: number, anch
       const last = blocks.at(-1)!
       if (emptyParagraph(last)) {
         paragraph = last
-        const previous = last.previousElementSibling
-        const baseY = previous instanceof HTMLElement ? previous.getBoundingClientRect().bottom : contentTop
-        leadingRows = rowGapFrom(baseY, clientY, rowHeight)
+        leadingRows = rowGapFrom(previousBlockBottom(paragraph, contentTop), clientY, rowHeight)
       } else {
         paragraph = createCaretParagraph()
         editor.append(paragraph)
@@ -191,20 +204,114 @@ function selectionBlock(editor: HTMLElement): HTMLElement | null {
   return element instanceof HTMLElement ? element : null
 }
 
-function keepCaretVisible(editor: HTMLElement) {
+function caretBounds(editor: HTMLElement): { top: number; bottom: number } | null {
   const block = selectionBlock(editor)
-  if (!block) return
+  if (!block) return null
+
+  const rect = block.getBoundingClientRect()
+  const style = getComputedStyle(block)
+  const paddingTop = Number.parseFloat(style.paddingTop) || 0
+  const rowHeight = editorRowHeight(editor)
+  const top = rect.top + paddingTop
+  return { top, bottom: top + rowHeight }
+}
+
+function keepCaretVisible(editor: HTMLElement) {
+  const bounds = caretBounds(editor)
+  if (!bounds) return
   const viewport = window.visualViewport
   const top = viewport?.offsetTop ?? 0
   const height = viewport?.height ?? window.innerHeight
   const bottom = top + height
-  const rect = block.getBoundingClientRect()
   const safeTop = top + 18
-  const safeBottom = bottom - 96
+  const safeBottom = bottom - MOBILE_DOCK_ALLOWANCE_PX
 
-  if (rect.bottom > safeBottom || rect.top < safeTop) {
-    block.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'smooth' })
+  if (bounds.bottom > safeBottom || bounds.top < safeTop) {
+    const block = selectionBlock(editor)
+    block?.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'smooth' })
   }
+}
+
+function directChildForTarget(editor: HTMLElement, target: Element): HTMLElement | null {
+  let current: Element | null = target
+  while (current && current.parentElement !== editor) current = current.parentElement
+  return current instanceof HTMLElement ? current : null
+}
+
+function editorForBlankCanvasTarget(target: EventTarget | null): HTMLElement | null {
+  if (!(target instanceof Element)) return null
+  const editor = target.closest<HTMLElement>('.editor-surface')
+  if (!editor) return null
+
+  const blocked = target.closest(
+    'button, input, textarea, select, a, [data-image-block="true"], [data-code-block="true"], [data-checklist-block="true"], [data-contact-block="true"], [data-daily-entry-block="true"]',
+  )
+  if (blocked && editor.contains(blocked)) return null
+  if (target === editor) return editor
+
+  const direct = directChildForTarget(editor, target)
+  return emptyParagraph(direct) ? editor : null
+}
+
+function scrollableAncestor(element: HTMLElement): HTMLElement | null {
+  let parent = element.parentElement
+  while (parent && parent !== document.body) {
+    const style = getComputedStyle(parent)
+    const scrollable = /(auto|scroll)/.test(style.overflowY) && parent.scrollHeight > parent.clientHeight + 2
+    if (scrollable) return parent
+    parent = parent.parentElement
+  }
+  return null
+}
+
+function centerImageAbovePanel(figure: HTMLElement, panelHeight: number) {
+  const viewport = window.visualViewport
+  const viewportTop = viewport?.offsetTop ?? 0
+  const viewportHeight = viewport?.height ?? window.innerHeight
+  const safeTop = viewportTop + 18
+  const safeBottom = viewportTop + viewportHeight - panelHeight - MOBILE_DOCK_ALLOWANCE_PX - 14
+
+  if (safeBottom <= safeTop + 100) {
+    figure.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'smooth' })
+    return
+  }
+
+  const figureRect = figure.getBoundingClientRect()
+  const actualCenter = (figureRect.top + figureRect.bottom) / 2
+  const desiredCenter = (safeTop + safeBottom) / 2
+  const delta = actualCenter - desiredCenter
+  if (Math.abs(delta) < 8) return
+
+  const scroller = scrollableAncestor(figure)
+  if (scroller) {
+    scroller.scrollBy({ top: delta, behavior: 'smooth' })
+  } else {
+    window.scrollBy({ top: delta, behavior: 'smooth' })
+  }
+}
+
+function closeImagePanelSpacing(root: HTMLElement) {
+  delete root.dataset.oanixImagePanelOpen
+  root.style.removeProperty('--oanix-image-panel-height')
+}
+
+function syncImagePanelGeometry(figure: HTMLElement) {
+  const root = figure.closest<HTMLElement>('.image-note-editor-root')
+  if (!root) return
+
+  if (figure.dataset.imageInfoOpen !== 'true') {
+    closeImagePanelSpacing(root)
+    return
+  }
+
+  root.dataset.oanixImagePanelOpen = 'true'
+  window.requestAnimationFrame(() => {
+    if (!figure.isConnected || figure.dataset.imageInfoOpen !== 'true') return
+    const panel = figure.querySelector<HTMLElement>('.editor-image-block__footer')
+    const panelHeight = Math.max(0, Math.ceil(panel?.getBoundingClientRect().height ?? 0))
+    root.style.setProperty('--oanix-image-panel-height', `${panelHeight}px`)
+    window.setTimeout(() => centerImageAbovePanel(figure, panelHeight), 40)
+  })
 }
 
 export function NotebookCanvasRuntime() {
@@ -244,9 +351,7 @@ export function NotebookCanvasRuntime() {
     }
 
     function handleBackgroundClick(event: MouseEvent) {
-      const editor = event.target instanceof HTMLElement && event.target.matches('.editor-surface')
-        ? event.target
-        : null
+      const editor = editorForBlankCanvasTarget(event.target)
       if (!editor || pointerMoved) return
 
       const selection = window.getSelection()
@@ -255,6 +360,15 @@ export function NotebookCanvasRuntime() {
       event.preventDefault()
       event.stopPropagation()
       insertCaretAtBackgroundPoint(editor, event.clientY, anchors)
+    }
+
+    function handleImagePanelClick(event: MouseEvent) {
+      const target = event.target
+      if (!(target instanceof Element)) return
+      const info = target.closest<HTMLElement>('[data-image-info="true"]')
+      const figure = info?.closest<HTMLElement>('[data-image-block="true"]')
+      if (!figure) return
+      window.requestAnimationFrame(() => syncImagePanelGeometry(figure))
     }
 
     function handleFocusIn(event: FocusEvent) {
@@ -270,6 +384,9 @@ export function NotebookCanvasRuntime() {
         ? active.closest<HTMLElement>('.editor-surface')
         : document.querySelector<HTMLElement>('.editor-surface:focus')
       if (editor) window.setTimeout(() => keepCaretVisible(editor), 40)
+
+      const openFigure = document.querySelector<HTMLElement>('[data-image-block="true"][data-image-info-open="true"]')
+      if (openFigure) syncImagePanelGeometry(openFigure)
     }
 
     const observer = new MutationObserver(scheduleRestore)
@@ -281,6 +398,7 @@ export function NotebookCanvasRuntime() {
     document.addEventListener('pointerup', handlePointerEnd, true)
     document.addEventListener('pointercancel', handlePointerEnd, true)
     document.addEventListener('click', handleBackgroundClick, true)
+    document.addEventListener('click', handleImagePanelClick)
     document.addEventListener('focusin', handleFocusIn, true)
     window.visualViewport?.addEventListener('resize', handleViewportChange)
     window.visualViewport?.addEventListener('scroll', handleViewportChange)
@@ -294,6 +412,7 @@ export function NotebookCanvasRuntime() {
       document.removeEventListener('pointerup', handlePointerEnd, true)
       document.removeEventListener('pointercancel', handlePointerEnd, true)
       document.removeEventListener('click', handleBackgroundClick, true)
+      document.removeEventListener('click', handleImagePanelClick)
       document.removeEventListener('focusin', handleFocusIn, true)
       window.visualViewport?.removeEventListener('resize', handleViewportChange)
       window.visualViewport?.removeEventListener('scroll', handleViewportChange)
