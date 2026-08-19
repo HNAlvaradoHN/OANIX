@@ -49,35 +49,45 @@ Validación física completada con PC + Android usando la misma bóveda/cuenta:
 - La UI normal crea un `imageId` nuevo en cada inserción y no ofrece sobrescribir el original conservando el mismo ID; por eso no se exige al usuario manipular IndexedDB/Supabase para fabricar un conflicto binario artificial del mismo registro durante el RC.
 - La sincronización normal de imágenes sí sigue dentro del smoke test #124.
 
-## Avatar manual de nota — PR #135 MERGED ✅ / VALIDACIÓN FÍSICA PENDIENTE
+## Avatar manual de nota — PR #135 + #136 MERGED ✅ / VALIDACIÓN FÍSICA FINAL PENDIENTE
 
-Durante el smoke test RC el usuario aclaró el requisito correcto: el círculo de avatar **no debe usar automáticamente la primera imagen del contenido de la nota**. Debe poder tocarse para elegir manualmente una foto de galería y esa foto debe ser independiente del editor.
+Durante el smoke test RC el usuario aclaró el requisito correcto: el círculo de avatar **no debe usar automáticamente la primera imagen del contenido de la nota**. Debe ser una foto manual e independiente del editor.
 
-Implementación integrada en `main` mediante PR #135:
+### PR #135 — avatar manual independiente
 
-- `NoteAvatar` ya no inspecciona `note.content.blocks` para buscar la primera imagen.
-- Tocar el círculo abre un selector de imagen compatible con JPEG/PNG/WebP/GIF.
-- El evento detiene propagación para que tocar el avatar dentro de una tarjeta no abra accidentalmente la nota.
-- El avatar usa un registro cifrado independiente `note-avatar` ligado al `noteId` dentro de `encrypted_records` existente.
-- La foto usa `storeEncryptedImage`, por lo que original y preview permanecen cifrados; no se introduce localStorage/sessionStorage ni un store paralelo.
-- Las URLs temporales de preview existen solo en memoria y se revocan.
-- Reemplazar avatar intenta limpiar la imagen anterior; eliminar una nota también limpia su avatar cifrado.
-- Los cambios de avatar se refrescan entre las instancias de lista/header y después de sincronización.
-- Sin avatar elegido se conserva la inicial de la nota como fallback.
+- `NoteAvatar` dejó de inspeccionar `note.content.blocks`.
+- Sin avatar, tocar el círculo abre el selector JPEG/PNG/WebP/GIF.
+- La foto se guarda como imagen cifrada y metadata `note-avatar` ligada al `noteId` dentro de `encrypted_records` existente.
+- No se añade localStorage/sessionStorage ni un store paralelo.
+- El avatar no se inserta como bloque del contenido.
+- Tocar el avatar dentro de una tarjeta detiene la propagación y no abre accidentalmente la nota.
+- Reemplazo/eliminación de nota limpian el avatar anterior en best-effort; URLs de preview solo existen en memoria.
+
+### PR #136 — acciones cuando ya existe avatar
+
+UX final acordada:
+- **Sin foto:** tocar círculo → selector de galería.
+- **Con foto:** tocar círculo → menú `Ver`, `Cambiar`, `Eliminar`.
+- `Ver` descifra el original solo bajo demanda, lo muestra en un visor temporal y revoca la Blob URL al cerrar.
+- `Cambiar` reutiliza el mismo selector cifrado y reemplaza el avatar.
+- `Eliminar` pide confirmación, borra metadata + imagen cifrada y vuelve a la inicial de la nota.
+- Menú y visor se renderizan por portal para no crear botones anidados dentro de la tarjeta.
+- Estilos aislados respetan variables de tema con fallback; no se modifica la dirección visual aprobada.
 
 Validación automática:
-- PR #135: OANIX CI #610 ✅.
-- PR #135: OANIX Android #171 ✅.
-- Merge funcional `main`: `76814291b1e0d5aea0393432836b67a0a610fca4`.
-- Android del merge funcional: #172 ✅.
+- PR #135: OANIX CI #610 ✅ / Android #171 ✅.
+- Merge PR #135: `76814291b1e0d5aea0393432836b67a0a610fca4`; Android `main` #172 ✅; firma estable ✅.
+- PR #136: OANIX CI #614 ✅ / Android #175 ✅.
+- Merge PR #136: `c8676395c9130ddeef60947117d0f7637decbb44`.
+- Android `main` #176 ✅.
 - `oanix/stable-debug-signing = success` ✅.
-- Artifact debug APK generado desde ese merge; los commits posteriores inmediatos son solo documentación y no cambian código de la app.
+- Artifact `oanix-debug-apk` generado desde el merge #136.
 
-Pendiente: el usuario debe instalar la nueva APK encima de la existente y confirmar físicamente que tocar el círculo abre el selector, la foto elegida queda como avatar sin insertarse en la nota y el avatar se mantiene al reabrir/sincronizar.
+Pendiente físico final: instalar la APK de PR #136 encima de la existente y confirmar `Ver`, `Cambiar`, `Eliminar`, persistencia y que la foto sigue independiente del contenido. Si pasa, el avatar se considera cerrado y no se vuelve a tocar durante el RC salvo regresión.
 
 ## RC Android — #124
 
-**Estado actual:** bloqueadores funcionales principales cerrados. #105, #70, #68 y #69 están completados. Ahora toca completar el smoke test RC sin regresiones; PR #135 corrigió el requisito de avatar detectado durante esta fase.
+**Estado actual:** bloqueadores funcionales principales cerrados. #105, #70, #68 y #69 están completados. Ahora toca completar el smoke test RC sin regresiones; PR #135/#136 cerraron el requisito funcional del avatar a nivel de código/CI y solo falta la confirmación física final.
 
 Ya validados:
 - instalación como actualización con firma estable ✅;
@@ -91,7 +101,7 @@ Ya validados:
 
 ### Smoke test aún pendiente
 
-- Validar físicamente el nuevo **avatar manual** de PR #135.
+- Validar físicamente el **avatar manual final PR #135/#136**: seleccionar, ver, cambiar, eliminar, persistencia y separación del contenido.
 - Crear, editar, fijar, mover y eliminar notas como flujo normal completo.
 - Títulos largos, etiquetas y carpetas.
 - Añadir una imagen **dentro del contenido** y confirmar que funciona de forma independiente del avatar.
@@ -119,9 +129,10 @@ Ya validados:
 
 ## Próximo paso exacto
 
-1. Instalar la APK de `main` del merge funcional PR #135 **encima de la existente, sin desinstalar**.
-2. Validar avatar manual: tocar círculo → elegir foto → avatar visible; confirmar que la foto no aparece como bloque de contenido y que tocar el avatar de la tarjeta no abre la nota.
-3. Reabrir OANIX y comprobar persistencia; con cuenta conectada, comprobar propagación del avatar al otro cliente.
-4. Si pasa, marcar ese punto en #124 y continuar el resto del smoke test RC.
-5. Si todo queda verde, generar/nombrar la APK RC y usarla varios días.
-6. Solo después avanzar a #125: appId/version final, icono/splash, firma release, política/ficha y AAB de publicación.
+1. Instalar la APK de `main` del merge PR #136 **encima de la existente, sin desinstalar**.
+2. Con una nota sin avatar: tocar círculo → elegir foto → confirmar que queda solo como avatar.
+3. Tocar nuevamente el avatar y comprobar `Ver`, `Cambiar`, `Eliminar`.
+4. Confirmar que `Ver` abre la foto, `Cambiar` reemplaza y `Eliminar` vuelve a la inicial; reabrir OANIX y comprobar persistencia del avatar que quede seleccionado.
+5. Si pasa, marcar avatar como validado en #124 y continuar inmediatamente el resto del smoke test RC.
+6. Si todo queda verde, generar/nombrar la APK RC y usarla varios días.
+7. Solo después avanzar a #125: appId/version final, icono/splash, firma release, política/ficha y AAB de publicación.
