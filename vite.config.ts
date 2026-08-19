@@ -34,7 +34,9 @@ export default defineConfig(({ mode }) => {
               src: '/OANIX/oanix-icon.svg',
               sizes: 'any',
               type: 'image/svg+xml',
-              purpose: 'any maskable'
+              // The artwork already contains its own rounded tile and wordmark.
+              // Marking it maskable made some Android launchers zoom/crop OANIX.
+              purpose: 'any'
             }
           ]
         }
