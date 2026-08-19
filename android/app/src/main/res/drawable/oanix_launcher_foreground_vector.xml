@@ -5,12 +5,12 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- Keep the complete OANIX composition inside the adaptive-icon safe zone. -->
+    <!-- Keep the COMPLETE logo comfortably inside aggressive launcher masks. -->
     <group
         android:pivotX="54"
         android:pivotY="54"
-        android:scaleX="0.78"
-        android:scaleY="0.78">
+        android:scaleX="0.62"
+        android:scaleY="0.62">
 
         <!-- Deep shadow behind the unmistakable open-right C. -->
         <path
@@ -52,7 +52,7 @@
             android:pathData="M69,30 C62,25 55,23 47,24 C36,26 29,35 29,47 C29,58 37,67 47,69 C55,71 63,69 69,64"
             android:fillColor="#00000000"
             android:strokeColor="#FF7D17"
-            android:strokeWidth="0.95"
+            android:strokeWidth="1.25"
             android:strokeLineCap="round" />
 
         <!-- Small light flare on the C. -->
@@ -60,59 +60,65 @@
             android:pathData="M36,24 L36,31 M32.5,27.5 L39.5,27.5"
             android:fillColor="#00000000"
             android:strokeColor="#FFFFFF"
-            android:strokeWidth="1.1"
+            android:strokeWidth="1.25"
             android:strokeLineCap="round" />
         <path
             android:pathData="M35,26.5 L37,26.5 L37,28.5 L35,28.5 Z"
             android:fillColor="#FFFFFF" />
 
-        <!-- Raised graphite notebook with orange fold. -->
+        <!-- Raised graphite notebook, intentionally lighter than the tile. -->
         <path
             android:pathData="M45,34 C45,32 46,31 48,31 L69,31 L78,40 L78,62 C78,65 77,66 74,66 L48,66 C46,66 45,65 45,63 Z"
-            android:fillColor="#33373D"
-            android:strokeColor="#5B6067"
-            android:strokeWidth="0.9" />
+            android:fillColor="#41464D"
+            android:strokeColor="#777D86"
+            android:strokeWidth="1.15" />
         <path
             android:pathData="M69,31 L69,39 C69,40 70,40 71,40 L78,40 Z"
             android:fillColor="#F07816"
             android:strokeColor="#FFAD54"
-            android:strokeWidth="0.6" />
+            android:strokeWidth="0.7" />
         <path
             android:pathData="M49,34 L67,34"
             android:fillColor="#00000000"
             android:strokeColor="#FFFFFF"
-            android:strokeWidth="0.5"
-            android:strokeAlpha="0.16"
+            android:strokeWidth="0.65"
+            android:strokeAlpha="0.22"
             android:strokeLineCap="round" />
 
         <!-- Notebook binding rings. -->
         <path
             android:pathData="M42,37 L47,37 M42,46 L47,46 M42,55 L47,55"
             android:fillColor="#00000000"
-            android:strokeColor="#AEB2B8"
-            android:strokeWidth="1.9"
+            android:strokeColor="#C4C8CE"
+            android:strokeWidth="2.1"
             android:strokeLineCap="round" />
         <path
             android:pathData="M42,37 L46,37 M42,46 L46,46 M42,55 L46,55"
             android:fillColor="#00000000"
             android:strokeColor="#1A1C20"
-            android:strokeWidth="1.05"
+            android:strokeWidth="1.1"
             android:strokeLineCap="round" />
 
-        <!-- Bright orange note rulings. -->
+        <!-- Strong orange rulings: dark underlay + vivid orange + highlight so they survive rasterization. -->
+        <path
+            android:pathData="M52,41 L70,41 M52,48 L70,48 M52,55 L67,55 M52,61 L61,61"
+            android:fillColor="#00000000"
+            android:strokeColor="#7A2D00"
+            android:strokeWidth="4.2"
+            android:strokeLineCap="round" />
         <path
             android:pathData="M52,41 L70,41 M52,48 L70,48 M52,55 L67,55 M52,61 L61,61"
             android:fillColor="#00000000"
             android:strokeColor="#FF8A24"
-            android:strokeWidth="1.8"
+            android:strokeWidth="2.9"
             android:strokeLineCap="round" />
         <path
-            android:pathData="M52,40.6 L69,40.6 M52,47.6 L69,47.6"
+            android:pathData="M52,40.5 L69,40.5 M52,47.5 L69,47.5 M52,54.5 L66,54.5"
             android:fillColor="#00000000"
             android:strokeColor="#FFD18D"
-            android:strokeWidth="0.45"
+            android:strokeWidth="0.8"
             android:strokeLineCap="round"
-            android:strokeAlpha="0.9" />
+            android:strokeAlpha="0.95" />
 
         <!-- Security lock overlapping lower-right notebook corner. -->
         <path
