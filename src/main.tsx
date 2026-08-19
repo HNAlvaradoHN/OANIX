@@ -26,11 +26,14 @@ type OanixUpdateWindow = Window & {
 
 const oanixWindow = window as OanixUpdateWindow
 
-// Keep the new identity web-first until the mark is approved. Capacitor intentionally
-// retains the current in-app/native branding while the web candidate is evaluated.
-if (import.meta.env.MODE !== 'capacitor') {
-  document.documentElement.classList.add('oanix-web-brand-preview')
-}
+// The approved identity is shared by the PWA and Capacitor. BASE_URL resolves to
+// /OANIX/ on GitHub Pages and ./ inside the native bundle, so both surfaces use
+// the same SVG without hard-coding a platform-specific path.
+document.documentElement.classList.add('oanix-brand-final')
+document.documentElement.style.setProperty(
+  '--oanix-brand-logo-url',
+  `url("${import.meta.env.BASE_URL}oanix-icon.svg")`,
+)
 
 // Theme is a non-sensitive local UI preference. Apply it before React paints to avoid a flash
 // of the default palette when the user already selected another preset on this device.

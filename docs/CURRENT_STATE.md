@@ -18,10 +18,12 @@ Este archivo es el checkpoint operativo corto para retomar OANIX desde otro chat
 ## Dirección visual aprobada
 
 - Diseño general de la aplicación aprobado; no rediseñar la interfaz principal sin una necesidad real.
-- El icono anterior era provisional.
-- Referencia visual elegida para el sello final: fondo negro, símbolo O/documento, acabado plateado y candado naranja.
-- **Flujo de aprobación del sello:** definir y revisar primero el logo en la web. No sustituir todavía launcher, adaptive icon ni splash de Android. Solo después de aprobación explícita del sello web se trasladará exactamente la identidad final a la APK.
-- **Candidato web actual:** sello vectorial negro/plata/naranja integrado únicamente en superficies web/PWA para evaluación. El modo Capacitor conserva deliberadamente la identidad Android existente mientras el candidato no esté aprobado.
+- **Identidad oficial definida:** fondo negro mate/grafito; C abierta grande en plata; candado cobrizo dentro; bloc/documento cobrizo a la derecha con renglones, esquina superior doblada y remate de hoja inferior; píxeles cuadrados cobrizos arriba; palabra `OANIX` completa abajo con `OANI` plata y `X` naranja.
+- Mantener sombra negra suave, profundidad premium y margen seguro. No introducir colores ajenos a negro/plata/cobrizo ni glow exagerado.
+- El SVG oficial PWA es `public/oanix-icon.svg`.
+- PWA y bundle Capacitor usan la misma identidad dentro de la interfaz mediante una ruta resuelta con `import.meta.env.BASE_URL`.
+- Android launcher normal/redondo/adaptive usa una adaptación VectorDrawable del mismo sello, escalada dentro de la safe zone para evitar recortes por máscaras del fabricante.
+- El splash bitmap existente es un asset separado y no se considera sustituido por el cambio de launcher; cerrarlo explícitamente antes del AAB release si sigue pendiente.
 
 ## Bloqueadores cerrados
 
@@ -82,7 +84,7 @@ No bloquean RC ni publicación.
 
 Orden actual:
 1. cerrar alcance exacto OANIX Free vs Pro (#80);
-2. cerrar icono/splash oficiales;
+2. cerrar/verificar identidad oficial y splash;
 3. confirmar `appId`, `versionCode` y `versionName`;
 4. crear/custodiar firma release definitiva;
 5. integrar Google Play Billing y derechos Pro después de cerrar alcance;
@@ -100,4 +102,4 @@ Orden actual:
 
 ## Próximo paso exacto
 
-Cerrar el alcance de **OANIX Pro v1** y luego comenzar la implementación pre-publicación, manteniendo intactas las funciones actuales de OANIX Free. En paralelo, revisar el candidato de sello **primero en la web**; solo cuando quede aprobado trasladarlo a icono/splash Android antes de firma release y AAB.
+Verificar visualmente el sello oficial ya integrado en PWA y launcher Android; si no requiere correcciones, cerrar únicamente el splash pendiente y continuar la preparación de publicación junto con el alcance de **OANIX Pro v1**.
