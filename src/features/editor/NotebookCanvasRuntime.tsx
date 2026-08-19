@@ -2,9 +2,13 @@ import { useEffect } from 'react'
 
 const ROW_HEIGHT_PX = 32
 const MAX_LEADING_ROWS = 80
-const LAYOUT_STORAGE_KEY = 'oanix.notebook.layout.v2'
+const LAYOUT_STORAGE_KEY = 'oanix.notebook.layout.v3'
+const NOTE_PAPER_STORAGE_KEY = 'oanix.note.paper.v1'
+const LEGACY_PAPER_STORAGE_KEY = 'oanix.paper.mode'
 const MAX_LAYOUT_ENTRIES = 500
 const MOBILE_DOCK_ALLOWANCE_PX = 86
+
+type PaperMode = 'plain' | 'ruled'
 
 interface StoredAnchor {
   rows: number
@@ -12,6 +16,7 @@ interface StoredAnchor {
 }
 
 type StoredAnchorMap = Record<string, StoredAnchor>
+type StoredPaperMap = Record<string, PaperMode>
 
 function createBlockId(): string {
   if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID()
@@ -37,8 +42,57 @@ function writeAnchorMap(map: StoredAnchorMap) {
       .slice(0, MAX_LAYOUT_ENTRIES)
     window.localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(Object.fromEntries(entries)))
   } catch {
-    // Layout is a local convenience only; storage restrictions must never block editing.
+    // Layout is only a local visual aid. Editing must keep working if storage is restricted.
   }
+}
+
+function readPaperMap(): StoredPaperMap {
+  try {
+    const value = JSON.parse(window.localStorage.getItem(NOTE_PAPER_STORAGE_KEY) ?? '{}') as StoredPaperMap
+    return value && typeof value === 'object' ? value : {}
+  } catch {
+    return {}
+  }
+}
+
+function writePaperMap(map: StoredPaperMap) {
+  try {
+    window.localStorage.setItem(NOTE_PAPER_STORAGE_KEY, JSON.stringify(map))
+  } catch {
+    // Paper style is a local preference and must never block note editing.
+  }
+}
+
+function legacyPaperMode(): PaperMode {
+  try {
+    return window.localStorage.getItem(LEGACY_PAPER_STORAGE_KEY) === 'ruled' ? 'ruled' : 'plain'
+  } catch {
+    return 'plain'
+  }
+}
+
+function currentHistoryNoteId(): string | null {
+  const state = window.history.state
+  if (!state || typeof state !== 'object') return null
+  const noteId = (state as { noteId?: unknown }).noteId
+  return typeof noteId === 'string' && noteId.length > 0 ? noteId : null
+}
+
+function noteKeyForEditor(editor: HTMLElement): string {
+  const explicit = editor.closest<HTMLElement>('.image-note-editor-root')?.dataset.noteId
+  if (explicit) return explicit
+
+  const historyId = currentHistoryNoteId()
+  if (historyId) return historyId
+
+  const firstBlock = Array.from(editor.children).find(
+    (child): child is HTMLElement => child instanceof HTMLElement && !!child.dataset.blockId,
+  )
+  return firstBlock?.dataset.blockId ? `block:${firstBlock.dataset.blockId}` : 'current-note'
+}
+
+function paperModeForEditor(editor: HTMLElement, paperMap: StoredPaperMap): PaperMode {
+  return paperMap[noteKeyForEditor(editor)] ?? legacyPaperMode()
 }
 
 function editorRowHeight(editor: HTMLElement): number {
@@ -51,6 +105,14 @@ function editorContentTop(editor: HTMLElement): number {
   const rect = editor.getBoundingClientRect()
   const paddingTop = Number.parseFloat(getComputedStyle(editor).paddingTop) || 0
   return rect.top + paddingTop
+}
+
+function canvasStartY(editor: HTMLElement): number {
+  const dailyEntries = Array.from(editor.children).filter(
+    (child): child is HTMLElement =>
+      child instanceof HTMLElement && child.dataset.dailyEntryBlock === 'true',
+  )
+  return dailyEntries.at(-1)?.getBoundingClientRect().bottom ?? editorContentTop(editor)
 }
 
 function directBlocks(editor: HTMLElement): HTMLElement[] {
@@ -129,7 +191,82 @@ function previousBlockBottom(paragraph: HTMLParagraphElement, fallback: number):
   return previous instanceof HTMLElement ? previous.getBoundingClientRect().bottom : fallback
 }
 
-function insertCaretAtBackgroundPoint(editor: HTMLElement, clientY: number, anchors: StoredAnchorMap) {
+interface ImagePointContext {
+  kind: 'none' | 'blocked' | 'side'
+  figure?: HTMLElement
+}
+
+function imageContextAtPoint(editor: HTMLElement, clientX: number, clientY: number): ImagePointContext {
+  for (const figure of directBlocks(editor)) {
+    if (figure.dataset.imageBlock !== 'true') continue
+    const rect = figure.getBoundingClientRect()
+    if (clientY < rect.top - 4 || clientY > rect.bottom + 4) continue
+
+    const alignment = figure.dataset.imageAlignment ?? 'center'
+    const compact = figure.dataset.imageCompact === 'true'
+
+    if (alignment === 'center' || !compact) return { kind: 'blocked', figure }
+
+    const xInsideImage = clientX >= rect.left - 8 && clientX <= rect.right + 8
+    if (xInsideImage) return { kind: 'blocked', figure }
+
+    return { kind: 'side', figure }
+  }
+
+  return { kind: 'none' }
+}
+
+function paragraphAfterSideImage(figure: HTMLElement): HTMLParagraphElement {
+  const next = figure.nextElementSibling
+  if (emptyParagraph(next)) return next
+
+  const paragraph = createCaretParagraph()
+  figure.after(paragraph)
+  return paragraph
+}
+
+function prepareCaret(paragraph: HTMLParagraphElement, leadingRows: number, anchors: StoredAnchorMap) {
+  const editor = paragraph.closest<HTMLElement>('.editor-surface')
+  if (!editor) return
+
+  saveAnchor(paragraph, leadingRows, anchors)
+  editor.dataset.empty = 'false'
+  editor.focus({ preventScroll: true })
+  placeCaretAtStart(paragraph)
+  flashTargetRow(paragraph)
+  editor.dispatchEvent(new Event('input', { bubbles: true }))
+  window.setTimeout(() => keepCaretVisible(editor), 80)
+  window.setTimeout(() => keepCaretVisible(editor), 260)
+}
+
+function insertCaretBesideImage(
+  editor: HTMLElement,
+  figure: HTMLElement,
+  clientY: number,
+  anchors: StoredAnchorMap,
+): boolean {
+  const rect = figure.getBoundingClientRect()
+  const rowHeight = editorRowHeight(editor)
+  const paragraph = paragraphAfterSideImage(figure)
+  const targetRow = Math.max(0, Math.min(MAX_LEADING_ROWS, Math.floor((clientY - rect.top) / rowHeight)))
+  prepareCaret(paragraph, targetRow, anchors)
+  return true
+}
+
+function insertCaretAtCanvasPoint(
+  editor: HTMLElement,
+  clientX: number,
+  clientY: number,
+  anchors: StoredAnchorMap,
+): boolean {
+  if (clientY < canvasStartY(editor)) return false
+
+  const imageContext = imageContextAtPoint(editor, clientX, clientY)
+  if (imageContext.kind === 'blocked') return false
+  if (imageContext.kind === 'side' && imageContext.figure) {
+    return insertCaretBesideImage(editor, imageContext.figure, clientY, anchors)
+  }
+
   const blocks = directBlocks(editor)
   const rowHeight = editorRowHeight(editor)
   const contentTop = editorContentTop(editor)
@@ -184,14 +321,8 @@ function insertCaretAtBackgroundPoint(editor: HTMLElement, clientY: number, anch
     }
   }
 
-  saveAnchor(paragraph, leadingRows, anchors)
-  editor.dataset.empty = 'false'
-  editor.focus({ preventScroll: true })
-  placeCaretAtStart(paragraph)
-  flashTargetRow(paragraph)
-  editor.dispatchEvent(new Event('input', { bubbles: true }))
-  window.setTimeout(() => keepCaretVisible(editor), 80)
-  window.setTimeout(() => keepCaretVisible(editor), 260)
+  prepareCaret(paragraph, leadingRows, anchors)
+  return true
 }
 
 function selectionBlock(editor: HTMLElement): HTMLElement | null {
@@ -238,7 +369,7 @@ function directChildForTarget(editor: HTMLElement, target: Element): HTMLElement
   return current instanceof HTMLElement ? current : null
 }
 
-function editorForBlankCanvasTarget(target: EventTarget | null): HTMLElement | null {
+function editorForCanvasTarget(target: EventTarget | null): HTMLElement | null {
   if (!(target instanceof Element)) return null
   const editor = target.closest<HTMLElement>('.editor-surface')
   if (!editor) return null
@@ -251,6 +382,58 @@ function editorForBlankCanvasTarget(target: EventTarget | null): HTMLElement | n
 
   const direct = directChildForTarget(editor, target)
   return emptyParagraph(direct) ? editor : null
+}
+
+function setPaperMode(editor: HTMLElement, mode: PaperMode, paperMap: StoredPaperMap, save: boolean) {
+  editor.dataset.oanixPaperMode = mode
+  if (save) {
+    paperMap[noteKeyForEditor(editor)] = mode
+    writePaperMap(paperMap)
+  }
+
+  const root = editor.closest<HTMLElement>('.image-note-editor-root')
+  root?.querySelectorAll<HTMLButtonElement>('[data-oanix-note-paper-toggle="true"]').forEach((button) => {
+    const ruled = mode === 'ruled'
+    button.setAttribute('aria-pressed', String(ruled))
+    button.setAttribute('aria-label', ruled ? 'Ocultar renglones de esta nota' : 'Mostrar renglones de esta nota')
+    button.title = ruled ? 'Ocultar renglones' : 'Mostrar renglones'
+    if (button.dataset.oanixPaperToolbar === 'true') {
+      button.textContent = ruled ? '▤ Renglones' : '▤ Hoja lisa'
+    } else {
+      button.textContent = '▤'
+    }
+  })
+}
+
+function createPaperToggle(toolbar = false): HTMLButtonElement {
+  const button = document.createElement('button')
+  button.type = 'button'
+  button.dataset.oanixNotePaperToggle = 'true'
+  button.dataset.oanixPaperToolbar = String(toolbar)
+  button.className = toolbar
+    ? 'editor-tool oanix-note-paper-toggle oanix-note-paper-toggle--toolbar'
+    : 'oanix-note-paper-toggle oanix-note-paper-toggle--dock'
+  return button
+}
+
+function ensurePaperControls(root: HTMLElement, paperMap: StoredPaperMap) {
+  const editor = root.querySelector<HTMLElement>('.editor-surface')
+  if (!editor) return
+
+  const mode = paperModeForEditor(editor, paperMap)
+  if (!editor.dataset.oanixPaperMode) editor.dataset.oanixPaperMode = mode
+
+  const dock = root.querySelector<HTMLElement>('.mobile-editor-dock')
+  if (dock && !dock.querySelector('[data-oanix-note-paper-toggle="true"]')) {
+    dock.insertBefore(createPaperToggle(false), dock.querySelector('.mobile-editor-dock__format'))
+  }
+
+  const toolbar = root.querySelector<HTMLElement>('.editor-toolbar')
+  if (toolbar && !toolbar.querySelector('[data-oanix-note-paper-toggle="true"]')) {
+    toolbar.append(createPaperToggle(true))
+  }
+
+  setPaperMode(editor, editor.dataset.oanixPaperMode === 'ruled' ? 'ruled' : 'plain', paperMap, false)
 }
 
 function scrollableAncestor(element: HTMLElement): HTMLElement | null {
@@ -320,15 +503,23 @@ export function NotebookCanvasRuntime() {
 
     document.documentElement.classList.add('oanix-notebook-canvas-pwa')
     const anchors = readAnchorMap()
+    const paperMap = readPaperMap()
     let frame = 0
     let pointerMoved = false
     let pointerStart: { x: number; y: number } | null = null
 
-    function scheduleRestore() {
+    function syncRuntime() {
+      restoreAnchors(document, anchors)
+      document.querySelectorAll<HTMLElement>('.image-note-editor-root').forEach((root) => {
+        ensurePaperControls(root, paperMap)
+      })
+    }
+
+    function scheduleSync() {
       if (frame) return
       frame = window.requestAnimationFrame(() => {
         frame = 0
-        restoreAnchors(document, anchors)
+        syncRuntime()
       })
     }
 
@@ -350,16 +541,33 @@ export function NotebookCanvasRuntime() {
       }, 0)
     }
 
-    function handleBackgroundClick(event: MouseEvent) {
-      const editor = editorForBlankCanvasTarget(event.target)
-      if (!editor || pointerMoved) return
+    function handlePaperToggle(event: MouseEvent) {
+      const target = event.target
+      if (!(target instanceof Element)) return
+      const button = target.closest<HTMLButtonElement>('[data-oanix-note-paper-toggle="true"]')
+      if (!button) return
+      const root = button.closest<HTMLElement>('.image-note-editor-root')
+      const editor = root?.querySelector<HTMLElement>('.editor-surface')
+      if (!editor) return
+
+      event.preventDefault()
+      event.stopPropagation()
+      const next: PaperMode = editor.dataset.oanixPaperMode === 'ruled' ? 'plain' : 'ruled'
+      setPaperMode(editor, next, paperMap, true)
+    }
+
+    function handleCanvasClick(event: MouseEvent) {
+      if (pointerMoved) return
+      const editor = editorForCanvasTarget(event.target)
+      if (!editor) return
 
       const selection = window.getSelection()
       if (selection && !selection.isCollapsed) return
 
+      const handled = insertCaretAtCanvasPoint(editor, event.clientX, event.clientY, anchors)
+      if (!handled) return
       event.preventDefault()
       event.stopPropagation()
-      insertCaretAtBackgroundPoint(editor, event.clientY, anchors)
     }
 
     function handleImagePanelClick(event: MouseEvent) {
@@ -389,15 +597,16 @@ export function NotebookCanvasRuntime() {
       if (openFigure) syncImagePanelGeometry(openFigure)
     }
 
-    const observer = new MutationObserver(scheduleRestore)
+    const observer = new MutationObserver(scheduleSync)
     observer.observe(document.body, { childList: true, subtree: true })
-    restoreAnchors(document, anchors)
+    syncRuntime()
 
     document.addEventListener('pointerdown', handlePointerDown, true)
     document.addEventListener('pointermove', handlePointerMove, true)
     document.addEventListener('pointerup', handlePointerEnd, true)
     document.addEventListener('pointercancel', handlePointerEnd, true)
-    document.addEventListener('click', handleBackgroundClick, true)
+    document.addEventListener('click', handlePaperToggle, true)
+    document.addEventListener('click', handleCanvasClick, true)
     document.addEventListener('click', handleImagePanelClick)
     document.addEventListener('focusin', handleFocusIn, true)
     window.visualViewport?.addEventListener('resize', handleViewportChange)
@@ -411,7 +620,8 @@ export function NotebookCanvasRuntime() {
       document.removeEventListener('pointermove', handlePointerMove, true)
       document.removeEventListener('pointerup', handlePointerEnd, true)
       document.removeEventListener('pointercancel', handlePointerEnd, true)
-      document.removeEventListener('click', handleBackgroundClick, true)
+      document.removeEventListener('click', handlePaperToggle, true)
+      document.removeEventListener('click', handleCanvasClick, true)
       document.removeEventListener('click', handleImagePanelClick)
       document.removeEventListener('focusin', handleFocusIn, true)
       window.visualViewport?.removeEventListener('resize', handleViewportChange)
