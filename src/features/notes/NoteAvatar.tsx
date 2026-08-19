@@ -241,7 +241,9 @@ export function NoteAvatar({ note, className }: NoteAvatarProps) {
           role="dialog"
           aria-modal="true"
           aria-label={`Avatar de ${note.title}`}
-          onPointerDown={(event) => {
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={(event) => {
+            event.stopPropagation()
             if (event.target === event.currentTarget) setViewerUrl(null)
           }}
         >
@@ -250,7 +252,11 @@ export function NoteAvatar({ note, className }: NoteAvatarProps) {
               className="oanix-avatar-viewer__close"
               type="button"
               aria-label="Cerrar imagen"
-              onClick={() => setViewerUrl(null)}
+              onClick={(event) => {
+                event.preventDefault()
+                event.stopPropagation()
+                setViewerUrl(null)
+              }}
             >
               ×
             </button>
