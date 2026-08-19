@@ -18,8 +18,10 @@ Este archivo es el checkpoint operativo corto para retomar OANIX desde otro chat
 ## Dirección visual aprobada
 
 - Diseño general de la aplicación aprobado; no rediseñar la interfaz principal sin una necesidad real.
-- El icono actual NO es definitivo.
-- Referencia visual elegida para el sello final: fondo negro, símbolo O/documento y candado naranja. Debe recrearse de forma limpia como icono oficial antes de publicación.
+- El icono anterior era provisional.
+- Referencia visual elegida para el sello final: fondo negro, símbolo O/documento, acabado plateado y candado naranja.
+- **Flujo de aprobación del sello:** definir y revisar primero el logo en la web. No sustituir todavía launcher, adaptive icon ni splash de Android. Solo después de aprobación explícita del sello web se trasladará exactamente la identidad final a la APK.
+- **Candidato web actual:** sello vectorial negro/plata/naranja integrado únicamente en superficies web/PWA para evaluación. El modo Capacitor conserva deliberadamente la identidad Android existente mientras el candidato no esté aprobado.
 
 ## Bloqueadores cerrados
 
@@ -98,4 +100,4 @@ Orden actual:
 
 ## Próximo paso exacto
 
-Cerrar el alcance de **OANIX Pro v1** y luego comenzar la implementación pre-publicación, manteniendo intactas las funciones actuales de OANIX Free. En paralelo, cerrar el sello visual final (icono/splash) antes de firma release y AAB.
+Cerrar el alcance de **OANIX Pro v1** y luego comenzar la implementación pre-publicación, manteniendo intactas las funciones actuales de OANIX Free. En paralelo, revisar el candidato de sello **primero en la web**; solo cuando quede aprobado trasladarlo a icono/splash Android antes de firma release y AAB.

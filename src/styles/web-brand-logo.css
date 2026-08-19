@@ -1,0 +1,87 @@
+/* Web-first OANIX identity preview.
+ * Intentionally scoped away from Capacitor so Android launcher/splash and in-app
+ * branding stay unchanged until the web mark receives product approval.
+ */
+
+html.oanix-web-brand-preview .vault-logo,
+html.oanix-web-brand-preview .notes-brand__mark {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden !important;
+  display: block !important;
+  flex: 0 0 auto;
+  color: transparent !important;
+  font-size: 0 !important;
+  line-height: 0 !important;
+  text-shadow: none !important;
+  border-radius: 27% !important;
+  border: 1px solid rgba(255, 255, 255, .13) !important;
+  background-color: #030304 !important;
+  background-image: url('/OANIX/oanix-icon.svg') !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+  background-size: cover !important;
+  box-shadow:
+    0 10px 28px rgba(0, 0, 0, .44),
+    0 0 0 1px rgba(255, 123, 34, .08),
+    0 0 24px rgba(255, 106, 22, .10) !important;
+  transform: translateZ(0);
+}
+
+html.oanix-web-brand-preview .vault-logo {
+  width: 3.6rem !important;
+  height: 3.6rem !important;
+}
+
+html.oanix-web-brand-preview .notes-brand__mark {
+  width: clamp(2.65rem, 4vw, 3rem) !important;
+  height: clamp(2.65rem, 4vw, 3rem) !important;
+}
+
+/* Retire the old purple/cyan orbital decoration only for the real brand marks.
+ * The decorative empty-state nucleus remains untouched for now.
+ */
+html.oanix-web-brand-preview .vault-logo::before,
+html.oanix-web-brand-preview .vault-logo::after,
+html.oanix-web-brand-preview .notes-brand__mark::before,
+html.oanix-web-brand-preview .notes-brand__mark::after {
+  content: none !important;
+  display: none !important;
+  animation: none !important;
+}
+
+html.oanix-web-brand-preview .vault-brandline strong,
+html.oanix-web-brand-preview .notes-brand strong {
+  text-shadow: 0 0 18px rgba(255, 255, 255, .035);
+}
+
+/* Brand identity remains black/silver/orange even when the UI uses Classic Day. */
+html.oanix-web-brand-preview.oanix-classic-day .vault-logo,
+html.oanix-web-brand-preview.oanix-classic-day .notes-brand__mark {
+  border-color: rgba(15, 23, 42, .20) !important;
+  background-color: #030304 !important;
+  background-image: url('/OANIX/oanix-icon.svg') !important;
+  box-shadow:
+    0 8px 24px rgba(15, 23, 42, .18),
+    0 0 0 1px rgba(255, 123, 34, .09),
+    0 0 20px rgba(255, 106, 22, .08) !important;
+}
+
+@media (max-width: 760px) {
+  html.oanix-web-brand-preview .vault-logo {
+    width: 3.25rem !important;
+    height: 3.25rem !important;
+  }
+
+  html.oanix-web-brand-preview .notes-brand__mark {
+    width: 2.7rem !important;
+    height: 2.7rem !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.oanix-web-brand-preview .vault-logo,
+  html.oanix-web-brand-preview .notes-brand__mark {
+    transition: none !important;
+  }
+}

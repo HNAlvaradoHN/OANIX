@@ -18,12 +18,19 @@ import './styles/header-icon-polish.css'
 import './styles/classic-day-hard-fix.css'
 import './styles/privacy-status-polish.css'
 import './styles/note-menu-viewport-fit.css'
+import './styles/web-brand-logo.css'
 
 type OanixUpdateWindow = Window & {
   __oanixApplyUpdate?: () => Promise<void>
 }
 
 const oanixWindow = window as OanixUpdateWindow
+
+// Keep the new identity web-first until the mark is approved. Capacitor intentionally
+// retains the current in-app/native branding while the web candidate is evaluated.
+if (import.meta.env.MODE !== 'capacitor') {
+  document.documentElement.classList.add('oanix-web-brand-preview')
+}
 
 // Theme is a non-sensitive local UI preference. Apply it before React paints to avoid a flash
 // of the default palette when the user already selected another preset on this device.
