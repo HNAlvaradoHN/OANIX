@@ -78,6 +78,12 @@
   }
 }
 
+@media (max-width: 360px) {
+  .note-row[data-oanix-note-has-lock='true'] .note-row__topline time {
+    display: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .oanix-note-row-lock {
     transition: none;
