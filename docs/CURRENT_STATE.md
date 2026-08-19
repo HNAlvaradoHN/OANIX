@@ -10,14 +10,16 @@ Este archivo es el checkpoint operativo corto para retomar OANIX desde otro chat
 - **V2 — Cuenta y sincronización:** cerrada funcionalmente. #69 conflictos y #73 recuperación Email OTP están cerrados; #73 conserva deuda multidispositivo adicional explícitamente no bloqueante.
 - **V3 — Android con Capacitor:** cerrada formalmente en #79.
 - **RC Android — #124:** CERRADO COMO COMPLETADO ✅ el 19 ago 2026 tras smoke test físico completo.
-- La APK debug interna usa firma estable y se validó actualización APK sobre APK sin desinstalar. La firma definitiva de Play Store será independiente.
+- **V4 / OANIX Pro — #80:** ACTIVO en definición pre-publicación.
+- **Publicación Android — #125:** preparación activa; por decisión del producto no existe periodo de soak obligatorio.
+- La APK debug interna usa firma estable; la firma definitiva de Play Store será independiente.
 - PWA y Android comparten la misma base React + TypeScript + Vite/Capacitor.
 
 ## Dirección visual aprobada
 
-- Base graphite/blue-night con acento violeta contenido.
-- Sistema de temas/personalización mediante variables semánticas.
-- Diseño actual aprobado; no rediseñar la dirección principal sin una necesidad real.
+- Diseño general de la aplicación aprobado; no rediseñar la interfaz principal sin una necesidad real.
+- El icono actual NO es definitivo.
+- Referencia visual elegida para el sello final: fondo negro, símbolo O/documento y candado naranja. Debe recrearse de forma limpia como icono oficial antes de publicación.
 
 ## Bloqueadores cerrados
 
@@ -27,68 +29,73 @@ Este archivo es el checkpoint operativo corto para retomar OANIX desde otro chat
 - #69 conflictos multidispositivo ✅.
 - #73 recuperación principal por Email OTP ✅.
 
-## Avatar manual de nota — CERRADO ✅
+## Base funcional validada
 
-- PR #135: avatar manual cifrado e independiente del contenido.
-- PR #136: `Ver`, `Cambiar`, `Eliminar`.
-- PR #137: corrige pantalla negra del menú.
-- PR #138: corrige click-through al cerrar visor.
-- Validación física final completa ✅.
-
-## OANIX Android RC1 — BASE CONGELADA PARA SOAK
-
-Base funcional validada:
 - PR #138 merge `7bec28335ef5ef425a648b812ae4cebca6f30fb2`.
 - Android `main` #183 ✅.
 - `oanix/stable-debug-signing = success` ✅.
+- Smoke test físico completo de #124 ✅: notas, carpetas/etiquetas, avatar, imágenes, temas, contraseña maestra, biometría/timeout, privacidad/Caja privada, backup, sincronización Google/reapertura, compartir/recibir, cámara/documentos/permisos y CI.
 
-Smoke test físico completado:
-- instalación sobre firma estable + cold starts ✅;
-- notas: crear, editar, fijar, mover, eliminar ✅;
-- títulos largos, etiquetas y carpetas ✅;
-- avatar manual completo ✅;
-- imagen dentro del contenido independiente del avatar ✅;
-- Día/Noche/ambientes ✅;
-- contraseña maestra correcta/incorrecta + bloqueo manual ✅;
-- huella/credencial fuerte + timeout Android ✅;
-- privacidad por nota + Caja privada ✅;
-- backup cifrado exportar/restaurar ✅;
-- sincronización Google + cierre completo/reapertura/recuperación de nota ✅;
-- compartir nota / recibir contenido Android ✅;
-- cámara/documentos y permisos relevantes ✅;
-- logs/artefactos CI ✅.
+## OANIX Pro — #80 ACTIVO
 
-**Regla actual:** no introducir cambios funcionales ni visuales durante el soak salvo una regresión real. La APK funcional validada se denomina **OANIX Android RC1**.
+### Principio
+OANIX Free seguirá siendo una app completa y útil. No se retirarán detrás de un pago funciones que ya existen y fueron validadas en el RC.
+
+### Free conserva
+- notas/edición, cifrado y contraseña maestra;
+- offline-first y sincronización E2EE;
+- backup cifrado básico;
+- biometría, timeout, protección por nota y Caja privada;
+- carpetas, etiquetas, búsqueda, imágenes y compartir/recibir;
+- funciones Android existentes y temas actuales.
+
+### Dirección Pro v1
+Preferencia comercial: **compra única / desbloqueo permanente**, no suscripción obligatoria.
+
+Función insignia: **Escáner Seguro de Documentos**:
+`cámara -> detectar bordes -> corregir perspectiva -> mejorar imagen -> PDF -> OCR -> texto buscable -> cifrar y guardar en la bóveda`.
+
+Complementos candidatos para Pro v1:
+- PDF avanzado y gestión documental;
+- OCR/búsqueda dentro de documentos;
+- exportaciones avanzadas;
+- organización documental avanzada;
+- personalización premium adicional sin quitar temas gratuitos;
+- audio/notas de voz avanzadas solo si no comprometen privacidad/offline ni retrasan innecesariamente publicación.
+
+No cobrar por cifrado, backup básico ni seguridad esencial.
 
 ## Recuperación #73
 
-El flujo principal de Email OTP está cerrado y validado en uso real. Persisten como cobertura adicional no bloqueante:
+El flujo principal de Email OTP está cerrado y validado. Persisten como cobertura adicional no bloqueante:
 - confirmar contraseña nueva desde un segundo dispositivo;
 - confirmar que un OTP usado no se reutiliza;
 - probar reconciliación de un dispositivo que estuvo offline durante rotación.
 
-Estas pruebas no bloquean RC ni publicación, pero deben conservarse documentadas.
+No bloquean RC ni publicación.
 
 ## Publicación — #125
 
-**Estado:** preparación solamente; todavía no publicar.
+**Estado:** preparación activa; todavía no enviar a producción.
 
-Después del periodo de soak sin regresiones:
-1. confirmar `appId` y versión final;
-2. aprobar icono/splash finales;
-3. crear y custodiar firma release definitiva separada de la firma debug estable;
-4. generar y verificar AAB release;
-5. preparar política de privacidad pública, ficha, textos y capturas;
-6. solo entonces avanzar al envío a Play Store.
+Orden actual:
+1. cerrar alcance exacto OANIX Free vs Pro (#80);
+2. cerrar icono/splash oficiales;
+3. confirmar `appId`, `versionCode` y `versionName`;
+4. crear/custodiar firma release definitiva;
+5. integrar Google Play Billing y derechos Pro después de cerrar alcance;
+6. generar/verificar AAB release;
+7. preparar política de privacidad, ficha, textos y capturas;
+8. verificación final y envío a Play Store.
 
 ## Forma de trabajo acordada
 
 - El agente hace directamente GitHub: ramas, archivos, PRs, CI, logs, merges, issues y artifacts cuando las herramientas lo permitan.
 - No convertir al usuario en operador de GitHub.
 - El usuario interviene principalmente en pruebas físicas inevitables del teléfono/cuenta.
-- Si aparece un bug durante soak: cambio mínimo + tests + PR + CI/Android + merge + nueva validación física puntual.
+- Si aparece un bug: cambio mínimo + tests + PR + CI/Android + merge + validación física puntual.
 - No prometer trabajo en segundo plano.
 
 ## Próximo paso exacto
 
-Usar **OANIX Android RC1** varios días como soak sin cambios funcionales. Si no aparecen regresiones, avanzar a #125: identidad final, firma release, política/ficha y AAB de publicación.
+Cerrar el alcance de **OANIX Pro v1** y luego comenzar la implementación pre-publicación, manteniendo intactas las funciones actuales de OANIX Free. En paralelo, cerrar el sello visual final (icono/splash) antes de firma release y AAB.
