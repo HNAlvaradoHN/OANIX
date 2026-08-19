@@ -2,8 +2,8 @@ html.oanix-notebook-canvas-pwa .editor-surface {
   --oanix-notebook-row: 32px;
   --oanix-notebook-line: color-mix(
     in srgb,
-    var(--theme-text-soft, #d7deeb) 24%,
-    var(--theme-accent, #6f61ee) 30%
+    var(--theme-accent, #6f61ee) 42%,
+    transparent
   );
   line-height: var(--oanix-notebook-row);
   hyphens: none;
