@@ -59,13 +59,14 @@ Ya validados físicamente:
 - continuidad de firma APK estable ✅.
 
 Bloqueador técnico prioritario restante:
-- **#69 — resolución de conflictos multidispositivo.** La detección real ya fue observada; falta cerrar casos de resolución local/remota/combinar, resolución obsoleta, imágenes y eliminación vs modificación.
+- **#69 — resolución de conflictos multidispositivo.** Detección real validada. El 18 ago 2026 se validó también `Combinar` con PC + Android: Android editó la nota offline, PC editó la misma nota online, al reconectar apareció el conflicto y OANIX conservó ambas versiones separadas por fecha sin pérdida de contenido.
+- Pendiente dentro de #69: elegir remoto, elegir local, resolución obsoleta, conflictos de imagen y eliminación vs modificación.
 
 También queda completar el resto del smoke test RC: operaciones normales de notas, títulos/etiquetas/carpetas, imágenes, temas, contraseña maestra, backup/restauración, sync Google, compartir, cámara/documentos.
 
 ## Otros pendientes importantes
 
-- **#69:** siguiente bloque técnico prioritario.
+- **#69:** siguiente bloque técnico prioritario; `Combinar` ya está validado físicamente.
 - **#73:** validación restante de recuperación por Email OTP.
 - **#124:** checklist general de Release Candidate.
 - **#125:** preparación de publicación; no comenzar Play Store/firma release definitiva antes de cerrar RC.
@@ -81,9 +82,10 @@ También queda completar el resto del smoke test RC: operaciones normales de not
 
 ## Próximo paso recomendado
 
-1. Abrir/revisar #69 y preparar una matriz exacta de escenarios de conflicto pendientes.
-2. Ejecutar primero los casos que puedan validarse con dos clientes/dispositivos reales sin cambiar código.
-3. Si aparece un bug, corregirlo con cambio mínimo + tests + PR + CI/Android.
-4. Cerrar #69 cuando todas las resoluciones necesarias queden validadas.
-5. Continuar el smoke test de #124.
-6. Solo después generar/nombrar la APK RC y pasar a #125 publicación.
+1. Continuar #69 con **elegir versión remota** usando una divergencia controlada PC + Android.
+2. Repetir después con **elegir versión local**.
+3. Validar resolución obsoleta, conflictos de imagen y eliminación vs modificación.
+4. Si aparece un bug, corregirlo con cambio mínimo + tests + PR + CI/Android.
+5. Cerrar #69 cuando todas las resoluciones necesarias queden validadas.
+6. Continuar el smoke test de #124.
+7. Solo después generar/nombrar la APK RC y pasar a #125 publicación.
