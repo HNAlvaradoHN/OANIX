@@ -1,8 +1,9 @@
 html.oanix-notebook-canvas-pwa .editor-surface {
   --oanix-notebook-row: 32px;
-  --oanix-notebook-line: color-mix(in srgb, var(--theme-accent, #6f61ee) 22%, transparent);
+  --oanix-notebook-line: color-mix(in srgb, var(--theme-accent, #6f61ee) 40%, transparent);
   line-height: var(--oanix-notebook-row);
   hyphens: none;
+  -webkit-hyphens: none;
   word-break: normal;
   overflow-wrap: normal;
   background-repeat: repeat-y;
@@ -66,37 +67,58 @@ html.oanix-notebook-canvas-pwa .editor-surface > p[data-oanix-row-target='true']
   100% { opacity: 0; }
 }
 
-/* A compact image aligned to a side becomes a true text-flow object.
- * Large images deliberately stay block-level so the remaining text column never becomes unusable.
+/* Side-aligned compact images are real text-flow objects, including on phones.
+ * Large or centered images remain full blocks so the writing column never becomes unusable.
  */
-html.oanix-notebook-canvas-pwa .image-note-editor-root .editor-image-block[data-image-compact='true'][data-image-alignment='left'] {
-  float: left;
-  clear: left;
-  min-width: 0;
-  max-width: 55%;
-  margin: 0 .95rem .65rem 0;
+html.oanix-notebook-canvas-pwa .image-note-editor-root .editor-surface > .editor-image-block[data-image-compact='true'][data-image-alignment='left'] {
+  float: left !important;
+  clear: left !important;
+  min-width: 0 !important;
+  max-width: 55% !important;
+  margin: 0 .95rem .65rem 0 !important;
   shape-outside: margin-box;
 }
 
-html.oanix-notebook-canvas-pwa .image-note-editor-root .editor-image-block[data-image-compact='true'][data-image-alignment='right'] {
-  float: right;
-  clear: right;
-  min-width: 0;
-  max-width: 55%;
-  margin: 0 0 .65rem .95rem;
+html.oanix-notebook-canvas-pwa .image-note-editor-root .editor-surface > .editor-image-block[data-image-compact='true'][data-image-alignment='right'] {
+  float: right !important;
+  clear: right !important;
+  min-width: 0 !important;
+  max-width: 55% !important;
+  margin: 0 0 .65rem .95rem !important;
   shape-outside: margin-box;
 }
 
-html.oanix-notebook-canvas-pwa .image-note-editor-root .editor-image-block[data-image-alignment='center'],
-html.oanix-notebook-canvas-pwa .image-note-editor-root .editor-image-block[data-image-compact='false'] {
-  float: none;
-  clear: both;
+html.oanix-notebook-canvas-pwa .image-note-editor-root .editor-surface > .editor-image-block[data-image-alignment='center'],
+html.oanix-notebook-canvas-pwa .image-note-editor-root .editor-surface > .editor-image-block[data-image-compact='false'] {
+  float: none !important;
+  clear: both !important;
+}
+
+/* The paragraph immediately after a side image must be allowed to wrap around it.
+ * It naturally returns to full width after the float ends.
+ */
+html.oanix-notebook-canvas-pwa .image-note-editor-root .editor-surface > .editor-image-block[data-image-compact='true'][data-image-alignment='left'] + p,
+html.oanix-notebook-canvas-pwa .image-note-editor-root .editor-surface > .editor-image-block[data-image-compact='true'][data-image-alignment='right'] + p {
+  clear: none !important;
 }
 
 html.oanix-notebook-canvas-pwa .editor-surface::after {
   content: '';
   display: block;
   clear: both;
+}
+
+/* When the compact-image editor opens as a bottom sheet, reserve real page space.
+ * The runtime then scrolls the selected image into the usable area above that sheet.
+ */
+html.oanix-notebook-canvas-pwa .image-note-editor-root[data-oanix-image-panel-open='true'] .editor-surface {
+  padding-bottom: calc(var(--oanix-image-panel-height, 0px) + 7rem);
+  transition: padding-bottom 160ms ease;
+}
+
+html.oanix-notebook-canvas-pwa .image-note-editor-root[data-oanix-image-panel-open='true'] .editor-image-block[data-image-info-open='true'] {
+  scroll-margin-top: 1rem;
+  scroll-margin-bottom: calc(var(--oanix-image-panel-height, 0px) + 6rem);
 }
 
 /* Personalization: plain vs visible notebook ruling. */
@@ -139,8 +161,8 @@ html.oanix-notebook-canvas-pwa .editor-surface::after {
     to bottom,
     transparent 0,
     transparent 9px,
-    color-mix(in srgb, var(--theme-accent, #6f61ee) 35%, transparent) 9px,
-    color-mix(in srgb, var(--theme-accent, #6f61ee) 35%, transparent) 10px
+    color-mix(in srgb, var(--theme-accent, #6f61ee) 48%, transparent) 9px,
+    color-mix(in srgb, var(--theme-accent, #6f61ee) 48%, transparent) 10px
   );
 }
 
@@ -166,19 +188,37 @@ html.oanix-notebook-canvas-pwa .editor-surface::after {
   line-height: 1.45;
 }
 
-@media (max-width: 620px) {
+@media (max-width: 760px) {
   .oanix-paper-options {
     grid-template-columns: 1fr;
   }
 
-  html.oanix-notebook-canvas-pwa .image-note-editor-root .editor-image-block[data-image-compact='true'][data-image-alignment='left'],
-  html.oanix-notebook-canvas-pwa .image-note-editor-root .editor-image-block[data-image-compact='true'][data-image-alignment='right'] {
-    max-width: 52%;
+  html.oanix-notebook-canvas-pwa .image-note-editor-root .editor-surface > .editor-image-block[data-image-compact='true'][data-image-alignment='left'],
+  html.oanix-notebook-canvas-pwa .image-note-editor-root .editor-surface > .editor-image-block[data-image-compact='true'][data-image-alignment='right'] {
+    width: min(48%, 12.5rem) !important;
+    max-width: 48% !important;
+  }
+
+  html.oanix-notebook-canvas-pwa .image-note-editor-root .editor-surface > .editor-image-block[data-image-compact='true'][data-image-alignment='left'] {
+    margin-right: .72rem !important;
+  }
+
+  html.oanix-notebook-canvas-pwa .image-note-editor-root .editor-surface > .editor-image-block[data-image-compact='true'][data-image-alignment='right'] {
+    margin-left: .72rem !important;
+  }
+}
+
+@media (max-width: 420px) {
+  html.oanix-notebook-canvas-pwa .image-note-editor-root .editor-surface > .editor-image-block[data-image-compact='true'][data-image-alignment='left'],
+  html.oanix-notebook-canvas-pwa .image-note-editor-root .editor-surface > .editor-image-block[data-image-compact='true'][data-image-alignment='right'] {
+    width: min(46%, 10.5rem) !important;
+    max-width: 46% !important;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  html.oanix-notebook-canvas-pwa .editor-surface > p[data-oanix-leading-rows] {
+  html.oanix-notebook-canvas-pwa .editor-surface > p[data-oanix-leading-rows],
+  html.oanix-notebook-canvas-pwa .image-note-editor-root[data-oanix-image-panel-open='true'] .editor-surface {
     transition: none;
   }
 
