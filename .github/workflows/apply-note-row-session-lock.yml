@@ -1,15 +1,15 @@
 name: Apply note-row session lock
 
 on:
-  push:
-    branches: [fix/note-row-session-lock]
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
 
 permissions:
   contents: write
 
 jobs:
   apply:
-    if: ${{ !contains(github.event.head_commit.message, '[note-row-lock-applied]') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -143,15 +143,12 @@ jobs:
           runtime = runtime.replace(old_portal, new_portal, 1)
           runtime_path.write_text(runtime)
 
-          css_path = Path('src/features/privacy/manualNoteRelock.css')
-          css_path.write_text(""".note-view[data-oanix-note-has-lock='true'] .note-view__identity strong::after,
+          Path('src/features/privacy/manualNoteRelock.css').write_text(""".note-view[data-oanix-note-has-lock='true'] .note-view__identity strong::after,
 .note-row[data-oanix-note-has-lock='true'] .note-row__topline strong::after {
   content: none !important;
 }
 
-.note-row__open {
-  order: 0;
-}
+.note-row__open { order: 0; }
 
 .oanix-note-row-lock {
   order: 1;
@@ -191,13 +188,9 @@ jobs:
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--theme-accent, #8d7aff) 8%, transparent);
 }
 
-.oanix-note-row-lock:active {
-  transform: scale(.94);
-}
+.oanix-note-row-lock:active { transform: scale(.94); }
 
-.oanix-note-row-lock--unlocked {
-  color: var(--theme-accent-2, #67e8f9);
-}
+.oanix-note-row-lock--unlocked { color: var(--theme-accent-2, #67e8f9); }
 
 .oanix-note-row-lock--unlocked:hover,
 .oanix-note-row-lock--unlocked:focus-visible {
@@ -217,22 +210,15 @@ jobs:
     height: 1.9rem;
     margin-left: 0;
   }
-
-  .oanix-note-row-lock__icon {
-    width: 1rem;
-    height: 1rem;
-  }
+  .oanix-note-row-lock__icon { width: 1rem; height: 1rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .oanix-note-row-lock {
-    transition: none;
-  }
+  .oanix-note-row-lock { transition: none; }
 }
 """)
 
-          test_path = Path('tests/manualNoteRelock.test.ts')
-          test_path.write_text("""import assert from 'node:assert/strict'
+          Path('tests/manualNoteRelock.test.ts').write_text("""import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
@@ -290,42 +276,39 @@ test('explicit row lock replaces duplicate pseudo locks and keeps list title ell
 ### Continuidad 2026-08-18 — candado de sesión en la tarjeta de nota
 **Estado:** IMPLEMENTED / VALIDATION_DEBT
 
-- El PR #133 introdujo el bloqueo manual de una nota protegida durante la sesión: `unlockedNoteIds` sigue siendo el único estado efímero de autorización; `manuallyRelockNote(noteId)` solo elimina ese ID y no modifica código, PBKDF2, metadatos cifrados, sync ni Caja privada.
-- Ajuste posterior solicitado por el usuario: el control visible `bloqueado/desbloqueado` debe vivir en la burbuja/tarjeta de la nota de la lista, no junto al título grande de la vista abierta.
-- Implementación elegida: portal desde `NotePrivacyRuntime` directamente sobre cada `.note-row`, como hermano de `.note-row__open` y antes visualmente del menú `⋮`. No se introduce estado nuevo en `NotesWorkspace` ni un componente paralelo de privacidad.
-- El icono usa SVG `currentColor` y tokens del tema; el título existente conserva `min-width: 0` + ellipsis y cede espacio al candado/menú sin superposición.
-- El candado explícito sustituye los pseudo-candados redundantes de título. Nota sin protección: sin candado. Protegida bloqueada: candado cerrado. Protegida desbloqueada: candado abierto; tocarlo vuelve a bloquear solo en memoria.
-- Corrección asociada: relock de una nota distinta de la seleccionada ya no debe desenfocar el editor activo; el `blur()` solo aplica cuando se relockea la nota actualmente abierta.
-- Validación automática requerida: node:test + build web + Android. Validación física restante: comprobar en APK que el icono cabe en tarjetas con títulos largos y que `cerrado -> código -> abierto -> cerrar` funciona sin abrir accidentalmente la nota.
-- Issue de privacidad relacionado: #68. No cerrarlo hasta completar la prueba física final.
+- PR #133 introdujo el bloqueo manual de una nota protegida durante la sesión. `unlockedNoteIds` sigue siendo el único estado efímero de autorización y `manuallyRelockNote(noteId)` solo elimina ese ID; no modifica código, PBKDF2, metadatos cifrados, sync ni Caja privada.
+- Ajuste posterior solicitado: el control visible debe vivir en la burbuja/tarjeta de la nota, no junto al título grande de la vista abierta.
+- Implementación: portal desde `NotePrivacyRuntime` sobre cada `.note-row`, como hermano de `.note-row__open` y antes visualmente de `⋮`; no se crea estado paralelo en `NotesWorkspace`.
+- El icono usa SVG `currentColor` y tokens de tema; el título existente conserva ellipsis y cede espacio al candado/menú.
+- Nota sin protección: sin candado. Protegida bloqueada: cerrado. Protegida desbloqueada: abierto; tocarlo vuelve a bloquear solo en memoria.
+- Relock de otra nota ya no desenfoca el editor activo; `blur()` solo aplica a la nota actualmente abierta.
+- Validación física restante: comprobar en APK títulos largos y flujo `cerrado -> código -> abierto -> cerrar`. #68 permanece abierto hasta esa prueba.
 """
               memory_path.write_text(memory)
 
           changelog_path = Path('docs/CHANGELOG.md')
           changelog = changelog_path.read_text()
-          changelog_marker = 'Candado de sesión integrado en la tarjeta de nota'
-          if changelog_marker not in changelog:
+          if 'Candado de sesión integrado en la tarjeta de nota' not in changelog:
               changelog += """
 
 ## 2026-08-18 — Candado de sesión integrado en la tarjeta de nota
-- Mueve el control manual de relock de PR #133 desde el encabezado de la nota abierta hacia cada tarjeta protegida de la lista.
-- Mantiene `unlockedNoteIds` como única autorización temporal y no cambia persistencia, cifrado, PBKDF2, Caja privada ni sincronización.
-- Añade icono SVG temático discreto, evita pseudo-candados duplicados y conserva ellipsis de títulos largos.
-- Evita desenfocar el editor cuando se relockea desde la lista una nota distinta de la actualmente abierta.
-- Añade regresiones con `node:test` para ubicación, propagación de eventos, no persistencia y contrato visual.
+- Mueve el relock manual de PR #133 desde el encabezado de la nota abierta hacia cada tarjeta protegida de la lista.
+- Mantiene `unlockedNoteIds` como única autorización temporal; no cambia persistencia, cifrado, PBKDF2, Caja privada ni sincronización.
+- Añade icono SVG temático discreto, elimina duplicados visuales y conserva ellipsis de títulos largos.
+- Evita desenfocar el editor al relockear una nota distinta desde la lista.
+- Añade regresiones `node:test` para ubicación, propagación, no persistencia y contrato visual.
 """
               changelog_path.write_text(changelog)
 
           roadmap_path = Path('docs/ROADMAP.md')
           roadmap = roadmap_path.read_text()
-          roadmap_marker = 'Checkpoint RC 2026-08-18 — privacidad por nota'
-          if roadmap_marker not in roadmap:
+          if 'Checkpoint RC 2026-08-18 — privacidad por nota' not in roadmap:
               roadmap += """
 
 ### Checkpoint RC 2026-08-18 — privacidad por nota
-- Protección individual y Caja privada están implementadas; issue #68 permanece en VALIDATION_DEBT hasta prueba física final Android.
-- PR #133 añadió relock manual de sesión. El ajuste visual posterior coloca el candado de sesión en la tarjeta de la lista manteniendo el mismo estado en memoria y sin ampliar alcance funcional.
-- Después de validar físicamente este bloque, cerrar #68 y continuar con las deudas RC ya registradas; no abrir funciones nuevas por este ajuste visual.
+- Protección individual y Caja privada están implementadas; #68 permanece en VALIDATION_DEBT hasta prueba física final Android.
+- PR #133 añadió relock manual de sesión; el ajuste visual posterior coloca el candado en la tarjeta de la lista manteniendo el mismo estado en memoria.
+- Tras validar físicamente este bloque, cerrar #68 y continuar con las deudas RC ya registradas; no abrir funciones nuevas por este ajuste.
 """
               roadmap_path.write_text(roadmap)
 
@@ -336,23 +319,18 @@ test('explicit row lock replaces duplicate pseudo locks and keeps list title ell
 A fecha de **2026-08-18**:
 
 - V1 — Núcleo local: cerrada.
-- V2 — Cuenta y sincronización: cerrada funcionalmente; continúan deudas de validación visibles, especialmente #69, #70 y #73.
+- V2 — Cuenta y sincronización: cerrada funcionalmente; continúan deudas de validación, especialmente #69, #70 y #73.
 - V3 — Android con Capacitor: cerrada formalmente en #79. La continuidad de firma debug estable quedó validada mediante actualización APK real sin desinstalar; la firma definitiva de Play Store sigue separada.
-- Rediseño/pulido visual post-V3: dirección aprobada y ya integrada en `main`, con sistema de temas/personalización y pulidos de tarjetas/menús.
-- Privacidad de uso diario: protección por nota + Caja privada implementadas. PR #133 añadió relock manual de sesión; el ajuste posterior mueve el candado visible a la tarjeta de la lista. #68 no se cierra hasta validación física final.
+- Rediseño/pulido visual post-V3: dirección aprobada e integrada en `main`, con sistema de temas/personalización y pulidos de tarjetas/menús.
+- Privacidad: protección por nota + Caja privada implementadas. PR #133 añadió relock manual; el ajuste posterior mueve el candado visible a la tarjeta. #68 no se cierra hasta validación física final.
 - Deuda Android diferida: #105, huella puede tardar 2–3 cold starts; resolver en pulido Android/RC sin debilitar biometría.
-- Bloque RC siguiente después de privacidad: continuar validaciones pendientes registradas en issues/ROADMAP, con especial atención a conflictos #69.
-- No introducir funciones de V4 ni monetización/OANIX Pro mientras se cierra el RC.
+- Siguiente bloque RC después de privacidad: continuar validaciones pendientes registradas, con especial atención a conflictos #69.
+- No introducir funciones V4 ni monetización/OANIX Pro mientras se cierra el RC.
 
-La especificación exacta, decisiones y deudas vigentes están en `docs/PROJECT_MEMORY.md`, `docs/ROADMAP.md` y los issues correspondientes.
+La especificación exacta y deudas vigentes están en `docs/PROJECT_MEMORY.md`, `docs/ROADMAP.md` y los issues correspondientes.
 
 """
-          agents_new, count = re.subn(
-              r"## Estado de continuidad actual\n[\s\S]*?(?=## Regla especial de traspaso entre IAs)",
-              replacement,
-              agents,
-              count=1,
-          )
+          agents_new, count = re.subn(r"## Estado de continuidad actual\n[\s\S]*?(?=## Regla especial de traspaso entre IAs)", replacement, agents, count=1)
           if count != 1:
               raise SystemExit('AGENTS continuity block not found')
           agents_path.write_text(agents_new)
@@ -367,9 +345,5 @@ La especificación exacta, decisiones y deudas vigentes están en `docs/PROJECT_
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
-          if git diff --cached --quiet; then
-            echo "No changes required."
-            exit 0
-          fi
           git commit -m "Privacy: move session lock into note cards [note-row-lock-applied]"
           git push origin HEAD:fix/note-row-session-lock
