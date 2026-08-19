@@ -195,7 +195,6 @@ html.oanix-notebook-canvas-pwa .image-note-editor-root[data-oanix-image-panel-op
 
   html.oanix-notebook-canvas-pwa .image-note-editor-root .editor-surface > .editor-image-block[data-image-compact='true'][data-image-alignment='left'],
   html.oanix-notebook-canvas-pwa .image-note-editor-root .editor-surface > .editor-image-block[data-image-compact='true'][data-image-alignment='right'] {
-    width: min(48%, 12.5rem) !important;
     max-width: 48% !important;
   }
 
@@ -211,7 +210,6 @@ html.oanix-notebook-canvas-pwa .image-note-editor-root[data-oanix-image-panel-op
 @media (max-width: 420px) {
   html.oanix-notebook-canvas-pwa .image-note-editor-root .editor-surface > .editor-image-block[data-image-compact='true'][data-image-alignment='left'],
   html.oanix-notebook-canvas-pwa .image-note-editor-root .editor-surface > .editor-image-block[data-image-compact='true'][data-image-alignment='right'] {
-    width: min(46%, 10.5rem) !important;
     max-width: 46% !important;
   }
 }
