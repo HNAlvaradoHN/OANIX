@@ -44,6 +44,12 @@ test('existing avatar opens explicit view change delete actions', () => {
   assert.match(avatarCss, /\.oanix-avatar-viewer/)
 })
 
+test('avatar viewer and close button consume events instead of opening a note behind the portal', () => {
+  assert.match(avatar, /className="oanix-avatar-viewer"[\s\S]{0,260}onPointerDown=\{\(event\) => event\.stopPropagation\(\)\}/)
+  assert.match(avatar, /onClick=\{\(event\) => \{\s*event\.stopPropagation\(\)\s*if \(event\.target === event\.currentTarget\) setViewerUrl\(null\)/)
+  assert.match(avatar, /aria-label="Cerrar imagen"[\s\S]{0,220}event\.preventDefault\(\)[\s\S]{0,120}event\.stopPropagation\(\)[\s\S]{0,120}setViewerUrl\(null\)/)
+})
+
 test('deleting avatar asks confirmation and returns to the note initial', () => {
   assert.match(avatar, /window\.confirm\('¿Eliminar la foto del avatar de esta nota\?'\)/)
   assert.match(avatar, /deleteNoteAvatar\(note\.id\)/)
