@@ -1,0 +1,189 @@
+html.oanix-notebook-canvas-pwa .editor-surface {
+  --oanix-notebook-row: 32px;
+  --oanix-notebook-line: color-mix(in srgb, var(--theme-accent, #6f61ee) 22%, transparent);
+  line-height: var(--oanix-notebook-row);
+  hyphens: none;
+  word-break: normal;
+  overflow-wrap: normal;
+  background-repeat: repeat-y;
+  background-size: 100% var(--oanix-notebook-row);
+  background-position: 0 27px;
+}
+
+html.oanix-notebook-canvas-pwa.oanix-paper-plain .editor-surface {
+  background-image: none;
+}
+
+html.oanix-notebook-canvas-pwa.oanix-paper-ruled .editor-surface {
+  background-image: linear-gradient(
+    to bottom,
+    transparent calc(100% - 1px),
+    var(--oanix-notebook-line) calc(100% - 1px),
+    var(--oanix-notebook-line) 100%
+  );
+}
+
+html.oanix-notebook-canvas-pwa .editor-surface p {
+  min-height: var(--oanix-notebook-row);
+  margin: 0;
+  line-height: var(--oanix-notebook-row);
+}
+
+html.oanix-notebook-canvas-pwa .editor-surface li {
+  min-height: var(--oanix-notebook-row);
+  margin: 0;
+  line-height: var(--oanix-notebook-row);
+}
+
+html.oanix-notebook-canvas-pwa .editor-surface a {
+  overflow-wrap: anywhere;
+}
+
+html.oanix-notebook-canvas-pwa .editor-surface > p[data-oanix-leading-rows] {
+  transition: padding-top 120ms ease;
+}
+
+html.oanix-notebook-canvas-pwa .editor-surface > p[data-oanix-row-target='true'] {
+  position: relative;
+}
+
+html.oanix-notebook-canvas-pwa .editor-surface > p[data-oanix-row-target='true']::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 1px;
+  background: #ff8a24;
+  box-shadow: 0 0 10px rgba(255, 138, 36, .38);
+  pointer-events: none;
+  animation: oanix-row-target-fade 650ms ease forwards;
+}
+
+@keyframes oanix-row-target-fade {
+  0% { opacity: .82; }
+  60% { opacity: .45; }
+  100% { opacity: 0; }
+}
+
+/* A compact image aligned to a side becomes a true text-flow object.
+ * Large images deliberately stay block-level so the remaining text column never becomes unusable.
+ */
+html.oanix-notebook-canvas-pwa .image-note-editor-root .editor-image-block[data-image-compact='true'][data-image-alignment='left'] {
+  float: left;
+  clear: left;
+  min-width: 0;
+  max-width: 55%;
+  margin: 0 .95rem .65rem 0;
+  shape-outside: margin-box;
+}
+
+html.oanix-notebook-canvas-pwa .image-note-editor-root .editor-image-block[data-image-compact='true'][data-image-alignment='right'] {
+  float: right;
+  clear: right;
+  min-width: 0;
+  max-width: 55%;
+  margin: 0 0 .65rem .95rem;
+  shape-outside: margin-box;
+}
+
+html.oanix-notebook-canvas-pwa .image-note-editor-root .editor-image-block[data-image-alignment='center'],
+html.oanix-notebook-canvas-pwa .image-note-editor-root .editor-image-block[data-image-compact='false'] {
+  float: none;
+  clear: both;
+}
+
+html.oanix-notebook-canvas-pwa .editor-surface::after {
+  content: '';
+  display: block;
+  clear: both;
+}
+
+/* Personalization: plain vs visible notebook ruling. */
+.oanix-paper-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .65rem;
+}
+
+.oanix-paper-option {
+  display: grid;
+  grid-template-columns: 3.2rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .7rem;
+  min-height: 4.5rem;
+  padding: .65rem;
+  border: 1px solid var(--theme-border, rgba(148, 163, 184, .2));
+  border-radius: .85rem;
+  background: var(--theme-surface-2, rgba(255, 255, 255, .04));
+  color: var(--theme-text, #eef5ff);
+  text-align: left;
+}
+
+.oanix-paper-option--selected {
+  border-color: var(--theme-border-strong, rgba(111, 97, 238, .45));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--theme-accent, #6f61ee) 28%, transparent);
+}
+
+.oanix-paper-option__preview {
+  display: block;
+  width: 3.2rem;
+  height: 3.2rem;
+  border: 1px solid var(--theme-border, rgba(148, 163, 184, .2));
+  border-radius: .6rem;
+  background-color: var(--theme-surface, #10141c);
+}
+
+.oanix-paper-option__preview--ruled {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 9px,
+    color-mix(in srgb, var(--theme-accent, #6f61ee) 35%, transparent) 9px,
+    color-mix(in srgb, var(--theme-accent, #6f61ee) 35%, transparent) 10px
+  );
+}
+
+.oanix-paper-option__copy {
+  display: grid;
+  gap: .18rem;
+  min-width: 0;
+}
+
+.oanix-paper-option__copy small,
+.oanix-paper-section__hint {
+  color: var(--theme-muted, #98a2b3);
+}
+
+.oanix-paper-option__check {
+  color: var(--theme-accent, #6f61ee);
+  font-weight: 900;
+}
+
+.oanix-paper-section__hint {
+  margin: .65rem 0 0;
+  font-size: .76rem;
+  line-height: 1.45;
+}
+
+@media (max-width: 620px) {
+  .oanix-paper-options {
+    grid-template-columns: 1fr;
+  }
+
+  html.oanix-notebook-canvas-pwa .image-note-editor-root .editor-image-block[data-image-compact='true'][data-image-alignment='left'],
+  html.oanix-notebook-canvas-pwa .image-note-editor-root .editor-image-block[data-image-compact='true'][data-image-alignment='right'] {
+    max-width: 52%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.oanix-notebook-canvas-pwa .editor-surface > p[data-oanix-leading-rows] {
+    transition: none;
+  }
+
+  html.oanix-notebook-canvas-pwa .editor-surface > p[data-oanix-row-target='true']::after {
+    animation: none;
+    opacity: .45;
+  }
+}
