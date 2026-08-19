@@ -6,6 +6,7 @@ import {
 } from '../versionHistory/versionHistoryService'
 import type { NoteHistoryReason, NoteHistorySnapshot } from '../versionHistory/versionHistoryTypes'
 import { createDailyEntryBlocks } from './dailyEntries'
+import { deleteNoteAvatar } from './noteAvatarService'
 import { compareNotesForList, type NoteRecord, type StoredNoteBlock } from './noteTypes'
 
 const DEFAULT_NOTE_TITLE = 'Nueva nota'
@@ -160,6 +161,11 @@ export function deleteNote(noteId: string): Promise<NoteRecord> {
         await deleteNoteVersionHistory(noteId)
       } catch (error) {
         reportHistoryWarning(noteId, error)
+      }
+      try {
+        await deleteNoteAvatar(noteId)
+      } catch {
+        // Avatar cleanup is best-effort after the authoritative note record is gone.
       }
       return existing
     })
