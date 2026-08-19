@@ -5,6 +5,7 @@ import {
 } from '../../storage/repositories/encryptedRecordRepository'
 import {
   deleteEncryptedImage,
+  loadEncryptedImage,
   loadEncryptedImagePreview,
   storeEncryptedImage,
 } from '../images/imageService'
@@ -50,6 +51,12 @@ export async function loadNoteAvatarPreview(noteId: string): Promise<Blob | null
   const avatar = await readNoteAvatar(noteId)
   if (!avatar) return null
   return loadEncryptedImagePreview(avatar.imageId, avatar.mimeType)
+}
+
+export async function loadNoteAvatarImage(noteId: string): Promise<Blob | null> {
+  const avatar = await readNoteAvatar(noteId)
+  if (!avatar) return null
+  return loadEncryptedImage(avatar.imageId, avatar.mimeType)
 }
 
 export async function chooseNoteAvatar(noteId: string, file: File): Promise<NoteAvatarRecord> {
