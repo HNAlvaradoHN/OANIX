@@ -188,9 +188,12 @@ export function NotePrivacyRuntime() {
     return document.querySelector<HTMLElement>('.note-canvas')
   }, [domRevision])
 
-  const noteIdentityHost = useMemo(() => {
+  const rowPrivacyHosts = useMemo(() => {
     void domRevision
-    return document.querySelector<HTMLElement>('.note-view__identity')
+    return Array.from(document.querySelectorAll<HTMLElement>('.note-row[data-reorder-note-id]')).flatMap((host) => {
+      const noteId = host.dataset.reorderNoteId
+      return noteId ? [{ host, noteId }] : []
+    })
   }, [domRevision])
 
   const selectedNoteId = selectedNoteIdFromDom()
@@ -219,6 +222,7 @@ export function NotePrivacyRuntime() {
       const shouldHide = privateHidden || searchHidden
 
       row.dataset.oanixNoteLocked = locked ? 'true' : 'false'
+      row.dataset.oanixNoteHasLock = privacy?.lock ? 'true' : 'false'
       row.dataset.oanixPrivateNote = privacy?.privateBox === true ? 'true' : 'false'
 
       if (shouldHide) {
@@ -305,7 +309,8 @@ export function NotePrivacyRuntime() {
   function manuallyRelockNote(noteId: string) {
     const focused = document.activeElement
     const noteView = document.querySelector<HTMLElement>('.note-view')
-    if (focused instanceof HTMLElement && noteView?.contains(focused)) focused.blur()
+    const relockingSelectedNote = selectedNoteIdFromDom() === noteId
+    if (relockingSelectedNote && focused instanceof HTMLElement && noteView?.contains(focused)) focused.blur()
 
     setUnlockedNoteIds((current) => {
       const next = new Set(current)
@@ -560,25 +565,40 @@ export function NotePrivacyRuntime() {
         workspaceMenuHost,
       )}
 
-      {noteIdentityHost && selectedNoteId && selectedPrivacy?.lock && createPortal(
-        <button
-          className={`oanix-note-session-lock${unlockedNoteIds.has(selectedNoteId) ? ' oanix-note-session-lock--unlocked' : ''}`}
-          type="button"
-          aria-label={unlockedNoteIds.has(selectedNoteId) ? 'Bloquear esta nota ahora' : 'Desbloquear esta nota'}
-          title={unlockedNoteIds.has(selectedNoteId) ? 'Bloquear nota ahora' : 'Desbloquear nota'}
-          disabled={selectedNeedsPrivateAuth}
-          onClick={() => {
-            if (unlockedNoteIds.has(selectedNoteId)) {
-              manuallyRelockNote(selectedNoteId)
-              return
-            }
-            if (!selectedNeedsPrivateAuth) openLockDialog('unlock', selectedNoteId)
-          }}
-        >
-          <span aria-hidden="true">{unlockedNoteIds.has(selectedNoteId) ? '🔓' : '🔒'}</span>
-        </button>,
-        noteIdentityHost,
-      )}
+      {rowPrivacyHosts.map(({ host, noteId }) => {
+        const privacy = privacyById.get(noteId)
+        if (!privacy?.lock) return null
+        const isUnlocked = unlockedNoteIds.has(noteId)
+        return createPortal(
+          <button
+            className={`oanix-note-row-lock${isUnlocked ? ' oanix-note-row-lock--unlocked' : ''}`}
+            type="button"
+            aria-label={isUnlocked ? 'Bloquear esta nota ahora' : 'Desbloquear esta nota'}
+            title={isUnlocked ? 'Bloquear nota ahora' : 'Desbloquear nota'}
+            onClick={(event) => {
+              event.preventDefault()
+              event.stopPropagation()
+              if (isUnlocked) {
+                manuallyRelockNote(noteId)
+                return
+              }
+              openLockDialog('unlock', noteId)
+            }}
+          >
+            <svg className="oanix-note-row-lock__icon" viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="5.5" y="10" width="13" height="10" rx="2.4" />
+              {isUnlocked ? (
+                <path d="M9 10V7.8a4 4 0 0 1 7.7-1.5" />
+              ) : (
+                <path d="M8.5 10V7.5a3.5 3.5 0 0 1 7 0V10" />
+              )}
+              <path d="M12 14v2.4" />
+            </svg>
+          </button>,
+          host,
+          `note-row-lock-${noteId}`,
+        )
+      })}
 
       {noteCanvasHost && (selectedNeedsPrivateAuth || selectedNeedsNoteCode) && createPortal(
         <div className="oanix-note-privacy-gate" role="region" aria-label="Contenido protegido">
