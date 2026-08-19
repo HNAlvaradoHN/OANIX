@@ -6,6 +6,7 @@ const main = readFileSync('src/main.tsx', 'utf8')
 const redesign = readFileSync('src/styles/redesign.css', 'utf8')
 const themes = readFileSync('src/styles/themes.css', 'utf8')
 const avatar = readFileSync('src/features/notes/NoteAvatar.tsx', 'utf8')
+const avatarService = readFileSync('src/features/notes/noteAvatarService.ts', 'utf8')
 const workspace = readFileSync('src/features/notes/NotesWorkspace.tsx', 'utf8')
 const gate = readFileSync('src/app/VaultGate.tsx', 'utf8')
 
@@ -32,11 +33,16 @@ test('existing OANIX marks receive the technological nucleus/orbit treatment', (
   assert.match(redesign, /prefers-reduced-motion/)
 })
 
-test('note avatars reuse encrypted note images and revoke temporary blob URLs', () => {
-  assert.match(avatar, /loadEncryptedImagePreview/)
-  assert.match(avatar, /block\.type === 'image'/)
+test('note avatars are manually selected encrypted images independent from note content', () => {
+  assert.match(avatar, /chooseNoteAvatar/)
+  assert.match(avatar, /loadNoteAvatarPreview/)
+  assert.match(avatar, /input\.type = 'file'/)
+  assert.match(avatar, /event\.stopPropagation\(\)/)
   assert.match(avatar, /URL\.createObjectURL/)
   assert.match(avatar, /URL\.revokeObjectURL/)
+  assert.doesNotMatch(avatar, /block\.type === 'image'/)
+  assert.match(avatarService, /NOTE_AVATAR_RECORD_TYPE = 'note-avatar'/)
+  assert.match(avatarService, /storeEncryptedImage/)
   assert.match(workspace, /<NoteAvatar note=\{note\} className="note-row__avatar"/)
   assert.match(workspace, /<NoteAvatar note=\{selectedNote\} className="note-view__avatar"/)
 })
