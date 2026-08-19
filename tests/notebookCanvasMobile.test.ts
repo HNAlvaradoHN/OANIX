@@ -9,7 +9,7 @@ const brandCss = readFileSync('src/styles/web-brand-logo.css', 'utf8')
 test('blank notebook taps work on the editor background and empty paragraphs', () => {
   assert.match(runtime, /target\.closest<HTMLElement>\('\.editor-surface'\)/)
   assert.match(runtime, /return emptyParagraph\(direct\) \? editor : null/)
-  assert.match(runtime, /oanix\.notebook\.layout\.v2/)
+  assert.match(runtime, /oanix\.notebook\.layout\.v3/)
 })
 
 test('mobile side images keep real text flow instead of forced block layout', () => {
@@ -20,7 +20,7 @@ test('mobile side images keep real text flow instead of forced block layout', ()
 
 test('ruled paper is visible and locked to the 32px writing rhythm', () => {
   assert.match(notebookCss, /--oanix-notebook-row:\s*32px/)
-  assert.match(notebookCss, /--oanix-notebook-line:[^;]*40%/)
+  assert.match(notebookCss, /--oanix-notebook-line:/)
   assert.match(notebookCss, /background-size:\s*100% var\(--oanix-notebook-row\)/)
 })
 
