@@ -59,14 +59,17 @@ Ya validados físicamente:
 - continuidad de firma APK estable ✅.
 
 Bloqueador técnico prioritario restante:
-- **#69 — resolución de conflictos multidispositivo.** Detección real validada. El 18 ago 2026 se validó también `Combinar` con PC + Android: Android editó la nota offline, PC editó la misma nota online, al reconectar apareció el conflicto y OANIX conservó ambas versiones separadas por fecha sin pérdida de contenido.
-- Pendiente dentro de #69: elegir remoto, elegir local, resolución obsoleta, conflictos de imagen y eliminación vs modificación.
+- **#69 — resolución de conflictos multidispositivo.** Detección real validada con PC + Android.
+- `Combinar ambas` ✅: conserva ambas versiones separadas por fecha sin pérdida de contenido.
+- `Primera en sincronizarse` / versión remota ✅: conserva y propaga la remota.
+- `Este dispositivo` / versión local ✅: conserva y propaga la local.
+- Pendiente dentro de #69: **resolución obsoleta**, conflictos de imagen y eliminación vs modificación.
 
 También queda completar el resto del smoke test RC: operaciones normales de notas, títulos/etiquetas/carpetas, imágenes, temas, contraseña maestra, backup/restauración, sync Google, compartir, cámara/documentos.
 
 ## Otros pendientes importantes
 
-- **#69:** siguiente bloque técnico prioritario; `Combinar` ya está validado físicamente.
+- **#69:** siguiente prueba: rechazo de una resolución obsoleta si otro cliente cambia la nota mientras el diálogo de conflicto sigue abierto.
 - **#73:** validación restante de recuperación por Email OTP.
 - **#124:** checklist general de Release Candidate.
 - **#125:** preparación de publicación; no comenzar Play Store/firma release definitiva antes de cerrar RC.
@@ -82,9 +85,9 @@ También queda completar el resto del smoke test RC: operaciones normales de not
 
 ## Próximo paso recomendado
 
-1. Continuar #69 con **elegir versión remota** usando una divergencia controlada PC + Android.
-2. Repetir después con **elegir versión local**.
-3. Validar resolución obsoleta, conflictos de imagen y eliminación vs modificación.
+1. Validar **resolución obsoleta** en #69: provocar un conflicto, dejar abierto el diálogo en un cliente, cambiar la misma nota desde el otro cliente y comprobar que OANIX rechaza la decisión antigua en vez de sobrescribir.
+2. Validar conflictos de imagen (remoto/local + regeneración de preview).
+3. Validar eliminación vs modificación.
 4. Si aparece un bug, corregirlo con cambio mínimo + tests + PR + CI/Android.
 5. Cerrar #69 cuando todas las resoluciones necesarias queden validadas.
 6. Continuar el smoke test de #124.
