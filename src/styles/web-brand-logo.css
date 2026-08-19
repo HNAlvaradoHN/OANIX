@@ -1,6 +1,5 @@
-/* Final OANIX identity.
- * The same black / silver / copper mark is used inside the PWA and Capacitor.
- * Native launcher resources mirror this composition with Android-safe vector geometry.
+/* OANIX brand surfaces.
+ * Capacitor keeps the current approved icon while the PWA can preview a new mark safely.
  */
 
 html.oanix-brand-final .vault-logo,
@@ -38,7 +37,19 @@ html.oanix-brand-final .notes-brand__mark {
   height: clamp(2.65rem, 4vw, 3rem) !important;
 }
 
-/* The old purple/cyan orbital nucleus is decorative history, not part of the final brand. */
+/* PWA notebook preview uses a compact mark so the OANIX header never becomes a blank dark tile. */
+html.oanix-brand-pwa-preview .vault-logo,
+html.oanix-brand-pwa-preview .notes-brand__mark {
+  background-color: #090b0e !important;
+  background-size: 94% 94% !important;
+  border-color: rgba(255, 151, 45, .24) !important;
+  box-shadow:
+    0 10px 28px rgba(0, 0, 0, .48),
+    0 0 0 1px rgba(255, 138, 36, .12),
+    0 0 20px rgba(255, 122, 22, .11) !important;
+}
+
+/* The old purple/cyan orbital nucleus is decorative history, not part of the current brand. */
 html.oanix-brand-final .vault-logo::before,
 html.oanix-brand-final .vault-logo::after,
 html.oanix-brand-final .notes-brand__mark::before,
@@ -63,6 +74,12 @@ html.oanix-brand-final.oanix-classic-day .notes-brand__mark {
     0 8px 24px rgba(15, 23, 42, .18),
     0 0 0 1px rgba(232, 135, 50, .09),
     0 0 20px rgba(232, 135, 50, .07) !important;
+}
+
+html.oanix-brand-pwa-preview.oanix-classic-day .vault-logo,
+html.oanix-brand-pwa-preview.oanix-classic-day .notes-brand__mark {
+  background-size: 94% 94% !important;
+  border-color: rgba(255, 138, 36, .24) !important;
 }
 
 @media (max-width: 760px) {
