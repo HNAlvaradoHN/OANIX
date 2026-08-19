@@ -99,26 +99,16 @@
             android:strokeWidth="1.1"
             android:strokeLineCap="round" />
 
-        <!-- Strong orange rulings: dark underlay + vivid orange + highlight so they survive rasterization. -->
-        <path
-            android:pathData="M52,41 L70,41 M52,48 L70,48 M52,55 L67,55 M52,61 L61,61"
-            android:fillColor="#00000000"
-            android:strokeColor="#7A2D00"
-            android:strokeWidth="4.2"
-            android:strokeLineCap="round" />
-        <path
-            android:pathData="M52,41 L70,41 M52,48 L70,48 M52,55 L67,55 M52,61 L61,61"
-            android:fillColor="#00000000"
-            android:strokeColor="#FF8A24"
-            android:strokeWidth="2.9"
-            android:strokeLineCap="round" />
-        <path
-            android:pathData="M52,40.5 L69,40.5 M52,47.5 L69,47.5 M52,54.5 L66,54.5"
-            android:fillColor="#00000000"
-            android:strokeColor="#FFD18D"
-            android:strokeWidth="0.8"
-            android:strokeLineCap="round"
-            android:strokeAlpha="0.95" />
+        <!-- Solid orange note rulings. Filled bars are used instead of thin strokes so they stay visible at launcher size. -->
+        <path android:pathData="M51.5,39.5 H71.5 V43 H51.5 Z" android:fillColor="#FF8A24" />
+        <path android:pathData="M51.5,46.5 H71.5 V50 H51.5 Z" android:fillColor="#FF8A24" />
+        <path android:pathData="M51.5,53.5 H68 V57 H51.5 Z" android:fillColor="#FF8A24" />
+        <path android:pathData="M51.5,60 H62 V63 H51.5 Z" android:fillColor="#FF8A24" />
+
+        <!-- Warm highlights make the rulings read like lit orange ink, not dark grooves. -->
+        <path android:pathData="M52.3,40.1 H70.7 V41 H52.3 Z" android:fillColor="#FFD18D" />
+        <path android:pathData="M52.3,47.1 H70.7 V48 H52.3 Z" android:fillColor="#FFD18D" />
+        <path android:pathData="M52.3,54.1 H67.2 V55 H52.3 Z" android:fillColor="#FFD18D" />
 
         <!-- Security lock overlapping lower-right notebook corner. -->
         <path
