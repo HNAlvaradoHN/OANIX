@@ -2,15 +2,15 @@
 
 **Última actualización:** 2026-08-18
 
-Este archivo es un checkpoint operativo corto para retomar OANIX desde otro chat o con otro agente sin reconstruir conversaciones. Siempre contrastarlo con `main`, `AGENTS.md`, `docs/PROJECT_MEMORY.md`, `docs/ROADMAP.md`, `docs/ARCHITECTURE.md`, `docs/SECURITY.md` y los issues/PRs mencionados.
+Este archivo es el checkpoint operativo corto para retomar OANIX desde otro chat o con otro agente sin reconstruir conversaciones. Siempre contrastarlo con `main`, `AGENTS.md`, `docs/PROJECT_MEMORY.md`, `docs/ROADMAP.md`, `docs/ARCHITECTURE.md`, `docs/SECURITY.md` y los issues/PRs mencionados.
 
 ## Estado de versiones
 
 - **V1 — Núcleo local:** cerrada.
-- **V2 — Cuenta y sincronización:** cerrada funcionalmente; siguen visibles deudas de validación, especialmente #69, #70 y #73.
+- **V2 — Cuenta y sincronización:** cerrada funcionalmente; permanecen deudas de validación visibles, principalmente #69 y #73.
 - **V3 — Android con Capacitor:** cerrada formalmente en #79.
 - La APK debug interna tiene **firma estable** y se validó físicamente una actualización APK sobre APK sin desinstalar. La firma definitiva de Play Store sigue siendo independiente.
-- La PWA y Android comparten la misma base React + TypeScript + Vite/Capacitor; no crear lógica paralela.
+- PWA y Android comparten la misma base React + TypeScript + Vite/Capacitor; no crear lógica paralela.
 
 ## Dirección visual aprobada
 
@@ -19,95 +19,71 @@ Este archivo es un checkpoint operativo corto para retomar OANIX desde otro chat
 - Tarjetas de notas, ellipsis de títulos largos, menús y editor ya tienen pulidos post-V3; no rediseñar la dirección principal sin necesidad.
 - Priorizar legibilidad y consistencia antes que agregar controles decorativos.
 
-## Privacidad — estado actual
+## Privacidad — #68 CERRADO ✅
 
-### Protección individual por nota
+Privacidad por nota, relock manual, Caja privada y reautenticación quedaron **implementadas y validadas físicamente en Android** el 18 ago 2026.
 
-Implementada y pendiente únicamente de validación física final dentro de issue #68.
-
-Invariantes:
+### Invariantes
 - El código de nota es una barrera adicional dentro de la bóveda ya cifrada.
 - No se guarda el código en plaintext.
 - La autorización temporal vive únicamente en `unlockedNoteIds: Set<string>` dentro de `NotePrivacyRuntime`.
 - Un relock manual solo elimina el ID de ese Set; no modifica PBKDF2, el verificador, `note.privacy`, sync, Caja privada ni cifrado.
 
-### PR #133
+### PR #133 / PR #134
+- PR #133 añadió relock manual durante la sesión.
+- PR #134 movió el candado de sesión a la **tarjeta de la nota** y eliminó la ubicación redundante junto al título grande.
+- Nota sin protección: sin candado.
+- Protegida bloqueada: candado cerrado.
+- Protegida desbloqueada temporalmente: candado abierto.
+- Tocar el candado abierto vuelve a bloquear y oculta el contenido inmediatamente.
+- El control usa SVG `currentColor`, respeta los temas, mantiene el ellipsis de títulos largos y no abre accidentalmente la tarjeta.
+- En ancho crítico, la fecha puede ceder antes que candado/menú.
 
-PR #133 añadió relock manual durante la sesión:
-- protegida bloqueada -> candado cerrado;
-- código correcto -> autorización temporal en memoria;
-- desbloqueada -> candado abierto;
-- tocar el candado abierto -> borrar solo esa autorización temporal y ocultar de nuevo el contenido.
+### Validación
+- PR #134: OANIX CI #602 ✅ / Android #163 ✅.
+- `main` posterior a PR #134: Android #164 ✅.
+- `oanix/stable-debug-signing = success` ✅.
+- APK probada físicamente: commit `135a0b09d3cb045271cfd059a363f0b53cdbeb0e`.
+- Usuario confirmó **sin fallos**: proteger/desbloquear/quitar protección, código incorrecto/correcto, relock manual, ocultamiento en Caja privada, reautenticación y nueva autenticación después de cerrar Caja privada.
+- Issue #68 cerrado como `completed`.
 
-### PR #134 — candado de sesión en la tarjeta
+## RC Android — #124
 
-**MERGED** en `main` mediante commit `135a0b09d3cb045271cfd059a363f0b53cdbeb0e`.
+Estado actual: preparación activa.
 
-UX/implementación definitiva:
-- el candado de sesión está visible **dentro de la burbuja/tarjeta de la nota en la lista**, no junto al título grande de la vista abierta;
-- se ve pequeño, tecnológico y discreto;
-- usa SVG con `currentColor` y tokens del tema, no emoji grande;
-- nota sin protección: no muestra control;
-- protegida bloqueada: candado cerrado;
-- protegida desbloqueada temporalmente: candado abierto;
-- tocar el candado no abre accidentalmente la tarjeta (`preventDefault` + `stopPropagation`);
-- el control reutiliza `unlockedNoteIds`; no existe segundo store/estado/localStorage/sessionStorage;
-- el título existente cede espacio mediante el ellipsis ya implementado; candado y menú `⋮` no se aplastan;
-- en ancho <= 360 px, una nota protegida puede ocultar la fecha antes que sacrificar candado/menú;
-- el pseudo-candado redundante del título se suprime cuando existe el control explícito;
-- relock de una nota distinta a la seleccionada no desenfoca el editor activo; `blur()` solo aplica si se relockea la nota abierta.
+Ya validados físicamente:
+- #105 huella/cold start ✅ cerrado.
+- #70 historial cifrado/restauración reversible ✅ cerrado.
+- #68 privacidad por nota/Caja privada ✅ cerrado.
+- timeout de sesión Android ✅.
+- continuidad de firma APK estable ✅.
 
-Archivos principales:
-- `src/features/privacy/NotePrivacyRuntime.tsx`
-- `src/features/privacy/manualNoteRelock.css`
-- `tests/manualNoteRelock.test.ts`
+Bloqueador técnico prioritario restante:
+- **#69 — resolución de conflictos multidispositivo.** La detección real ya fue observada; falta cerrar casos de resolución local/remota/combinar, resolución obsoleta, imágenes y eliminación vs modificación.
 
-Validación automática:
-- PR: OANIX CI #602 ✅.
-- PR: OANIX Android #163 ✅.
-- `main`: OANIX Android #164 ✅.
-- `main`: certificado de firma debug estable verificado ✅ (`oanix/stable-debug-signing = success`).
-- Artifact de prueba: `oanix-debug-apk`, generado por Android #164 para el commit de merge #134.
-
-**Validación pendiente:** prueba física de la APK en Android; #68 permanece abierto hasta confirmación del usuario.
-
-## Prueba física pendiente para cerrar #68
-
-En Android:
-1. Proteger una nota con código.
-2. Código incorrecto -> rechazo.
-3. Código correcto -> contenido visible y candado abierto en la tarjeta.
-4. Tocar candado abierto en la tarjeta -> vuelve a cerrado y oculta contenido inmediatamente.
-5. Tocar candado cerrado -> vuelve a pedir código.
-6. Verificar con título largo que aparecen `...` antes de invadir candado/menú.
-7. Quitar protección -> nota normal y sin candado.
-8. Mover nota a Caja privada -> desaparece de lista/búsqueda normal.
-9. Entrar a Caja privada mediante huella/credencial o contraseña maestra.
-10. Cerrar Caja privada y comprobar que reentrar exige autenticación otra vez.
-
-No cerrar #68 antes de esta confirmación física.
+También queda completar el resto del smoke test RC: operaciones normales de notas, títulos/etiquetas/carpetas, imágenes, temas, contraseña maestra, backup/restauración, sync Google, compartir, cámara/documentos.
 
 ## Otros pendientes importantes
 
-- **#69:** validación de resolución de conflictos multidispositivo (local/remoto/combinar, resolución obsoleta, imágenes, delete-vs-edit). Es el siguiente bloque técnico importante después de cerrar privacidad.
-- **#70:** validación restante de historial cifrado.
+- **#69:** siguiente bloque técnico prioritario.
 - **#73:** validación restante de recuperación por Email OTP.
-- **#105:** huella puede tardar 2–3 aperturas en cold start. Resolver durante pulido Android/RC; no debilitar biometría para ocultarlo.
 - **#124:** checklist general de Release Candidate.
 - **#125:** preparación de publicación; no comenzar Play Store/firma release definitiva antes de cerrar RC.
-- Monetización/OANIX Pro sigue diferida; no implementarla durante el cierre RC.
+- **#80 OANIX Pro/monetización:** diferido.
 
 ## Forma de trabajo acordada con el usuario
 
 - El agente debe hacer directamente las operaciones de GitHub que tenga disponibles: ramas, archivos, PRs, CI, logs, reintentos, merges, issues y artifacts.
-- No convertir al usuario en operador de GitHub si la herramienta puede hacerlo.
-- Para cambios pequeños/locales y seguros, avanzar, probar, integrar y documentar sin detenerse a pedir confirmaciones innecesarias.
-- Para seguridad/datos/alcance importante, detenerse si existe una decisión real que deba tomar el usuario.
-- Después de cambios Android, si se necesita prueba física, descargar el artifact APK y entregarlo directamente cuando las herramientas lo permitan.
+- No convertir al usuario en operador de GitHub si la herramienta puede realizar la acción.
+- Para cambios pequeños/locales y seguros, avanzar, probar, integrar y documentar sin detenerse por confirmaciones innecesarias.
+- Para seguridad/datos/alcance importante, detenerse únicamente cuando exista una decisión real que deba tomar el usuario.
+- Si un cambio Android necesita prueba física, llegar hasta artifact/APK y entregarla directamente cuando las herramientas lo permitan.
 
 ## Próximo paso recomendado
 
-1. Entregar/probar la APK de `main` generada por Android #164.
-2. Validar físicamente #68 con el checklist anterior.
-3. Si todo pasa: documentar el resultado, cerrar #68 y actualizar #124.
-4. Continuar con #69; no abrir funciones nuevas antes de cerrar estas deudas RC.
+1. Abrir/revisar #69 y preparar una matriz exacta de escenarios de conflicto pendientes.
+2. Ejecutar primero los casos que puedan validarse con dos clientes/dispositivos reales sin cambiar código.
+3. Si aparece un bug, corregirlo con cambio mínimo + tests + PR + CI/Android.
+4. Cerrar #69 cuando todas las resoluciones necesarias queden validadas.
+5. Continuar el smoke test de #124.
+6. Solo después generar/nombrar la APK RC y pasar a #125 publicación.
