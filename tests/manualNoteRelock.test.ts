@@ -38,6 +38,7 @@ test('explicit row lock replaces duplicate pseudo locks and keeps list title ell
   assert.match(styleSource, /\.oanix-note-row-lock/)
   assert.match(styleSource, /flex: 0 0 auto/)
   assert.match(styleSource, /var\(--theme-accent/)
+  assert.match(styleSource, /max-width: 360px[\s\S]*?note-row__topline time[\s\S]*?display: none/)
   assert.match(styleSource, /prefers-reduced-motion/)
   assert.match(notesStyleSource, /\.note-row__open[\s\S]*?min-width: 0/)
   assert.match(notesStyleSource, /\.note-row__topline strong[^}]*overflow: hidden[^}]*text-overflow: ellipsis[^}]*white-space: nowrap/)
