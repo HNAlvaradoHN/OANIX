@@ -49,7 +49,7 @@ Validación física completada con PC + Android usando la misma bóveda/cuenta:
 - La UI normal crea un `imageId` nuevo en cada inserción y no ofrece sobrescribir el original conservando el mismo ID; por eso no se exige al usuario manipular IndexedDB/Supabase para fabricar un conflicto binario artificial del mismo registro durante el RC.
 - La sincronización normal de imágenes sí sigue dentro del smoke test #124.
 
-## Avatar manual de nota — PR #135 + #136 MERGED ✅ / VALIDACIÓN FÍSICA FINAL PENDIENTE
+## Avatar manual de nota — PR #135 + #136 + #137 MERGED ✅ / VALIDACIÓN FÍSICA FINAL PENDIENTE
 
 Durante el smoke test RC el usuario aclaró el requisito correcto: el círculo de avatar **no debe usar automáticamente la primera imagen del contenido de la nota**. Debe ser una foto manual e independiente del editor.
 
@@ -65,31 +65,41 @@ Durante el smoke test RC el usuario aclaró el requisito correcto: el círculo d
 
 ### PR #136 — acciones cuando ya existe avatar
 
-UX final acordada:
+UX acordada:
 - **Sin foto:** tocar círculo → selector de galería.
 - **Con foto:** tocar círculo → menú `Ver`, `Cambiar`, `Eliminar`.
 - `Ver` descifra el original solo bajo demanda, lo muestra en un visor temporal y revoca la Blob URL al cerrar.
 - `Cambiar` reutiliza el mismo selector cifrado y reemplaza el avatar.
 - `Eliminar` pide confirmación, borra metadata + imagen cifrada y vuelve a la inicial de la nota.
 - Menú y visor se renderizan por portal para no crear botones anidados dentro de la tarjeta.
-- Estilos aislados respetan variables de tema con fallback; no se modifica la dirección visual aprobada.
+
+### PR #137 — pantalla negra al abrir acciones
+
+Durante la primera validación física del menú de PR #136, al tocar por segunda vez un avatar existente la PWA quedó completamente negra/blanca de contenido en vez de mostrar el menú. La captura del usuario confirmó un crash/render vacío, no el visor intencional.
+
+Causa corregida:
+- PR #136 evaluaba `event.currentTarget` dentro del updater funcional de `setMenuPosition`.
+- React puede ejecutar ese updater cuando el handler ya terminó y `currentTarget` ya no es un elemento válido, haciendo fallar `getBoundingClientRect()`.
+- PR #137 calcula `menuPositionFor(event.currentTarget)` **sincrónicamente dentro del handler** y pasa solo la posición ya calculada al updater.
+- Test de regresión impide volver a usar `event.currentTarget` dentro de ese updater.
+- No cambia cifrado, avatar persistido, visor, sync, editor ni contenido.
 
 Validación automática:
 - PR #135: OANIX CI #610 ✅ / Android #171 ✅.
 - Merge PR #135: `76814291b1e0d5aea0393432836b67a0a610fca4`; Android `main` #172 ✅; firma estable ✅.
 - PR #136: OANIX CI #614 ✅ / Android #175 ✅.
-- Merge PR #136: `c8676395c9130ddeef60947117d0f7637decbb44`.
-- Android `main` #176 ✅.
+- Merge PR #136: `c8676395c9130ddeef60947117d0f7637decbb44`; Android `main` #176 ✅; firma estable ✅.
+- PR #137: OANIX CI #618 ✅ / Android #179 ✅.
+- Merge PR #137: `d6306ccf1b332607074e39d328b8078bd1c01199`.
+- Android `main` del merge #137: workflow run `32208379718` ✅.
 - `oanix/stable-debug-signing = success` ✅.
-- Artifact `oanix-debug-apk` generado desde el merge #136.
-- APK entregable: `OANIX-main-PR136.apk`, SHA-256 `b1caccf565b19bb876834fad152893de203620a11e51b21e045c84e57c3ac07a`.
-- Los commits posteriores inmediatos son solo documentación y no cambian el código de la app contenido en esa APK.
+- APK de prueba actual: `OANIX-main-PR137.apk`, SHA-256 `f0c3b4191111e9386a64e818e3afac2fe9801715166e6638a2c8f7d3b13f8286`.
 
-Pendiente físico final: instalar la APK de PR #136 encima de la existente y confirmar `Ver`, `Cambiar`, `Eliminar`, persistencia y que la foto sigue independiente del contenido. Si pasa, el avatar se considera cerrado y no se vuelve a tocar durante el RC salvo regresión.
+Pendiente físico final: instalar la APK de PR #137 encima de la existente y confirmar que el segundo toque ya muestra `Ver`, `Cambiar`, `Eliminar` sin pantalla negra; después probar las tres acciones, persistencia y separación del contenido. Si pasa, el avatar se considera cerrado y no se vuelve a tocar durante el RC salvo regresión.
 
 ## RC Android — #124
 
-**Estado actual:** bloqueadores funcionales principales cerrados. #105, #70, #68 y #69 están completados. Ahora toca completar el smoke test RC sin regresiones; PR #135/#136 cerraron el requisito funcional del avatar a nivel de código/CI y solo falta la confirmación física final.
+**Estado actual:** bloqueadores funcionales principales cerrados. #105, #70, #68 y #69 están completados. Ahora toca completar el smoke test RC sin regresiones; el avatar manual está implementado en PR #135/#136 y la regresión de pantalla negra quedó corregida en PR #137, pendiente solo de revalidación física.
 
 Ya validados:
 - instalación como actualización con firma estable ✅;
@@ -103,7 +113,7 @@ Ya validados:
 
 ### Smoke test aún pendiente
 
-- Validar físicamente el **avatar manual final PR #135/#136**: seleccionar, ver, cambiar, eliminar, persistencia y separación del contenido.
+- Revalidar físicamente el **avatar manual final PR #135/#136/#137**: seleccionar, abrir menú, ver, cambiar, eliminar, persistencia y separación del contenido.
 - Crear, editar, fijar, mover y eliminar notas como flujo normal completo.
 - Títulos largos, etiquetas y carpetas.
 - Añadir una imagen **dentro del contenido** y confirmar que funciona de forma independiente del avatar.
@@ -131,10 +141,10 @@ Ya validados:
 
 ## Próximo paso exacto
 
-1. Instalar `OANIX-main-PR136.apk` **encima de la existente, sin desinstalar**.
-2. Con una nota sin avatar: tocar círculo → elegir foto → confirmar que queda solo como avatar.
-3. Tocar nuevamente el avatar y comprobar `Ver`, `Cambiar`, `Eliminar`.
-4. Confirmar que `Ver` abre la foto, `Cambiar` reemplaza y `Eliminar` vuelve a la inicial; reabrir OANIX y comprobar persistencia del avatar que quede seleccionado.
+1. Instalar `OANIX-main-PR137.apk` **encima de la existente, sin desinstalar**.
+2. Con una nota que ya tenga avatar, tocar el círculo por segunda vez y confirmar que aparece el menú `Ver`, `Cambiar`, `Eliminar` sin pantalla negra.
+3. Probar `Ver`, `Cambiar`, `Eliminar`; volver a elegir una foto y reabrir OANIX para comprobar persistencia.
+4. Confirmar que la foto del avatar nunca aparece como bloque dentro del contenido.
 5. Si pasa, marcar avatar como validado en #124 y continuar inmediatamente el resto del smoke test RC.
 6. Si todo queda verde, generar/nombrar la APK RC y usarla varios días.
 7. Solo después avanzar a #125: appId/version final, icono/splash, firma release, política/ficha y AAB de publicación.
