@@ -68,10 +68,10 @@ Implementación integrada en `main` mediante PR #135:
 Validación automática:
 - PR #135: OANIX CI #610 ✅.
 - PR #135: OANIX Android #171 ✅.
-- Merge `main`: `76814291b1e0d5aea0393432836b67a0a610fca4`.
-- Android `main` #172 ✅.
+- Merge funcional `main`: `76814291b1e0d5aea0393432836b67a0a610fca4`.
+- Android del merge funcional: #172 ✅.
 - `oanix/stable-debug-signing = success` ✅.
-- Artifact debug APK generado desde `main`.
+- Artifact debug APK generado desde ese merge; los commits posteriores inmediatos son solo documentación y no cambian código de la app.
 
 Pendiente: el usuario debe instalar la nueva APK encima de la existente y confirmar físicamente que tocar el círculo abre el selector, la foto elegida queda como avatar sin insertarse en la nota y el avatar se mantiene al reabrir/sincronizar.
 
@@ -119,7 +119,7 @@ Ya validados:
 
 ## Próximo paso exacto
 
-1. Instalar la APK de `main` posterior a PR #135 **encima de la existente, sin desinstalar**.
+1. Instalar la APK de `main` del merge funcional PR #135 **encima de la existente, sin desinstalar**.
 2. Validar avatar manual: tocar círculo → elegir foto → avatar visible; confirmar que la foto no aparece como bloque de contenido y que tocar el avatar de la tarjeta no abre la nota.
 3. Reabrir OANIX y comprobar persistencia; con cuenta conectada, comprobar propagación del avatar al otro cliente.
 4. Si pasa, marcar ese punto en #124 y continuar el resto del smoke test RC.
