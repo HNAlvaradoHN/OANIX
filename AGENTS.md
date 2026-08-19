@@ -4,17 +4,20 @@ Este archivo es la puerta de entrada obligatoria para cualquier IA, agente de c�
 
 ## Objetivo
 
-El repositorio debe servir también como memoria operativa del proyecto. Si el usuario entrega únicamente el enlace de GitHub y dice algo como **«continuemos con lo que estaba»**, no se le debe pedir que reconstruya conversaciones anteriores si la información ya está registrada aquí o en `docs/PROJECT_MEMORY.md`.
+El repositorio debe servir también como memoria operativa del proyecto. Si el usuario entrega únicamente el enlace de GitHub y dice algo como **«continuemos con lo que estaba»**, no se le debe pedir que reconstruya conversaciones anteriores si la información ya está registrada aquí o en la documentación de continuidad.
 
 Antes de proponer o implementar un cambio, leer y contrastar:
 
 1. `AGENTS.md` — reglas de trabajo y traspaso entre IAs.
-2. `docs/ROADMAP.md` — alcance oficial, versión activa y orden obligatorio.
-3. `docs/PROJECT_MEMORY.md` — decisiones funcionales, pendientes, ideas diferidas, excepciones y contexto de continuidad.
-4. `docs/ARCHITECTURE.md` — arquitectura vigente.
-5. `docs/SECURITY.md` — invariantes y modelo de seguridad.
-6. `docs/CHANGELOG.md` — cambios ya realizados.
-7. Código y pruebas de `main` — verificación final del estado realmente implementado.
+2. `docs/CURRENT_STATE.md` — checkpoint corto y actualizado para reanudar desde otro chat.
+3. `docs/ROADMAP.md` — alcance oficial, versión activa y orden obligatorio.
+4. `docs/PROJECT_MEMORY.md` — decisiones funcionales, pendientes, ideas diferidas, excepciones y contexto histórico de continuidad.
+5. `docs/ARCHITECTURE.md` — arquitectura vigente.
+6. `docs/SECURITY.md` — invariantes y modelo de seguridad.
+7. `docs/CHANGELOG.md` — cambios ya realizados.
+8. Código, issues, PRs y pruebas de `main` — verificación final del estado realmente implementado.
+
+`docs/CURRENT_STATE.md` es un checkpoint operativo, no reemplaza los documentos históricos. Si contradice `main`, prevalece el repositorio real y debe corregirse el checkpoint.
 
 No asumir que un chat, una memoria externa o una descripción antigua representa el estado actual. Verificar siempre el repositorio.
 
@@ -47,7 +50,7 @@ Si por una razón válida se implementa algo fuera de orden, debe quedar registr
 
 Toda decisión relevante conversada con el usuario debe sobrevivir al chat.
 
-Actualizar `docs/PROJECT_MEMORY.md` cuando ocurra cualquiera de estos casos:
+Actualizar `docs/PROJECT_MEMORY.md` o el checkpoint vigente cuando ocurra cualquiera de estos casos:
 
 - se define cómo debe funcionar una característica;
 - se modifica una decisión anterior;
@@ -75,10 +78,10 @@ No borrar silenciosamente decisiones anteriores. Si cambian, marcarlas como sust
 Al completar un cambio relevante:
 
 1. verificar pruebas y CI aplicables;
-2. actualizar `docs/CHANGELOG.md`;
-3. actualizar `docs/ROADMAP.md` cuando corresponda cambiar el estado oficial de un bloque;
-4. actualizar `docs/PROJECT_MEMORY.md` con el resultado, incluyendo cualquier desviación de lo acordado;
-5. mantener `AGENTS.md` estable salvo que cambien las reglas generales de trabajo o su estado de continuidad quede obsoleto.
+2. actualizar la documentación de continuidad (`docs/CURRENT_STATE.md` y/o `docs/PROJECT_MEMORY.md` según corresponda);
+3. actualizar `docs/CHANGELOG.md` cuando el cambio forme parte del historial de producto;
+4. actualizar `docs/ROADMAP.md` cuando corresponda cambiar el estado oficial de un bloque;
+5. mantener `AGENTS.md` estable salvo que cambien las reglas generales o su checkpoint de continuidad quede obsoleto.
 
 La documentación de memoria no debe introducir lógica de ejecución ni modificar el comportamiento de la aplicación; es documentación de continuidad.
 
@@ -88,46 +91,46 @@ El usuario pidió explícitamente no detener el desarrollo por cambios pequeños
 
 Detenerse para pedir decisión únicamente cuando exista una alternativa real que cambie seguridad, datos, alcance o una experiencia importante.
 
-## Secuencia acordada para cerrar V3 y diseñar la interfaz
+## Regla operativa de GitHub
+
+Cuando el agente tenga herramientas integradas de GitHub debe usarlas directamente para ramas, archivos, PRs, CI, logs, reintentos, merges, issues y artifacts. No convertir al usuario en operador de GitHub si la herramienta puede realizar la acción.
+
+Si una tarea requiere prueba física en Android, el agente debe llegar hasta generar/verificar el artifact y, cuando sus herramientas lo permitan, entregar la APK directamente al usuario. Nunca afirmar que un build fue probado físicamente si solo pasó CI.
+
+## Secuencia acordada para cerrar RC y publicación
 
 La secuencia vigente es deliberada:
 
-1. terminar y validar primero todas las funciones y correcciones funcionales pertenecientes a V3, incluidas las que solo pueden verificarse en Android real;
-2. congelar la lógica funcional de V3 salvo bugs reales;
-3. hacer después un rediseño/pulido visual completo principalmente sobre la PWA, porque comparte la misma base React con Android y permite iterar más rápido en móvil/tablet/PC;
-4. generar una APK consolidada para validar las diferencias nativas del diseño ya estabilizado;
-5. cerrar firma, icono/splash, `appId` y preparación de publicación.
+1. cerrar las validaciones funcionales visibles del RC, sin introducir nuevas funciones por impulso;
+2. mantener estable la dirección visual ya aprobada;
+3. validar en Android real los cambios que lo requieran;
+4. corregir el pendiente biométrico #105 durante pulido Android/RC sin debilitar seguridad;
+5. cerrar el checklist RC #124;
+6. preparar identidad/firma release/AAB/publicación bajo #125.
 
-No adelantar cambios puramente visuales mientras todavía se estén cerrando fallos funcionales Android, salvo UI mínima necesaria para operar/probar una función.
+No adelantar V4, monetización u OANIX Pro mientras existan deudas RC activas, salvo preparación arquitectónica explícitamente justificada y documentada.
 
 ## Estado de continuidad actual
 
-A fecha de **2026-08-17**:
+A fecha de **2026-08-18**:
 
 - V1 — Núcleo local: cerrada.
-- V2 — Cuenta y sincronización: cerrada funcionalmente; continúan deudas de validación visibles en #69, #70 y #73.
-- Versión activa: **V3 — Android con Capacitor**.
-- Capacitor PR #81 y empaquetado APK/AAB PR #82 completados; modo local Android validado.
-- Android Keystore PR #83 implementado; prueba específica `seal/open` pendiente.
-- Huella / acceso rápido: PR #84 + #88/#89/#90; reapertura, cancelación y reintento manual por huella validados en teléfono real.
-- Cámara nativa PR #86 y archivos nativos PR #87: implementación y prueba funcional básica real completadas.
-- Compartir hacia OANIX: PR #91 + #92/#93. PR #93 usa cola de intents solo en memoria, soporta entregas repetidas con Activity viva, muestra progreso local y abre la nota al finalizar; falta validación consolidada en teléfono.
-- PR #94 implementa la navegación Android Atrás/salida segura y una acción explícita `Usar PIN o patrón del teléfono` mediante `DEVICE_CREDENTIAL`, reutilizando la misma envoltura cifrada de acceso rápido. Implementación/CI completas; falta prueba real.
-- En una nota, Back debe guardar y volver a la lista. Desde la lista, primer Back pregunta si se desea salir; segundo Back con la confirmación visible sale.
-- El flujo Android online/sincronizado todavía no se declara validado.
-- Las APK debug de CI aún no tienen firma de pruebas estable, por lo que una build nueva puede exigir desinstalar la anterior.
-- El icono/appId siguen provisionales antes de publicación.
-- **Bloque inmediato:** validación consolidada en teléfono de PR #93/#94.
-- Después: cuenta/sync Android → firma estable de pruebas → congelar funcionalidad V3 → rediseño visual completo en PWA → APK visual consolidada → publicación.
-- No avanzar a V4 antes de cerrar V3 salvo preparación arquitectónica explícitamente justificada y registrada.
-
-La especificación exacta, deudas y decisiones de seguridad están en `docs/PROJECT_MEMORY.md`, `docs/ROADMAP.md` e issue #79.
+- V2 — Cuenta y sincronización: cerrada funcionalmente; continúan deudas de validación visibles, especialmente #69, #70 y #73.
+- V3 — Android con Capacitor: cerrada formalmente en issue #79.
+- Firma debug estable: configurada y validada por CI; se comprobó físicamente una actualización APK sobre APK sin desinstalar. No confundirla con la futura firma definitiva de Play Store.
+- Rediseño visual post-V3: dirección aprobada e integrada; existen temas/personalización y pulidos de tarjetas, menús y editor.
+- Privacidad por nota + Caja privada: implementadas; issue #68 permanece abierto únicamente por validación física final.
+- PR #133 añadió relock manual de una nota protegida durante la sesión usando el mismo `unlockedNoteIds` en memoria.
+- Ajuste visual siguiente: PR #134 / rama `fix/note-row-session-lock` mueve el candado visible a la tarjeta de la nota, mantiene ellipsis y no crea estado/persistencia paralelos. Consultar `docs/CURRENT_STATE.md` para los detalles exactos y su estado más reciente.
+- Deuda Android diferida: #105 — la huella puede tardar 2–3 cold starts. Resolver durante pulido Android/RC; no reducir requisitos de seguridad biométrica para ocultarlo.
+- Después de cerrar #68, el siguiente bloque técnico prioritario es la validación de conflictos #69.
+- #124 concentra el Release Candidate; #125 la preparación de publicación.
 
 ## Regla especial de traspaso entre IAs
 
 Cuando una IA nueva reciba este repositorio:
 
-- debe leer los documentos anteriores antes de diseñar cambios;
+- debe leer `AGENTS.md` y `docs/CURRENT_STATE.md` primero, después los documentos históricos y el estado real de `main`;
 - no debe inventar requisitos para llenar huecos;
 - si encuentra contradicciones, debe señalarlas y usar evidencia del repo antes de actuar;
 - no debe pedir al usuario que repita decisiones que ya estén registradas;
