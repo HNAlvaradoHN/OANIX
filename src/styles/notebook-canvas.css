@@ -1,38 +1,41 @@
 html.oanix-notebook-canvas-pwa .editor-surface {
   --oanix-notebook-row: 32px;
-  --oanix-notebook-line: color-mix(in srgb, var(--theme-accent, #6f61ee) 40%, transparent);
+  --oanix-notebook-line: color-mix(
+    in srgb,
+    var(--theme-accent, #6f61ee) 42%,
+    transparent
+  );
   line-height: var(--oanix-notebook-row);
   hyphens: none;
   -webkit-hyphens: none;
   word-break: normal;
   overflow-wrap: normal;
-  background-repeat: repeat-y;
-  background-size: 100% var(--oanix-notebook-row);
-  background-position: 0 27px;
+  cursor: text;
 }
 
-html.oanix-notebook-canvas-pwa.oanix-paper-plain .editor-surface {
-  background-image: none;
+/* Each note owns its paper style. The hidden grid remains identical in both modes. */
+html.oanix-notebook-canvas-pwa .editor-surface[data-oanix-paper-mode='plain'] {
+  background-image: none !important;
 }
 
-html.oanix-notebook-canvas-pwa.oanix-paper-ruled .editor-surface {
-  background-image: linear-gradient(
+html.oanix-notebook-canvas-pwa .editor-surface[data-oanix-paper-mode='ruled'] {
+  background-image: repeating-linear-gradient(
     to bottom,
-    transparent calc(100% - 1px),
-    var(--oanix-notebook-line) calc(100% - 1px),
-    var(--oanix-notebook-line) 100%
-  );
+    transparent 0,
+    transparent calc(var(--oanix-notebook-row) - 1px),
+    var(--oanix-notebook-line) calc(var(--oanix-notebook-row) - 1px),
+    var(--oanix-notebook-line) var(--oanix-notebook-row)
+  ) !important;
+  background-position: 0 24px !important;
+  background-repeat: repeat-y !important;
+  background-size: 100% var(--oanix-notebook-row) !important;
 }
 
-html.oanix-notebook-canvas-pwa .editor-surface p {
-  min-height: var(--oanix-notebook-row);
-  margin: 0;
-  line-height: var(--oanix-notebook-row);
-}
-
+html.oanix-notebook-canvas-pwa .editor-surface p,
 html.oanix-notebook-canvas-pwa .editor-surface li {
   min-height: var(--oanix-notebook-row);
-  margin: 0;
+  margin-top: 0;
+  margin-bottom: 0;
   line-height: var(--oanix-notebook-row);
 }
 
@@ -56,20 +59,19 @@ html.oanix-notebook-canvas-pwa .editor-surface > p[data-oanix-row-target='true']
   left: 0;
   height: 1px;
   background: #ff8a24;
-  box-shadow: 0 0 10px rgba(255, 138, 36, .38);
+  box-shadow: 0 0 10px rgba(255, 138, 36, .4);
   pointer-events: none;
   animation: oanix-row-target-fade 650ms ease forwards;
 }
 
 @keyframes oanix-row-target-fade {
-  0% { opacity: .82; }
+  0% { opacity: .85; }
   60% { opacity: .45; }
   100% { opacity: 0; }
 }
 
-/* Side-aligned compact images are real text-flow objects, including on phones.
- * Large or centered images remain full blocks so the writing column never becomes unusable.
- */
+/* Compact side images are true floating objects even on phones. Text and newly-created
+ * empty rows can occupy the free side. Centered/large images deliberately block both sides. */
 html.oanix-notebook-canvas-pwa .image-note-editor-root .editor-surface > .editor-image-block[data-image-compact='true'][data-image-alignment='left'] {
   float: left !important;
   clear: left !important;
@@ -94,9 +96,6 @@ html.oanix-notebook-canvas-pwa .image-note-editor-root .editor-surface > .editor
   clear: both !important;
 }
 
-/* The paragraph immediately after a side image must be allowed to wrap around it.
- * It naturally returns to full width after the float ends.
- */
 html.oanix-notebook-canvas-pwa .image-note-editor-root .editor-surface > .editor-image-block[data-image-compact='true'][data-image-alignment='left'] + p,
 html.oanix-notebook-canvas-pwa .image-note-editor-root .editor-surface > .editor-image-block[data-image-compact='true'][data-image-alignment='right'] + p {
   clear: none !important;
@@ -108,9 +107,28 @@ html.oanix-notebook-canvas-pwa .editor-surface::after {
   clear: both;
 }
 
-/* When the compact-image editor opens as a bottom sheet, reserve real page space.
- * The runtime then scrolls the selected image into the usable area above that sheet.
- */
+/* Per-note paper control: toolbar on desktop, one compact button in the mobile dock. */
+.oanix-note-paper-toggle {
+  transition: background-color 120ms ease, color 120ms ease, box-shadow 120ms ease;
+}
+
+.oanix-note-paper-toggle[aria-pressed='true'] {
+  background: color-mix(in srgb, var(--theme-accent, #6f61ee) 18%, transparent) !important;
+  color: var(--theme-accent-soft, #b9afff) !important;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--theme-accent, #6f61ee) 38%, transparent) !important;
+}
+
+.oanix-note-paper-toggle--toolbar {
+  min-width: max-content;
+  padding-inline: .72rem !important;
+}
+
+.oanix-note-paper-toggle--dock {
+  font-size: 1.18rem !important;
+}
+
+/* Opening image options must create actual room in the sheet, then runtime centers the image
+ * in the usable viewport above the panel and keyboard. */
 html.oanix-notebook-canvas-pwa .image-note-editor-root[data-oanix-image-panel-open='true'] .editor-surface {
   padding-bottom: calc(var(--oanix-image-panel-height, 0px) + 7rem);
   transition: padding-bottom 160ms ease;
@@ -121,80 +139,10 @@ html.oanix-notebook-canvas-pwa .image-note-editor-root[data-oanix-image-panel-op
   scroll-margin-bottom: calc(var(--oanix-image-panel-height, 0px) + 6rem);
 }
 
-/* Personalization: plain vs visible notebook ruling. */
-.oanix-paper-options {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: .65rem;
-}
-
-.oanix-paper-option {
-  display: grid;
-  grid-template-columns: 3.2rem minmax(0, 1fr) auto;
-  align-items: center;
-  gap: .7rem;
-  min-height: 4.5rem;
-  padding: .65rem;
-  border: 1px solid var(--theme-border, rgba(148, 163, 184, .2));
-  border-radius: .85rem;
-  background: var(--theme-surface-2, rgba(255, 255, 255, .04));
-  color: var(--theme-text, #eef5ff);
-  text-align: left;
-}
-
-.oanix-paper-option--selected {
-  border-color: var(--theme-border-strong, rgba(111, 97, 238, .45));
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--theme-accent, #6f61ee) 28%, transparent);
-}
-
-.oanix-paper-option__preview {
-  display: block;
-  width: 3.2rem;
-  height: 3.2rem;
-  border: 1px solid var(--theme-border, rgba(148, 163, 184, .2));
-  border-radius: .6rem;
-  background-color: var(--theme-surface, #10141c);
-}
-
-.oanix-paper-option__preview--ruled {
-  background-image: repeating-linear-gradient(
-    to bottom,
-    transparent 0,
-    transparent 9px,
-    color-mix(in srgb, var(--theme-accent, #6f61ee) 48%, transparent) 9px,
-    color-mix(in srgb, var(--theme-accent, #6f61ee) 48%, transparent) 10px
-  );
-}
-
-.oanix-paper-option__copy {
-  display: grid;
-  gap: .18rem;
-  min-width: 0;
-}
-
-.oanix-paper-option__copy small,
-.oanix-paper-section__hint {
-  color: var(--theme-muted, #98a2b3);
-}
-
-.oanix-paper-option__check {
-  color: var(--theme-accent, #6f61ee);
-  font-weight: 900;
-}
-
-.oanix-paper-section__hint {
-  margin: .65rem 0 0;
-  font-size: .76rem;
-  line-height: 1.45;
-}
-
 @media (max-width: 760px) {
-  .oanix-paper-options {
-    grid-template-columns: 1fr;
-  }
-
   html.oanix-notebook-canvas-pwa .image-note-editor-root .editor-surface > .editor-image-block[data-image-compact='true'][data-image-alignment='left'],
   html.oanix-notebook-canvas-pwa .image-note-editor-root .editor-surface > .editor-image-block[data-image-compact='true'][data-image-alignment='right'] {
+    width: min(48%, 12.5rem) !important;
     max-width: 48% !important;
   }
 
@@ -205,18 +153,30 @@ html.oanix-notebook-canvas-pwa .image-note-editor-root[data-oanix-image-panel-op
   html.oanix-notebook-canvas-pwa .image-note-editor-root .editor-surface > .editor-image-block[data-image-compact='true'][data-image-alignment='right'] {
     margin-left: .72rem !important;
   }
+
+  .oanix-note-paper-toggle--toolbar {
+    display: none !important;
+  }
+}
+
+@media (min-width: 761px) {
+  .oanix-note-paper-toggle--dock {
+    display: none !important;
+  }
 }
 
 @media (max-width: 420px) {
   html.oanix-notebook-canvas-pwa .image-note-editor-root .editor-surface > .editor-image-block[data-image-compact='true'][data-image-alignment='left'],
   html.oanix-notebook-canvas-pwa .image-note-editor-root .editor-surface > .editor-image-block[data-image-compact='true'][data-image-alignment='right'] {
+    width: min(46%, 10.5rem) !important;
     max-width: 46% !important;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   html.oanix-notebook-canvas-pwa .editor-surface > p[data-oanix-leading-rows],
-  html.oanix-notebook-canvas-pwa .image-note-editor-root[data-oanix-image-panel-open='true'] .editor-surface {
+  html.oanix-notebook-canvas-pwa .image-note-editor-root[data-oanix-image-panel-open='true'] .editor-surface,
+  .oanix-note-paper-toggle {
     transition: none;
   }
 
