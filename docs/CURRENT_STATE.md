@@ -23,7 +23,7 @@ Este archivo es un checkpoint operativo corto para retomar OANIX desde otro chat
 
 ### Protección individual por nota
 
-Implementada y pendiente de validación física final dentro de issue #68.
+Implementada y pendiente únicamente de validación física final dentro de issue #68.
 
 Invariantes:
 - El código de nota es una barrera adicional dentro de la bóveda ya cifrada.
@@ -39,49 +39,51 @@ PR #133 añadió relock manual durante la sesión:
 - desbloqueada -> candado abierto;
 - tocar el candado abierto -> borrar solo esa autorización temporal y ocultar de nuevo el contenido.
 
-### PR #134 — ajuste visual del candado
+### PR #134 — candado de sesión en la tarjeta
 
-**En curso durante este checkpoint.** Rama: `fix/note-row-session-lock`.
+**MERGED** en `main` mediante commit `135a0b09d3cb045271cfd059a363f0b53cdbeb0e`.
 
-Decisión de UX acordada con el usuario:
-- el candado de sesión debe estar visible **dentro de la burbuja/tarjeta de la nota en la lista**, no junto al título grande de la vista abierta;
-- debe verse pequeño, tecnológico y discreto;
+UX/implementación definitiva:
+- el candado de sesión está visible **dentro de la burbuja/tarjeta de la nota en la lista**, no junto al título grande de la vista abierta;
+- se ve pequeño, tecnológico y discreto;
 - usa SVG con `currentColor` y tokens del tema, no emoji grande;
 - nota sin protección: no muestra control;
 - protegida bloqueada: candado cerrado;
 - protegida desbloqueada temporalmente: candado abierto;
-- tocar el candado no debe abrir accidentalmente la tarjeta (`preventDefault` + `stopPropagation`);
-- el control reutiliza `unlockedNoteIds`; no crear un segundo store/estado/localStorage/sessionStorage;
-- el título existente debe ceder espacio mediante el ellipsis ya implementado; candado y menú `⋮` no se aplastan;
+- tocar el candado no abre accidentalmente la tarjeta (`preventDefault` + `stopPropagation`);
+- el control reutiliza `unlockedNoteIds`; no existe segundo store/estado/localStorage/sessionStorage;
+- el título existente cede espacio mediante el ellipsis ya implementado; candado y menú `⋮` no se aplastan;
 - en ancho <= 360 px, una nota protegida puede ocultar la fecha antes que sacrificar candado/menú;
 - el pseudo-candado redundante del título se suprime cuando existe el control explícito;
-- relock de una nota distinta a la seleccionada no debe desenfocar el editor activo; `blur()` solo aplica si se relockea la nota abierta.
+- relock de una nota distinta a la seleccionada no desenfoca el editor activo; `blur()` solo aplica si se relockea la nota abierta.
 
-Archivos de implementación:
+Archivos principales:
 - `src/features/privacy/NotePrivacyRuntime.tsx`
 - `src/features/privacy/manualNoteRelock.css`
 - `tests/manualNoteRelock.test.ts`
 
-Validación requerida antes de merge:
-- `npm test` / OANIX CI verde;
-- build web/offline audit verde;
-- OANIX Android verde;
-- revisar que el diff no incluya workflows temporales.
+Validación automática:
+- PR: OANIX CI #602 ✅.
+- PR: OANIX Android #163 ✅.
+- `main`: OANIX Android #164 ✅.
+- `main`: certificado de firma debug estable verificado ✅ (`oanix/stable-debug-signing = success`).
+- Artifact de prueba: `oanix-debug-apk`, generado por Android #164 para el commit de merge #134.
 
-Después del merge, generar/descargar la APK desde el workflow de `main` y entregarla al usuario para prueba física de #68.
+**Validación pendiente:** prueba física de la APK en Android; #68 permanece abierto hasta confirmación del usuario.
 
 ## Prueba física pendiente para cerrar #68
 
 En Android:
 1. Proteger una nota con código.
 2. Código incorrecto -> rechazo.
-3. Código correcto -> contenido visible y candado abierto.
+3. Código correcto -> contenido visible y candado abierto en la tarjeta.
 4. Tocar candado abierto en la tarjeta -> vuelve a cerrado y oculta contenido inmediatamente.
 5. Tocar candado cerrado -> vuelve a pedir código.
-6. Quitar protección -> nota normal y sin candado.
-7. Mover nota a Caja privada -> desaparece de lista/búsqueda normal.
-8. Entrar a Caja privada mediante huella/credencial o contraseña maestra.
-9. Cerrar Caja privada y comprobar que reentrar exige autenticación otra vez.
+6. Verificar con título largo que aparecen `...` antes de invadir candado/menú.
+7. Quitar protección -> nota normal y sin candado.
+8. Mover nota a Caja privada -> desaparece de lista/búsqueda normal.
+9. Entrar a Caja privada mediante huella/credencial o contraseña maestra.
+10. Cerrar Caja privada y comprobar que reentrar exige autenticación otra vez.
 
 No cerrar #68 antes de esta confirmación física.
 
@@ -105,10 +107,7 @@ No cerrar #68 antes de esta confirmación física.
 
 ## Próximo paso recomendado
 
-1. Terminar PR #134 con CI + Android verde.
-2. Fusionarlo a `main`.
-3. Verificar el workflow Android de `main` y firma debug estable.
-4. Entregar APK resultante al usuario.
-5. Validar físicamente #68.
-6. Si todo pasa: documentar y cerrar #68, actualizar #124.
-7. Continuar con #69; no abrir funciones nuevas antes de cerrar estas deudas RC.
+1. Entregar/probar la APK de `main` generada por Android #164.
+2. Validar físicamente #68 con el checklist anterior.
+3. Si todo pasa: documentar el resultado, cerrar #68 y actualizar #124.
+4. Continuar con #69; no abrir funciones nuevas antes de cerrar estas deudas RC.
