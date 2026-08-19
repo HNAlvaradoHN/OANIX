@@ -74,11 +74,11 @@
   </g>
 
   <g filter="url(#orangeGlow)">
-    <path d="M180 250v-27c0-39 25-66 61-66s61 27 61 66v27" fill="none" stroke="url(#orange)" stroke-width="18" stroke-linecap="round"/>
-    <rect x="166" y="239" width="150" height="116" rx="24" fill="url(#orange)" stroke="#ffbc65" stroke-width="3"/>
-    <circle cx="241" cy="288" r="17" fill="#090a0c"/>
-    <path d="M232 300h18l7 34h-32Z" fill="#090a0c"/>
-    <path d="M181 256h120" stroke="#ffffff" stroke-opacity="0.18" stroke-width="3" stroke-linecap="round"/>
+    <path d="M190 266v-28c0-35 21-59 52-59s52 24 52 59v28" fill="none" stroke="url(#orange)" stroke-width="16" stroke-linecap="round"/>
+    <rect x="176" y="255" width="132" height="102" rx="22" fill="url(#orange)" stroke="#ffbc65" stroke-width="3"/>
+    <circle cx="242" cy="299" r="15" fill="#090a0c"/>
+    <path d="M234 309h16l6 30h-28Z" fill="#090a0c"/>
+    <path d="M190 270h104" stroke="#ffffff" stroke-opacity="0.18" stroke-width="3" stroke-linecap="round"/>
   </g>
 
   <g fill="url(#orange)" filter="url(#orangeGlow)">
