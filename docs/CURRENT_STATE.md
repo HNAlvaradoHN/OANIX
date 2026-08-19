@@ -1,16 +1,16 @@
 # OANIX — Estado actual para continuidad
 
-**Última actualización:** 2026-08-18
+**Última actualización:** 2026-08-19
 
 Este archivo es el checkpoint operativo corto para retomar OANIX desde otro chat o con otro agente sin reconstruir conversaciones. Contrastar siempre con `main`, `AGENTS.md`, `docs/PROJECT_MEMORY.md`, `docs/ROADMAP.md`, `docs/ARCHITECTURE.md`, `docs/SECURITY.md` y los issues/PRs citados.
 
 ## Estado general
 
 - **V1 — Núcleo local:** cerrada.
-- **V2 — Cuenta y sincronización:** cerrada funcionalmente. La deuda de conflictos #69 quedó cerrada y validada; sigue visible #73 para recuperación Email OTP.
+- **V2 — Cuenta y sincronización:** cerrada funcionalmente. #69 conflictos quedó cerrado y validado; #73 recuperación Email OTP sigue visible como deuda de campo.
 - **V3 — Android con Capacitor:** cerrada formalmente en #79.
-- La APK debug interna usa **firma estable** y se validó actualización APK sobre APK sin desinstalar. La firma definitiva de Play Store será independiente.
-- PWA y Android comparten la misma base React + TypeScript + Vite/Capacitor; no duplicar lógica.
+- La APK debug interna usa firma estable y se validó actualización APK sobre APK sin desinstalar. La firma definitiva de Play Store será independiente.
+- PWA y Android comparten la misma base React + TypeScript + Vite/Capacitor.
 
 ## Dirección visual aprobada
 
@@ -29,51 +29,29 @@ Privacidad por nota, relock manual, Caja privada y reautenticación quedaron imp
 
 ## Conflictos multidispositivo — #69 CERRADO ✅
 
-Validación física completada con PC + Android usando la misma bóveda/cuenta:
-
-- Detección de divergencia ✅.
-- `Combinar ambas` ✅.
-- Versión remota ✅.
-- Versión local ✅.
-- Resolución obsoleta/refresco mientras el diálogo está abierto ✅.
-- Eliminación vs modificación ✅.
-- Ruta binaria de imágenes cubierta automáticamente; la UI normal no permite fabricar el mismo `imageId` divergente sin manipulación interna.
+Validación física completada con PC + Android:
+- detección de divergencia ✅;
+- `Combinar ambas` ✅;
+- versión remota ✅;
+- versión local ✅;
+- resolución obsoleta/refresco mientras el diálogo está abierto ✅;
+- eliminación vs modificación ✅;
+- ruta binaria de imágenes cubierta automáticamente.
 
 ## Avatar manual de nota — CERRADO Y VALIDADO FÍSICAMENTE ✅
 
-Requisito final: el círculo es un avatar manual independiente de las imágenes del contenido.
-
-### Implementación
-- PR #135: avatar manual cifrado independiente mediante metadata `note-avatar` + imagen cifrada. Sin avatar, tocar el círculo abre galería. No inserta la foto en el editor ni abre accidentalmente la nota.
-- PR #136: con avatar existente, tocar círculo muestra `Ver`, `Cambiar`, `Eliminar`.
-- PR #137: corrige pantalla negra al abrir el menú; captura la posición del elemento antes del updater de React.
-- PR #138: corrige click-through al cerrar el visor; overlay y X consumen pointer/click antes de desmontarse.
-
-### Validación automática
-- PR #135: OANIX CI #610 ✅ / Android #171 ✅ / `main` #172 ✅.
-- PR #136: OANIX CI #614 ✅ / Android #175 ✅ / `main` #176 ✅.
-- PR #137: OANIX CI #618 ✅ / Android #179 ✅ / `main` #180 ✅.
-- PR #138: OANIX CI #621 ✅ / Android #182 ✅ / merge `7bec28335ef5ef425a648b812ae4cebca6f30fb2` / `main` Android #183 ✅ / firma estable ✅.
-
-### Validación física final — 18 ago 2026
-- elegir foto ✅;
-- avatar independiente del contenido ✅;
-- menú `Ver / Cambiar / Eliminar` ✅;
-- `Ver` ✅;
-- `Cambiar` ✅;
-- `Eliminar` ✅;
-- persistencia ✅;
-- sin pantalla negra ✅;
-- X cierra el visor sin abrir una nota de fondo ✅.
-
-El avatar queda **cerrado** durante el RC salvo una regresión nueva.
+- PR #135: avatar manual cifrado e independiente del contenido.
+- PR #136: `Ver`, `Cambiar`, `Eliminar`.
+- PR #137: corrige pantalla negra del menú.
+- PR #138: corrige click-through al cerrar visor.
+- Validación física final: elegir, ver, cambiar, eliminar, persistir, separación del contenido, sin pantalla negra y X sin abrir nota de fondo ✅.
+- Base funcional actual: PR #138 merge `7bec28335ef5ef425a648b812ae4cebca6f30fb2`; Android `main` #183 ✅; firma estable ✅.
 
 ## RC Android — #124
 
-**Estado actual:** bloqueadores principales cerrados (#105, #70, #68, #69) y avatar manual ya validado. Toca completar el smoke test general.
+### Validado físicamente
 
-Ya validados:
-- instalación como actualización con firma estable ✅;
+- instalación como actualización sobre firma estable ✅;
 - cold starts ✅;
 - huella/credencial fuerte ✅;
 - timeout de sesión Android ✅;
@@ -81,19 +59,19 @@ Ya validados:
 - privacidad por nota + Caja privada ✅;
 - conflictos multidispositivo ✅;
 - avatar manual completo ✅;
+- crear, editar, fijar, mover y eliminar notas ✅;
+- títulos largos, etiquetas y carpetas ✅;
+- imagen dentro del contenido independiente del avatar ✅;
+- Día, Noche y varios ambientes ✅;
+- contraseña maestra: bloqueo manual, rechazo de contraseña incorrecta y apertura correcta con contraseña válida ✅;
+- backup cifrado: exportación usando selector Android, guardado de archivo, selección del backup, verificación con contraseña maestra y restauración correcta de la bóveda ✅;
 - revisión de logs/artefactos CI ✅.
 
 ### Smoke test aún pendiente
 
-- Crear, editar, fijar, mover y eliminar notas como flujo normal completo.
-- Títulos largos, etiquetas y carpetas.
-- Añadir una imagen **dentro del contenido** y confirmar independencia del avatar.
-- Cambiar entre Día, Noche y varios ambientes.
-- Bloquear/desbloquear con contraseña maestra.
-- Backup cifrado exportar/restaurar.
-- Sincronización de cuenta y recuperación tras relanzar.
-- Compartir nota / recepción de contenido Android si aplica.
-- Cámara/documentos y permisos relevantes.
+1. Sincronización Google y recuperación tras relanzar.
+2. Compartir nota / recepción de contenido Android si aplica.
+3. Cámara/documentos y permisos relevantes.
 
 ## Otros pendientes importantes
 
@@ -108,12 +86,12 @@ Ya validados:
 - No convertir al usuario en operador de GitHub.
 - El usuario interviene principalmente en pruebas físicas inevitables del teléfono/cuenta.
 - Si aparece un bug, cambio mínimo + tests + PR + CI/Android + merge + verificación.
-- No prometer trabajo en segundo plano: completar/pollear dentro del turno cuando sea posible.
+- No prometer trabajo en segundo plano.
 
 ## Próximo paso exacto
 
-1. Continuar smoke test RC con flujo normal de notas.
-2. En una sola ronda validar crear/editar/fijar/mover/eliminar, título largo, etiqueta, carpeta, imagen dentro del contenido y varios temas.
-3. Después validar contraseña maestra, backup cifrado, sincronización tras relanzar, compartir/recibir y permisos.
-4. Si todo queda verde, generar/nombrar la APK RC y usarla varios días.
+1. Validar sincronización Google + recuperación tras relanzar usando solo Android si es posible.
+2. Después validar compartir/recibir contenido Android.
+3. Finalmente validar cámara/documentos y permisos relevantes.
+4. Si todo queda verde, cerrar #124, generar/nombrar APK RC y usarla varios días.
 5. Solo después avanzar a #125: appId/version final, icono/splash, firma release, política/ficha y AAB de publicación.
