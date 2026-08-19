@@ -3,8 +3,6 @@ import { createRoot } from 'react-dom/client'
 import { registerSW } from 'virtual:pwa-register'
 import { App } from './app/App'
 import { ThemeMenu } from './features/personalization/ThemeMenu'
-import { NotebookPaperPreference } from './features/personalization/NotebookPaperPreference'
-import { applyNotebookPaperMode, readNotebookPaperMode } from './features/personalization/notebookPaper'
 import { applyOanixTheme, readSavedOanixTheme } from './features/personalization/themeCatalog'
 import { NotebookCanvasRuntime } from './features/editor/NotebookCanvasRuntime'
 import { NoteMenuScrollDismiss } from './features/notes/NoteMenuScrollDismiss'
@@ -41,9 +39,8 @@ document.documentElement.style.setProperty(
   `url("${import.meta.env.BASE_URL}${brandMarkAsset}")`,
 )
 
-// Theme and paper style are non-sensitive local UI preferences. Apply them before React paints.
+// Theme is a non-sensitive local UI preference. Paper style is now chosen per note.
 applyOanixTheme(readSavedOanixTheme(), false)
-if (!isCapacitorBuild) applyNotebookPaperMode(readNotebookPaperMode(), false)
 
 if (!isCapacitorBuild) {
   // Keep the existing prompt-based update strategy on the PWA: a new service worker is discovered
@@ -72,7 +69,6 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />
     <ThemeMenu />
-    {!isCapacitorBuild && <NotebookPaperPreference />}
     {!isCapacitorBuild && <NotebookCanvasRuntime />}
     <NoteMenuScrollDismiss />
     <NoteMenuViewportFit />
