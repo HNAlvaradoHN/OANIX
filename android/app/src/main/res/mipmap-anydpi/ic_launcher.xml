@@ -1,8 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item>
-        <bitmap
-            android:src="@drawable/oanix_icon_master"
-            android:gravity="fill" />
-    </item>
+    <item android:drawable="@drawable/oanix_launcher_tile" />
 </layer-list>
