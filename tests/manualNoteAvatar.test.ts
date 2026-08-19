@@ -5,6 +5,7 @@ import test from 'node:test'
 const avatar = readFileSync('src/features/notes/NoteAvatar.tsx', 'utf8')
 const service = readFileSync('src/features/notes/noteAvatarService.ts', 'utf8')
 const noteService = readFileSync('src/features/notes/noteService.ts', 'utf8')
+const avatarCss = readFileSync('src/features/notes/noteAvatarActions.css', 'utf8')
 
 test('avatar picker opens a gallery/file selector without opening the note row', () => {
   assert.match(avatar, /input\.type = 'file'/)
@@ -22,11 +23,30 @@ test('avatar is stored as encrypted metadata plus encrypted image, not as a note
   assert.doesNotMatch(avatar, /content\.blocks|firstImageBlock/)
 })
 
-test('avatar preview stays encrypted at rest and temporary object URLs are revoked', () => {
+test('avatar preview and full view stay encrypted at rest and temporary object URLs are revoked', () => {
   assert.match(service, /loadEncryptedImagePreview/)
+  assert.match(service, /loadEncryptedImage\(avatar\.imageId, avatar\.mimeType\)/)
+  assert.match(avatar, /loadNoteAvatarImage/)
   assert.match(avatar, /URL\.createObjectURL/)
   assert.match(avatar, /URL\.revokeObjectURL/)
   assert.doesNotMatch(service, /localStorage|sessionStorage|caches\.open/)
+})
+
+test('existing avatar opens explicit view change delete actions', () => {
+  assert.match(avatar, />Ver<\/button>/)
+  assert.match(avatar, />Cambiar<\/button>/)
+  assert.match(avatar, />Eliminar<\/button>/)
+  assert.match(avatar, /if \(!hasAvatar\)[\s\S]*selectAvatarFile\(\)/)
+  assert.match(avatar, /menuPositionFor\(event\.currentTarget\)/)
+  assert.match(avatarCss, /\.oanix-avatar-menu/)
+  assert.match(avatarCss, /\.oanix-avatar-viewer/)
+})
+
+test('deleting avatar asks confirmation and returns to the note initial', () => {
+  assert.match(avatar, /window\.confirm\('¿Eliminar la foto del avatar de esta nota\?'\)/)
+  assert.match(avatar, /deleteNoteAvatar\(note\.id\)/)
+  assert.match(avatar, /setHasAvatar\(false\)/)
+  assert.match(avatar, /noteInitial\(note\.title\)/)
 })
 
 test('replacing or deleting a note cleans avatar image data', () => {
