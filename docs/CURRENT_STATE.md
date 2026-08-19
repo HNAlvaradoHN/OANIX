@@ -2,93 +2,97 @@
 
 **Última actualización:** 2026-08-18
 
-Este archivo es el checkpoint operativo corto para retomar OANIX desde otro chat o con otro agente sin reconstruir conversaciones. Siempre contrastarlo con `main`, `AGENTS.md`, `docs/PROJECT_MEMORY.md`, `docs/ROADMAP.md`, `docs/ARCHITECTURE.md`, `docs/SECURITY.md` y los issues/PRs mencionados.
+Este archivo es el checkpoint operativo corto para retomar OANIX desde otro chat o con otro agente sin reconstruir conversaciones. Contrastar siempre con `main`, `AGENTS.md`, `docs/PROJECT_MEMORY.md`, `docs/ROADMAP.md`, `docs/ARCHITECTURE.md`, `docs/SECURITY.md` y los issues/PRs citados.
 
-## Estado de versiones
+## Estado general
 
 - **V1 — Núcleo local:** cerrada.
-- **V2 — Cuenta y sincronización:** cerrada funcionalmente; permanecen deudas de validación visibles, principalmente #69 y #73.
+- **V2 — Cuenta y sincronización:** cerrada funcionalmente. La deuda de conflictos #69 quedó cerrada y validada; sigue visible #73 para recuperación Email OTP.
 - **V3 — Android con Capacitor:** cerrada formalmente en #79.
-- La APK debug interna tiene **firma estable** y se validó físicamente una actualización APK sobre APK sin desinstalar. La firma definitiva de Play Store sigue siendo independiente.
-- PWA y Android comparten la misma base React + TypeScript + Vite/Capacitor; no crear lógica paralela.
+- La APK debug interna usa **firma estable** y se validó actualización APK sobre APK sin desinstalar. La firma definitiva de Play Store será independiente.
+- PWA y Android comparten la misma base React + TypeScript + Vite/Capacitor; no duplicar lógica.
 
 ## Dirección visual aprobada
 
-- Base graphite/blue-night con acento violeta contenido; evitar volver a una interfaz excesivamente morada u oscura.
-- Sistema de personalización/temas ya existe y debe respetarse mediante variables semánticas.
-- Tarjetas de notas, ellipsis de títulos largos, menús y editor ya tienen pulidos post-V3; no rediseñar la dirección principal sin necesidad.
-- Priorizar legibilidad y consistencia antes que agregar controles decorativos.
+- Base graphite/blue-night con acento violeta contenido.
+- Sistema de temas/personalización mediante variables semánticas.
+- El usuario aprobó el diseño actual y específicamente el candado pequeño dentro de la tarjeta/burbuja de nota.
+- No rediseñar la dirección principal sin una necesidad real; priorizar legibilidad y consistencia.
 
 ## Privacidad — #68 CERRADO ✅
 
-Privacidad por nota, relock manual, Caja privada y reautenticación quedaron **implementadas y validadas físicamente en Android** el 18 ago 2026.
+Privacidad por nota, relock manual, Caja privada y reautenticación quedaron implementadas y validadas físicamente en Android el 18 ago 2026.
 
-### Invariantes
-- El código de nota es una barrera adicional dentro de la bóveda ya cifrada.
-- No se guarda el código en plaintext.
-- La autorización temporal vive únicamente en `unlockedNoteIds: Set<string>` dentro de `NotePrivacyRuntime`.
-- Un relock manual solo elimina el ID de ese Set; no modifica PBKDF2, el verificador, `note.privacy`, sync, Caja privada ni cifrado.
-
-### PR #133 / PR #134
 - PR #133 añadió relock manual durante la sesión.
-- PR #134 movió el candado de sesión a la **tarjeta de la nota** y eliminó la ubicación redundante junto al título grande.
-- Nota sin protección: sin candado.
-- Protegida bloqueada: candado cerrado.
-- Protegida desbloqueada temporalmente: candado abierto.
-- Tocar el candado abierto vuelve a bloquear y oculta el contenido inmediatamente.
-- El control usa SVG `currentColor`, respeta los temas, mantiene el ellipsis de títulos largos y no abre accidentalmente la tarjeta.
-- En ancho crítico, la fecha puede ceder antes que candado/menú.
+- PR #134 movió el candado a la tarjeta de la nota.
+- `unlockedNoteIds: Set<string>` sigue siendo autorización temporal en memoria; relock solo elimina el ID y no modifica cifrado/PBKDF2/sync.
+- Usuario confirmó sin fallos: código incorrecto/correcto, desbloqueo, relock, quitar protección, Caja privada, ocultamiento y reautenticación.
+- PR #134: OANIX CI #602 ✅ / Android #163 ✅; `main` Android #164 ✅; firma estable ✅.
 
-### Validación
-- PR #134: OANIX CI #602 ✅ / Android #163 ✅.
-- `main` posterior a PR #134: Android #164 ✅.
-- `oanix/stable-debug-signing = success` ✅.
-- APK probada físicamente: commit `135a0b09d3cb045271cfd059a363f0b53cdbeb0e`.
-- Usuario confirmó **sin fallos**: proteger/desbloquear/quitar protección, código incorrecto/correcto, relock manual, ocultamiento en Caja privada, reautenticación y nueva autenticación después de cerrar Caja privada.
-- Issue #68 cerrado como `completed`.
+## Conflictos multidispositivo — #69 CERRADO ✅
+
+Validación física completada con PC + Android usando la misma bóveda/cuenta:
+
+- Detección de divergencia sin sobrescritura silenciosa ✅.
+- `Combinar ambas` ✅: conserva ambos contenidos separados por fecha.
+- `Primera en sincronizarse` / versión remota ✅: conserva y propaga la remota.
+- `Este dispositivo` / versión local ✅: conserva y propaga la local.
+- Resolución obsoleta ✅: cambios posteriores desde PC refrescan el conflicto abierto en Android antes de aplicar una decisión vieja.
+- Eliminación vs modificación ✅:
+  - conservar local hace sobrevivir y propagar la modificación;
+  - aceptar estado remoto `Eliminada` elimina en ambos clientes.
+
+### Imágenes en conflictos
+
+- PR #67 implementó la ruta binaria.
+- `tests/v2BinaryConflictResolution.test.ts` cubre elección local/remota, fingerprints/versionado esperado, fragmentos cifrados de 6 MiB, SHA-256 por fragmento, reemplazo seguro, limpieza y reset/regeneración de `image-preview`.
+- La UI normal crea un `imageId` nuevo en cada inserción y no ofrece sobrescribir el original conservando el mismo ID; por eso no se exige al usuario manipular IndexedDB/Supabase para fabricar un conflicto binario artificial del mismo registro durante el RC.
+- La sincronización normal de imágenes sí sigue dentro del smoke test #124.
 
 ## RC Android — #124
 
-Estado actual: preparación activa.
+**Estado actual:** bloqueadores funcionales principales cerrados. #105, #70, #68 y #69 están completados. Ahora toca únicamente completar el smoke test RC sin regresiones.
 
-Ya validados físicamente:
-- #105 huella/cold start ✅ cerrado.
-- #70 historial cifrado/restauración reversible ✅ cerrado.
-- #68 privacidad por nota/Caja privada ✅ cerrado.
-- timeout de sesión Android ✅.
-- continuidad de firma APK estable ✅.
+Ya validados:
+- instalación como actualización con firma estable ✅;
+- cold starts ✅;
+- huella/credencial fuerte ✅;
+- timeout de sesión Android ✅;
+- historial/restauración reversible ✅;
+- privacidad por nota + Caja privada ✅;
+- conflictos multidispositivo ✅;
+- revisión de logs/artefactos CI ✅.
 
-Bloqueador técnico prioritario restante:
-- **#69 — resolución de conflictos multidispositivo.** Detección real validada con PC + Android.
-- `Combinar ambas` ✅: conserva ambas versiones separadas por fecha sin pérdida de contenido.
-- `Primera en sincronizarse` / versión remota ✅: conserva y propaga la remota.
-- `Este dispositivo` / versión local ✅: conserva y propaga la local.
-- Pendiente dentro de #69: **resolución obsoleta**, conflictos de imagen y eliminación vs modificación.
+### Smoke test aún pendiente
 
-También queda completar el resto del smoke test RC: operaciones normales de notas, títulos/etiquetas/carpetas, imágenes, temas, contraseña maestra, backup/restauración, sync Google, compartir, cámara/documentos.
+- Crear, editar, fijar, mover y eliminar notas como flujo normal completo.
+- Títulos largos, etiquetas y carpetas.
+- Añadir imagen y confirmar miniatura cifrada/fallback.
+- Cambiar entre Día, Noche y varios ambientes.
+- Bloquear/desbloquear con contraseña maestra.
+- Backup cifrado exportar/restaurar.
+- Sincronización de cuenta y recuperación tras relanzar.
+- Compartir nota / recepción de contenido Android si aplica.
+- Cámara/documentos y permisos relevantes.
 
 ## Otros pendientes importantes
 
-- **#69:** siguiente prueba: rechazo de una resolución obsoleta si otro cliente cambia la nota mientras el diálogo de conflicto sigue abierto.
 - **#73:** validación restante de recuperación por Email OTP.
-- **#124:** checklist general de Release Candidate.
-- **#125:** preparación de publicación; no comenzar Play Store/firma release definitiva antes de cerrar RC.
+- **#124:** checklist general de Release Candidate, prioridad actual.
+- **#125:** preparación de publicación; no publicar ni crear firma release definitiva antes de cerrar RC.
 - **#80 OANIX Pro/monetización:** diferido.
 
-## Forma de trabajo acordada con el usuario
+## Forma de trabajo acordada
 
-- El agente debe hacer directamente las operaciones de GitHub que tenga disponibles: ramas, archivos, PRs, CI, logs, reintentos, merges, issues y artifacts.
-- No convertir al usuario en operador de GitHub si la herramienta puede realizar la acción.
-- Para cambios pequeños/locales y seguros, avanzar, probar, integrar y documentar sin detenerse por confirmaciones innecesarias.
-- Para seguridad/datos/alcance importante, detenerse únicamente cuando exista una decisión real que deba tomar el usuario.
-- Si un cambio Android necesita prueba física, llegar hasta artifact/APK y entregarla directamente cuando las herramientas lo permitan.
+- El agente hace directamente GitHub: ramas, archivos, PRs, CI, logs, merges, issues y artifacts cuando las herramientas lo permitan.
+- No convertir al usuario en operador de GitHub.
+- El usuario interviene principalmente en pruebas físicas inevitables del teléfono/cuenta.
+- Si aparece un bug, cambio mínimo + tests + PR + CI/Android + merge + verificación.
+- No prometer trabajo en segundo plano: completar/pollear dentro del turno cuando sea posible.
 
-## Próximo paso recomendado
+## Próximo paso exacto
 
-1. Validar **resolución obsoleta** en #69: provocar un conflicto, dejar abierto el diálogo en un cliente, cambiar la misma nota desde el otro cliente y comprobar que OANIX rechaza la decisión antigua en vez de sobrescribir.
-2. Validar conflictos de imagen (remoto/local + regeneración de preview).
-3. Validar eliminación vs modificación.
-4. Si aparece un bug, corregirlo con cambio mínimo + tests + PR + CI/Android.
-5. Cerrar #69 cuando todas las resoluciones necesarias queden validadas.
-6. Continuar el smoke test de #124.
-7. Solo después generar/nombrar la APK RC y pasar a #125 publicación.
+1. Continuar #124 con el **smoke test RC Android**.
+2. Ejecutar las pruebas físicas en bloques cortos y marcar solo lo realmente comprobado.
+3. Si todo queda verde, generar/nombrar la APK RC y usarla varios días.
+4. Solo después avanzar a #125: appId/version final, icono/splash, firma release, política/ficha y AAB de publicación.
