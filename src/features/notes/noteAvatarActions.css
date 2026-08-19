@@ -1,0 +1,102 @@
+.oanix-avatar-menu {
+  position: fixed;
+  z-index: 2400;
+  width: min(10.5rem, calc(100vw - 1rem));
+  padding: .35rem;
+  border: 1px solid var(--theme-border, rgba(155, 108, 255, .28));
+  border-radius: .85rem;
+  background: var(--theme-panel, rgba(12, 16, 30, .985));
+  color: var(--theme-text, #f5f7ff);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, .44), 0 0 22px rgba(124, 77, 255, .08);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.oanix-avatar-menu button {
+  width: 100%;
+  min-height: 2.55rem;
+  display: flex;
+  align-items: center;
+  padding: .5rem .7rem;
+  border: 0;
+  border-radius: .62rem;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: .84rem;
+  font-weight: 760;
+  text-align: left;
+}
+
+.oanix-avatar-menu button:hover,
+.oanix-avatar-menu button:focus-visible {
+  outline: none;
+  background: color-mix(in srgb, var(--theme-accent, #7c4dff) 14%, transparent);
+}
+
+.oanix-avatar-menu__danger {
+  color: var(--theme-danger, #ff7d91) !important;
+}
+
+.oanix-avatar-menu__danger:hover,
+.oanix-avatar-menu__danger:focus-visible {
+  background: rgba(255, 88, 112, .12) !important;
+}
+
+.oanix-avatar-viewer {
+  position: fixed;
+  z-index: 2500;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: max(1rem, env(safe-area-inset-top)) 1rem max(1rem, env(safe-area-inset-bottom));
+  background: rgba(2, 4, 10, .82);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.oanix-avatar-viewer__panel {
+  position: relative;
+  width: min(94vw, 46rem);
+  max-height: 88dvh;
+  display: grid;
+  place-items: center;
+  padding: 2.8rem .75rem .75rem;
+  border: 1px solid var(--theme-border, rgba(155, 108, 255, .3));
+  border-radius: 1rem;
+  background: var(--theme-panel, #0c101e);
+  box-shadow: 0 28px 80px rgba(0, 0, 0, .58);
+  overflow: hidden;
+}
+
+.oanix-avatar-viewer__panel img {
+  display: block;
+  max-width: 100%;
+  max-height: calc(88dvh - 4rem);
+  object-fit: contain;
+  border-radius: .7rem;
+}
+
+.oanix-avatar-viewer__close {
+  position: absolute;
+  top: .45rem;
+  right: .45rem;
+  width: 2.1rem;
+  height: 2.1rem;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--theme-text, #fff) 8%, transparent);
+  color: var(--theme-text, #fff);
+  font: inherit;
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.oanix-avatar-viewer__close:hover,
+.oanix-avatar-viewer__close:focus-visible {
+  outline: none;
+  background: color-mix(in srgb, var(--theme-accent, #7c4dff) 18%, transparent);
+}
