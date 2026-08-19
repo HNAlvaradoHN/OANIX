@@ -121,7 +121,7 @@ A fecha de **2026-08-18**:
 - Rediseño visual post-V3: dirección aprobada e integrada; existen temas/personalización y pulidos de tarjetas, menús y editor.
 - Privacidad por nota + Caja privada: implementadas; issue #68 permanece abierto únicamente por validación física final.
 - PR #133 añadió relock manual de una nota protegida durante la sesión usando el mismo `unlockedNoteIds` en memoria.
-- Ajuste visual siguiente: PR #134 / rama `fix/note-row-session-lock` mueve el candado visible a la tarjeta de la nota, mantiene ellipsis y no crea estado/persistencia paralelos. Consultar `docs/CURRENT_STATE.md` para los detalles exactos y su estado más reciente.
+- PR #134 está **fusionado en `main`**: mueve el candado visible a la tarjeta de la nota, conserva ellipsis, usa el mismo estado efímero y no añade persistencia paralela. La APK de `main` pasó Android #164 y verificación de firma estable; falta únicamente la prueba física indicada en `docs/CURRENT_STATE.md`.
 - Deuda Android diferida: #105 — la huella puede tardar 2–3 cold starts. Resolver durante pulido Android/RC; no reducir requisitos de seguridad biométrica para ocultarlo.
 - Después de cerrar #68, el siguiente bloque técnico prioritario es la validación de conflictos #69.
 - #124 concentra el Release Candidate; #125 la preparación de publicación.
