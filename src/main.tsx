@@ -25,21 +25,23 @@ type OanixUpdateWindow = Window & {
 }
 
 const oanixWindow = window as OanixUpdateWindow
+const isCapacitorBuild = import.meta.env.MODE === 'capacitor'
 
-// The approved identity is shared by the PWA and Capacitor. BASE_URL resolves to
-// /OANIX/ on GitHub Pages and ./ inside the native bundle, so both surfaces use
-// the same SVG without hard-coding a platform-specific path.
+// PWA preview: notebook + orange rulings + lock, without the C.
+// Capacitor keeps the currently approved native identity until this preview is accepted.
+const brandMarkAsset = isCapacitorBuild ? 'oanix-icon.svg' : 'oanix-mark-pwa.svg'
 document.documentElement.classList.add('oanix-brand-final')
+if (!isCapacitorBuild) document.documentElement.classList.add('oanix-brand-pwa-preview')
 document.documentElement.style.setProperty(
   '--oanix-brand-logo-url',
-  `url("${import.meta.env.BASE_URL}oanix-icon.svg")`,
+  `url("${import.meta.env.BASE_URL}${brandMarkAsset}")`,
 )
 
 // Theme is a non-sensitive local UI preference. Apply it before React paints to avoid a flash
 // of the default palette when the user already selected another preset on this device.
 applyOanixTheme(readSavedOanixTheme(), false)
 
-if (import.meta.env.MODE !== 'capacitor') {
+if (!isCapacitorBuild) {
   // Keep the existing prompt-based update strategy on the PWA: a new service worker is discovered
   // in the background, but OANIX only reloads after the user explicitly chooses to update.
   // The native Capacitor bundle is already installed locally, so it must not register the PWA SW.
