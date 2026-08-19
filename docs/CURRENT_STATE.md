@@ -82,6 +82,8 @@ Validación automática:
 - Android `main` #176 ✅.
 - `oanix/stable-debug-signing = success` ✅.
 - Artifact `oanix-debug-apk` generado desde el merge #136.
+- APK entregable: `OANIX-main-PR136.apk`, SHA-256 `b1caccf565b19bb876834fad152893de203620a11e51b21e045c84e57c3ac07a`.
+- Los commits posteriores inmediatos son solo documentación y no cambian el código de la app contenido en esa APK.
 
 Pendiente físico final: instalar la APK de PR #136 encima de la existente y confirmar `Ver`, `Cambiar`, `Eliminar`, persistencia y que la foto sigue independiente del contenido. Si pasa, el avatar se considera cerrado y no se vuelve a tocar durante el RC salvo regresión.
 
@@ -129,7 +131,7 @@ Ya validados:
 
 ## Próximo paso exacto
 
-1. Instalar la APK de `main` del merge PR #136 **encima de la existente, sin desinstalar**.
+1. Instalar `OANIX-main-PR136.apk` **encima de la existente, sin desinstalar**.
 2. Con una nota sin avatar: tocar círculo → elegir foto → confirmar que queda solo como avatar.
 3. Tocar nuevamente el avatar y comprobar `Ver`, `Cambiar`, `Eliminar`.
 4. Confirmar que `Ver` abre la foto, `Cambiar` reemplaza y `Eliminar` vuelve a la inicial; reabrir OANIX y comprobar persistencia del avatar que quede seleccionado.
