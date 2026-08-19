@@ -16,8 +16,7 @@ Este archivo es el checkpoint operativo corto para retomar OANIX desde otro chat
 
 - Base graphite/blue-night con acento violeta contenido.
 - Sistema de temas/personalización mediante variables semánticas.
-- El usuario aprobó el diseño actual y específicamente el candado pequeño dentro de la tarjeta/burbuja de nota.
-- No rediseñar la dirección principal sin una necesidad real; priorizar legibilidad y consistencia.
+- Diseño actual aprobado; no rediseñar la dirección principal sin una necesidad real.
 
 ## Privacidad — #68 CERRADO ✅
 
@@ -25,81 +24,53 @@ Privacidad por nota, relock manual, Caja privada y reautenticación quedaron imp
 
 - PR #133 añadió relock manual durante la sesión.
 - PR #134 movió el candado a la tarjeta de la nota.
-- `unlockedNoteIds: Set<string>` sigue siendo autorización temporal en memoria; relock solo elimina el ID y no modifica cifrado/PBKDF2/sync.
-- Usuario confirmó sin fallos: código incorrecto/correcto, desbloqueo, relock, quitar protección, Caja privada, ocultamiento y reautenticación.
-- PR #134: OANIX CI #602 ✅ / Android #163 ✅; `main` Android #164 ✅; firma estable ✅.
+- `unlockedNoteIds: Set<string>` sigue siendo autorización temporal en memoria.
+- Usuario confirmó sin fallos código incorrecto/correcto, desbloqueo, relock, quitar protección, Caja privada, ocultamiento y reautenticación.
 
 ## Conflictos multidispositivo — #69 CERRADO ✅
 
 Validación física completada con PC + Android usando la misma bóveda/cuenta:
 
-- Detección de divergencia sin sobrescritura silenciosa ✅.
-- `Combinar ambas` ✅: conserva ambos contenidos separados por fecha.
-- `Primera en sincronizarse` / versión remota ✅: conserva y propaga la remota.
-- `Este dispositivo` / versión local ✅: conserva y propaga la local.
-- Resolución obsoleta ✅: cambios posteriores desde PC refrescan el conflicto abierto en Android antes de aplicar una decisión vieja.
-- Eliminación vs modificación ✅:
-  - conservar local hace sobrevivir y propagar la modificación;
-  - aceptar estado remoto `Eliminada` elimina en ambos clientes.
+- Detección de divergencia ✅.
+- `Combinar ambas` ✅.
+- Versión remota ✅.
+- Versión local ✅.
+- Resolución obsoleta/refresco mientras el diálogo está abierto ✅.
+- Eliminación vs modificación ✅.
+- Ruta binaria de imágenes cubierta automáticamente; la UI normal no permite fabricar el mismo `imageId` divergente sin manipulación interna.
 
-### Imágenes en conflictos
+## Avatar manual de nota — CERRADO Y VALIDADO FÍSICAMENTE ✅
 
-- PR #67 implementó la ruta binaria.
-- `tests/v2BinaryConflictResolution.test.ts` cubre elección local/remota, fingerprints/versionado esperado, fragmentos cifrados de 6 MiB, SHA-256 por fragmento, reemplazo seguro, limpieza y reset/regeneración de `image-preview`.
-- La UI normal crea un `imageId` nuevo en cada inserción y no ofrece sobrescribir el original conservando el mismo ID; por eso no se exige al usuario manipular IndexedDB/Supabase para fabricar un conflicto binario artificial del mismo registro durante el RC.
-- La sincronización normal de imágenes sí sigue dentro del smoke test #124.
+Requisito final: el círculo es un avatar manual independiente de las imágenes del contenido.
 
-## Avatar manual de nota — PR #135 + #136 + #137 MERGED ✅ / VALIDACIÓN FÍSICA FINAL PENDIENTE
+### Implementación
+- PR #135: avatar manual cifrado independiente mediante metadata `note-avatar` + imagen cifrada. Sin avatar, tocar el círculo abre galería. No inserta la foto en el editor ni abre accidentalmente la nota.
+- PR #136: con avatar existente, tocar círculo muestra `Ver`, `Cambiar`, `Eliminar`.
+- PR #137: corrige pantalla negra al abrir el menú; captura la posición del elemento antes del updater de React.
+- PR #138: corrige click-through al cerrar el visor; overlay y X consumen pointer/click antes de desmontarse.
 
-Durante el smoke test RC el usuario aclaró el requisito correcto: el círculo de avatar **no debe usar automáticamente la primera imagen del contenido de la nota**. Debe ser una foto manual e independiente del editor.
+### Validación automática
+- PR #135: OANIX CI #610 ✅ / Android #171 ✅ / `main` #172 ✅.
+- PR #136: OANIX CI #614 ✅ / Android #175 ✅ / `main` #176 ✅.
+- PR #137: OANIX CI #618 ✅ / Android #179 ✅ / `main` #180 ✅.
+- PR #138: OANIX CI #621 ✅ / Android #182 ✅ / merge `7bec28335ef5ef425a648b812ae4cebca6f30fb2` / `main` Android #183 ✅ / firma estable ✅.
 
-### PR #135 — avatar manual independiente
+### Validación física final — 18 ago 2026
+- elegir foto ✅;
+- avatar independiente del contenido ✅;
+- menú `Ver / Cambiar / Eliminar` ✅;
+- `Ver` ✅;
+- `Cambiar` ✅;
+- `Eliminar` ✅;
+- persistencia ✅;
+- sin pantalla negra ✅;
+- X cierra el visor sin abrir una nota de fondo ✅.
 
-- `NoteAvatar` dejó de inspeccionar `note.content.blocks`.
-- Sin avatar, tocar el círculo abre el selector JPEG/PNG/WebP/GIF.
-- La foto se guarda como imagen cifrada y metadata `note-avatar` ligada al `noteId` dentro de `encrypted_records` existente.
-- No se añade localStorage/sessionStorage ni un store paralelo.
-- El avatar no se inserta como bloque del contenido.
-- Tocar el avatar dentro de una tarjeta detiene la propagación y no abre accidentalmente la nota.
-- Reemplazo/eliminación de nota limpian el avatar anterior en best-effort; URLs de preview solo existen en memoria.
-
-### PR #136 — acciones cuando ya existe avatar
-
-UX acordada:
-- **Sin foto:** tocar círculo → selector de galería.
-- **Con foto:** tocar círculo → menú `Ver`, `Cambiar`, `Eliminar`.
-- `Ver` descifra el original solo bajo demanda, lo muestra en un visor temporal y revoca la Blob URL al cerrar.
-- `Cambiar` reutiliza el mismo selector cifrado y reemplaza el avatar.
-- `Eliminar` pide confirmación, borra metadata + imagen cifrada y vuelve a la inicial de la nota.
-- Menú y visor se renderizan por portal para no crear botones anidados dentro de la tarjeta.
-
-### PR #137 — pantalla negra al abrir acciones
-
-Durante la primera validación física del menú de PR #136, al tocar por segunda vez un avatar existente la PWA quedó completamente negra/blanca de contenido en vez de mostrar el menú. La captura del usuario confirmó un crash/render vacío, no el visor intencional.
-
-Causa corregida:
-- PR #136 evaluaba `event.currentTarget` dentro del updater funcional de `setMenuPosition`.
-- React puede ejecutar ese updater cuando el handler ya terminó y `currentTarget` ya no es un elemento válido, haciendo fallar `getBoundingClientRect()`.
-- PR #137 calcula `menuPositionFor(event.currentTarget)` **sincrónicamente dentro del handler** y pasa solo la posición ya calculada al updater.
-- Test de regresión impide volver a usar `event.currentTarget` dentro de ese updater.
-- No cambia cifrado, avatar persistido, visor, sync, editor ni contenido.
-
-Validación automática:
-- PR #135: OANIX CI #610 ✅ / Android #171 ✅.
-- Merge PR #135: `76814291b1e0d5aea0393432836b67a0a610fca4`; Android `main` #172 ✅; firma estable ✅.
-- PR #136: OANIX CI #614 ✅ / Android #175 ✅.
-- Merge PR #136: `c8676395c9130ddeef60947117d0f7637decbb44`; Android `main` #176 ✅; firma estable ✅.
-- PR #137: OANIX CI #618 ✅ / Android #179 ✅.
-- Merge PR #137: `d6306ccf1b332607074e39d328b8078bd1c01199`.
-- Android `main` del merge #137: workflow run `32208379718` ✅.
-- `oanix/stable-debug-signing = success` ✅.
-- APK de prueba actual: `OANIX-main-PR137.apk`, SHA-256 `f0c3b4191111e9386a64e818e3afac2fe9801715166e6638a2c8f7d3b13f8286`.
-
-Pendiente físico final: instalar la APK de PR #137 encima de la existente y confirmar que el segundo toque ya muestra `Ver`, `Cambiar`, `Eliminar` sin pantalla negra; después probar las tres acciones, persistencia y separación del contenido. Si pasa, el avatar se considera cerrado y no se vuelve a tocar durante el RC salvo regresión.
+El avatar queda **cerrado** durante el RC salvo una regresión nueva.
 
 ## RC Android — #124
 
-**Estado actual:** bloqueadores funcionales principales cerrados. #105, #70, #68 y #69 están completados. Ahora toca completar el smoke test RC sin regresiones; el avatar manual está implementado en PR #135/#136 y la regresión de pantalla negra quedó corregida en PR #137, pendiente solo de revalidación física.
+**Estado actual:** bloqueadores principales cerrados (#105, #70, #68, #69) y avatar manual ya validado. Toca completar el smoke test general.
 
 Ya validados:
 - instalación como actualización con firma estable ✅;
@@ -109,14 +80,14 @@ Ya validados:
 - historial/restauración reversible ✅;
 - privacidad por nota + Caja privada ✅;
 - conflictos multidispositivo ✅;
+- avatar manual completo ✅;
 - revisión de logs/artefactos CI ✅.
 
 ### Smoke test aún pendiente
 
-- Revalidar físicamente el **avatar manual final PR #135/#136/#137**: seleccionar, abrir menú, ver, cambiar, eliminar, persistencia y separación del contenido.
 - Crear, editar, fijar, mover y eliminar notas como flujo normal completo.
 - Títulos largos, etiquetas y carpetas.
-- Añadir una imagen **dentro del contenido** y confirmar que funciona de forma independiente del avatar.
+- Añadir una imagen **dentro del contenido** y confirmar independencia del avatar.
 - Cambiar entre Día, Noche y varios ambientes.
 - Bloquear/desbloquear con contraseña maestra.
 - Backup cifrado exportar/restaurar.
@@ -141,10 +112,8 @@ Ya validados:
 
 ## Próximo paso exacto
 
-1. Instalar `OANIX-main-PR137.apk` **encima de la existente, sin desinstalar**.
-2. Con una nota que ya tenga avatar, tocar el círculo por segunda vez y confirmar que aparece el menú `Ver`, `Cambiar`, `Eliminar` sin pantalla negra.
-3. Probar `Ver`, `Cambiar`, `Eliminar`; volver a elegir una foto y reabrir OANIX para comprobar persistencia.
-4. Confirmar que la foto del avatar nunca aparece como bloque dentro del contenido.
-5. Si pasa, marcar avatar como validado en #124 y continuar inmediatamente el resto del smoke test RC.
-6. Si todo queda verde, generar/nombrar la APK RC y usarla varios días.
-7. Solo después avanzar a #125: appId/version final, icono/splash, firma release, política/ficha y AAB de publicación.
+1. Continuar smoke test RC con flujo normal de notas.
+2. En una sola ronda validar crear/editar/fijar/mover/eliminar, título largo, etiqueta, carpeta, imagen dentro del contenido y varios temas.
+3. Después validar contraseña maestra, backup cifrado, sincronización tras relanzar, compartir/recibir y permisos.
+4. Si todo queda verde, generar/nombrar la APK RC y usarla varios días.
+5. Solo después avanzar a #125: appId/version final, icono/splash, firma release, política/ficha y AAB de publicación.
