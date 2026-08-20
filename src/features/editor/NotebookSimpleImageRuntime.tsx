@@ -6,16 +6,6 @@ function normalizeNotebookImage(image: HTMLElement) {
   image.dataset.oanixNotebookFullWidth = 'true'
 }
 
-function keyboardInsetPx(): number {
-  const viewport = window.visualViewport
-  if (!viewport) return 0
-  return Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop)
-}
-
-function syncKeyboardInset() {
-  document.documentElement.style.setProperty('--oanix-keyboard-inset', `${keyboardInsetPx()}px`)
-}
-
 export function NotebookSimpleImageRuntime() {
   useLayoutEffect(() => {
     if (import.meta.env.MODE === 'capacitor') return
@@ -26,26 +16,18 @@ export function NotebookSimpleImageRuntime() {
         .forEach(normalizeNotebookImage)
     }
 
+    // Only react to DOM insertion/removal. Watching the image attributes themselves caused a
+    // mutation feedback loop because normalization rewrote those same attributes on every pass.
     const observer = new MutationObserver(syncImages)
     observer.observe(document.body, {
       childList: true,
       subtree: true,
-      attributes: true,
-      attributeFilter: ['data-image-alignment', 'data-image-compact'],
     })
 
     syncImages()
-    syncKeyboardInset()
-    window.visualViewport?.addEventListener('resize', syncKeyboardInset)
-    window.visualViewport?.addEventListener('scroll', syncKeyboardInset)
-    window.addEventListener('resize', syncKeyboardInset)
 
     return () => {
       observer.disconnect()
-      window.visualViewport?.removeEventListener('resize', syncKeyboardInset)
-      window.visualViewport?.removeEventListener('scroll', syncKeyboardInset)
-      window.removeEventListener('resize', syncKeyboardInset)
-      document.documentElement.style.removeProperty('--oanix-keyboard-inset')
     }
   }, [])
 
