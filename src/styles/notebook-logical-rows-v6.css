@@ -26,14 +26,6 @@ html.oanix-notebook-canvas-pwa .editor-surface[data-oanix-virtual-canvas='true']
   margin: 0 !important;
 }
 
-/* The logical-row runtime absolutely positions blocks after the first edit. A full-width image
- * must keep both editor insets pinned; otherwise left:50% + width:auto makes it shrink-to-fit. */
-html.oanix-notebook-canvas-pwa .editor-surface[data-oanix-virtual-canvas='true'] > .editor-image-block[data-oanix-notebook-full-width='true'] {
-  left: clamp(1.15rem, 3vw, 2rem) !important;
-  right: clamp(1.15rem, 3vw, 2rem) !important;
-  transform: none !important;
-}
-
 html.oanix-notebook-canvas-pwa .editor-surface[data-oanix-virtual-canvas='true'] .editor-image-block__alignment {
   display: none !important;
 }
@@ -43,11 +35,10 @@ html.oanix-notebook-canvas-pwa .editor-surface[data-oanix-virtual-canvas='true']
 }
 
 @media (max-width: 760px) {
-  /* Stable mobile card: preview/options stay above and description owns the complete bottom row. */
+  /* One clean horizontal card: large preview on the left, compact controls on the right. */
   html.oanix-notebook-canvas-pwa .editor-surface[data-oanix-virtual-canvas='true'] > .editor-image-block[data-oanix-notebook-full-width='true'] {
     display: grid !important;
-    grid-template-columns: minmax(0, 1.55fr) minmax(8.2rem, 1fr) !important;
-    grid-template-rows: auto auto auto !important;
+    grid-template-columns: minmax(0, 1.75fr) minmax(7.6rem, .9fr) !important;
     align-items: stretch !important;
     overflow: hidden !important;
     border: 1px solid rgba(148, 163, 184, .38) !important;
@@ -69,41 +60,47 @@ html.oanix-notebook-canvas-pwa .editor-surface[data-oanix-virtual-canvas='true']
 
   html.oanix-notebook-canvas-pwa .editor-image-block__preview {
     grid-column: 1 !important;
-    grid-row: 1 / 3 !important;
+    grid-row: 1 !important;
     width: 100% !important;
     min-width: 0 !important;
-    min-height: 12.5rem !important;
+    min-height: 14rem !important;
     height: 100% !important;
     max-height: none !important;
-    border-radius: 15px 0 0 0 !important;
+    border-radius: 15px 0 0 15px !important;
     background: #eef2f6 !important;
   }
 
   html.oanix-notebook-canvas-pwa .editor-image-block__preview img {
     width: 100% !important;
     height: 100% !important;
-    min-height: 12.5rem !important;
+    min-height: 14rem !important;
     max-height: none !important;
     object-fit: contain !important;
     background: #eef2f6 !important;
   }
 
-  /* Flatten the two wrappers so actions/meta can stay at the right while the alt field spans
-   * the whole card underneath both columns. DOM/event behavior remains unchanged. */
-  html.oanix-notebook-canvas-pwa .editor-image-block__footer,
-  html.oanix-notebook-canvas-pwa .editor-image-block__details {
-    display: contents !important;
+  html.oanix-notebook-canvas-pwa .editor-image-block__footer {
+    grid-column: 2 !important;
+    grid-row: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-start !important;
+    gap: .65rem !important;
+    min-width: 0 !important;
+    padding: .7rem !important;
+    overflow: hidden !important;
+    border-top: 0 !important;
+    border-left: 1px solid rgba(148, 163, 184, .28) !important;
+    border-radius: 0 15px 15px 0 !important;
+    background: rgba(255, 255, 255, .98) !important;
   }
 
   html.oanix-notebook-canvas-pwa .editor-image-block__actions {
-    grid-column: 2 !important;
-    grid-row: 1 !important;
     display: grid !important;
     grid-template-columns: minmax(0, auto) minmax(0, 1fr) !important;
     align-items: stretch !important;
     gap: .4rem !important;
     min-width: 0 !important;
-    margin: .7rem .7rem 0 !important;
   }
 
   html.oanix-notebook-canvas-pwa .editor-image-block__actions button {
@@ -137,33 +134,33 @@ html.oanix-notebook-canvas-pwa .editor-surface[data-oanix-virtual-canvas='true']
     margin-left: 0 !important;
   }
 
-  html.oanix-notebook-canvas-pwa .editor-image-block__meta {
-    grid-column: 2 !important;
-    grid-row: 2 !important;
+  html.oanix-notebook-canvas-pwa .editor-image-block__details {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: .5rem !important;
     min-width: 0 !important;
-    max-width: 100% !important;
-    padding: .15rem .7rem .7rem !important;
-    box-sizing: border-box !important;
   }
 
+  html.oanix-notebook-canvas-pwa .editor-image-block__meta,
   html.oanix-notebook-canvas-pwa .editor-image-block__meta strong,
   html.oanix-notebook-canvas-pwa .editor-image-block__meta span {
     min-width: 0 !important;
     max-width: 100% !important;
+  }
+
+  html.oanix-notebook-canvas-pwa .editor-image-block__meta strong,
+  html.oanix-notebook-canvas-pwa .editor-image-block__meta span {
     overflow: hidden !important;
     text-overflow: ellipsis !important;
     white-space: nowrap !important;
   }
 
   html.oanix-notebook-canvas-pwa .editor-image-block__alt {
-    grid-column: 1 / -1 !important;
-    grid-row: 3 !important;
-    width: calc(100% - 1.4rem) !important;
+    width: 100% !important;
     min-width: 0 !important;
     height: auto !important;
-    min-height: 2.65rem !important;
-    margin: 0 .7rem .7rem !important;
-    padding: .55rem .65rem !important;
+    min-height: 2.35rem !important;
+    padding: .5rem .55rem !important;
     box-sizing: border-box !important;
   }
 
