@@ -10,6 +10,10 @@ html.oanix-note-bulk-selecting .oanix-note-row-lock {
   background: rgba(79, 112, 219, .14) !important;
 }
 
+.note-row[data-oanix-bulk-selected='true'] .note-row__open {
+  position: relative;
+}
+
 .note-row[data-oanix-bulk-selected='true'] .note-row__open::after {
   content: '✓';
   position: absolute;
