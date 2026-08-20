@@ -26,8 +26,8 @@ html.oanix-notebook-canvas-pwa .editor-surface[data-oanix-virtual-canvas='true']
   margin: 0 !important;
 }
 
-/* Logical rows absolutely position blocks. Pin both writing insets so an image always fills the
- * same useful sheet width and can never shrink-to-fit when text or the software keyboard changes. */
+/* The card owns the complete useful sheet width. The photo inside the card is proportional and
+ * bounded, so portrait images stay comfortable while landscape images can use the available width. */
 html.oanix-notebook-canvas-pwa .editor-surface[data-oanix-virtual-canvas='true'] > .editor-image-block[data-oanix-notebook-full-width='true'] {
   left: clamp(1.15rem, 3vw, 2rem) !important;
   right: clamp(1.15rem, 3vw, 2rem) !important;
@@ -54,15 +54,16 @@ html.oanix-notebook-canvas-pwa .editor-image-block[data-oanix-notebook-full-widt
   outline: none !important;
 }
 
-/* Preserve the source aspect ratio for both portrait and landscape images. The card width is
- * fixed by the sheet; its height is allowed to grow naturally and the row runtime reserves it. */
 html.oanix-notebook-canvas-pwa .editor-image-block[data-oanix-notebook-full-width='true'] .editor-image-block__preview {
-  display: block !important;
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: flex-start !important;
   width: 100% !important;
   min-width: 0 !important;
   height: auto !important;
   min-height: 0 !important;
-  max-height: none !important;
+  padding: .65rem !important;
+  box-sizing: border-box !important;
   overflow: hidden !important;
   border-radius: 15px 15px 0 0 !important;
   background: #eef2f6 !important;
@@ -70,10 +71,12 @@ html.oanix-notebook-canvas-pwa .editor-image-block[data-oanix-notebook-full-widt
 
 html.oanix-notebook-canvas-pwa .editor-image-block[data-oanix-notebook-full-width='true'] .editor-image-block__preview img {
   display: block !important;
-  width: 100% !important;
+  width: auto !important;
+  max-width: 100% !important;
   height: auto !important;
   min-height: 0 !important;
-  max-height: none !important;
+  max-height: 28rem !important;
+  margin: 0 !important;
   object-fit: contain !important;
   object-position: left top !important;
   background: #eef2f6 !important;
@@ -124,6 +127,10 @@ html.oanix-notebook-canvas-pwa .editor-surface[data-oanix-virtual-canvas='true']
     display: flex !important;
     flex-direction: column !important;
     align-items: stretch !important;
+  }
+
+  html.oanix-notebook-canvas-pwa .editor-image-block[data-oanix-notebook-full-width='true'] .editor-image-block__preview img {
+    max-height: 20rem !important;
   }
 
   html.oanix-notebook-canvas-pwa .editor-image-block__actions {
