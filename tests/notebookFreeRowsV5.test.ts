@@ -52,12 +52,13 @@ test('manual visual viewport scrolling is not recentered', () => {
   assert.match(runtime, /visualViewport\?\.addEventListener\('scroll'/)
 })
 
-test('mobile dock stays visible above the software keyboard', () => {
+test('mobile dock stays fixed to the visible viewport', () => {
   assert.match(css, /\.mobile-editor-dock/)
   assert.match(css, /top: auto !important/)
-  assert.match(css, /--oanix-keyboard-inset/)
+  assert.match(css, /bottom: max\(\.7rem, env\(safe-area-inset-bottom\)\) !important/)
   assert.match(css, /z-index: 1600 !important/)
   assert.match(css, /opacity: 1 !important/)
   assert.match(css, /visibility: visible !important/)
   assert.match(css, /\.editor-command-panel/)
+  assert.doesNotMatch(css, /--oanix-keyboard-inset/)
 })
