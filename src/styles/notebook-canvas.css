@@ -14,13 +14,15 @@ html.oanix-notebook-canvas-pwa .editor-surface {
   cursor: text;
   min-height: max(100%, calc(100dvh - 11rem));
   transition: min-height 160ms ease;
+  touch-action: pan-y manipulation;
 }
 
-/* While the note owns the caret, keep a long writable tail. It collapses again when editing ends,
- * so the stored/read view visually finishes near the last real block instead of saving fake lines. */
+/* While the note owns the caret, keep a genuinely long writable tail. The height belongs only
+ * to the editing state; it is not stored as fake paragraphs and collapses when focus leaves. */
 html.oanix-notebook-canvas-pwa .editor-surface:focus {
-  min-height: max(52rem, 175dvh);
-  scroll-margin-bottom: 45dvh;
+  min-height: max(72rem, calc(100dvh + 44rem));
+  padding-bottom: max(18rem, 55dvh);
+  scroll-margin-bottom: 55dvh;
 }
 
 /* Each note owns its paper style. The hidden grid remains identical in both modes. */
@@ -36,8 +38,6 @@ html.oanix-notebook-canvas-pwa .editor-surface[data-oanix-paper-mode='ruled'] {
     var(--oanix-notebook-line) calc(var(--oanix-notebook-row) - 1px),
     var(--oanix-notebook-line) var(--oanix-notebook-row)
   ) !important;
-  /* The editor already has a 24px content inset. Moving the previous 24px grid offset up by
-   * 7px places each rule on the text baseline instead of below the letters. */
   background-position: 0 var(--oanix-notebook-baseline-offset) !important;
   background-repeat: repeat-y !important;
   background-size: 100% var(--oanix-notebook-row) !important;
@@ -153,8 +153,9 @@ html.oanix-notebook-canvas-pwa .image-note-editor-root[data-oanix-image-panel-op
 
 @media (max-width: 760px) {
   html.oanix-notebook-canvas-pwa .editor-surface:focus {
-    min-height: max(48rem, 190dvh);
-    scroll-margin-bottom: 55dvh;
+    min-height: max(110rem, calc(100dvh + 72rem));
+    padding-bottom: max(24rem, 70dvh);
+    scroll-margin-bottom: 70dvh;
   }
 
   html.oanix-notebook-canvas-pwa .image-note-editor-root .editor-surface > .editor-image-block[data-image-compact='true'][data-image-alignment='left'],
