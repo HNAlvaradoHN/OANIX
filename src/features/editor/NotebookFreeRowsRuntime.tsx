@@ -247,6 +247,28 @@ function syncImageReservations(
   return changed
 }
 
+function repairBlockOrderOverlaps(editor: HTMLElement, rows: RowMap): boolean {
+  const rowPx = rowHeight(editor)
+  let nextAvailableRow = 0
+  let changed = false
+
+  for (const block of directCanvasBlocks(editor)) {
+    const id = blockId(block)
+    const savedRow = rows[id] ?? parseRow(block) ?? nextAvailableRow
+    const row = Math.max(savedRow, nextAvailableRow)
+
+    if (row !== savedRow) {
+      rows[id] = row
+      block.dataset.oanixLogicalRow = String(row)
+      changed = true
+    }
+
+    nextAvailableRow = row + blockRows(block, rowPx)
+  }
+
+  return changed
+}
+
 function positionBlock(editor: HTMLElement, block: HTMLElement, row: number) {
   const rowPx = rowHeight(editor)
   const top = canvasOffset(editor) + row * rowPx
@@ -372,8 +394,9 @@ export function NotebookFreeRowsRuntime() {
         document.querySelectorAll<HTMLElement>('.editor-surface').forEach((editor) => {
           const assigned = assignMissingRows(editor, rows)
           const imagesChanged = syncImageReservations(editor, rows, imageStates)
+          const overlapsRepaired = repairBlockOrderOverlaps(editor, rows)
           applyVirtualCanvas(editor, rows)
-          if (assigned || imagesChanged) writeRows(rows)
+          if (assigned || imagesChanged || overlapsRepaired) writeRows(rows)
 
           editor.querySelectorAll<HTMLElement>(':scope > [data-image-block="true"]').forEach((image) => {
             if (observedImages.has(image)) return
