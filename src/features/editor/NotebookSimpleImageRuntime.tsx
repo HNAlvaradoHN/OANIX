@@ -1,5 +1,36 @@
 import { useLayoutEffect } from 'react'
 
+function ensureNotebookImageLayout(image: HTMLElement) {
+  const preview = image.querySelector<HTMLElement>('[data-image-preview="true"]')
+  const actions = image.querySelector<HTMLElement>('.editor-image-block__actions')
+  const details = image.querySelector<HTMLElement>('.editor-image-block__details')
+  if (!preview || !actions || !details) return
+
+  let layout = image.querySelector<HTMLElement>(':scope > [data-oanix-notebook-image-layout="true"]')
+  if (!layout) {
+    layout = document.createElement('div')
+    layout.className = 'oanix-notebook-image-layout'
+    layout.dataset.oanixNotebookImageLayout = 'true'
+    image.prepend(layout)
+  }
+
+  let main = layout.querySelector<HTMLElement>(':scope > [data-oanix-notebook-image-main="true"]')
+  if (!main) {
+    main = document.createElement('div')
+    main.className = 'oanix-notebook-image-main'
+    main.dataset.oanixNotebookImageMain = 'true'
+    layout.prepend(main)
+  }
+
+  if (preview.parentElement !== main) main.prepend(preview)
+  if (details.parentElement !== main) main.append(details)
+  if (actions.parentElement !== layout) layout.append(actions)
+
+  image.querySelectorAll<HTMLElement>(':scope > .editor-image-block__footer').forEach((footer) => {
+    if (footer.childElementCount === 0) footer.remove()
+  })
+}
+
 function normalizeNotebookImage(image: HTMLElement) {
   image.contentEditable = 'false'
   image.dataset.imageCompact = 'false'
@@ -8,13 +39,15 @@ function normalizeNotebookImage(image: HTMLElement) {
   image.dataset.imageSelected = 'false'
   image.style.removeProperty('translate')
 
-  // Full-width notebook images have no movable/resizable state. Remove only the controls that
-  // can no longer affect this layout; open, name visibility, description and remove stay intact.
+  // Notebook images use one fixed PWA card. Remove only the controls that no longer affect this
+  // layout; open, name visibility, description and remove stay available inside the reserved box.
   image
     .querySelectorAll<HTMLElement>(
       '[data-image-lock="true"], [data-image-align], [data-image-resize], .editor-image-block__alignment',
     )
     .forEach((control) => control.remove())
+
+  ensureNotebookImageLayout(image)
 }
 
 function notebookImageFromTarget(target: EventTarget | null): HTMLElement | null {
