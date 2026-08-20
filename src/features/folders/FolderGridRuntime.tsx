@@ -103,10 +103,6 @@ export function FolderGridRuntime() {
   }
 
   useEffect(() => {
-    void refreshData()
-  }, [])
-
-  useEffect(() => {
     let frame = 0
     const refreshTargets = () => {
       window.cancelAnimationFrame(frame)
@@ -140,6 +136,14 @@ export function FolderGridRuntime() {
       sidebar.style.setProperty('--oanix-folder-grid-top', `${Math.ceil(header.getBoundingClientRect().height)}px`)
     }
     updateTop()
+
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', updateTop)
+      return () => {
+        window.removeEventListener('resize', updateTop)
+        sidebar.style.removeProperty('--oanix-folder-grid-top')
+      }
+    }
 
     const resizeObserver = new ResizeObserver(updateTop)
     resizeObserver.observe(header)
