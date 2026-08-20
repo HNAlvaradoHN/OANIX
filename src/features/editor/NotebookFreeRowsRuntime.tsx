@@ -8,7 +8,7 @@ const VIEW_ROWS_AFTER_CONTENT = 14
 type RowMap = Record<string, number>
 type LayoutBlock = HTMLElement
 
-type ImageState = {
+type ReservedBlockState = {
   row: number
   span: number
 }
@@ -56,8 +56,14 @@ function isDailyEntry(block: Element): boolean {
   return block instanceof HTMLElement && block.dataset.dailyEntryBlock === 'true'
 }
 
-function isImageBlock(block: Element): boolean {
-  return block instanceof HTMLElement && block.dataset.imageBlock === 'true'
+function isReservedBlock(block: Element): block is HTMLElement {
+  return (
+    block instanceof HTMLElement &&
+    (block.dataset.imageBlock === 'true' ||
+      block.dataset.codeBlock === 'true' ||
+      block.dataset.checklistBlock === 'true' ||
+      block.dataset.contactBlock === 'true')
+  )
 }
 
 function isCanvasBlock(block: Element): block is HTMLElement {
@@ -84,8 +90,12 @@ function createParagraph(): HTMLParagraphElement {
   return paragraph
 }
 
+function reservedBlockRows(block: HTMLElement, rowPx: number): number {
+  const height = Math.max(block.getBoundingClientRect().height, block.offsetHeight, rowPx)
+  return Math.max(1, Math.ceil(height / rowPx))
+}
+
 function textRows(block: HTMLElement, rowPx: number): number {
-  if (isImageBlock(block)) return imageRows(block, rowPx)
   const range = document.createRange()
   range.selectNodeContents(block)
   const rects = Array.from(range.getClientRects()).filter((rect) => rect.height > 0)
@@ -96,13 +106,8 @@ function textRows(block: HTMLElement, rowPx: number): number {
   return Math.max(1, tops.length)
 }
 
-function imageRows(image: HTMLElement, rowPx: number): number {
-  const height = Math.max(image.getBoundingClientRect().height, image.offsetHeight, rowPx)
-  return Math.max(1, Math.ceil(height / rowPx))
-}
-
 function blockRows(block: LayoutBlock, rowPx: number): number {
-  return isImageBlock(block) ? imageRows(block, rowPx) : textRows(block, rowPx)
+  return isReservedBlock(block) ? reservedBlockRows(block, rowPx) : textRows(block, rowPx)
 }
 
 function parseRow(block: HTMLElement): number | null {
@@ -158,11 +163,10 @@ function assignMissingRows(editor: HTMLElement, rows: RowMap): boolean {
       proposed = previousRow + blockRows(previous, rowPx)
     }
 
-    if (isImageBlock(block)) {
-      const span = imageRows(block, rowPx)
-      // A newly inserted image is atomic. Put it immediately after its preceding DOM block and
-      // move every later logical block down by the image's complete measured height. This keeps
-      // document order intact instead of searching for a distant free row around existing text.
+    if (isReservedBlock(block)) {
+      const span = reservedBlockRows(block, rowPx)
+      // Images, code, checklists and contacts are vertical reserved zones. Insert the complete box
+      // immediately after its preceding DOM block and push every later logical block below it.
       shiftRowsAtOrAfter(rows, proposed, span, id)
       rows[id] = proposed
       block.dataset.oanixLogicalRow = String(proposed)
@@ -181,53 +185,51 @@ function assignMissingRows(editor: HTMLElement, rows: RowMap): boolean {
   return changed
 }
 
-function repairImageBarrier(editor: HTMLElement, image: HTMLElement, rows: RowMap, span: number): boolean {
+function repairReservedBarrier(editor: HTMLElement, reserved: HTMLElement, rows: RowMap, span: number): boolean {
   const blocks = directCanvasBlocks(editor)
-  const imageIndex = blocks.indexOf(image)
-  if (imageIndex < 0) return false
+  const reservedIndex = blocks.indexOf(reserved)
+  if (reservedIndex < 0) return false
 
-  const imageRow = rows[blockId(image)] ?? 0
-  const imageEnd = imageRow + span
+  const reservedRow = rows[blockId(reserved)] ?? 0
+  const reservedEnd = reservedRow + span
   const firstOverlappingRow = blocks
-    .slice(imageIndex + 1)
+    .slice(reservedIndex + 1)
     .map((block) => rows[blockId(block)] ?? parseRow(block))
-    .filter((row): row is number => Number.isSafeInteger(row) && row >= imageRow && row < imageEnd)
+    .filter((row): row is number => Number.isSafeInteger(row) && row >= reservedRow && row < reservedEnd)
     .sort((left, right) => left - right)[0]
 
   if (!Number.isSafeInteger(firstOverlappingRow)) return false
-  shiftRowsAtOrAfter(rows, firstOverlappingRow, imageEnd - firstOverlappingRow, blockId(image))
+  shiftRowsAtOrAfter(rows, firstOverlappingRow, reservedEnd - firstOverlappingRow, blockId(reserved))
   return true
 }
 
-function syncImageReservations(
+function syncReservedBlockReservations(
   editor: HTMLElement,
   rows: RowMap,
-  states: Map<string, ImageState>,
+  states: Map<string, ReservedBlockState>,
 ): boolean {
   const rowPx = rowHeight(editor)
-  const images = directCanvasBlocks(editor).filter((block) => isImageBlock(block))
-  const present = new Set(images.map((image) => blockId(image)))
+  const reservedBlocks = directCanvasBlocks(editor).filter(isReservedBlock)
+  const present = new Set(reservedBlocks.map((block) => blockId(block)))
   let changed = false
 
-  for (const image of images) {
-    const id = blockId(image)
+  for (const reserved of reservedBlocks) {
+    const id = blockId(reserved)
     const row = rows[id] ?? 0
-    const span = imageRows(image, rowPx)
+    const span = reservedBlockRows(reserved, rowPx)
     const previous = states.get(id)
 
     if (!previous) {
-      // assignMissingRows already reserves new images. For notes created before this atomic model,
-      // repair only an actual overlap inside the measured image range instead of blindly shifting
-      // every following row a second time.
-      if (repairImageBarrier(editor, image, rows, span)) changed = true
+      // assignMissingRows already reserves new blocks. Older notes are repaired only when a real
+      // overlap exists, avoiding a second blind reservation of the same physical height.
+      if (repairReservedBarrier(editor, reserved, rows, span)) changed = true
       states.set(id, { row, span })
       continue
     }
 
     const delta = span - previous.span
     if (delta !== 0) {
-      // Grow or shrink only the rows that begin after the image's previous reserved range.
-      // ResizeObserver calls this again when the real image, controls, or description change height.
+      // Any real height change moves only content that begins after the old reserved zone.
       shiftRowsAtOrAfter(rows, row + previous.span, delta, id)
       changed = true
     }
@@ -236,8 +238,7 @@ function syncImageReservations(
 
   for (const [id, state] of Array.from(states.entries())) {
     if (present.has(id)) continue
-    // Image removal is authorized elsewhere. Collapse exactly the space that belonged to it and
-    // leave text deletion unable to consume or partially overlap any surviving image block.
+    // When an authorized special block is removed, collapse exactly the rows that belonged to it.
     shiftRowsAtOrAfter(rows, state.row + state.span, -state.span, id)
     delete rows[id]
     states.delete(id)
@@ -267,6 +268,15 @@ function repairBlockOrderOverlaps(editor: HTMLElement, rows: RowMap): boolean {
   }
 
   return changed
+}
+
+function refreshReservedStateRows(rows: RowMap, states: Map<string, ReservedBlockState>) {
+  for (const [id, state] of states.entries()) {
+    const row = rows[id]
+    if (Number.isSafeInteger(row) && row >= 0 && row !== state.row) {
+      states.set(id, { row, span: state.span })
+    }
+  }
 }
 
 function positionBlock(editor: HTMLElement, block: HTMLElement, row: number) {
@@ -319,27 +329,10 @@ function rowAtPoint(editor: HTMLElement, clientY: number): number {
   return Math.max(0, Math.floor(localY / rowHeight(editor)))
 }
 
-function paragraphOccupiesRow(editor: HTMLElement, row: number, rows: RowMap): boolean {
-  const rowPx = rowHeight(editor)
-  return directCanvasBlocks(editor).some((block) => {
-    if (isImageBlock(block)) return false
-    const start = rows[blockId(block)] ?? 0
-    return row >= start && row < start + blockRows(block, rowPx)
-  })
-}
-
-function imageOccupiesRow(editor: HTMLElement, row: number, rows: RowMap): boolean {
-  const rowPx = rowHeight(editor)
-  return directCanvasBlocks(editor).some((block) => {
-    if (!isImageBlock(block)) return false
-    const start = rows[blockId(block)] ?? 0
-    return row >= start && row < start + imageRows(block, rowPx)
-  })
-}
-
 function insertParagraphAtRow(editor: HTMLElement, targetRow: number, rows: RowMap): HTMLParagraphElement | null {
-  if (paragraphOccupiesRow(editor, targetRow, rows)) return null
-  if (imageOccupiesRow(editor, targetRow, rows)) return null
+  // Free placement is allowed only on genuinely empty logical rows. Reserved special blocks use
+  // their measured physical height here, so touching anywhere inside them can never create text.
+  if (rowOccupied(editor, targetRow, rows)) return null
 
   const inserted = createParagraph()
   rows[blockId(inserted)] = targetRow
@@ -383,8 +376,8 @@ export function NotebookFreeRowsRuntime() {
     if (import.meta.env.MODE === 'capacitor') return
 
     const rows = readRows()
-    const imageStates = new Map<string, ImageState>()
-    const observedImages = new Set<HTMLElement>()
+    const reservedStates = new Map<string, ReservedBlockState>()
+    const observedReservedBlocks = new Set<HTMLElement>()
     let frame = 0
 
     const sync = () => {
@@ -393,27 +386,30 @@ export function NotebookFreeRowsRuntime() {
         frame = 0
         document.querySelectorAll<HTMLElement>('.editor-surface').forEach((editor) => {
           const assigned = assignMissingRows(editor, rows)
-          const imagesChanged = syncImageReservations(editor, rows, imageStates)
+          const reservedChanged = syncReservedBlockReservations(editor, rows, reservedStates)
           const overlapsRepaired = repairBlockOrderOverlaps(editor, rows)
+          refreshReservedStateRows(rows, reservedStates)
           applyVirtualCanvas(editor, rows)
-          if (assigned || imagesChanged || overlapsRepaired) writeRows(rows)
+          if (assigned || reservedChanged || overlapsRepaired) writeRows(rows)
 
-          editor.querySelectorAll<HTMLElement>(':scope > [data-image-block="true"]').forEach((image) => {
-            if (observedImages.has(image)) return
-            observedImages.add(image)
-            imageResizeObserver.observe(image)
-          })
+          directCanvasBlocks(editor)
+            .filter(isReservedBlock)
+            .forEach((block) => {
+              if (observedReservedBlocks.has(block)) return
+              observedReservedBlocks.add(block)
+              reservedResizeObserver.observe(block)
+            })
         })
 
-        for (const image of Array.from(observedImages)) {
-          if (image.isConnected) continue
-          imageResizeObserver.unobserve(image)
-          observedImages.delete(image)
+        for (const block of Array.from(observedReservedBlocks)) {
+          if (block.isConnected) continue
+          reservedResizeObserver.unobserve(block)
+          observedReservedBlocks.delete(block)
         }
       })
     }
 
-    const imageResizeObserver = new ResizeObserver(sync)
+    const reservedResizeObserver = new ResizeObserver(sync)
 
     function handleClick(event: MouseEvent) {
       const target = event.target
@@ -444,8 +440,7 @@ export function NotebookFreeRowsRuntime() {
       const nextRow = row + 1
 
       // The browser's native contenteditable Enter creates a DOM paragraph before the virtual
-      // row map can assign it, which made the new line render on top of the current one. Own the
-      // operation here: reserve one logical row, create exactly one paragraph there, then focus it.
+      // row map can assign it. Own the operation so following reserved blocks move down one row.
       event.preventDefault()
       event.stopImmediatePropagation()
       shiftRowsAfter(rows, row, 1)
@@ -483,8 +478,8 @@ export function NotebookFreeRowsRuntime() {
     return () => {
       if (frame) cancelAnimationFrame(frame)
       observer.disconnect()
-      imageResizeObserver.disconnect()
-      observedImages.clear()
+      reservedResizeObserver.disconnect()
+      observedReservedBlocks.clear()
       document.removeEventListener('click', handleClick, true)
       document.removeEventListener('keydown', handleKeyDown, true)
       document.removeEventListener('focusin', sync, true)

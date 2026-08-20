@@ -24,12 +24,15 @@ test('the note is a growing virtual canvas rather than padding-owned gaps', () =
   assert.match(css, /data-oanix-virtual-canvas/)
 })
 
-test('tapping an empty logical row inserts there while image rows remain unavailable', () => {
+test('tapping inserts only on a genuinely empty row and all special block areas remain unavailable', () => {
   assert.match(runtime, /insertParagraphAtRow/)
+  assert.match(runtime, /if \(rowOccupied\(editor, targetRow, rows\)\) return null/)
   assert.match(runtime, /rows\[blockId\(inserted\)\] = targetRow/)
-  assert.match(runtime, /paragraphOccupiesRow/)
-  assert.match(runtime, /imageOccupiesRow/)
   assert.match(runtime, /blockedTarget/)
+  assert.match(runtime, /data-code-block/)
+  assert.match(runtime, /data-checklist-block/)
+  assert.match(runtime, /data-contact-block/)
+  assert.match(runtime, /data-image-block/)
 })
 
 test('Enter is owned by the virtual canvas and creates exactly the next logical row', () => {

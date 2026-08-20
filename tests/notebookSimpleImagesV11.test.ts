@@ -6,17 +6,18 @@ const main = readFileSync('src/main.tsx', 'utf8')
 const runtime = readFileSync('src/features/editor/NotebookSimpleImageRuntime.tsx', 'utf8')
 const css = readFileSync('src/styles/notebook-logical-rows-v6.css', 'utf8')
 
-test('PWA notebook images are normalized to one full-width atomic mode', () => {
+test('PWA notebook images are normalized to one fixed reserved card mode', () => {
   assert.match(main, /NotebookSimpleImageRuntime/)
   assert.match(runtime, /image\.contentEditable = 'false'/)
   assert.match(runtime, /image\.dataset\.imageCompact = 'false'/)
   assert.match(runtime, /image\.dataset\.imageAlignment = 'center'/)
   assert.match(runtime, /oanixNotebookFullWidth/)
-  assert.match(css, /atomic document blocks/)
-  assert.match(css, /never beside or through it/)
+  assert.match(runtime, /ensureNotebookImageLayout/)
+  assert.match(css, /reserved document blocks/)
+  assert.match(css, /never through it/)
 })
 
-test('obsolete move, resize and lock controls are removed while normal image actions remain', () => {
+test('obsolete move resize and lock controls are removed while normal image actions remain', () => {
   assert.match(runtime, /data-image-lock/)
   assert.match(runtime, /data-image-align/)
   assert.match(runtime, /data-image-resize/)
@@ -33,28 +34,26 @@ test('image normalization cannot observe and rewrite the same attributes forever
   assert.doesNotMatch(runtime, /attributeFilter/)
 })
 
-test('full-width card contains portrait and landscape images without stretching them', () => {
+test('fixed image card uses a square contained photo without stretching source aspect ratio', () => {
   assert.match(css, /data-oanix-notebook-full-width='true'/)
   assert.match(css, /left: clamp\(1\.15rem, 3vw, 2rem\) !important/)
   assert.match(css, /right: clamp\(1\.15rem, 3vw, 2rem\) !important/)
-  assert.match(css, /transform: none !important/)
-  assert.match(css, /width: auto !important/)
-  assert.match(css, /max-width: 100% !important/)
-  assert.match(css, /height: auto !important/)
-  assert.match(css, /max-height: 28rem !important/)
-  assert.match(css, /max-height: 20rem !important/)
-  assert.match(css, /object-position: left top !important/)
-  assert.doesNotMatch(css, /max-height: none !important/)
+  assert.match(css, /width: min\(100%, 20rem\) !important/)
+  assert.match(css, /width: min\(100%, 17rem\) !important/)
+  assert.match(css, /aspect-ratio: 1 \/ 1 !important/)
+  assert.match(css, /object-fit: contain !important/)
+  assert.match(css, /object-position: center !important/)
 })
 
-test('description and controls stay below the image without horizontal card columns', () => {
-  assert.match(css, /editor-image-block__footer/)
+test('description stays below the square photo and image actions stay in a side column', () => {
+  assert.match(runtime, /main\.append\(details\)/)
+  assert.match(runtime, /layout\.append\(actions\)/)
+  assert.match(css, /oanix-notebook-image-layout/)
+  assert.match(css, /grid-template-columns: minmax\(0, 1fr\) minmax\(7\.75rem, 9\.5rem\) !important/)
+  assert.match(css, /oanix-notebook-image-main/)
   assert.match(css, /flex-direction: column !important/)
   assert.match(css, /editor-image-block__details/)
-  assert.match(css, /grid-template-columns: minmax\(0, 1fr\) !important/)
-  assert.match(css, /editor-image-block__alt/)
-  assert.match(css, /min-height: 2\.65rem !important/)
-  assert.doesNotMatch(css, /grid-template-columns: minmax\(0, 1\.75fr\) minmax\(7\.6rem, \.9fr\)/)
+  assert.match(css, /editor-image-block__actions/)
   assert.doesNotMatch(css, /display: contents !important/)
 })
 
