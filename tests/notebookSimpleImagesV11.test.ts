@@ -23,10 +23,25 @@ test('image normalization cannot observe and rewrite the same attributes forever
   assert.doesNotMatch(runtime, /attributeFilter/)
 })
 
-test('mobile editor dock stays fixed to the visible viewport above the keyboard', () => {
-  assert.doesNotMatch(runtime, /window\.visualViewport/)
-  assert.doesNotMatch(runtime, /--oanix-keyboard-inset/)
-  assert.match(css, /bottom: max\(\.7rem, env\(safe-area-inset-bottom\)\) !important/)
-  assert.match(css, /bottom: calc\(max\(\.7rem, env\(safe-area-inset-bottom\)\) \+ 4\.5rem\) !important/)
-  assert.doesNotMatch(css, /--oanix-keyboard-inset/)
+test('mobile image card prioritizes preview at left and keeps options readable at right', () => {
+  assert.match(css, /grid-template-columns: minmax\(0, 1\.75fr\) minmax\(7\.6rem, \.9fr\)/)
+  assert.match(css, /editor-image-block__preview/)
+  assert.match(css, /grid-column: 1 !important/)
+  assert.match(css, /editor-image-block__footer/)
+  assert.match(css, /grid-column: 2 !important/)
+  assert.match(css, /editor-image-block__resize/)
+  assert.match(css, /display: none !important/)
+  assert.match(css, /overflow-wrap: break-word !important/)
+  assert.match(css, /text-overflow: ellipsis !important/)
+})
+
+test('mobile editor dock is pinned to the visual viewport across keyboard resize and scroll', () => {
+  assert.match(runtime, /window\.visualViewport/)
+  assert.match(runtime, /visibleTop/)
+  assert.match(runtime, /visibleHeight/)
+  assert.match(runtime, /dock\.style\.setProperty\('top'/)
+  assert.match(runtime, /panel\.style\.setProperty\('top'/)
+  assert.match(runtime, /visualViewport\?\.addEventListener\('resize'/)
+  assert.match(runtime, /visualViewport\?\.addEventListener\('scroll'/)
+  assert.match(css, /bottom: auto !important/)
 })
