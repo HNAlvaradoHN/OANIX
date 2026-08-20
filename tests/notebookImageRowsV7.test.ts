@@ -12,11 +12,12 @@ test('virtual row runtime integrates image blocks into the same row map', () => 
   assert.match(runtime, /imageStates/)
 })
 
-test('compact side images do not consume full notebook rows', () => {
-  assert.match(runtime, /imageAllowsSideFlow/)
-  assert.match(runtime, /imageCompact/)
-  assert.match(runtime, /imageAlignment === 'left'/)
-  assert.match(runtime, /imageAlignment === 'right'/)
+test('every notebook image is an atomic row barrier with no side-flow mode', () => {
+  assert.match(runtime, /function imageOccupiesRow/)
+  assert.match(runtime, /if \(imageOccupiesRow\(editor, targetRow, rows\)\) return null/)
+  assert.doesNotMatch(runtime, /imageAllowsSideFlow/)
+  assert.doesNotMatch(runtime, /sideImageForRow/)
+  assert.doesNotMatch(runtime, /imageWidth \+ gutter/)
 })
 
 test('text rows are measured independently from image box height', () => {
@@ -26,16 +27,18 @@ test('text rows are measured independently from image box height', () => {
   assert.doesNotMatch(runtime, /scrollHeight - padding/)
 })
 
-test('center or large images block row insertion while side-flow image rows stay writable', () => {
-  assert.match(runtime, /blockingImageOccupiesRow/)
-  assert.match(runtime, /if \(blockingImageOccupiesRow\(editor, targetRow, rows\)\) return null/)
-  assert.match(runtime, /sideImageForRow/)
+test('new images reserve their complete measured span in document order', () => {
+  assert.match(runtime, /if \(isImageBlock\(block\)\)/)
+  assert.match(runtime, /const span = imageRows\(block, rowPx\)/)
+  assert.match(runtime, /shiftRowsAtOrAfter\(rows, proposed, span, id\)/)
+  assert.match(runtime, /rows\[id\] = proposed/)
+  assert.match(runtime, /repairImageBarrier/)
 })
 
-test('changing image layout adjusts reserved rows without reintroducing paragraph padding gaps', () => {
-  assert.match(runtime, /previous\.blocking && blocking/)
-  assert.match(runtime, /!previous\.blocking && blocking/)
-  assert.match(runtime, /previous\.blocking && !blocking/)
-  assert.match(runtime, /shiftRowsAtOrAfter/)
-  assert.doesNotMatch(runtime, /style\.paddingTop/)
+test('image height changes continuously update the reserved rows', () => {
+  assert.match(runtime, /new ResizeObserver\(sync\)/)
+  assert.match(runtime, /imageResizeObserver\.observe\(image\)/)
+  assert.match(runtime, /const delta = span - previous\.span/)
+  assert.match(runtime, /shiftRowsAtOrAfter\(rows, row \+ previous\.span, delta, id\)/)
+  assert.doesNotMatch(runtime, /attributeFilter: \['data-image-alignment', 'data-image-compact', 'style'\]/)
 })

@@ -24,11 +24,12 @@ test('the note is a growing virtual canvas rather than padding-owned gaps', () =
   assert.match(css, /data-oanix-virtual-canvas/)
 })
 
-test('tapping an empty logical row inserts there without moving unrelated rows', () => {
+test('tapping an empty logical row inserts there while image rows remain unavailable', () => {
   assert.match(runtime, /insertParagraphAtRow/)
   assert.match(runtime, /rows\[blockId\(inserted\)\] = targetRow/)
   assert.match(runtime, /paragraphOccupiesRow/)
-  assert.match(runtime, /blockingImageOccupiesRow/)
+  assert.match(runtime, /imageOccupiesRow/)
+  assert.match(runtime, /blockedTarget/)
 })
 
 test('Enter is owned by the virtual canvas and creates exactly the next logical row', () => {
@@ -40,10 +41,12 @@ test('Enter is owned by the virtual canvas and creates exactly the next logical 
   assert.match(runtime, /placeCaret\(inserted\)/)
 })
 
-test('compact side images constrain only the text rows they overlap', () => {
-  assert.match(runtime, /sideImageForRow/)
-  assert.match(runtime, /imageAllowsSideFlow/)
-  assert.match(runtime, /imageWidth \+ gutter/)
+test('all blocks use the same sheet width and no lateral text geometry remains', () => {
+  assert.match(runtime, /block\.style\.left = `\$\{padLeft\}px`/)
+  assert.match(runtime, /block\.style\.right = `\$\{padRight\}px`/)
+  assert.match(runtime, /block\.style\.width = 'auto'/)
+  assert.doesNotMatch(runtime, /sideImageForRow/)
+  assert.doesNotMatch(runtime, /imageWidth \+ gutter/)
   assert.match(css, /float: none !important/)
 })
 

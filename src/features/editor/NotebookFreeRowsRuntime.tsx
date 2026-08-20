@@ -11,7 +11,6 @@ type LayoutBlock = HTMLElement
 type ImageState = {
   row: number
   span: number
-  blocking: boolean
 }
 
 function readRows(): RowMap {
@@ -85,11 +84,6 @@ function createParagraph(): HTMLParagraphElement {
   return paragraph
 }
 
-function imageAllowsSideFlow(image: HTMLElement): boolean {
-  if (image.dataset.imageCompact !== 'true') return false
-  return image.dataset.imageAlignment === 'left' || image.dataset.imageAlignment === 'right'
-}
-
 function textRows(block: HTMLElement, rowPx: number): number {
   if (isImageBlock(block)) return imageRows(block, rowPx)
   const range = document.createRange()
@@ -122,7 +116,6 @@ function rowOccupied(editor: HTMLElement, row: number, rows: RowMap, ignore?: HT
     if (block === ignore) return false
     const start = rows[blockId(block)] ?? parseRow(block)
     if (!Number.isSafeInteger(start) || start < 0) return false
-    if (isImageBlock(block) && imageAllowsSideFlow(block)) return false
     return row >= start && row < start + blockRows(block, rowPx)
   })
 }
@@ -135,6 +128,14 @@ function nextFreeRow(editor: HTMLElement, start: number, rows: RowMap): number {
     guard += 1
   }
   return row
+}
+
+function shiftRowsAtOrAfter(rows: RowMap, row: number, amount: number, exceptId?: string) {
+  if (amount === 0) return
+  for (const [id, value] of Object.entries(rows)) {
+    if (id === exceptId) continue
+    if (Number.isSafeInteger(value) && value >= row) rows[id] = Math.max(0, value + amount)
+  }
 }
 
 function assignMissingRows(editor: HTMLElement, rows: RowMap): boolean {
@@ -157,6 +158,19 @@ function assignMissingRows(editor: HTMLElement, rows: RowMap): boolean {
       proposed = previousRow + blockRows(previous, rowPx)
     }
 
+    if (isImageBlock(block)) {
+      const span = imageRows(block, rowPx)
+      // A newly inserted image is atomic. Put it immediately after its preceding DOM block and
+      // move every later logical block down by the image's complete measured height. This keeps
+      // document order intact instead of searching for a distant free row around existing text.
+      shiftRowsAtOrAfter(rows, proposed, span, id)
+      rows[id] = proposed
+      block.dataset.oanixLogicalRow = String(proposed)
+      cursor = Math.max(cursor, proposed + span)
+      changed = true
+      continue
+    }
+
     const row = nextFreeRow(editor, proposed, rows)
     rows[id] = row
     block.dataset.oanixLogicalRow = String(row)
@@ -167,12 +181,22 @@ function assignMissingRows(editor: HTMLElement, rows: RowMap): boolean {
   return changed
 }
 
-function shiftRowsAtOrAfter(rows: RowMap, row: number, amount: number, exceptId?: string) {
-  if (amount === 0) return
-  for (const [id, value] of Object.entries(rows)) {
-    if (id === exceptId) continue
-    if (Number.isSafeInteger(value) && value >= row) rows[id] = Math.max(0, value + amount)
-  }
+function repairImageBarrier(editor: HTMLElement, image: HTMLElement, rows: RowMap, span: number): boolean {
+  const blocks = directCanvasBlocks(editor)
+  const imageIndex = blocks.indexOf(image)
+  if (imageIndex < 0) return false
+
+  const imageRow = rows[blockId(image)] ?? 0
+  const imageEnd = imageRow + span
+  const firstOverlappingRow = blocks
+    .slice(imageIndex + 1)
+    .map((block) => rows[blockId(block)] ?? parseRow(block))
+    .filter((row): row is number => Number.isSafeInteger(row) && row >= imageRow && row < imageEnd)
+    .sort((left, right) => left - right)[0]
+
+  if (!Number.isSafeInteger(firstOverlappingRow)) return false
+  shiftRowsAtOrAfter(rows, firstOverlappingRow, imageEnd - firstOverlappingRow, blockId(image))
+  return true
 }
 
 function syncImageReservations(
@@ -189,31 +213,32 @@ function syncImageReservations(
     const id = blockId(image)
     const row = rows[id] ?? 0
     const span = imageRows(image, rowPx)
-    const blocking = !imageAllowsSideFlow(image)
     const previous = states.get(id)
 
     if (!previous) {
-      if (blocking) shiftRowsAtOrAfter(rows, row + 1, span, id)
-      states.set(id, { row, span, blocking })
-      changed = true
+      // assignMissingRows already reserves new images. For notes created before this atomic model,
+      // repair only an actual overlap inside the measured image range instead of blindly shifting
+      // every following row a second time.
+      if (repairImageBarrier(editor, image, rows, span)) changed = true
+      states.set(id, { row, span })
       continue
     }
 
-    let delta = 0
-    if (previous.blocking && blocking) delta = span - previous.span
-    else if (!previous.blocking && blocking) delta = span
-    else if (previous.blocking && !blocking) delta = -previous.span
-
+    const delta = span - previous.span
     if (delta !== 0) {
-      shiftRowsAtOrAfter(rows, row + 1, delta, id)
+      // Grow or shrink only the rows that begin after the image's previous reserved range.
+      // ResizeObserver calls this again when the real image, controls, or description change height.
+      shiftRowsAtOrAfter(rows, row + previous.span, delta, id)
       changed = true
     }
-    states.set(id, { row, span, blocking })
+    states.set(id, { row, span })
   }
 
   for (const [id, state] of Array.from(states.entries())) {
     if (present.has(id)) continue
-    if (state.blocking) shiftRowsAtOrAfter(rows, state.row + 1, -state.span, id)
+    // Image removal is authorized elsewhere. Collapse exactly the space that belonged to it and
+    // leave text deletion unable to consume or partially overlap any surviving image block.
+    shiftRowsAtOrAfter(rows, state.row + state.span, -state.span, id)
     delete rows[id]
     states.delete(id)
     changed = true
@@ -222,16 +247,7 @@ function syncImageReservations(
   return changed
 }
 
-function sideImageForRow(editor: HTMLElement, row: number, rows: RowMap): HTMLElement | null {
-  const rowPx = rowHeight(editor)
-  return directCanvasBlocks(editor).find((block) => {
-    if (!isImageBlock(block) || !imageAllowsSideFlow(block)) return false
-    const start = rows[blockId(block)] ?? 0
-    return row >= start && row < start + imageRows(block, rowPx)
-  }) ?? null
-}
-
-function positionBlock(editor: HTMLElement, block: HTMLElement, row: number, rows: RowMap) {
+function positionBlock(editor: HTMLElement, block: HTMLElement, row: number) {
   const rowPx = rowHeight(editor)
   const top = canvasOffset(editor) + row * rowPx
   block.dataset.oanixLogicalRow = String(row)
@@ -243,42 +259,12 @@ function positionBlock(editor: HTMLElement, block: HTMLElement, row: number, row
 
   const padLeft = editorPaddingLeft(editor)
   const padRight = editorPaddingRight(editor)
-  const contentWidth = Math.max(0, editor.clientWidth - padLeft - padRight)
-
-  if (isImageBlock(block)) {
-    const alignment = block.dataset.imageAlignment ?? 'center'
-    block.style.transform = 'none'
-    if (alignment === 'right') {
-      block.style.left = 'auto'
-      block.style.right = `${padRight}px`
-    } else if (alignment === 'center') {
-      block.style.left = '50%'
-      block.style.right = 'auto'
-      block.style.transform = 'translateX(-50%)'
-    } else {
-      block.style.left = `${padLeft}px`
-      block.style.right = 'auto'
-    }
-    return
-  }
 
   block.style.transform = 'none'
   block.style.left = `${padLeft}px`
   block.style.right = `${padRight}px`
   block.style.width = 'auto'
-
-  const sideImage = sideImageForRow(editor, row, rows)
-  if (!sideImage) return
-
-  const imageWidth = sideImage.getBoundingClientRect().width
-  const gutter = 16
-  if (sideImage.dataset.imageAlignment === 'left') {
-    block.style.left = `${padLeft + imageWidth + gutter}px`
-  } else {
-    block.style.right = `${padRight + imageWidth + gutter}px`
-  }
-  block.style.width = 'auto'
-  if (contentWidth > 0) block.style.maxWidth = `${Math.max(80, contentWidth - imageWidth - gutter)}px`
+  block.style.maxWidth = 'none'
 }
 
 function maxUsedRow(editor: HTMLElement, rows: RowMap): number {
@@ -295,7 +281,7 @@ function applyVirtualCanvas(editor: HTMLElement, rows: RowMap) {
   const offset = canvasOffset(editor)
   for (const block of directCanvasBlocks(editor)) {
     const row = rows[blockId(block)] ?? 0
-    positionBlock(editor, block, row, rows)
+    positionBlock(editor, block, row)
   }
 
   const focused = editor === document.activeElement || editor.contains(document.activeElement)
@@ -320,10 +306,10 @@ function paragraphOccupiesRow(editor: HTMLElement, row: number, rows: RowMap): b
   })
 }
 
-function blockingImageOccupiesRow(editor: HTMLElement, row: number, rows: RowMap): boolean {
+function imageOccupiesRow(editor: HTMLElement, row: number, rows: RowMap): boolean {
   const rowPx = rowHeight(editor)
   return directCanvasBlocks(editor).some((block) => {
-    if (!isImageBlock(block) || imageAllowsSideFlow(block)) return false
+    if (!isImageBlock(block)) return false
     const start = rows[blockId(block)] ?? 0
     return row >= start && row < start + imageRows(block, rowPx)
   })
@@ -331,7 +317,7 @@ function blockingImageOccupiesRow(editor: HTMLElement, row: number, rows: RowMap
 
 function insertParagraphAtRow(editor: HTMLElement, targetRow: number, rows: RowMap): HTMLParagraphElement | null {
   if (paragraphOccupiesRow(editor, targetRow, rows)) return null
-  if (blockingImageOccupiesRow(editor, targetRow, rows)) return null
+  if (imageOccupiesRow(editor, targetRow, rows)) return null
 
   const inserted = createParagraph()
   rows[blockId(inserted)] = targetRow
@@ -376,6 +362,7 @@ export function NotebookFreeRowsRuntime() {
 
     const rows = readRows()
     const imageStates = new Map<string, ImageState>()
+    const observedImages = new Set<HTMLElement>()
     let frame = 0
 
     const sync = () => {
@@ -387,9 +374,23 @@ export function NotebookFreeRowsRuntime() {
           const imagesChanged = syncImageReservations(editor, rows, imageStates)
           applyVirtualCanvas(editor, rows)
           if (assigned || imagesChanged) writeRows(rows)
+
+          editor.querySelectorAll<HTMLElement>(':scope > [data-image-block="true"]').forEach((image) => {
+            if (observedImages.has(image)) return
+            observedImages.add(image)
+            imageResizeObserver.observe(image)
+          })
         })
+
+        for (const image of Array.from(observedImages)) {
+          if (image.isConnected) continue
+          imageResizeObserver.unobserve(image)
+          observedImages.delete(image)
+        }
       })
     }
+
+    const imageResizeObserver = new ResizeObserver(sync)
 
     function handleClick(event: MouseEvent) {
       const target = event.target
@@ -446,7 +447,7 @@ export function NotebookFreeRowsRuntime() {
       childList: true,
       subtree: true,
       attributes: true,
-      attributeFilter: ['data-image-alignment', 'data-image-compact', 'style'],
+      attributeFilter: ['data-image-info-open'],
     })
     document.addEventListener('click', handleClick, true)
     document.addEventListener('keydown', handleKeyDown, true)
@@ -459,6 +460,8 @@ export function NotebookFreeRowsRuntime() {
     return () => {
       if (frame) cancelAnimationFrame(frame)
       observer.disconnect()
+      imageResizeObserver.disconnect()
+      observedImages.clear()
       document.removeEventListener('click', handleClick, true)
       document.removeEventListener('keydown', handleKeyDown, true)
       document.removeEventListener('focusin', sync, true)
