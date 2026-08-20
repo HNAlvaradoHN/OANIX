@@ -6,8 +6,9 @@ const main = readFileSync('src/main.tsx', 'utf8')
 const runtime = readFileSync('src/features/editor/NotebookSimpleImageRuntime.tsx', 'utf8')
 const css = readFileSync('src/styles/notebook-logical-rows-v6.css', 'utf8')
 
-test('PWA notebook images are normalized to one fixed reserved card mode', () => {
-  assert.match(main, /NotebookSimpleImageRuntime/)
+test('simple image runtime is no longer mounted over the stable shared editor', () => {
+  assert.doesNotMatch(main, /NotebookSimpleImageRuntime/)
+  assert.doesNotMatch(main, /notebook-logical-rows-v6\.css/)
   assert.match(runtime, /image\.contentEditable = 'false'/)
   assert.match(runtime, /image\.dataset\.imageCompact = 'false'/)
   assert.match(runtime, /image\.dataset\.imageAlignment = 'center'/)
