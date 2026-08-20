@@ -160,7 +160,9 @@ export function FolderGridRuntime() {
     if (!gridOpen && !targets.searchOpen) shell.dataset.oanixFolderCompact = 'true'
     else delete shell.dataset.oanixFolderCompact
 
-    return () => delete shell.dataset.oanixFolderCompact
+    return () => {
+      delete shell.dataset.oanixFolderCompact
+    }
   }, [gridOpen, targets.searchOpen, targets.tabsShell])
 
   useEffect(() => {
@@ -184,7 +186,7 @@ export function FolderGridRuntime() {
     if (gridOpen) void refreshData()
   }, [gridOpen])
 
-  const dashboardVisible = gridOpen && !targets.searchOpen && Boolean(targets.sidebar)
+  const dashboardVisible = gridOpen && !targets.searchOpen && Boolean(targets.sidebar && targets.tabsShell)
 
   const folderCards = useMemo(
     () => data.folders.map((folder) => ({
