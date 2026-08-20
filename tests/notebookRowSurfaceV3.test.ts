@@ -38,10 +38,20 @@ test('side images allow row creation while centered images block side writing', 
   assert.match(css, /float: none !important/)
 })
 
-test('ruled mode has a visible repeated 32px writing rhythm', () => {
+test('ruled mode has a visible repeated 32px writing rhythm aligned with text', () => {
   assert.match(css, /--oanix-notebook-row: 32px/)
+  assert.match(css, /--oanix-notebook-baseline-offset: 17px/)
   assert.match(css, /repeating-linear-gradient/)
   assert.match(css, /--oanix-notebook-line/)
+  assert.match(css, /background-position: 0 var\(--oanix-notebook-baseline-offset\) !important/)
   assert.match(css, /background-image: none !important/)
   assert.match(css, /line-height: var\(--oanix-notebook-row\)/)
+})
+
+test('focused notes expose a long writable tail without persisting fake blank lines', () => {
+  assert.match(css, /\.editor-surface:focus/)
+  assert.match(css, /175dvh/)
+  assert.match(css, /190dvh/)
+  assert.match(css, /scroll-margin-bottom: 55dvh/)
+  assert.doesNotMatch(runtime, /append\([^)]*fake|fake.*row/i)
 })
