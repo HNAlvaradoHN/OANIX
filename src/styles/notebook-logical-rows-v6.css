@@ -15,8 +15,8 @@ html.oanix-notebook-canvas-pwa .editor-surface[data-oanix-virtual-canvas='true']
   line-height: var(--oanix-notebook-row, 32px) !important;
 }
 
-/* PWA notebook images use one stable block model: the image owns the writing width and text
- * can exist only above or below it. This avoids the overlap seen with lateral text flow. */
+/* Images use one deliberately simple notebook mode: they block the complete writing width.
+ * Text can exist above or below the image, never beside it. */
 html.oanix-notebook-canvas-pwa .editor-surface[data-oanix-virtual-canvas='true'] > .editor-image-block[data-oanix-virtual-block='true'],
 html.oanix-notebook-canvas-pwa .editor-surface[data-oanix-virtual-canvas='true'] > .editor-image-block[data-oanix-notebook-full-width='true'] {
   float: none !important;
@@ -24,6 +24,14 @@ html.oanix-notebook-canvas-pwa .editor-surface[data-oanix-virtual-canvas='true']
   width: auto !important;
   max-width: none !important;
   margin: 0 !important;
+}
+
+/* The logical-row runtime absolutely positions image blocks. Pin both editor insets so a
+ * centered image can never switch to shrink-to-fit when text is added elsewhere in the note. */
+html.oanix-notebook-canvas-pwa .editor-surface[data-oanix-virtual-canvas='true'] > .editor-image-block[data-oanix-notebook-full-width='true'] {
+  left: clamp(1.15rem, 3vw, 2rem) !important;
+  right: clamp(1.15rem, 3vw, 2rem) !important;
+  transform: none !important;
 }
 
 html.oanix-notebook-canvas-pwa .editor-surface[data-oanix-virtual-canvas='true'] .editor-image-block__alignment {
@@ -35,10 +43,10 @@ html.oanix-notebook-canvas-pwa .editor-surface[data-oanix-virtual-canvas='true']
 }
 
 @media (max-width: 760px) {
-  /* One clean horizontal card: large preview on the left, compact controls on the right. */
+  /* Mobile stays intentionally boring and stable: image first, controls and description below. */
   html.oanix-notebook-canvas-pwa .editor-surface[data-oanix-virtual-canvas='true'] > .editor-image-block[data-oanix-notebook-full-width='true'] {
-    display: grid !important;
-    grid-template-columns: minmax(0, 1.75fr) minmax(7.6rem, .9fr) !important;
+    display: flex !important;
+    flex-direction: column !important;
     align-items: stretch !important;
     overflow: hidden !important;
     border: 1px solid rgba(148, 163, 184, .38) !important;
@@ -54,52 +62,55 @@ html.oanix-notebook-canvas-pwa .editor-surface[data-oanix-virtual-canvas='true']
     outline: none !important;
   }
 
-  html.oanix-notebook-canvas-pwa .editor-image-block__resize {
+  html.oanix-notebook-canvas-pwa .editor-image-block__resize,
+  html.oanix-notebook-canvas-pwa .editor-image-block__alignment {
     display: none !important;
   }
 
   html.oanix-notebook-canvas-pwa .editor-image-block__preview {
-    grid-column: 1 !important;
-    grid-row: 1 !important;
+    display: block !important;
     width: 100% !important;
     min-width: 0 !important;
-    min-height: 14rem !important;
-    height: 100% !important;
-    max-height: none !important;
-    border-radius: 15px 0 0 15px !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: 24rem !important;
+    overflow: hidden !important;
+    border-radius: 15px 15px 0 0 !important;
     background: #eef2f6 !important;
   }
 
   html.oanix-notebook-canvas-pwa .editor-image-block__preview img {
+    display: block !important;
     width: 100% !important;
-    height: 100% !important;
-    min-height: 14rem !important;
-    max-height: none !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: 24rem !important;
     object-fit: contain !important;
     background: #eef2f6 !important;
   }
 
   html.oanix-notebook-canvas-pwa .editor-image-block__footer {
-    grid-column: 2 !important;
-    grid-row: 1 !important;
     display: flex !important;
     flex-direction: column !important;
     justify-content: flex-start !important;
     gap: .65rem !important;
+    width: 100% !important;
     min-width: 0 !important;
     padding: .7rem !important;
+    box-sizing: border-box !important;
     overflow: hidden !important;
-    border-top: 0 !important;
-    border-left: 1px solid rgba(148, 163, 184, .28) !important;
-    border-radius: 0 15px 15px 0 !important;
+    border-top: 1px solid rgba(148, 163, 184, .28) !important;
+    border-left: 0 !important;
+    border-radius: 0 0 15px 15px !important;
     background: rgba(255, 255, 255, .98) !important;
   }
 
   html.oanix-notebook-canvas-pwa .editor-image-block__actions {
     display: grid !important;
-    grid-template-columns: minmax(0, auto) minmax(0, 1fr) !important;
+    grid-template-columns: minmax(2.3rem, auto) minmax(0, 1fr) !important;
     align-items: stretch !important;
     gap: .4rem !important;
+    width: 100% !important;
     min-width: 0 !important;
   }
 
@@ -138,6 +149,7 @@ html.oanix-notebook-canvas-pwa .editor-surface[data-oanix-virtual-canvas='true']
     display: grid !important;
     grid-template-columns: minmax(0, 1fr) !important;
     gap: .5rem !important;
+    width: 100% !important;
     min-width: 0 !important;
   }
 
@@ -156,11 +168,13 @@ html.oanix-notebook-canvas-pwa .editor-surface[data-oanix-virtual-canvas='true']
   }
 
   html.oanix-notebook-canvas-pwa .editor-image-block__alt {
+    display: block !important;
     width: 100% !important;
     min-width: 0 !important;
     height: auto !important;
-    min-height: 2.35rem !important;
-    padding: .5rem .55rem !important;
+    min-height: 2.65rem !important;
+    margin: 0 !important;
+    padding: .55rem .65rem !important;
     box-sizing: border-box !important;
   }
 
