@@ -77,8 +77,21 @@ function imageAllowsSideFlow(image: HTMLElement): boolean {
 }
 
 function paragraphRows(paragraph: HTMLParagraphElement, rowPx: number): number {
-  const padding = Number.parseFloat(paragraph.style.paddingTop || '0') || 0
-  return Math.max(1, Math.ceil(Math.max(rowPx, paragraph.scrollHeight - padding) / rowPx))
+  // A floated image can make the paragraph's layout box much taller than its actual text.
+  // Counting scrollHeight therefore made one short line such as "Rios" occupy many logical
+  // rows. Measure rendered text-line rects instead, deduplicating inline fragments that share
+  // the same baseline. Empty paragraphs still consume exactly one logical row.
+  const range = document.createRange()
+  range.selectNodeContents(paragraph)
+  const rects = Array.from(range.getClientRects()).filter((rect) => rect.height > 0)
+  const tops: number[] = []
+
+  for (const rect of rects) {
+    const top = rect.top
+    if (!tops.some((value) => Math.abs(value - top) < Math.max(2, rowPx * 0.2))) tops.push(top)
+  }
+
+  return Math.max(1, tops.length)
 }
 
 function imageRows(image: HTMLElement, rowPx: number): number {

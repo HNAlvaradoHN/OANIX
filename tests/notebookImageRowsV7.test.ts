@@ -20,6 +20,14 @@ test('compact side images do not consume full notebook rows', () => {
   assert.match(runtime, /if \(!imageAllowsSideFlow\(block\)\)/)
 })
 
+test('text beside a floated image occupies only its rendered text lines', () => {
+  assert.match(runtime, /function paragraphRows/)
+  assert.match(runtime, /document\.createRange\(\)/)
+  assert.match(runtime, /range\.selectNodeContents\(paragraph\)/)
+  assert.match(runtime, /range\.getClientRects\(\)/)
+  assert.doesNotMatch(runtime, /paragraph\.scrollHeight - padding/)
+})
+
 test('center or large images block row insertion while side-flow images keep free rows writable', () => {
   assert.match(runtime, /blockingImageOccupiesRow/)
   assert.match(runtime, /if \(blockingImageOccupiesRow\(editor, targetRow, rowPx\)\) return null/)

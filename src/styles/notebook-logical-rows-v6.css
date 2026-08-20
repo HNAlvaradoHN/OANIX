@@ -8,19 +8,24 @@ html.oanix-notebook-canvas-pwa .editor-surface > p[data-oanix-logical-row][data-
   box-sizing: content-box;
 }
 
-/* Chrome/Android already resizes the visual viewport for the keyboard. Adding the measured
- * keyboard inset a second time lifted the editor dock into the middle of the note while scrolling. */
+/* Keep mobile editing controls on a stable viewport edge. Chrome/Android changes the visual
+ * viewport while the keyboard is open, so bottom anchoring could disappear below the keyboard
+ * or float over the note after a scroll. The dock now stays at the top of the visible viewport. */
 @media (max-width: 760px) {
   .mobile-editor-dock {
     position: fixed !important;
+    z-index: 1330 !important;
+    top: calc(.7rem + env(safe-area-inset-top)) !important;
     right: max(.75rem, env(safe-area-inset-right)) !important;
-    bottom: max(.7rem, env(safe-area-inset-bottom)) !important;
+    bottom: auto !important;
     left: auto !important;
     transform: none !important;
   }
 
   .editor-command-panel {
-    bottom: calc(4.45rem + env(safe-area-inset-bottom)) !important;
+    top: calc(4.55rem + env(safe-area-inset-top)) !important;
+    bottom: auto !important;
+    max-height: min(62dvh, calc(100dvh - 5.5rem)) !important;
   }
 
   html.oanix-notebook-canvas-pwa .editor-surface:focus {
