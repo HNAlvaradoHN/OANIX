@@ -42,3 +42,12 @@ test('image height changes continuously update the reserved rows', () => {
   assert.match(runtime, /shiftRowsAtOrAfter\(rows, row \+ previous\.span, delta, id\)/)
   assert.doesNotMatch(runtime, /attributeFilter: \['data-image-alignment', 'data-image-compact', 'style'\]/)
 })
+
+test('a final document-order guard prevents later blocks from overlapping images', () => {
+  assert.match(runtime, /function repairBlockOrderOverlaps/)
+  assert.match(runtime, /let nextAvailableRow = 0/)
+  assert.match(runtime, /const row = Math\.max\(savedRow, nextAvailableRow\)/)
+  assert.match(runtime, /nextAvailableRow = row \+ blockRows\(block, rowPx\)/)
+  assert.match(runtime, /const overlapsRepaired = repairBlockOrderOverlaps\(editor, rows\)/)
+  assert.match(runtime, /assigned \|\| imagesChanged \|\| overlapsRepaired/)
+})
