@@ -69,7 +69,7 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />
     <ThemeMenu />
-    {!isCapacitorBuild && <PwaImagePreviewRuntime />}
+    <PwaImagePreviewRuntime />
     <NoteMenuScrollDismiss />
     <NoteMenuViewportFit />
     <PrivacyStatusHelp />

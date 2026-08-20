@@ -6,10 +6,10 @@ const main = readFileSync('src/main.tsx', 'utf8')
 const runtime = readFileSync('src/features/images/PwaImagePreviewRuntime.tsx', 'utf8')
 const css = readFileSync('src/features/images/pwa-image-preview.css', 'utf8')
 
-test('the fixed image card is mounted only in the PWA and leaves the shared editor untouched', () => {
-  assert.match(main, /PwaImagePreviewRuntime/)
-  assert.match(main, /!isCapacitorBuild && <PwaImagePreviewRuntime \/>/)
-  assert.match(runtime, /import\.meta\.env\.MODE === 'capacitor'/)
+test('the approved fixed image card is mounted in both PWA and Capacitor without changing the shared editor', () => {
+  assert.match(main, /<PwaImagePreviewRuntime \/>/)
+  assert.doesNotMatch(main, /!isCapacitorBuild && <PwaImagePreviewRuntime \/>/)
+  assert.doesNotMatch(runtime, /import\.meta\.env\.MODE === 'capacitor'/)
   assert.match(runtime, /oanix-pwa-image-preview-v1/)
 })
 
