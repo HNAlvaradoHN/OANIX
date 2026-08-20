@@ -27,26 +27,31 @@ html.oanix-notebook-canvas-pwa .editor-surface[data-oanix-virtual-canvas='true']
   clear: none !important;
 }
 
-/* Keep mobile editing controls on a stable viewport edge. The note itself can now be thousands
- * of virtual rows tall while the dock remains independent from document and keyboard scroll. */
+/* Keep the mobile editor controls below the sticky note header instead of inside/behind it.
+ * They remain viewport-fixed and fully opaque while the long virtual sheet scrolls below. */
 @media (max-width: 760px) {
   .mobile-editor-dock {
     position: fixed !important;
-    z-index: 1330 !important;
-    top: calc(.7rem + env(safe-area-inset-top)) !important;
+    z-index: 1600 !important;
+    top: calc(8.25rem + env(safe-area-inset-top)) !important;
     right: max(.75rem, env(safe-area-inset-right)) !important;
     bottom: auto !important;
     left: auto !important;
     transform: none !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
   }
 
   .editor-command-panel {
     position: fixed !important;
-    z-index: 1325 !important;
-    top: calc(4.55rem + env(safe-area-inset-top)) !important;
+    z-index: 1595 !important;
+    top: calc(12.1rem + env(safe-area-inset-top)) !important;
     right: max(.75rem, env(safe-area-inset-right)) !important;
     bottom: auto !important;
-    max-height: min(62dvh, calc(100dvh - 5.5rem)) !important;
+    max-height: min(58dvh, calc(100dvh - 13rem)) !important;
+    opacity: 1 !important;
+    visibility: visible !important;
   }
 
   html.oanix-notebook-canvas-pwa .editor-surface[data-oanix-virtual-canvas='true'] {
