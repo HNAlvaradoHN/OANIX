@@ -7,9 +7,9 @@ const runtime = readFileSync('src/features/editor/NotebookFreeRowsRuntime.tsx', 
 const simpleRuntime = readFileSync('src/features/editor/NotebookSimpleImageRuntime.tsx', 'utf8')
 const css = readFileSync('src/styles/notebook-logical-rows-v6.css', 'utf8')
 
-test('free-row runtime stays PWA-only and uses v9 logical row metadata', () => {
-  assert.match(main, /NotebookFreeRowsRuntime/)
-  assert.match(main, /notebook-logical-rows-v6\.css/)
+test('free-row runtime stays dormant while its implementation remains available for later experiments', () => {
+  assert.doesNotMatch(main, /NotebookFreeRowsRuntime/)
+  assert.doesNotMatch(main, /notebook-logical-rows-v6\.css/)
   assert.match(runtime, /import\.meta\.env\.MODE === 'capacitor'/)
   assert.match(runtime, /oanix\.notebook\.rows\.v9/)
   assert.match(runtime, /oanixLogicalRow/)

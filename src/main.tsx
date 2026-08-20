@@ -4,9 +4,6 @@ import { registerSW } from 'virtual:pwa-register'
 import { App } from './app/App'
 import { ThemeMenu } from './features/personalization/ThemeMenu'
 import { applyOanixTheme, readSavedOanixTheme } from './features/personalization/themeCatalog'
-import { NotebookCanvasRuntime } from './features/editor/NotebookCanvasRuntime'
-import { NotebookFreeRowsRuntime } from './features/editor/NotebookFreeRowsRuntime'
-import { NotebookSimpleImageRuntime } from './features/editor/NotebookSimpleImageRuntime'
 import { NoteMenuScrollDismiss } from './features/notes/NoteMenuScrollDismiss'
 import { NoteMenuViewportFit } from './features/notes/NoteMenuViewportFit'
 import { PrivacyStatusHelp } from './features/privacy/PrivacyStatusHelp'
@@ -22,8 +19,6 @@ import './styles/classic-day-hard-fix.css'
 import './styles/privacy-status-polish.css'
 import './styles/note-menu-viewport-fit.css'
 import './styles/web-brand-logo.css'
-import './styles/notebook-canvas.css'
-import './styles/notebook-logical-rows-v6.css'
 
 type OanixUpdateWindow = Window & {
   __oanixApplyUpdate?: () => Promise<void>
@@ -72,9 +67,6 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />
     <ThemeMenu />
-    {!isCapacitorBuild && <NotebookSimpleImageRuntime />}
-    {!isCapacitorBuild && <NotebookFreeRowsRuntime />}
-    {!isCapacitorBuild && <NotebookCanvasRuntime />}
     <NoteMenuScrollDismiss />
     <NoteMenuViewportFit />
     <PrivacyStatusHelp />

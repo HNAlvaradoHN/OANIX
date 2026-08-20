@@ -6,8 +6,9 @@ const main = readFileSync('src/main.tsx', 'utf8')
 const runtime = readFileSync('src/features/editor/NotebookCanvasRuntime.tsx', 'utf8')
 const css = readFileSync('src/styles/notebook-canvas.css', 'utf8')
 
-test('notebook canvas preview is PWA-only until Android is approved', () => {
-  assert.match(main, /!isCapacitorBuild && <NotebookCanvasRuntime \/>/)
+test('experimental notebook canvas is no longer mounted in the PWA', () => {
+  assert.doesNotMatch(main, /NotebookCanvasRuntime/)
+  assert.doesNotMatch(main, /notebook-canvas\.css/)
   assert.doesNotMatch(main, /NotebookPaperPreference/)
   assert.match(runtime, /import\.meta\.env\.MODE === 'capacitor'/)
 })
