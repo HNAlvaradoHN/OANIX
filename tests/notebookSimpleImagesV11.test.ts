@@ -34,26 +34,27 @@ test('image normalization cannot observe and rewrite the same attributes forever
   assert.doesNotMatch(runtime, /attributeFilter/)
 })
 
-test('fixed image card uses a square contained photo without stretching source aspect ratio', () => {
-  assert.match(css, /data-oanix-notebook-full-width='true'/)
-  assert.match(css, /left: clamp\(1\.15rem, 3vw, 2rem\) !important/)
-  assert.match(css, /right: clamp\(1\.15rem, 3vw, 2rem\) !important/)
-  assert.match(css, /width: min\(100%, 20rem\) !important/)
+test('fixed image card is horizontally centered and keeps a square contained preview', () => {
+  assert.match(css, /left: 50% !important/)
+  assert.match(css, /right: auto !important/)
+  assert.match(css, /transform: translateX\(-50%\) !important/)
+  assert.match(css, /width: min\(calc\(100% - 1\.5rem\), 34rem\) !important/)
   assert.match(css, /width: min\(100%, 17rem\) !important/)
   assert.match(css, /aspect-ratio: 1 \/ 1 !important/)
   assert.match(css, /object-fit: contain !important/)
   assert.match(css, /object-position: center !important/)
 })
 
-test('description stays below the square photo and image actions stay in a side column', () => {
-  assert.match(runtime, /main\.append\(details\)/)
-  assert.match(runtime, /layout\.append\(actions\)/)
+test('preview and actions share the top row while description spans the complete card below', () => {
+  assert.match(runtime, /main\.append\(actions\)/)
+  assert.match(runtime, /layout\.append\(details\)/)
   assert.match(css, /oanix-notebook-image-layout/)
-  assert.match(css, /grid-template-columns: minmax\(0, 1fr\) minmax\(7\.75rem, 9\.5rem\) !important/)
-  assert.match(css, /oanix-notebook-image-main/)
   assert.match(css, /flex-direction: column !important/)
+  assert.match(css, /oanix-notebook-image-main/)
+  assert.match(css, /grid-template-columns: minmax\(0, 1fr\) minmax\(7\.5rem, 9rem\) !important/)
   assert.match(css, /editor-image-block__details/)
-  assert.match(css, /editor-image-block__actions/)
+  assert.match(css, /editor-image-block__alt/)
+  assert.match(css, /max-width: 100% !important/)
   assert.doesNotMatch(css, /display: contents !important/)
 })
 
