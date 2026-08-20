@@ -57,7 +57,7 @@ function isDailyEntry(block: Element): boolean {
   return block instanceof HTMLElement && block.dataset.dailyEntryBlock === 'true'
 }
 
-function isImageBlock(block: Element): block is HTMLElement {
+function isImageBlock(block: Element): boolean {
   return block instanceof HTMLElement && block.dataset.imageBlock === 'true'
 }
 
@@ -181,7 +181,7 @@ function syncImageReservations(
   states: Map<string, ImageState>,
 ): boolean {
   const rowPx = rowHeight(editor)
-  const images = directCanvasBlocks(editor).filter(isImageBlock)
+  const images = directCanvasBlocks(editor).filter((block) => isImageBlock(block))
   const present = new Set(images.map((image) => blockId(image)))
   let changed = false
 
@@ -228,7 +228,7 @@ function sideImageForRow(editor: HTMLElement, row: number, rows: RowMap): HTMLEl
     if (!isImageBlock(block) || !imageAllowsSideFlow(block)) return false
     const start = rows[blockId(block)] ?? 0
     return row >= start && row < start + imageRows(block, rowPx)
-  }) as HTMLElement | undefined ?? null
+  }) ?? null
 }
 
 function positionBlock(editor: HTMLElement, block: HTMLElement, row: number, rows: RowMap) {
