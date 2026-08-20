@@ -1,0 +1,227 @@
+.oanix-folder-grid {
+  position: absolute;
+  z-index: 44;
+  top: var(--oanix-folder-grid-top, var(--oanix-header-height));
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  gap: .85rem;
+  overflow: auto;
+  padding: .9rem .72rem max(1rem, env(safe-area-inset-bottom));
+  background:
+    radial-gradient(circle at 12% 0%, color-mix(in srgb, var(--theme-primary, #4f70db) 10%, transparent), transparent 34%),
+    var(--oanix-panel, #fff);
+  color: var(--oanix-text, #172033);
+  overscroll-behavior: contain;
+}
+
+.oanix-folder-grid__header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: .75rem;
+  padding: .1rem .18rem .15rem;
+}
+
+.oanix-folder-grid__header > div {
+  min-width: 0;
+}
+
+.oanix-folder-grid__header span,
+.oanix-folder-grid__header strong,
+.oanix-folder-grid__header small {
+  display: block;
+}
+
+.oanix-folder-grid__header span {
+  color: var(--theme-primary, #4f70db);
+  font-size: .6rem;
+  font-weight: 900;
+  letter-spacing: .09em;
+}
+
+.oanix-folder-grid__header strong {
+  margin-top: .12rem;
+  font-size: 1.05rem;
+}
+
+.oanix-folder-grid__header small {
+  flex: 0 0 auto;
+  color: var(--oanix-muted, #64748b);
+  font-size: .67rem;
+}
+
+.oanix-folder-grid__cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(3.45rem, 1fr));
+  gap: .55rem;
+  align-content: start;
+}
+
+.oanix-folder-card {
+  position: relative;
+  min-width: 0;
+  min-height: 5.45rem;
+  display: grid;
+  grid-template-rows: auto minmax(1.8rem, auto) auto;
+  place-items: center;
+  align-content: center;
+  gap: .22rem;
+  padding: .55rem .28rem .42rem;
+  border: 1px solid color-mix(in srgb, var(--oanix-border, #d8e0ea) 84%, transparent);
+  border-radius: 1rem;
+  background:
+    linear-gradient(165deg, color-mix(in srgb, var(--oanix-panel, #fff) 94%, var(--theme-primary, #4f70db)), var(--oanix-panel-2, #f8fafc));
+  color: var(--oanix-text, #172033);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, .055);
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+  transition: transform .14s ease, border-color .14s ease, box-shadow .14s ease, background .14s ease;
+}
+
+.oanix-folder-card:hover,
+.oanix-folder-card:focus-visible {
+  outline: none;
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--theme-primary, #4f70db) 48%, var(--oanix-border, #d8e0ea));
+  box-shadow: 0 8px 20px rgba(15, 23, 42, .1);
+}
+
+.oanix-folder-card__icon {
+  display: grid;
+  width: 2.05rem;
+  height: 2.05rem;
+  place-items: center;
+  border-radius: .7rem;
+  background: color-mix(in srgb, var(--theme-primary, #4f70db) 9%, var(--oanix-panel-3, #e9eef5));
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+.oanix-folder-card strong {
+  width: 100%;
+  min-width: 0;
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--oanix-text, #172033);
+  font-size: .64rem;
+  font-weight: 850;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.oanix-folder-card small {
+  color: var(--oanix-muted, #64748b);
+  font-size: .58rem;
+  font-weight: 750;
+}
+
+.oanix-folder-card--all {
+  border-color: color-mix(in srgb, var(--theme-primary, #4f70db) 30%, var(--oanix-border, #d8e0ea));
+}
+
+.oanix-folder-card--all .oanix-folder-card__icon {
+  color: var(--theme-primary, #4f70db);
+  font-weight: 900;
+}
+
+.oanix-folder-card--add {
+  border-style: dashed;
+  background: color-mix(in srgb, var(--theme-primary, #4f70db) 5%, var(--oanix-panel, #fff));
+}
+
+.oanix-folder-card--add .oanix-folder-card__icon {
+  color: var(--theme-primary, #4f70db);
+  font-size: 1.45rem;
+  font-weight: 750;
+}
+
+.oanix-folder-grid__empty,
+.oanix-folder-grid__hint,
+.oanix-folder-grid__error {
+  margin: 0;
+  padding: .75rem;
+  border-radius: .8rem;
+  font-size: .72rem;
+  line-height: 1.4;
+}
+
+.oanix-folder-grid__empty,
+.oanix-folder-grid__hint {
+  color: var(--oanix-muted, #64748b);
+  background: var(--oanix-panel-2, #f8fafc);
+}
+
+.oanix-folder-grid__error {
+  color: var(--theme-danger, #b42318);
+  background: color-mix(in srgb, var(--theme-danger, #b42318) 8%, transparent);
+}
+
+.notes-tabs-shell[data-oanix-folder-compact='true'] {
+  display: block;
+  padding: .5rem .7rem;
+}
+
+.notes-tabs-shell[data-oanix-folder-compact='true'] > :not(.oanix-folder-breadcrumb) {
+  display: none !important;
+}
+
+.oanix-folder-breadcrumb {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+}
+
+.oanix-folder-breadcrumb button {
+  min-height: 2.25rem;
+  display: inline-flex;
+  align-items: center;
+  gap: .2rem;
+  flex: 0 0 auto;
+  padding: 0 .55rem;
+  border: 1px solid var(--oanix-border, #d8e0ea);
+  border-radius: .72rem;
+  background: var(--oanix-panel, #fff);
+  color: var(--theme-primary, #4f70db);
+  font: inherit;
+  font-size: .72rem;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.oanix-folder-breadcrumb strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--oanix-text, #172033);
+  font-size: .76rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .oanix-folder-card {
+    transition: none;
+  }
+
+  .oanix-folder-card:hover,
+  .oanix-folder-card:focus-visible {
+    transform: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .oanix-folder-grid {
+    padding-inline: .65rem;
+  }
+
+  .oanix-folder-grid__cards {
+    gap: .5rem;
+  }
+}
