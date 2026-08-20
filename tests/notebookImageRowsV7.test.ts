@@ -31,15 +31,26 @@ test('ordinary text keeps line-based measurement while special cards stay atomic
   assert.doesNotMatch(runtime, /sideImageForRow/)
 })
 
-test('new reserved blocks start after the selected line and push later rows below the full box', () => {
+test('new reserved blocks use the selected empty row itself and push later rows only by the extra height', () => {
   assert.match(runtime, /RESERVED_INSERT_SELECTOR/)
   assert.match(runtime, /selectionDirectBlock/)
   assert.match(runtime, /placePendingReservedAfterAnchor/)
   assert.match(runtime, /pendingAnchorIds/)
-  assert.match(runtime, /if \(isReservedBlock\(block\)\)/)
-  assert.match(runtime, /const span = reservedBlockRows\(block, rowPx\)/)
-  assert.match(runtime, /shiftRowsAtOrAfter\(rows, proposed, span, id\)/)
-  assert.match(runtime, /rows\[id\] = proposed/)
+  assert.match(runtime, /function isEmptyInsertionParagraph/)
+  assert.match(runtime, /if \(isEmptyInsertionParagraph\(previous\)\)/)
+  assert.match(runtime, /insertionRow = previousRow/)
+  assert.match(runtime, /replacedRows = blockRows\(previous, rowPx\)/)
+  assert.match(runtime, /previous\.remove\(\)/)
+  assert.match(runtime, /const extraRows = Math\.max\(0, span - replacedRows\)/)
+  assert.match(runtime, /shiftRowsAtOrAfter\(rows, insertionRow \+ replacedRows, extraRows, id\)/)
+  assert.match(runtime, /rows\[id\] = insertionRow/)
+})
+
+test('consuming an empty insertion row is persisted back to the note model', () => {
+  assert.match(runtime, /oanixConsumedInsertionParagraph/)
+  assert.match(runtime, /delete editor\.dataset\.oanixConsumedInsertionParagraph/)
+  assert.match(runtime, /queueMicrotask/)
+  assert.match(runtime, /editor\.dispatchEvent\(new Event\('input', \{ bubbles: true \}\)\)/)
 })
 
 test('the physical vertical band of a visible reserved block rejects free text immediately', () => {
