@@ -30,9 +30,13 @@ test('tapping an empty logical row inserts there without moving unrelated rows',
   assert.match(runtime, /blockingImageOccupiesRow/)
 })
 
-test('Enter remains the explicit operation allowed to move later logical rows', () => {
+test('Enter is owned by the virtual canvas and creates exactly the next logical row', () => {
   assert.match(runtime, /event\.key !== 'Enter'/)
+  assert.match(runtime, /event\.preventDefault\(\)/)
+  assert.match(runtime, /const nextRow = row \+ 1/)
   assert.match(runtime, /shiftRowsAfter\(rows, row, 1\)/)
+  assert.match(runtime, /rows\[blockId\(inserted\)\] = nextRow/)
+  assert.match(runtime, /placeCaret\(inserted\)/)
 })
 
 test('compact side images constrain only the text rows they overlap', () => {
@@ -48,9 +52,11 @@ test('manual visual viewport scrolling is not recentered', () => {
   assert.match(runtime, /visualViewport\?\.addEventListener\('scroll'/)
 })
 
-test('mobile dock stays pinned to the top of the visible viewport', () => {
+test('mobile dock stays visible below the sticky header', () => {
   assert.match(css, /\.mobile-editor-dock/)
-  assert.match(css, /top: calc\(\.7rem \+ env\(safe-area-inset-top\)\) !important/)
-  assert.match(css, /bottom: auto !important/)
+  assert.match(css, /top: calc\(8\.25rem \+ env\(safe-area-inset-top\)\) !important/)
+  assert.match(css, /z-index: 1600 !important/)
+  assert.match(css, /opacity: 1 !important/)
+  assert.match(css, /visibility: visible !important/)
   assert.match(css, /\.editor-command-panel/)
 })
