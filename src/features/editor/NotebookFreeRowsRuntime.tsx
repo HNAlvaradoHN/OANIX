@@ -135,6 +135,14 @@ function reservedBlockOwnsClientY(editor: HTMLElement, clientY: number): boolean
   })
 }
 
+function isEmptyInsertionParagraph(block: Element | null): block is HTMLParagraphElement {
+  return (
+    block instanceof HTMLParagraphElement &&
+    isCanvasBlock(block) &&
+    (block.textContent ?? '').trim() === ''
+  )
+}
+
 function nextFreeRow(editor: HTMLElement, start: number, rows: RowMap): number {
   let row = Math.max(0, start)
   let guard = 0
@@ -220,12 +228,30 @@ function assignMissingRows(editor: HTMLElement, rows: RowMap): boolean {
 
     if (isReservedBlock(block)) {
       const span = reservedBlockRows(block, rowPx)
-      // A special card starts only after the complete line/block immediately before it. Its full
-      // measured height then pushes every later row down so no text or another card can share it.
-      shiftRowsAtOrAfter(rows, proposed, span, id)
-      rows[id] = proposed
-      block.dataset.oanixLogicalRow = String(proposed)
-      cursor = Math.max(cursor, proposed + span)
+      let insertionRow = proposed
+      let replacedRows = 0
+
+      // If the user tapped an empty ruled row and immediately inserts a special block, that empty
+      // paragraph is only a caret placeholder. The card must begin on that exact row, not one row
+      // later. Replacing the placeholder means only the card's additional rows push later content.
+      if (isEmptyInsertionParagraph(previous)) {
+        const previousId = blockId(previous)
+        const previousRow = rows[previousId] ?? parseRow(previous)
+        if (Number.isSafeInteger(previousRow) && previousRow >= 0) {
+          insertionRow = previousRow
+          replacedRows = blockRows(previous, rowPx)
+          delete rows[previousId]
+          previous.remove()
+          editor.dataset.oanixConsumedInsertionParagraph = 'true'
+          changed = true
+        }
+      }
+
+      const extraRows = Math.max(0, span - replacedRows)
+      shiftRowsAtOrAfter(rows, insertionRow + replacedRows, extraRows, id)
+      rows[id] = insertionRow
+      block.dataset.oanixLogicalRow = String(insertionRow)
+      cursor = Math.max(cursor, insertionRow + span)
       changed = true
       continue
     }
@@ -443,6 +469,13 @@ export function NotebookFreeRowsRuntime() {
           refreshReservedStateRows(rows, reservedStates)
           applyVirtualCanvas(editor, rows)
           if (pendingPlaced || assigned || reservedChanged || overlapsRepaired) writeRows(rows)
+
+          if (editor.dataset.oanixConsumedInsertionParagraph === 'true') {
+            delete editor.dataset.oanixConsumedInsertionParagraph
+            queueMicrotask(() => {
+              if (editor.isConnected) editor.dispatchEvent(new Event('input', { bubbles: true }))
+            })
+          }
 
           directCanvasBlocks(editor)
             .filter(isReservedBlock)
