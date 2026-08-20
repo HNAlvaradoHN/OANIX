@@ -22,6 +22,7 @@ import './styles/privacy-status-polish.css'
 import './styles/note-menu-viewport-fit.css'
 import './styles/web-brand-logo.css'
 import './styles/notebook-canvas.css'
+import './styles/notebook-logical-rows-v6.css'
 
 type OanixUpdateWindow = Window & {
   __oanixApplyUpdate?: () => Promise<void>
