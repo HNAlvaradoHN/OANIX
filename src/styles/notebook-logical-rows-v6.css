@@ -15,8 +15,8 @@ html.oanix-notebook-canvas-pwa .editor-surface[data-oanix-virtual-canvas='true']
   line-height: var(--oanix-notebook-row, 32px) !important;
 }
 
-/* PWA notebook images use a deliberately simple Word-like block model: the image owns the
- * full writing width and text can exist only above or below it. This avoids lateral overlap. */
+/* PWA notebook images use one stable block model: the image owns the writing width and text
+ * can exist only above or below it. This avoids the overlap seen with lateral text flow. */
 html.oanix-notebook-canvas-pwa .editor-surface[data-oanix-virtual-canvas='true'] > .editor-image-block[data-oanix-virtual-block='true'],
 html.oanix-notebook-canvas-pwa .editor-surface[data-oanix-virtual-canvas='true'] > .editor-image-block[data-oanix-notebook-full-width='true'] {
   float: none !important;
@@ -34,15 +34,15 @@ html.oanix-notebook-canvas-pwa .editor-surface[data-oanix-virtual-canvas='true']
   clear: none !important;
 }
 
-/* Restore the compact editor dock above the software keyboard. The runtime updates
- * --oanix-keyboard-inset from visualViewport, so scrolling the long note does not move it. */
+/* Fixed elements already follow the visible mobile viewport when the software keyboard opens.
+ * Do not add a second keyboard-height offset: that was what made the dock float and move. */
 @media (max-width: 760px) {
   .mobile-editor-dock {
     position: fixed !important;
     z-index: 1600 !important;
     top: auto !important;
     right: max(.75rem, env(safe-area-inset-right)) !important;
-    bottom: calc(var(--oanix-keyboard-inset, 0px) + .7rem) !important;
+    bottom: max(.7rem, env(safe-area-inset-bottom)) !important;
     left: auto !important;
     transform: none !important;
     opacity: 1 !important;
@@ -55,8 +55,8 @@ html.oanix-notebook-canvas-pwa .editor-surface[data-oanix-virtual-canvas='true']
     z-index: 1595 !important;
     top: auto !important;
     right: max(.75rem, env(safe-area-inset-right)) !important;
-    bottom: calc(var(--oanix-keyboard-inset, 0px) + 5.2rem) !important;
-    max-height: min(58dvh, calc(100dvh - var(--oanix-keyboard-inset, 0px) - 6.2rem)) !important;
+    bottom: calc(max(.7rem, env(safe-area-inset-bottom)) + 4.5rem) !important;
+    max-height: min(58dvh, calc(100dvh - 6.2rem)) !important;
     opacity: 1 !important;
     visibility: visible !important;
   }
