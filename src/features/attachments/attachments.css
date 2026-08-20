@@ -77,6 +77,13 @@
   background: var(--oanix-panel, #fff);
 }
 
+.note-attachment-card[data-oanix-new='true'] {
+  border-color: color-mix(in srgb, var(--theme-primary, #4f70db) 62%, var(--oanix-border, #d8e0ea));
+  outline: 2px solid color-mix(in srgb, var(--theme-primary, #4f70db) 24%, transparent);
+  outline-offset: 2px;
+  animation: oanix-attachment-added 900ms ease-out 1;
+}
+
 .note-attachment-card__icon {
   display: grid;
   width: 2.45rem;
@@ -147,6 +154,10 @@
   margin: 0;
 }
 
+.note-attachments__status--added {
+  font-weight: 800;
+}
+
 .note-attachments__error {
   padding: .62rem .7rem;
   border: 1px solid color-mix(in srgb, var(--theme-danger, #b42318) 42%, transparent);
@@ -158,6 +169,27 @@
 
 .note-attachments__scope {
   padding-top: .1rem;
+}
+
+@keyframes oanix-attachment-added {
+  0% {
+    transform: translateY(5px);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--theme-primary, #4f70db) 36%, transparent);
+  }
+  45% {
+    transform: translateY(0);
+    box-shadow: 0 0 0 6px color-mix(in srgb, var(--theme-primary, #4f70db) 12%, transparent);
+  }
+  100% {
+    transform: translateY(0);
+    box-shadow: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .note-attachment-card[data-oanix-new='true'] {
+    animation: none;
+  }
 }
 
 @media (max-width: 760px) {
