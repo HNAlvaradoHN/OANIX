@@ -56,7 +56,7 @@ function isDailyEntry(block: Element): boolean {
   return block instanceof HTMLElement && block.dataset.dailyEntryBlock === 'true'
 }
 
-function isReservedBlock(block: Element): block is HTMLElement {
+function isReservedBlock(block: Element): boolean {
   return (
     block instanceof HTMLElement &&
     (block.dataset.imageBlock === 'true' ||
