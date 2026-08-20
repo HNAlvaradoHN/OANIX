@@ -5,6 +5,7 @@ import { App } from './app/App'
 import { ThemeMenu } from './features/personalization/ThemeMenu'
 import { applyOanixTheme, readSavedOanixTheme } from './features/personalization/themeCatalog'
 import { PwaImagePreviewRuntime } from './features/images/PwaImagePreviewRuntime'
+import { NoteAttachmentsRuntime } from './features/attachments/NoteAttachmentsRuntime'
 import { NoteMenuScrollDismiss } from './features/notes/NoteMenuScrollDismiss'
 import { NoteMenuViewportFit } from './features/notes/NoteMenuViewportFit'
 import { PrivacyStatusHelp } from './features/privacy/PrivacyStatusHelp'
@@ -70,6 +71,7 @@ createRoot(document.getElementById('root')!).render(
     <App />
     <ThemeMenu />
     <PwaImagePreviewRuntime />
+    <NoteAttachmentsRuntime />
     <NoteMenuScrollDismiss />
     <NoteMenuViewportFit />
     <PrivacyStatusHelp />
