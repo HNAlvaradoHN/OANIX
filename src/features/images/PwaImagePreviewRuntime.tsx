@@ -34,8 +34,6 @@ function clampZoom(value: number): number {
 
 export function PwaImagePreviewRuntime() {
   useEffect(() => {
-    if (import.meta.env.MODE === 'capacitor') return
-
     document.documentElement.classList.add('oanix-pwa-image-preview-v1')
 
     const appRoot = document.getElementById('root')
