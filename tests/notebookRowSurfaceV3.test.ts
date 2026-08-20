@@ -50,8 +50,9 @@ test('ruled mode has a visible repeated 32px writing rhythm aligned with text', 
 
 test('focused notes expose a long writable tail without persisting fake blank lines', () => {
   assert.match(css, /\.editor-surface:focus/)
-  assert.match(css, /175dvh/)
-  assert.match(css, /190dvh/)
-  assert.match(css, /scroll-margin-bottom: 55dvh/)
+  assert.match(css, /min-height: max\(72rem, calc\(100dvh \+ 44rem\)\)/)
+  assert.match(css, /min-height: max\(110rem, calc\(100dvh \+ 72rem\)\)/)
+  assert.match(css, /padding-bottom: max\(24rem, 70dvh\)/)
+  assert.match(css, /scroll-margin-bottom: 70dvh/)
   assert.doesNotMatch(runtime, /append\([^)]*fake|fake.*row/i)
 })
