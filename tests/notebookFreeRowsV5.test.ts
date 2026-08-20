@@ -24,11 +24,21 @@ test('the note is a growing virtual canvas rather than padding-owned gaps', () =
   assert.match(css, /data-oanix-virtual-canvas/)
 })
 
-test('tapping inserts only on a genuinely empty row and reserved vertical bands stay unavailable', () => {
+test('background taps no longer create arbitrary rows and only atomic block borders can create a caret row', () => {
+  assert.match(runtime, /function rowTouchesReservedBoundary/)
+  assert.match(runtime, /row === start - 1/)
+  assert.match(runtime, /row === end/)
+  assert.match(runtime, /function reservedBlockOccupiesRow/)
+  assert.match(runtime, /if \(reservedBlockOccupiesRow\(editor, row, rows\)\)/)
+  assert.match(runtime, /if \(!rowTouchesReservedBoundary\(editor, row, rows\)\)/)
+  assert.match(runtime, /event\.preventDefault\(\)/)
+  assert.match(runtime, /event\.stopImmediatePropagation\(\)/)
   assert.match(runtime, /insertParagraphAtRow/)
   assert.match(runtime, /if \(rowOccupied\(editor, targetRow, rows\)\) return null/)
-  assert.match(runtime, /reservedBlockOwnsClientY/)
-  assert.match(runtime, /rows\[blockId\(inserted\)\] = targetRow/)
+})
+
+test('existing paragraph rows retain native caret behavior instead of creating duplicate paragraphs', () => {
+  assert.match(runtime, /if \(rowOccupied\(editor, row, rows\)\) return/)
   assert.match(runtime, /blockedTarget/)
   assert.match(runtime, /data-code-block/)
   assert.match(runtime, /data-checklist-block/)
@@ -44,7 +54,7 @@ test('special insertion remembers the active direct block instead of sharing its
   assert.match(runtime, /reference\.after\(block\)/)
 })
 
-test('Enter is owned by the virtual canvas and creates exactly the next logical row', () => {
+test('Enter is the normal way to create the next logical row', () => {
   assert.match(runtime, /event\.key !== 'Enter'/)
   assert.match(runtime, /event\.preventDefault\(\)/)
   assert.match(runtime, /const nextRow = row \+ 1/)
