@@ -54,13 +54,30 @@ test('special insertion remembers the active direct block instead of sharing its
   assert.match(runtime, /reference\.after\(block\)/)
 })
 
-test('Enter is the normal way to create the next logical row', () => {
+test('the duplicated automatic tail after a final image is normalized to one caret row', () => {
+  assert.match(runtime, /function normalizeTrailingImageCaret/)
+  assert.match(runtime, /trailing\.dataset\.oanixTrailingCaret !== 'true'/)
+  assert.match(runtime, /image\.dataset\.imageBlock !== 'true'/)
+  assert.match(runtime, /delete rows\[blockId\(trailing\)\]/)
+  assert.match(runtime, /trailing\.remove\(\)/)
+  assert.match(runtime, /previous\.dataset\.oanixTrailingCaret = 'true'/)
+  assert.match(runtime, /oanixNormalizedTrailingCaret/)
+  assert.match(runtime, /const trailingNormalized = normalizeTrailingImageCaret\(editor, rows\)/)
+})
+
+test('Enter uses the real paragraph span and reuses an existing next caret row', () => {
   assert.match(runtime, /event\.key !== 'Enter'/)
-  assert.match(runtime, /event\.preventDefault\(\)/)
-  assert.match(runtime, /const nextRow = row \+ 1/)
-  assert.match(runtime, /shiftRowsAfter\(rows, row, 1\)/)
+  assert.match(runtime, /const rowPx = rowHeight\(editor\)/)
+  assert.match(runtime, /const paragraphSpan = blockRows\(paragraph, rowPx\)/)
+  assert.match(runtime, /const nextRow = row \+ paragraphSpan/)
+  assert.match(runtime, /const immediateNext = paragraph\.nextElementSibling/)
+  assert.match(runtime, /if \(isEmptyInsertionParagraph\(immediateNext\)\)/)
+  assert.match(runtime, /if \(immediateNextRow === nextRow\)/)
+  assert.match(runtime, /placeCaret\(immediateNext\)/)
+  assert.match(runtime, /shiftRowsAtOrAfter\(rows, nextRow, 1\)/)
   assert.match(runtime, /rows\[blockId\(inserted\)\] = nextRow/)
-  assert.match(runtime, /placeCaret\(inserted\)/)
+  assert.match(runtime, /paragraph\.after\(inserted\)/)
+  assert.doesNotMatch(runtime, /shiftRowsAfter/)
 })
 
 test('all normal blocks use the sheet width and no lateral text geometry returns', () => {
