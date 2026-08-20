@@ -4,6 +4,7 @@ import test from 'node:test'
 
 const main = readFileSync('src/main.tsx', 'utf8')
 const runtime = readFileSync('src/features/editor/NotebookFreeRowsRuntime.tsx', 'utf8')
+const simpleRuntime = readFileSync('src/features/editor/NotebookSimpleImageRuntime.tsx', 'utf8')
 const css = readFileSync('src/styles/notebook-logical-rows-v6.css', 'utf8')
 
 test('free-row runtime stays PWA-only and uses v9 logical row metadata', () => {
@@ -52,13 +53,14 @@ test('manual visual viewport scrolling is not recentered', () => {
   assert.match(runtime, /visualViewport\?\.addEventListener\('scroll'/)
 })
 
-test('mobile dock stays fixed to the visible viewport', () => {
+test('mobile dock stays pinned to the visible viewport', () => {
   assert.match(css, /\.mobile-editor-dock/)
-  assert.match(css, /top: auto !important/)
-  assert.match(css, /bottom: max\(\.7rem, env\(safe-area-inset-bottom\)\) !important/)
+  assert.match(css, /bottom: auto !important/)
   assert.match(css, /z-index: 1600 !important/)
   assert.match(css, /opacity: 1 !important/)
   assert.match(css, /visibility: visible !important/)
   assert.match(css, /\.editor-command-panel/)
-  assert.doesNotMatch(css, /--oanix-keyboard-inset/)
+  assert.match(simpleRuntime, /dock\.style\.setProperty\('top'/)
+  assert.match(simpleRuntime, /panel\.style\.setProperty\('top'/)
+  assert.match(simpleRuntime, /window\.visualViewport/)
 })
