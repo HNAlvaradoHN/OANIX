@@ -135,6 +135,27 @@ function reservedBlockOwnsClientY(editor: HTMLElement, clientY: number): boolean
   })
 }
 
+function reservedBlockOccupiesRow(editor: HTMLElement, row: number, rows: RowMap): boolean {
+  const rowPx = rowHeight(editor)
+  return directCanvasBlocks(editor).some((block) => {
+    if (!isReservedBlock(block)) return false
+    const start = rows[blockId(block)] ?? parseRow(block)
+    if (!Number.isSafeInteger(start) || start < 0) return false
+    return row >= start && row < start + reservedBlockRows(block, rowPx)
+  })
+}
+
+function rowTouchesReservedBoundary(editor: HTMLElement, row: number, rows: RowMap): boolean {
+  const rowPx = rowHeight(editor)
+  return directCanvasBlocks(editor).some((block) => {
+    if (!isReservedBlock(block)) return false
+    const start = rows[blockId(block)] ?? parseRow(block)
+    if (!Number.isSafeInteger(start) || start < 0) return false
+    const end = start + reservedBlockRows(block, rowPx)
+    return (start > 0 && row === start - 1) || row === end
+  })
+}
+
 function isEmptyInsertionParagraph(block: Element | null): block is HTMLParagraphElement {
   return (
     block instanceof HTMLParagraphElement &&
@@ -231,9 +252,8 @@ function assignMissingRows(editor: HTMLElement, rows: RowMap): boolean {
       let insertionRow = proposed
       let replacedRows = 0
 
-      // If the user tapped an empty ruled row and immediately inserts a special block, that empty
-      // paragraph is only a caret placeholder. The card must begin on that exact row, not one row
-      // later. Replacing the placeholder means only the card's additional rows push later content.
+      // An empty paragraph created by Enter or by the immediate border tap is a caret placeholder.
+      // The special card consumes that exact row and reserves the remaining measured height below it.
       if (isEmptyInsertionParagraph(previous)) {
         const previousId = blockId(previous)
         const previousRow = rows[previousId] ?? parseRow(previous)
@@ -314,10 +334,11 @@ function syncReservedBlockReservations(
     states.set(id, { row, span })
   }
 
-  for (const [id] of Array.from(states.entries())) {
+  for (const [id, state] of Array.from(states.entries())) {
     if (present.has(id)) continue
-    // Removing a special block releases its exact rows. Do not collapse later content upward:
-    // the vacated cells become genuinely free and can be used again by a later tap or insertion.
+    // Sequential-editor mode has no arbitrary free-row cursor. Collapse the exact vacated span so
+    // deleting an atomic card behaves like deleting content in a normal text editor.
+    shiftRowsAtOrAfter(rows, state.row + state.span, -state.span, id)
     delete rows[id]
     states.delete(id)
     changed = true
@@ -511,11 +532,30 @@ export function NotebookFreeRowsRuntime() {
       const editor = target.closest<HTMLElement>('.editor-surface')
       if (!editor || blockedTarget(target, editor)) return
 
-      // Even if ResizeObserver has not yet committed the latest row span, the complete vertical
-      // band of a visible special card is immediately untouchable for free text.
-      if (reservedBlockOwnsClientY(editor, event.clientY)) return
+      // Existing text paragraphs keep normal browser caret behavior. Empty background is no longer a
+      // free-placement canvas: only the row immediately above or below an atomic card may create a
+      // new caret paragraph. This prevents arbitrary row activation from competing with reservations.
+      if (reservedBlockOwnsClientY(editor, event.clientY)) {
+        event.preventDefault()
+        event.stopImmediatePropagation()
+        return
+      }
 
       const row = rowAtPoint(editor, event.clientY)
+      if (reservedBlockOccupiesRow(editor, row, rows)) {
+        event.preventDefault()
+        event.stopImmediatePropagation()
+        return
+      }
+
+      if (rowOccupied(editor, row, rows)) return
+
+      if (!rowTouchesReservedBoundary(editor, row, rows)) {
+        event.preventDefault()
+        event.stopImmediatePropagation()
+        return
+      }
+
       const paragraph = insertParagraphAtRow(editor, row, rows)
       if (!paragraph) return
       event.preventDefault()
