@@ -22,9 +22,11 @@ function ensureNotebookImageLayout(image: HTMLElement) {
     layout.prepend(main)
   }
 
+  // Fixed card structure: square preview and actions share the top row. Metadata and the
+  // description live underneath and use the complete inner width of the reserved card.
   if (preview.parentElement !== main) main.prepend(preview)
-  if (details.parentElement !== main) main.append(details)
-  if (actions.parentElement !== layout) layout.append(actions)
+  if (actions.parentElement !== main) main.append(actions)
+  if (details.parentElement !== layout) layout.append(details)
 
   image.querySelectorAll<HTMLElement>(':scope > .editor-image-block__footer').forEach((footer) => {
     if (footer.childElementCount === 0) footer.remove()
