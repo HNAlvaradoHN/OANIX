@@ -65,6 +65,10 @@ function sameTargets(left: AttachmentTargets, right: AttachmentTargets): boolean
   )
 }
 
+function closeEditorCommandPanel(): void {
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+}
+
 function isPreviewable(item: AttachmentMetadata): boolean {
   const kind = attachmentKind(item)
   return ['pdf', 'image', 'video', 'audio', 'text'].includes(kind)
@@ -207,6 +211,7 @@ export function NoteAttachmentsRuntime() {
     pickerNoteIdRef.current = noteId
     setError('')
     setStatus('')
+    closeEditorCommandPanel()
     inputRef.current?.click()
   }
 
