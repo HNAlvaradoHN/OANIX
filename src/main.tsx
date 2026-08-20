@@ -5,6 +5,7 @@ import { App } from './app/App'
 import { ThemeMenu } from './features/personalization/ThemeMenu'
 import { applyOanixTheme, readSavedOanixTheme } from './features/personalization/themeCatalog'
 import { NotebookCanvasRuntime } from './features/editor/NotebookCanvasRuntime'
+import { NotebookFreeRowsRuntime } from './features/editor/NotebookFreeRowsRuntime'
 import { NoteMenuScrollDismiss } from './features/notes/NoteMenuScrollDismiss'
 import { NoteMenuViewportFit } from './features/notes/NoteMenuViewportFit'
 import { PrivacyStatusHelp } from './features/privacy/PrivacyStatusHelp'
@@ -69,6 +70,7 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />
     <ThemeMenu />
+    {!isCapacitorBuild && <NotebookFreeRowsRuntime />}
     {!isCapacitorBuild && <NotebookCanvasRuntime />}
     <NoteMenuScrollDismiss />
     <NoteMenuViewportFit />
