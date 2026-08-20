@@ -33,14 +33,18 @@ test('image normalization cannot observe and rewrite the same attributes forever
   assert.doesNotMatch(runtime, /attributeFilter/)
 })
 
-test('full-width image stays pinned and preserves portrait or landscape aspect ratio', () => {
+test('full-width card contains portrait and landscape images without stretching them', () => {
   assert.match(css, /data-oanix-notebook-full-width='true'/)
   assert.match(css, /left: clamp\(1\.15rem, 3vw, 2rem\) !important/)
   assert.match(css, /right: clamp\(1\.15rem, 3vw, 2rem\) !important/)
   assert.match(css, /transform: none !important/)
+  assert.match(css, /width: auto !important/)
+  assert.match(css, /max-width: 100% !important/)
   assert.match(css, /height: auto !important/)
-  assert.match(css, /max-height: none !important/)
+  assert.match(css, /max-height: 28rem !important/)
+  assert.match(css, /max-height: 20rem !important/)
   assert.match(css, /object-position: left top !important/)
+  assert.doesNotMatch(css, /max-height: none !important/)
 })
 
 test('description and controls stay below the image without horizontal card columns', () => {
