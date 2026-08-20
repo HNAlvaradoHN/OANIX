@@ -7,7 +7,7 @@ const runtime = readFileSync('src/features/editor/NotebookFreeRowsRuntime.tsx', 
 test('virtual row runtime recognizes every interactive reserved notebook block', () => {
   assert.match(runtime, /oanix\.notebook\.rows\.v9/)
   assert.match(runtime, /function isReservedBlock/)
-  assert.match(runtime, /data.*imageBlock|dataset\.imageBlock/)
+  assert.match(runtime, /dataset\.imageBlock/)
   assert.match(runtime, /dataset\.codeBlock/)
   assert.match(runtime, /dataset\.checklistBlock/)
   assert.match(runtime, /dataset\.contactBlock/)
@@ -31,12 +31,22 @@ test('ordinary text keeps line-based measurement while special cards stay atomic
   assert.doesNotMatch(runtime, /sideImageForRow/)
 })
 
-test('new reserved blocks push all later logical rows below their complete box', () => {
+test('new reserved blocks start after the selected line and push later rows below the full box', () => {
+  assert.match(runtime, /RESERVED_INSERT_SELECTOR/)
+  assert.match(runtime, /selectionDirectBlock/)
+  assert.match(runtime, /placePendingReservedAfterAnchor/)
+  assert.match(runtime, /pendingAnchorIds/)
   assert.match(runtime, /if \(isReservedBlock\(block\)\)/)
   assert.match(runtime, /const span = reservedBlockRows\(block, rowPx\)/)
   assert.match(runtime, /shiftRowsAtOrAfter\(rows, proposed, span, id\)/)
   assert.match(runtime, /rows\[id\] = proposed/)
-  assert.match(runtime, /repairReservedBarrier/)
+})
+
+test('the physical vertical band of a visible reserved block rejects free text immediately', () => {
+  assert.match(runtime, /function reservedBlockOwnsClientY/)
+  assert.match(runtime, /clientY >= rect\.top && clientY < rect\.bottom/)
+  assert.match(runtime, /if \(reservedBlockOwnsClientY\(editor, event\.clientY\)\) return/)
+  assert.match(runtime, /if \(rowOccupied\(editor, targetRow, rows\)\) return null/)
 })
 
 test('height changes of images code checklists and contacts continuously update reservations', () => {
@@ -47,11 +57,17 @@ test('height changes of images code checklists and contacts continuously update 
   assert.match(runtime, /shiftRowsAtOrAfter\(rows, row \+ previous\.span, delta, id\)/)
 })
 
+test('removing a reserved block releases its cells without collapsing later content upward', () => {
+  assert.match(runtime, /Removing a special block releases its exact rows/)
+  assert.match(runtime, /delete rows\[id\]/)
+  assert.doesNotMatch(runtime, /shiftRowsAtOrAfter\(rows, state\.row \+ state\.span, -state\.span, id\)/)
+})
+
 test('a final document-order guard prevents any later block from overlapping a reserved block', () => {
   assert.match(runtime, /function repairBlockOrderOverlaps/)
   assert.match(runtime, /let nextAvailableRow = 0/)
   assert.match(runtime, /const row = Math\.max\(savedRow, nextAvailableRow\)/)
   assert.match(runtime, /nextAvailableRow = row \+ blockRows\(block, rowPx\)/)
   assert.match(runtime, /const overlapsRepaired = repairBlockOrderOverlaps\(editor, rows\)/)
-  assert.match(runtime, /assigned \|\| reservedChanged \|\| overlapsRepaired/)
+  assert.match(runtime, /pendingPlaced \|\| assigned \|\| reservedChanged \|\| overlapsRepaired/)
 })
