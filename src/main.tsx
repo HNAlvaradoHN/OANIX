@@ -20,6 +20,7 @@ import './styles/classic-day-hard-fix.css'
 import './styles/privacy-status-polish.css'
 import './styles/note-menu-viewport-fit.css'
 import './styles/web-brand-logo.css'
+import './features/images/pwa-image-no-name.css'
 
 type OanixUpdateWindow = Window & {
   __oanixApplyUpdate?: () => Promise<void>
