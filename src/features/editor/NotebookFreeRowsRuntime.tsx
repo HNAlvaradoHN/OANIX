@@ -415,10 +415,26 @@ export function NotebookFreeRowsRuntime() {
       const node = selection?.anchorNode
       const paragraph = node instanceof Element ? node.closest<HTMLParagraphElement>('p') : node?.parentElement?.closest<HTMLParagraphElement>('p')
       if (!paragraph || paragraph.parentElement !== editor) return
+
       const row = rows[blockId(paragraph)] ?? parseRow(paragraph) ?? 0
+      const nextRow = row + 1
+
+      // The browser's native contenteditable Enter creates a DOM paragraph before the virtual
+      // row map can assign it, which made the new line render on top of the current one. Own the
+      // operation here: reserve one logical row, create exactly one paragraph there, then focus it.
+      event.preventDefault()
+      event.stopImmediatePropagation()
       shiftRowsAfter(rows, row, 1)
+
+      const inserted = createParagraph()
+      rows[blockId(inserted)] = nextRow
+      const following = directCanvasBlocks(editor).find((block) => block !== paragraph && (rows[blockId(block)] ?? 0) > row)
+      if (following) following.before(inserted)
+      else paragraph.after(inserted)
+
       writeRows(rows)
-      requestAnimationFrame(sync)
+      applyVirtualCanvas(editor, rows)
+      placeCaret(inserted)
     }
 
     function keepManualScroll(event: Event) {
