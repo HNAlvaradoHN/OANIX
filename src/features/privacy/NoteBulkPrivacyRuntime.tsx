@@ -127,7 +127,7 @@ export function NoteBulkPrivacyRuntime() {
 
     document.documentElement.classList.toggle('oanix-note-bulk-selecting', selectedIds.size > 0)
     return () => {
-      if (selectedIds.size === 0) document.documentElement.classList.remove('oanix-note-bulk-selecting')
+      document.documentElement.classList.remove('oanix-note-bulk-selecting')
     }
   }, [selectedIds])
 
@@ -190,13 +190,13 @@ export function NoteBulkPrivacyRuntime() {
       if (suppressNextClickRef.current === noteId) {
         suppressNextClickRef.current = null
         event.preventDefault()
-        event.stopPropagation()
+        event.stopImmediatePropagation()
         return
       }
 
       if (selectedIdsRef.current.size > 0) {
         event.preventDefault()
-        event.stopPropagation()
+        event.stopImmediatePropagation()
         toggleSelection(noteId)
       }
     }
