@@ -4,6 +4,8 @@ const ROW_HEIGHT_PX = 32
 const ROW_STORAGE_KEY = 'oanix.notebook.rows.v9'
 const EDIT_ROWS = 240
 const VIEW_ROWS_AFTER_CONTENT = 14
+const RESERVED_INSERT_SELECTOR =
+  '[data-image-tool="true"], [data-format="code"], [data-insert="checklist"], [data-insert="contact"]'
 
 type RowMap = Record<string, number>
 type LayoutBlock = HTMLElement
@@ -125,6 +127,14 @@ function rowOccupied(editor: HTMLElement, row: number, rows: RowMap, ignore?: HT
   })
 }
 
+function reservedBlockOwnsClientY(editor: HTMLElement, clientY: number): boolean {
+  return directCanvasBlocks(editor).some((block) => {
+    if (!isReservedBlock(block)) return false
+    const rect = block.getBoundingClientRect()
+    return rect.height > 0 && clientY >= rect.top && clientY < rect.bottom
+  })
+}
+
 function nextFreeRow(editor: HTMLElement, start: number, rows: RowMap): number {
   let row = Math.max(0, start)
   let guard = 0
@@ -141,6 +151,51 @@ function shiftRowsAtOrAfter(rows: RowMap, row: number, amount: number, exceptId?
     if (id === exceptId) continue
     if (Number.isSafeInteger(value) && value >= row) rows[id] = Math.max(0, value + amount)
   }
+}
+
+function selectionDirectBlock(editor: HTMLElement): HTMLElement | null {
+  const selection = window.getSelection()
+  if (!selection || selection.rangeCount === 0) return null
+
+  let element: Element | null =
+    selection.anchorNode instanceof Element
+      ? selection.anchorNode
+      : selection.anchorNode?.parentElement ?? null
+
+  while (element && element.parentElement !== editor) element = element.parentElement
+  return element instanceof HTMLElement && isCanvasBlock(element) ? element : null
+}
+
+function placePendingReservedAfterAnchor(
+  editor: HTMLElement,
+  rows: RowMap,
+  pendingAnchorIds: WeakMap<HTMLElement, string>,
+): boolean {
+  const anchorId = pendingAnchorIds.get(editor)
+  if (!anchorId) return false
+
+  const blocks = directCanvasBlocks(editor)
+  const anchor = blocks.find((block) => blockId(block) === anchorId)
+  const pending = blocks.filter((block) => {
+    if (!isReservedBlock(block)) return false
+    const id = blockId(block)
+    return !Number.isSafeInteger(rows[id]) && parseRow(block) === null
+  })
+
+  if (!anchor || pending.length === 0) return false
+
+  let reference = anchor
+  let changed = false
+  for (const block of pending) {
+    if (reference.nextElementSibling !== block) {
+      reference.after(block)
+      changed = true
+    }
+    reference = block
+  }
+
+  pendingAnchorIds.delete(editor)
+  return changed
 }
 
 function assignMissingRows(editor: HTMLElement, rows: RowMap): boolean {
@@ -165,8 +220,8 @@ function assignMissingRows(editor: HTMLElement, rows: RowMap): boolean {
 
     if (isReservedBlock(block)) {
       const span = reservedBlockRows(block, rowPx)
-      // Images, code, checklists and contacts are vertical reserved zones. Insert the complete box
-      // immediately after its preceding DOM block and push every later logical block below it.
+      // A special card starts only after the complete line/block immediately before it. Its full
+      // measured height then pushes every later row down so no text or another card can share it.
       shiftRowsAtOrAfter(rows, proposed, span, id)
       rows[id] = proposed
       block.dataset.oanixLogicalRow = String(proposed)
@@ -220,8 +275,6 @@ function syncReservedBlockReservations(
     const previous = states.get(id)
 
     if (!previous) {
-      // assignMissingRows already reserves new blocks. Older notes are repaired only when a real
-      // overlap exists, avoiding a second blind reservation of the same physical height.
       if (repairReservedBarrier(editor, reserved, rows, span)) changed = true
       states.set(id, { row, span })
       continue
@@ -229,17 +282,16 @@ function syncReservedBlockReservations(
 
     const delta = span - previous.span
     if (delta !== 0) {
-      // Any real height change moves only content that begins after the old reserved zone.
       shiftRowsAtOrAfter(rows, row + previous.span, delta, id)
       changed = true
     }
     states.set(id, { row, span })
   }
 
-  for (const [id, state] of Array.from(states.entries())) {
+  for (const [id] of Array.from(states.entries())) {
     if (present.has(id)) continue
-    // When an authorized special block is removed, collapse exactly the rows that belonged to it.
-    shiftRowsAtOrAfter(rows, state.row + state.span, -state.span, id)
+    // Removing a special block releases its exact rows. Do not collapse later content upward:
+    // the vacated cells become genuinely free and can be used again by a later tap or insertion.
     delete rows[id]
     states.delete(id)
     changed = true
@@ -330,8 +382,6 @@ function rowAtPoint(editor: HTMLElement, clientY: number): number {
 }
 
 function insertParagraphAtRow(editor: HTMLElement, targetRow: number, rows: RowMap): HTMLParagraphElement | null {
-  // Free placement is allowed only on genuinely empty logical rows. Reserved special blocks use
-  // their measured physical height here, so touching anywhere inside them can never create text.
   if (rowOccupied(editor, targetRow, rows)) return null
 
   const inserted = createParagraph()
@@ -378,6 +428,7 @@ export function NotebookFreeRowsRuntime() {
     const rows = readRows()
     const reservedStates = new Map<string, ReservedBlockState>()
     const observedReservedBlocks = new Set<HTMLElement>()
+    const pendingAnchorIds = new WeakMap<HTMLElement, string>()
     let frame = 0
 
     const sync = () => {
@@ -385,12 +436,13 @@ export function NotebookFreeRowsRuntime() {
       frame = requestAnimationFrame(() => {
         frame = 0
         document.querySelectorAll<HTMLElement>('.editor-surface').forEach((editor) => {
+          const pendingPlaced = placePendingReservedAfterAnchor(editor, rows, pendingAnchorIds)
           const assigned = assignMissingRows(editor, rows)
           const reservedChanged = syncReservedBlockReservations(editor, rows, reservedStates)
           const overlapsRepaired = repairBlockOrderOverlaps(editor, rows)
           refreshReservedStateRows(rows, reservedStates)
           applyVirtualCanvas(editor, rows)
-          if (assigned || reservedChanged || overlapsRepaired) writeRows(rows)
+          if (pendingPlaced || assigned || reservedChanged || overlapsRepaired) writeRows(rows)
 
           directCanvasBlocks(editor)
             .filter(isReservedBlock)
@@ -411,11 +463,24 @@ export function NotebookFreeRowsRuntime() {
 
     const reservedResizeObserver = new ResizeObserver(sync)
 
+    function captureReservedInsertionAnchor(event: MouseEvent) {
+      const target = event.target
+      if (!(target instanceof Element) || !target.closest(RESERVED_INSERT_SELECTOR)) return
+      const root = target.closest<HTMLElement>('.image-note-editor-root')
+      const editor = root?.querySelector<HTMLElement>('.editor-surface') ?? null
+      const anchor = editor ? selectionDirectBlock(editor) : null
+      if (editor && anchor) pendingAnchorIds.set(editor, blockId(anchor))
+    }
+
     function handleClick(event: MouseEvent) {
       const target = event.target
       if (!(target instanceof Element)) return
       const editor = target.closest<HTMLElement>('.editor-surface')
       if (!editor || blockedTarget(target, editor)) return
+
+      // Even if ResizeObserver has not yet committed the latest row span, the complete vertical
+      // band of a visible special card is immediately untouchable for free text.
+      if (reservedBlockOwnsClientY(editor, event.clientY)) return
 
       const row = rowAtPoint(editor, event.clientY)
       const paragraph = insertParagraphAtRow(editor, row, rows)
@@ -439,8 +504,6 @@ export function NotebookFreeRowsRuntime() {
       const row = rows[blockId(paragraph)] ?? parseRow(paragraph) ?? 0
       const nextRow = row + 1
 
-      // The browser's native contenteditable Enter creates a DOM paragraph before the virtual
-      // row map can assign it. Own the operation so following reserved blocks move down one row.
       event.preventDefault()
       event.stopImmediatePropagation()
       shiftRowsAfter(rows, row, 1)
@@ -467,6 +530,7 @@ export function NotebookFreeRowsRuntime() {
       attributes: true,
       attributeFilter: ['data-image-info-open'],
     })
+    document.addEventListener('click', captureReservedInsertionAnchor, true)
     document.addEventListener('click', handleClick, true)
     document.addEventListener('keydown', handleKeyDown, true)
     document.addEventListener('focusin', sync, true)
@@ -480,6 +544,7 @@ export function NotebookFreeRowsRuntime() {
       observer.disconnect()
       reservedResizeObserver.disconnect()
       observedReservedBlocks.clear()
+      document.removeEventListener('click', captureReservedInsertionAnchor, true)
       document.removeEventListener('click', handleClick, true)
       document.removeEventListener('keydown', handleKeyDown, true)
       document.removeEventListener('focusin', sync, true)

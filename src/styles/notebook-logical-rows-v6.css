@@ -29,12 +29,14 @@ html.oanix-notebook-canvas-pwa .editor-surface[data-oanix-virtual-canvas='true']
   margin-bottom: 0 !important;
 }
 
-/* Fixed PWA image card: full notebook-width reservation, compact square preview at the left,
- * description directly below that preview, and the normal image actions in a right-side column. */
+/* Fixed PWA image card. The complete card is centered horizontally in the notebook. The upper row
+ * contains the square preview and its actions; metadata and description use the full width below. */
 html.oanix-notebook-canvas-pwa .editor-surface[data-oanix-virtual-canvas='true'] > .editor-image-block[data-oanix-notebook-full-width='true'] {
-  left: clamp(1.15rem, 3vw, 2rem) !important;
-  right: clamp(1.15rem, 3vw, 2rem) !important;
-  transform: none !important;
+  left: 50% !important;
+  right: auto !important;
+  width: min(calc(100% - 1.5rem), 34rem) !important;
+  max-width: calc(100% - 1rem) !important;
+  transform: translateX(-50%) !important;
   overflow: hidden !important;
   border: 1px solid rgba(148, 163, 184, .38) !important;
   border-radius: 16px !important;
@@ -56,27 +58,29 @@ html.oanix-notebook-canvas-pwa .editor-image-block[data-oanix-notebook-full-widt
 }
 
 html.oanix-notebook-canvas-pwa .oanix-notebook-image-layout {
-  display: grid !important;
-  grid-template-columns: minmax(0, 1fr) minmax(7.75rem, 9.5rem) !important;
-  align-items: start !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
   gap: .7rem !important;
   width: 100% !important;
   min-width: 0 !important;
-  padding: .7rem !important;
+  padding: .75rem !important;
   box-sizing: border-box !important;
 }
 
 html.oanix-notebook-canvas-pwa .oanix-notebook-image-main {
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: flex-start !important;
-  gap: .55rem !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(7.5rem, 9rem) !important;
+  align-items: start !important;
+  gap: .75rem !important;
+  width: 100% !important;
   min-width: 0 !important;
 }
 
 html.oanix-notebook-canvas-pwa .editor-image-block[data-oanix-notebook-full-width='true'] .editor-image-block__preview {
   display: grid !important;
-  width: min(100%, 20rem) !important;
+  justify-self: center !important;
+  width: min(100%, 17rem) !important;
   min-width: 0 !important;
   aspect-ratio: 1 / 1 !important;
   height: auto !important;
@@ -107,7 +111,7 @@ html.oanix-notebook-canvas-pwa .editor-image-block[data-oanix-notebook-full-widt
   display: grid !important;
   grid-template-columns: minmax(0, 1fr) !important;
   gap: .5rem !important;
-  width: min(100%, 20rem) !important;
+  width: 100% !important;
   min-width: 0 !important;
   padding: 0 !important;
   box-sizing: border-box !important;
@@ -116,11 +120,12 @@ html.oanix-notebook-canvas-pwa .editor-image-block[data-oanix-notebook-full-widt
 html.oanix-notebook-canvas-pwa .editor-image-block[data-oanix-notebook-full-width='true'] .editor-image-block__alt {
   display: block !important;
   width: 100% !important;
+  max-width: 100% !important;
   min-width: 0 !important;
   height: auto !important;
-  min-height: 2.65rem !important;
+  min-height: 2.75rem !important;
   margin: 0 !important;
-  padding: .55rem .65rem !important;
+  padding: .6rem .7rem !important;
   box-sizing: border-box !important;
 }
 
@@ -168,15 +173,23 @@ html.oanix-notebook-canvas-pwa .editor-surface[data-oanix-virtual-canvas='true']
 }
 
 @media (max-width: 760px) {
-  html.oanix-notebook-canvas-pwa .oanix-notebook-image-layout {
-    grid-template-columns: minmax(0, 1fr) minmax(7.25rem, 8.75rem) !important;
-    gap: .55rem !important;
-    padding: .6rem !important;
+  html.oanix-notebook-canvas-pwa .editor-surface[data-oanix-virtual-canvas='true'] > .editor-image-block[data-oanix-notebook-full-width='true'] {
+    width: min(calc(100% - .9rem), 32rem) !important;
+    max-width: calc(100% - .6rem) !important;
   }
 
-  html.oanix-notebook-canvas-pwa .editor-image-block[data-oanix-notebook-full-width='true'] .editor-image-block__preview,
-  html.oanix-notebook-canvas-pwa .editor-image-block[data-oanix-notebook-full-width='true'] .editor-image-block__details {
-    width: min(100%, 17rem) !important;
+  html.oanix-notebook-canvas-pwa .oanix-notebook-image-layout {
+    gap: .6rem !important;
+    padding: .65rem !important;
+  }
+
+  html.oanix-notebook-canvas-pwa .oanix-notebook-image-main {
+    grid-template-columns: minmax(0, 1fr) minmax(7.1rem, 8.25rem) !important;
+    gap: .55rem !important;
+  }
+
+  html.oanix-notebook-canvas-pwa .editor-image-block[data-oanix-notebook-full-width='true'] .editor-image-block__preview {
+    width: min(100%, 14.5rem) !important;
   }
 
   html.oanix-notebook-canvas-pwa .editor-image-block[data-oanix-notebook-full-width='true'] .editor-image-block__actions button {
