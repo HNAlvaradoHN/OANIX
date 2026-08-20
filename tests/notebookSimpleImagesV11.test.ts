@@ -11,15 +11,22 @@ test('PWA notebook images are normalized to one full-width blocking mode', () =>
   assert.match(runtime, /image\.dataset\.imageCompact = 'false'/)
   assert.match(runtime, /image\.dataset\.imageAlignment = 'center'/)
   assert.match(runtime, /oanixNotebookFullWidth/)
-  assert.match(css, /full writing width/)
+  assert.match(css, /owns the writing width/)
   assert.match(css, /editor-image-block__alignment/)
   assert.match(css, /display: none !important/)
 })
 
-test('mobile editor dock tracks the software keyboard instead of the document scroll', () => {
-  assert.match(runtime, /window\.visualViewport/)
-  assert.match(runtime, /--oanix-keyboard-inset/)
-  assert.match(runtime, /visualViewport\?\.addEventListener\('resize'/)
-  assert.match(css, /bottom: calc\(var\(--oanix-keyboard-inset, 0px\) \+ \.7rem\) !important/)
-  assert.match(css, /bottom: calc\(var\(--oanix-keyboard-inset, 0px\) \+ 5\.2rem\) !important/)
+test('image normalization cannot observe and rewrite the same attributes forever', () => {
+  assert.match(runtime, /childList: true/)
+  assert.match(runtime, /subtree: true/)
+  assert.doesNotMatch(runtime, /attributes: true/)
+  assert.doesNotMatch(runtime, /attributeFilter/)
+})
+
+test('mobile editor dock stays fixed to the visible viewport above the keyboard', () => {
+  assert.doesNotMatch(runtime, /window\.visualViewport/)
+  assert.doesNotMatch(runtime, /--oanix-keyboard-inset/)
+  assert.match(css, /bottom: max\(\.7rem, env\(safe-area-inset-bottom\)\) !important/)
+  assert.match(css, /bottom: calc\(max\(\.7rem, env\(safe-area-inset-bottom\)\) \+ 4\.5rem\) !important/)
+  assert.doesNotMatch(css, /--oanix-keyboard-inset/)
 })
