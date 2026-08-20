@@ -7,6 +7,7 @@ import { AutoSyncRuntime } from '../features/sync/AutoSyncRuntime'
 import { ConflictCenter } from '../features/sync/ConflictCenter'
 import { VersionHistoryCenter } from '../features/versionHistory/VersionHistoryCenter'
 import { NotePrivacyRuntime } from '../features/privacy/NotePrivacyRuntime'
+import { NoteBulkPrivacyRuntime, NOTE_PRIVACY_REFRESH_EVENT } from '../features/privacy/NoteBulkPrivacyRuntime'
 import { PrivateBoxListHint } from '../features/privacy/PrivateBoxListHint'
 import { AndroidAuthRuntime } from '../platform/android/AndroidAuthRuntime'
 import { NativeCameraRuntime } from '../platform/android/NativeCameraRuntime'
@@ -57,6 +58,7 @@ function UnlockedApp({ lockVault }: { lockVault: () => void }) {
   const [accountOpen, setAccountOpen] = useState(false)
   const [accountHost, setAccountHost] = useState<HTMLElement | null>(null)
   const [workspaceRevision, setWorkspaceRevision] = useState(0)
+  const [privacyRevision, setPrivacyRevision] = useState(0)
 
   useEffect(() => {
     setAccountHost(null)
@@ -65,6 +67,12 @@ function UnlockedApp({ lockVault }: { lockVault: () => void }) {
     })
     return () => window.cancelAnimationFrame(frame)
   }, [workspaceRevision])
+
+  useEffect(() => {
+    const refreshPrivacy = () => setPrivacyRevision((value) => value + 1)
+    window.addEventListener(NOTE_PRIVACY_REFRESH_EVENT, refreshPrivacy)
+    return () => window.removeEventListener(NOTE_PRIVACY_REFRESH_EVENT, refreshPrivacy)
+  }, [])
 
   return (
     <>
@@ -75,7 +83,8 @@ function UnlockedApp({ lockVault }: { lockVault: () => void }) {
       <NativeNoteShareRuntime />
       <AndroidKeystoreDiagnosticRuntime />
       <NotesWorkspace key={workspaceRevision} onLock={lockVault} />
-      <NotePrivacyRuntime key={`privacy-${workspaceRevision}`} />
+      <NotePrivacyRuntime key={`privacy-${workspaceRevision}-${privacyRevision}`} />
+      <NoteBulkPrivacyRuntime key={`privacy-bulk-${workspaceRevision}`} />
       <PrivateBoxListHint key={`private-hint-${workspaceRevision}`} />
       <ConflictCenter onResolved={() => setWorkspaceRevision((value) => value + 1)} />
       <VersionHistoryCenter onRestored={() => setWorkspaceRevision((value) => value + 1)} />
