@@ -53,10 +53,12 @@ test('consuming an empty insertion row is persisted back to the note model', () 
   assert.match(runtime, /editor\.dispatchEvent\(new Event\('input', \{ bubbles: true \}\)\)/)
 })
 
-test('the physical vertical band of a visible reserved block rejects free text immediately', () => {
+test('reserved cards reject free cursor activation across their complete physical and logical area', () => {
   assert.match(runtime, /function reservedBlockOwnsClientY/)
   assert.match(runtime, /clientY >= rect\.top && clientY < rect\.bottom/)
-  assert.match(runtime, /if \(reservedBlockOwnsClientY\(editor, event\.clientY\)\) return/)
+  assert.match(runtime, /function reservedBlockOccupiesRow/)
+  assert.match(runtime, /if \(reservedBlockOwnsClientY\(editor, event\.clientY\)\)/)
+  assert.match(runtime, /if \(reservedBlockOccupiesRow\(editor, row, rows\)\)/)
   assert.match(runtime, /if \(rowOccupied\(editor, targetRow, rows\)\) return null/)
 })
 
@@ -68,10 +70,10 @@ test('height changes of images code checklists and contacts continuously update 
   assert.match(runtime, /shiftRowsAtOrAfter\(rows, row \+ previous\.span, delta, id\)/)
 })
 
-test('removing a reserved block releases its cells without collapsing later content upward', () => {
-  assert.match(runtime, /Removing a special block releases its exact rows/)
+test('removing a reserved block collapses its exact span in sequential editor mode', () => {
+  assert.match(runtime, /Sequential-editor mode has no arbitrary free-row cursor/)
+  assert.match(runtime, /shiftRowsAtOrAfter\(rows, state\.row \+ state\.span, -state\.span, id\)/)
   assert.match(runtime, /delete rows\[id\]/)
-  assert.doesNotMatch(runtime, /shiftRowsAtOrAfter\(rows, state\.row \+ state\.span, -state\.span, id\)/)
 })
 
 test('a final document-order guard prevents any later block from overlapping a reserved block', () => {
