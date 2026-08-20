@@ -164,6 +164,32 @@ function isEmptyInsertionParagraph(block: Element | null): block is HTMLParagrap
   )
 }
 
+function normalizeTrailingImageCaret(editor: HTMLElement, rows: RowMap): boolean {
+  const trailing = editor.lastElementChild
+  if (
+    !(trailing instanceof HTMLParagraphElement) ||
+    trailing.dataset.oanixTrailingCaret !== 'true' ||
+    !isEmptyInsertionParagraph(trailing)
+  ) {
+    return false
+  }
+
+  const previous = trailing.previousElementSibling
+  if (!isEmptyInsertionParagraph(previous)) return false
+
+  const image = previous.previousElementSibling
+  if (!(image instanceof HTMLElement) || image.dataset.imageBlock !== 'true') return false
+
+  // ImageNoteEditor historically left two empty caret paragraphs after the final image. In the
+  // sequential notebook that creates two competing logical rows. Keep exactly the first row and
+  // remove the redundant trailing helper before row assignment or Enter can interact with it.
+  delete rows[blockId(trailing)]
+  trailing.remove()
+  previous.dataset.oanixTrailingCaret = 'true'
+  editor.dataset.oanixNormalizedTrailingCaret = 'true'
+  return true
+}
+
 function nextFreeRow(editor: HTMLElement, start: number, rows: RowMap): number {
   let row = Math.max(0, start)
   let guard = 0
@@ -462,12 +488,6 @@ function blockedTarget(target: Element, editor: HTMLElement): boolean {
   return !!blocked && editor.contains(blocked)
 }
 
-function shiftRowsAfter(rows: RowMap, row: number, amount: number) {
-  for (const [id, value] of Object.entries(rows)) {
-    if (Number.isSafeInteger(value) && value > row) rows[id] = value + amount
-  }
-}
-
 export function NotebookFreeRowsRuntime() {
   useLayoutEffect(() => {
     if (import.meta.env.MODE === 'capacitor') return
@@ -483,16 +503,21 @@ export function NotebookFreeRowsRuntime() {
       frame = requestAnimationFrame(() => {
         frame = 0
         document.querySelectorAll<HTMLElement>('.editor-surface').forEach((editor) => {
+          const trailingNormalized = normalizeTrailingImageCaret(editor, rows)
           const pendingPlaced = placePendingReservedAfterAnchor(editor, rows, pendingAnchorIds)
           const assigned = assignMissingRows(editor, rows)
           const reservedChanged = syncReservedBlockReservations(editor, rows, reservedStates)
           const overlapsRepaired = repairBlockOrderOverlaps(editor, rows)
           refreshReservedStateRows(rows, reservedStates)
           applyVirtualCanvas(editor, rows)
-          if (pendingPlaced || assigned || reservedChanged || overlapsRepaired) writeRows(rows)
+          if (trailingNormalized || pendingPlaced || assigned || reservedChanged || overlapsRepaired) writeRows(rows)
 
-          if (editor.dataset.oanixConsumedInsertionParagraph === 'true') {
+          const needsModelSync =
+            editor.dataset.oanixConsumedInsertionParagraph === 'true' ||
+            editor.dataset.oanixNormalizedTrailingCaret === 'true'
+          if (needsModelSync) {
             delete editor.dataset.oanixConsumedInsertionParagraph
+            delete editor.dataset.oanixNormalizedTrailingCaret
             queueMicrotask(() => {
               if (editor.isConnected) editor.dispatchEvent(new Event('input', { bubbles: true }))
             })
@@ -574,18 +599,32 @@ export function NotebookFreeRowsRuntime() {
       const paragraph = node instanceof Element ? node.closest<HTMLParagraphElement>('p') : node?.parentElement?.closest<HTMLParagraphElement>('p')
       if (!paragraph || paragraph.parentElement !== editor) return
 
+      const rowPx = rowHeight(editor)
       const row = rows[blockId(paragraph)] ?? parseRow(paragraph) ?? 0
-      const nextRow = row + 1
+      const paragraphSpan = blockRows(paragraph, rowPx)
+      const nextRow = row + paragraphSpan
 
       event.preventDefault()
       event.stopImmediatePropagation()
-      shiftRowsAfter(rows, row, 1)
+
+      // The final image may already have one empty caret paragraph after the line being edited.
+      // Reuse that exact next row instead of creating another row and making the tail compete with
+      // the image reservation.
+      const immediateNext = paragraph.nextElementSibling
+      if (isEmptyInsertionParagraph(immediateNext)) {
+        const immediateNextRow = rows[blockId(immediateNext)] ?? parseRow(immediateNext)
+        if (immediateNextRow === nextRow) {
+          delete immediateNext.dataset.oanixTrailingCaret
+          placeCaret(immediateNext)
+          return
+        }
+      }
+
+      shiftRowsAtOrAfter(rows, nextRow, 1)
 
       const inserted = createParagraph()
       rows[blockId(inserted)] = nextRow
-      const following = directCanvasBlocks(editor).find((block) => block !== paragraph && (rows[blockId(block)] ?? 0) > row)
-      if (following) following.before(inserted)
-      else paragraph.after(inserted)
+      paragraph.after(inserted)
 
       writeRows(rows)
       applyVirtualCanvas(editor, rows)
