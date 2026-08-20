@@ -15,27 +15,34 @@ html.oanix-notebook-canvas-pwa .editor-surface[data-oanix-virtual-canvas='true']
   line-height: var(--oanix-notebook-row, 32px) !important;
 }
 
-/* Images and text now share absolute logical rows. Disable the legacy float/clear model so
- * inserting or moving an image cannot stretch a paragraph box and push unrelated rows. */
-html.oanix-notebook-canvas-pwa .editor-surface[data-oanix-virtual-canvas='true'] > .editor-image-block[data-oanix-virtual-block='true'] {
+/* PWA notebook images use a deliberately simple Word-like block model: the image owns the
+ * full writing width and text can exist only above or below it. This avoids lateral overlap. */
+html.oanix-notebook-canvas-pwa .editor-surface[data-oanix-virtual-canvas='true'] > .editor-image-block[data-oanix-virtual-block='true'],
+html.oanix-notebook-canvas-pwa .editor-surface[data-oanix-virtual-canvas='true'] > .editor-image-block[data-oanix-notebook-full-width='true'] {
   float: none !important;
-  clear: none !important;
+  clear: both !important;
+  width: auto !important;
+  max-width: none !important;
   margin: 0 !important;
+}
+
+html.oanix-notebook-canvas-pwa .editor-surface[data-oanix-virtual-canvas='true'] .editor-image-block__alignment {
+  display: none !important;
 }
 
 html.oanix-notebook-canvas-pwa .editor-surface[data-oanix-virtual-canvas='true'] > p[data-oanix-virtual-block='true'] + p {
   clear: none !important;
 }
 
-/* Keep the mobile editor controls below the sticky note header instead of inside/behind it.
- * They remain viewport-fixed and fully opaque while the long virtual sheet scrolls below. */
+/* Restore the compact editor dock above the software keyboard. The runtime updates
+ * --oanix-keyboard-inset from visualViewport, so scrolling the long note does not move it. */
 @media (max-width: 760px) {
   .mobile-editor-dock {
     position: fixed !important;
     z-index: 1600 !important;
-    top: calc(8.25rem + env(safe-area-inset-top)) !important;
+    top: auto !important;
     right: max(.75rem, env(safe-area-inset-right)) !important;
-    bottom: auto !important;
+    bottom: calc(var(--oanix-keyboard-inset, 0px) + .7rem) !important;
     left: auto !important;
     transform: none !important;
     opacity: 1 !important;
@@ -46,10 +53,10 @@ html.oanix-notebook-canvas-pwa .editor-surface[data-oanix-virtual-canvas='true']
   .editor-command-panel {
     position: fixed !important;
     z-index: 1595 !important;
-    top: calc(12.1rem + env(safe-area-inset-top)) !important;
+    top: auto !important;
     right: max(.75rem, env(safe-area-inset-right)) !important;
-    bottom: auto !important;
-    max-height: min(58dvh, calc(100dvh - 13rem)) !important;
+    bottom: calc(var(--oanix-keyboard-inset, 0px) + 5.2rem) !important;
+    max-height: min(58dvh, calc(100dvh - var(--oanix-keyboard-inset, 0px) - 6.2rem)) !important;
     opacity: 1 !important;
     visibility: visible !important;
   }
