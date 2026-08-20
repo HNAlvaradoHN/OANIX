@@ -1,16 +1,34 @@
-html.oanix-notebook-canvas-pwa .editor-surface > p[data-oanix-logical-row] {
-  margin-top: 0 !important;
-  margin-bottom: 0 !important;
+html.oanix-notebook-canvas-pwa .editor-surface[data-oanix-virtual-canvas='true'] {
+  position: relative !important;
+  overflow: visible !important;
+}
+
+html.oanix-notebook-canvas-pwa .editor-surface[data-oanix-virtual-canvas='true'] > [data-oanix-virtual-block='true'] {
+  box-sizing: border-box;
+}
+
+html.oanix-notebook-canvas-pwa .editor-surface[data-oanix-virtual-canvas='true'] > p[data-oanix-virtual-block='true'] {
+  min-height: var(--oanix-notebook-row, 32px) !important;
+  margin: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
   line-height: var(--oanix-notebook-row, 32px) !important;
 }
 
-html.oanix-notebook-canvas-pwa .editor-surface > p[data-oanix-logical-row][data-oanix-leading-rows]:not([data-oanix-leading-rows='']) {
-  box-sizing: content-box;
+/* Images and text now share absolute logical rows. Disable the legacy float/clear model so
+ * inserting or moving an image cannot stretch a paragraph box and push unrelated rows. */
+html.oanix-notebook-canvas-pwa .editor-surface[data-oanix-virtual-canvas='true'] > .editor-image-block[data-oanix-virtual-block='true'] {
+  float: none !important;
+  clear: none !important;
+  margin: 0 !important;
 }
 
-/* Keep mobile editing controls on a stable viewport edge. Chrome/Android changes the visual
- * viewport while the keyboard is open, so bottom anchoring could disappear below the keyboard
- * or float over the note after a scroll. The dock now stays at the top of the visible viewport. */
+html.oanix-notebook-canvas-pwa .editor-surface[data-oanix-virtual-canvas='true'] > p[data-oanix-virtual-block='true'] + p {
+  clear: none !important;
+}
+
+/* Keep mobile editing controls on a stable viewport edge. The note itself can now be thousands
+ * of virtual rows tall while the dock remains independent from document and keyboard scroll. */
 @media (max-width: 760px) {
   .mobile-editor-dock {
     position: fixed !important;
@@ -23,15 +41,16 @@ html.oanix-notebook-canvas-pwa .editor-surface > p[data-oanix-logical-row][data-
   }
 
   .editor-command-panel {
+    position: fixed !important;
+    z-index: 1325 !important;
     top: calc(4.55rem + env(safe-area-inset-top)) !important;
+    right: max(.75rem, env(safe-area-inset-right)) !important;
     bottom: auto !important;
     max-height: min(62dvh, calc(100dvh - 5.5rem)) !important;
   }
 
-  html.oanix-notebook-canvas-pwa .editor-surface:focus {
-    min-height: max(110rem, calc(100dvh + 72rem));
-    padding-bottom: max(18rem, 58dvh);
-    overscroll-behavior-y: contain;
+  html.oanix-notebook-canvas-pwa .editor-surface[data-oanix-virtual-canvas='true'] {
+    overscroll-behavior-y: auto;
     touch-action: pan-y;
   }
 }
