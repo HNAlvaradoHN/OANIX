@@ -32,8 +32,10 @@ test('manual visual viewport scrolling is not recentered by the legacy caret gua
   assert.match(runtime, /visualViewport\?\.addEventListener\('scroll'/)
 })
 
-test('mobile dock does not double-count keyboard inset while the note scrolls', () => {
+test('mobile dock stays pinned to the top of the visible viewport while keyboard is open', () => {
   assert.match(css, /\.mobile-editor-dock/)
-  assert.match(css, /bottom: max\(\.7rem, env\(safe-area-inset-bottom\)\) !important/)
-  assert.doesNotMatch(css, /mobile-editor-dock[\s\S]*oanix-keyboard-inset/)
+  assert.match(css, /top: calc\(\.7rem \+ env\(safe-area-inset-top\)\) !important/)
+  assert.match(css, /bottom: auto !important/)
+  assert.match(css, /\.editor-command-panel/)
+  assert.match(css, /top: calc\(4\.55rem \+ env\(safe-area-inset-top\)\) !important/)
 })
