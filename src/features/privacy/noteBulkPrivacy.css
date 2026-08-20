@@ -1,0 +1,228 @@
+html.oanix-note-bulk-selecting .note-row__menu-wrap,
+html.oanix-note-bulk-selecting .oanix-note-row-lock {
+  pointer-events: none;
+  opacity: .34;
+}
+
+.note-row[data-oanix-bulk-selected='true'] {
+  outline: 2px solid rgba(143, 176, 255, .9);
+  outline-offset: -2px;
+  background: rgba(79, 112, 219, .14) !important;
+}
+
+.note-row[data-oanix-bulk-selected='true'] .note-row__open::after {
+  content: '✓';
+  position: absolute;
+  top: .5rem;
+  left: .55rem;
+  width: 1.35rem;
+  height: 1.35rem;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #dbe7ff;
+  color: #1d4ed8;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, .2);
+  font-size: .78rem;
+  font-weight: 900;
+}
+
+.oanix-note-bulk-bar {
+  position: fixed;
+  z-index: 2300;
+  left: .5rem;
+  bottom: max(.55rem, env(safe-area-inset-bottom));
+  width: min(calc(var(--oanix-sidebar) - 1rem), calc(100vw - 1rem));
+  min-height: 4rem;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .55rem;
+  padding: .55rem;
+  border: 1px solid rgba(148, 163, 184, .28);
+  border-radius: 1rem;
+  background: rgba(15, 23, 42, .96);
+  color: #eef5ff;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, .38);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.oanix-note-bulk-bar > div {
+  min-width: 0;
+}
+
+.oanix-note-bulk-bar strong,
+.oanix-note-bulk-bar small {
+  display: block;
+}
+
+.oanix-note-bulk-bar strong {
+  font-size: .84rem;
+}
+
+.oanix-note-bulk-bar small {
+  margin-top: .08rem;
+  overflow: hidden;
+  color: #aebbd0;
+  font-size: .68rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.oanix-note-bulk-bar button {
+  min-height: 2.45rem;
+  border: 1px solid rgba(143, 176, 255, .34);
+  border-radius: .72rem;
+  background: rgba(79, 112, 219, .18);
+  color: #eef5ff;
+  font: inherit;
+  font-size: .76rem;
+  font-weight: 850;
+}
+
+.oanix-note-bulk-bar button:disabled {
+  opacity: .45;
+}
+
+.oanix-note-bulk-bar__close {
+  width: 2.45rem;
+  padding: 0;
+  font-size: 1.25rem !important;
+}
+
+.oanix-note-bulk-bar__protect {
+  padding: .45rem .7rem;
+}
+
+.oanix-bulk-lock-overlay {
+  position: fixed;
+  z-index: 2500;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(2, 6, 23, .68);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.oanix-bulk-lock-panel {
+  width: min(28rem, 100%);
+  max-height: min(38rem, calc(100dvh - 2rem));
+  overflow: auto;
+  padding: 1rem;
+  border: 1px solid rgba(148, 163, 184, .3);
+  border-radius: 1.05rem;
+  background: #111827;
+  color: #eef5ff;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, .46);
+}
+
+.oanix-bulk-lock-panel header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: .8rem;
+}
+
+.oanix-bulk-lock-panel header span,
+.oanix-bulk-lock-panel header strong,
+.oanix-bulk-lock-panel label span {
+  display: block;
+}
+
+.oanix-bulk-lock-panel header span {
+  color: #8faeff;
+  font-size: .66rem;
+  font-weight: 900;
+  letter-spacing: .08em;
+}
+
+.oanix-bulk-lock-panel header strong {
+  margin-top: .16rem;
+  font-size: 1rem;
+}
+
+.oanix-bulk-lock-panel header button {
+  width: 2.35rem;
+  height: 2.35rem;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(148, 163, 184, .12);
+  color: #eef5ff;
+  font-size: 1.2rem;
+}
+
+.oanix-bulk-lock-panel > p,
+.oanix-bulk-lock-panel > small {
+  color: #b6c2d3;
+  font-size: .78rem;
+  line-height: 1.45;
+}
+
+.oanix-bulk-lock-panel label {
+  display: grid;
+  gap: .3rem;
+  margin-top: .75rem;
+  color: #dbe7ff;
+  font-size: .76rem;
+  font-weight: 800;
+}
+
+.oanix-bulk-lock-panel input {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: .55rem .7rem;
+  border: 1px solid rgba(148, 163, 184, .34);
+  border-radius: .72rem;
+  background: rgba(15, 23, 42, .75);
+  color: #fff;
+  font: inherit;
+}
+
+.oanix-bulk-lock-status,
+.oanix-bulk-lock-error {
+  margin: .7rem 0 0;
+  padding: .6rem .7rem;
+  border-radius: .7rem;
+}
+
+.oanix-bulk-lock-status {
+  background: rgba(37, 99, 235, .16);
+  color: #dbe7ff !important;
+}
+
+.oanix-bulk-lock-error {
+  background: rgba(190, 24, 93, .16);
+  color: #fecdd3 !important;
+}
+
+.oanix-bulk-lock-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: .55rem;
+  margin-top: 1rem;
+}
+
+.oanix-bulk-lock-actions button {
+  min-height: 2.5rem;
+  padding: .45rem .75rem;
+  border: 1px solid rgba(148, 163, 184, .3);
+  border-radius: .7rem;
+  background: rgba(148, 163, 184, .08);
+  color: #eef5ff;
+  font: inherit;
+  font-weight: 800;
+}
+
+.oanix-bulk-lock-actions button[type='submit'] {
+  border-color: rgba(143, 176, 255, .55);
+  background: rgba(79, 112, 219, .24);
+}
+
+@media (max-width: 760px) {
+  .oanix-note-bulk-bar {
+    width: calc(100vw - 1rem);
+  }
+}
