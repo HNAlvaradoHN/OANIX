@@ -1,0 +1,195 @@
+.note-attachments__input {
+  position: fixed;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.note-attachments__tool {
+  font-size: 1rem;
+}
+
+.note-attachments {
+  display: grid;
+  gap: .72rem;
+  margin: 1rem 0 5.5rem;
+  padding: .8rem;
+  border: 1px solid var(--oanix-border, #d8e0ea);
+  border-radius: 14px;
+  background: var(--oanix-panel-2, #f8fafc);
+  color: var(--oanix-text, #172033);
+}
+
+.note-attachments__heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+}
+
+.note-attachments__heading > div {
+  display: grid;
+  min-width: 0;
+  gap: .12rem;
+}
+
+.note-attachments__heading strong {
+  font-size: .9rem;
+}
+
+.note-attachments__heading span,
+.note-attachments__scope,
+.note-attachments__status {
+  color: var(--oanix-muted, #64748b);
+  font-size: .74rem;
+}
+
+.note-attachments__heading > button {
+  width: 2.1rem;
+  height: 2.1rem;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 1px solid var(--oanix-border, #d8e0ea);
+  border-radius: 9px;
+  background: var(--oanix-panel, #fff);
+  color: var(--oanix-text, #172033);
+  font: inherit;
+  font-size: 1.05rem;
+  cursor: pointer;
+}
+
+.note-attachments__list {
+  display: grid;
+  gap: .55rem;
+}
+
+.note-attachment-card {
+  display: grid;
+  grid-template-columns: 2.45rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .68rem;
+  min-width: 0;
+  padding: .68rem .72rem;
+  border: 1px solid var(--oanix-border, #d8e0ea);
+  border-radius: 12px;
+  background: var(--oanix-panel, #fff);
+}
+
+.note-attachment-card__icon {
+  display: grid;
+  width: 2.45rem;
+  height: 2.45rem;
+  place-items: center;
+  border-radius: 10px;
+  background: var(--oanix-panel-3, #e9eef5);
+  font-size: 1.25rem;
+}
+
+.note-attachment-card__body {
+  display: grid;
+  min-width: 0;
+  gap: .13rem;
+}
+
+.note-attachment-card__body strong {
+  overflow: hidden;
+  color: var(--oanix-text, #172033);
+  font-size: .84rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.note-attachment-card__body span {
+  color: var(--oanix-muted, #64748b);
+  font-size: .72rem;
+}
+
+.note-attachment-card__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: .28rem;
+  flex-wrap: wrap;
+}
+
+.note-attachment-card__actions button {
+  min-height: 1.95rem;
+  padding: 0 .52rem;
+  border: 1px solid var(--oanix-border, #d8e0ea);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--oanix-text-soft, #475569);
+  font: inherit;
+  font-size: .72rem;
+  cursor: pointer;
+}
+
+.note-attachment-card__actions button:hover,
+.note-attachments__heading > button:hover {
+  border-color: var(--oanix-border-strong, #93a4bd);
+  background: var(--oanix-paper-hover, rgba(148, 163, 184, .12));
+}
+
+.note-attachment-card__actions .note-attachment-card__remove {
+  color: var(--theme-danger, #b42318);
+}
+
+.note-attachments button:disabled {
+  opacity: .5;
+  cursor: default;
+}
+
+.note-attachments__status,
+.note-attachments__scope,
+.note-attachments__error {
+  margin: 0;
+}
+
+.note-attachments__error {
+  padding: .62rem .7rem;
+  border: 1px solid color-mix(in srgb, var(--theme-danger, #b42318) 42%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--theme-danger, #b42318) 9%, transparent);
+  color: var(--theme-danger, #b42318);
+  font-size: .78rem;
+}
+
+.note-attachments__scope {
+  padding-top: .1rem;
+}
+
+@media (max-width: 760px) {
+  .note-attachments {
+    margin-top: .8rem;
+    padding: .68rem;
+  }
+
+  .note-attachment-card {
+    grid-template-columns: 2.25rem minmax(0, 1fr);
+    gap: .6rem;
+    padding: .62rem;
+  }
+
+  .note-attachment-card__icon {
+    width: 2.25rem;
+    height: 2.25rem;
+  }
+
+  .note-attachment-card__actions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+    padding-left: 2.85rem;
+  }
+}
+
+@media (max-width: 430px) {
+  .note-attachment-card__actions {
+    padding-left: 0;
+  }
+
+  .note-attachment-card__actions button {
+    flex: 1 1 auto;
+  }
+}

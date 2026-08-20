@@ -30,8 +30,12 @@ const VAULT_BOOTSTRAP_PROTOCOL = 'oanix-vault-bootstrap-v1' as const
 const VAULT_BOOTSTRAP_KEY = 'vault-bootstrap-v1'
 const SYNC_STATE_RECORD_TYPE = 'system.sync-state'
 const SYNC_STATE_RECORD_ID = 'primary'
-const BINARY_RECORD_TYPES = new Set(['image', 'image-preview'])
-const LOCAL_ONLY_RECORD_TYPES = new Set([SYNC_STATE_RECORD_TYPE, 'system.encryption-check'])
+const BINARY_RECORD_TYPES = new Set(['image', 'image-preview', 'attachment'])
+const LOCAL_ONLY_RECORD_TYPES = new Set([
+  SYNC_STATE_RECORD_TYPE,
+  'system.encryption-check',
+  'note-attachments',
+])
 
 interface ParsedLocalRecordKey {
   recordType: string
