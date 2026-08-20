@@ -18,21 +18,30 @@ test('free-row runtime stays PWA-only and uses v9 logical row metadata', () => {
 test('the note is a growing virtual canvas rather than padding-owned gaps', () => {
   assert.match(runtime, /EDIT_ROWS = 240/)
   assert.match(runtime, /applyVirtualCanvas/)
-  assert.match(runtime, /data.*oanixVirtualCanvas|oanixVirtualCanvas/)
+  assert.match(runtime, /oanixVirtualCanvas/)
   assert.match(runtime, /block\.style\.position = 'absolute'/)
   assert.doesNotMatch(runtime, /style\.paddingTop/)
   assert.match(css, /data-oanix-virtual-canvas/)
 })
 
-test('tapping inserts only on a genuinely empty row and all special block areas remain unavailable', () => {
+test('tapping inserts only on a genuinely empty row and reserved vertical bands stay unavailable', () => {
   assert.match(runtime, /insertParagraphAtRow/)
   assert.match(runtime, /if \(rowOccupied\(editor, targetRow, rows\)\) return null/)
+  assert.match(runtime, /reservedBlockOwnsClientY/)
   assert.match(runtime, /rows\[blockId\(inserted\)\] = targetRow/)
   assert.match(runtime, /blockedTarget/)
   assert.match(runtime, /data-code-block/)
   assert.match(runtime, /data-checklist-block/)
   assert.match(runtime, /data-contact-block/)
   assert.match(runtime, /data-image-block/)
+})
+
+test('special insertion remembers the active direct block instead of sharing its text row', () => {
+  assert.match(runtime, /RESERVED_INSERT_SELECTOR/)
+  assert.match(runtime, /captureReservedInsertionAnchor/)
+  assert.match(runtime, /selectionDirectBlock/)
+  assert.match(runtime, /placePendingReservedAfterAnchor/)
+  assert.match(runtime, /reference\.after\(block\)/)
 })
 
 test('Enter is owned by the virtual canvas and creates exactly the next logical row', () => {
@@ -44,7 +53,7 @@ test('Enter is owned by the virtual canvas and creates exactly the next logical 
   assert.match(runtime, /placeCaret\(inserted\)/)
 })
 
-test('all blocks use the same sheet width and no lateral text geometry remains', () => {
+test('all normal blocks use the sheet width and no lateral text geometry returns', () => {
   assert.match(runtime, /block\.style\.left = `\$\{padLeft\}px`/)
   assert.match(runtime, /block\.style\.right = `\$\{padRight\}px`/)
   assert.match(runtime, /block\.style\.width = 'auto'/)
