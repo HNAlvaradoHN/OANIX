@@ -126,8 +126,10 @@ async function cleanupAttachmentsAfterPossibleNoteDeletion(noteId: string): Prom
 export function NoteAttachmentsRuntime() {
   const inputRef = useRef<HTMLInputElement>(null)
   const pickerNoteIdRef = useRef<string | null>(null)
+  const highlightTimerRef = useRef<number | null>(null)
   const [targets, setTargets] = useState<AttachmentTargets>(() => currentTargets())
   const [attachments, setAttachments] = useState<AttachmentMetadata[]>([])
+  const [newAttachmentIds, setNewAttachmentIds] = useState<Set<string>>(() => new Set())
   const [loading, setLoading] = useState(false)
   const [busy, setBusy] = useState(false)
   const [status, setStatus] = useState('')
@@ -176,8 +178,13 @@ export function NoteAttachmentsRuntime() {
   useEffect(() => {
     let active = true
     setAttachments([])
+    setNewAttachmentIds(new Set())
     setError('')
     setStatus('')
+    if (highlightTimerRef.current !== null) {
+      window.clearTimeout(highlightTimerRef.current)
+      highlightTimerRef.current = null
+    }
 
     if (!targets.noteId) {
       setLoading(false)
@@ -200,6 +207,21 @@ export function NoteAttachmentsRuntime() {
 
     return () => { active = false }
   }, [targets.noteId])
+
+  useEffect(() => {
+    if (newAttachmentIds.size === 0 || !targets.editorRoot) return
+
+    const frame = window.requestAnimationFrame(() => {
+      const firstNewCard = targets.editorRoot?.querySelector<HTMLElement>('.note-attachment-card[data-oanix-new="true"]')
+      firstNewCard?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    })
+
+    return () => window.cancelAnimationFrame(frame)
+  }, [newAttachmentIds, targets.editorRoot])
+
+  useEffect(() => () => {
+    if (highlightTimerRef.current !== null) window.clearTimeout(highlightTimerRef.current)
+  }, [])
 
   function beginAttachmentSelection() {
     const noteId = currentNoteId()
@@ -225,14 +247,24 @@ export function NoteAttachmentsRuntime() {
     setBusy(true)
     setError('')
     try {
+      const storedItems: AttachmentMetadata[] = []
       for (let index = 0; index < files.length; index += 1) {
         setStatus(`Cifrando archivo ${index + 1} de ${files.length}…`)
-        await storeEncryptedAttachment(noteId, files[index])
+        storedItems.push(await storeEncryptedAttachment(noteId, files[index]))
       }
       const items = await loadEncryptedAttachments(noteId)
-      if (currentNoteId() === noteId) setAttachments(items)
-      setStatus(files.length === 1 ? 'Archivo guardado y cifrado.' : `${files.length} archivos guardados y cifrados.`)
-      window.setTimeout(() => setStatus(''), 2200)
+      if (currentNoteId() === noteId) {
+        setAttachments(items)
+        setNewAttachmentIds(new Set(storedItems.map((item) => item.attachmentId)))
+        setStatus(files.length === 1 ? 'Archivo agregado ↓' : `${files.length} archivos agregados ↓`)
+
+        if (highlightTimerRef.current !== null) window.clearTimeout(highlightTimerRef.current)
+        highlightTimerRef.current = window.setTimeout(() => {
+          setNewAttachmentIds(new Set())
+          setStatus('')
+          highlightTimerRef.current = null
+        }, 2400)
+      }
     } catch (storeError) {
       setError(storeError instanceof Error ? storeError.message : 'No se pudo guardar el archivo cifrado.')
     } finally {
@@ -302,6 +334,11 @@ export function NoteAttachmentsRuntime() {
     try {
       await removeEncryptedAttachment(noteId, item.attachmentId)
       setAttachments((current) => current.filter((attachment) => attachment.attachmentId !== item.attachmentId))
+      setNewAttachmentIds((current) => {
+        const next = new Set(current)
+        next.delete(item.attachmentId)
+        return next
+      })
     } catch (removeError) {
       setError(removeError instanceof Error ? removeError.message : 'No se pudo quitar el adjunto cifrado.')
     } finally {
@@ -362,25 +399,32 @@ export function NoteAttachmentsRuntime() {
 
           {attachments.length > 0 && (
             <div className="note-attachments__list">
-              {attachments.map((item) => (
-                <article className="note-attachment-card" key={item.attachmentId}>
-                  <div className="note-attachment-card__icon" aria-hidden="true">{attachmentIcon(item)}</div>
-                  <div className="note-attachment-card__body">
-                    <strong title={item.name}>{item.name}</strong>
-                    <span>{formatAttachmentSize(item.byteLength)} · {attachmentTypeLabel(item)}</span>
-                  </div>
-                  <div className="note-attachment-card__actions">
-                    <button type="button" onClick={() => void handleOpen(item)} disabled={busy}>Abrir</button>
-                    <button type="button" onClick={() => void handleExport(item)} disabled={busy}>Exportar</button>
-                    <button className="note-attachment-card__remove" type="button" onClick={() => void handleRemove(item)} disabled={busy}>Quitar</button>
-                  </div>
-                </article>
-              ))}
+              {attachments.map((item) => {
+                const isNew = newAttachmentIds.has(item.attachmentId)
+                return (
+                  <article
+                    className="note-attachment-card"
+                    data-oanix-new={isNew ? 'true' : 'false'}
+                    key={item.attachmentId}
+                  >
+                    <div className="note-attachment-card__icon" aria-hidden="true">{attachmentIcon(item)}</div>
+                    <div className="note-attachment-card__body">
+                      <strong title={item.name}>{item.name}</strong>
+                      <span>{formatAttachmentSize(item.byteLength)} · {attachmentTypeLabel(item)}</span>
+                    </div>
+                    <div className="note-attachment-card__actions">
+                      <button type="button" onClick={() => void handleOpen(item)} disabled={busy}>Abrir</button>
+                      <button type="button" onClick={() => void handleExport(item)} disabled={busy}>Exportar</button>
+                      <button className="note-attachment-card__remove" type="button" onClick={() => void handleRemove(item)} disabled={busy}>Quitar</button>
+                    </div>
+                  </article>
+                )
+              })}
             </div>
           )}
 
           {loading && <p className="note-attachments__status">Cargando adjuntos cifrados…</p>}
-          {status && <p className="note-attachments__status" role="status">{status}</p>}
+          {status && <p className="note-attachments__status note-attachments__status--added" role="status">{status}</p>}
           {error && <p className="note-attachments__error" role="alert">{error}</p>}
           <p className="note-attachments__scope">Incluidos en el backup cifrado · sincronización de archivos pendiente.</p>
         </section>,
