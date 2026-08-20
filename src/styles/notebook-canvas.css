@@ -5,12 +5,22 @@ html.oanix-notebook-canvas-pwa .editor-surface {
     var(--theme-accent, #6f61ee) 42%,
     transparent
   );
+  --oanix-notebook-baseline-offset: 17px;
   line-height: var(--oanix-notebook-row);
   hyphens: none;
   -webkit-hyphens: none;
   word-break: normal;
   overflow-wrap: normal;
   cursor: text;
+  min-height: max(100%, calc(100dvh - 11rem));
+  transition: min-height 160ms ease;
+}
+
+/* While the note owns the caret, keep a long writable tail. It collapses again when editing ends,
+ * so the stored/read view visually finishes near the last real block instead of saving fake lines. */
+html.oanix-notebook-canvas-pwa .editor-surface:focus {
+  min-height: max(52rem, 175dvh);
+  scroll-margin-bottom: 45dvh;
 }
 
 /* Each note owns its paper style. The hidden grid remains identical in both modes. */
@@ -26,7 +36,9 @@ html.oanix-notebook-canvas-pwa .editor-surface[data-oanix-paper-mode='ruled'] {
     var(--oanix-notebook-line) calc(var(--oanix-notebook-row) - 1px),
     var(--oanix-notebook-line) var(--oanix-notebook-row)
   ) !important;
-  background-position: 0 24px !important;
+  /* The editor already has a 24px content inset. Moving the previous 24px grid offset up by
+   * 7px places each rule on the text baseline instead of below the letters. */
+  background-position: 0 var(--oanix-notebook-baseline-offset) !important;
   background-repeat: repeat-y !important;
   background-size: 100% var(--oanix-notebook-row) !important;
 }
@@ -131,7 +143,7 @@ html.oanix-notebook-canvas-pwa .editor-surface::after {
  * in the usable viewport above the panel and keyboard. */
 html.oanix-notebook-canvas-pwa .image-note-editor-root[data-oanix-image-panel-open='true'] .editor-surface {
   padding-bottom: calc(var(--oanix-image-panel-height, 0px) + 7rem);
-  transition: padding-bottom 160ms ease;
+  transition: padding-bottom 160ms ease, min-height 160ms ease;
 }
 
 html.oanix-notebook-canvas-pwa .image-note-editor-root[data-oanix-image-panel-open='true'] .editor-image-block[data-image-info-open='true'] {
@@ -140,6 +152,11 @@ html.oanix-notebook-canvas-pwa .image-note-editor-root[data-oanix-image-panel-op
 }
 
 @media (max-width: 760px) {
+  html.oanix-notebook-canvas-pwa .editor-surface:focus {
+    min-height: max(48rem, 190dvh);
+    scroll-margin-bottom: 55dvh;
+  }
+
   html.oanix-notebook-canvas-pwa .image-note-editor-root .editor-surface > .editor-image-block[data-image-compact='true'][data-image-alignment='left'],
   html.oanix-notebook-canvas-pwa .image-note-editor-root .editor-surface > .editor-image-block[data-image-compact='true'][data-image-alignment='right'] {
     width: min(48%, 12.5rem) !important;
@@ -174,6 +191,7 @@ html.oanix-notebook-canvas-pwa .image-note-editor-root[data-oanix-image-panel-op
 }
 
 @media (prefers-reduced-motion: reduce) {
+  html.oanix-notebook-canvas-pwa .editor-surface,
   html.oanix-notebook-canvas-pwa .editor-surface > p[data-oanix-leading-rows],
   html.oanix-notebook-canvas-pwa .image-note-editor-root[data-oanix-image-panel-open='true'] .editor-surface,
   .oanix-note-paper-toggle {
