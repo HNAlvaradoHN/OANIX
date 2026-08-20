@@ -1,12 +1,14 @@
 import { useLayoutEffect } from 'react'
 
 const ROW_HEIGHT_PX = 32
-const ROW_STORAGE_KEY = 'oanix.notebook.rows.v7'
+const ROW_STORAGE_KEY = 'oanix.notebook.rows.v9'
+const EDIT_ROWS = 240
+const VIEW_ROWS_AFTER_CONTENT = 14
 
 type RowMap = Record<string, number>
-type LayoutBlock = HTMLParagraphElement | HTMLElement
+type LayoutBlock = HTMLElement
 
-type ImageLayoutState = {
+type ImageState = {
   row: number
   span: number
   blocking: boolean
@@ -25,7 +27,7 @@ function writeRows(rows: RowMap) {
   try {
     window.localStorage.setItem(ROW_STORAGE_KEY, JSON.stringify(rows))
   } catch {
-    // Layout metadata is optional; editing must still work if storage is unavailable.
+    // Row metadata is a local layout enhancement; note editing must still work without it.
   }
 }
 
@@ -34,12 +36,38 @@ function rowHeight(editor: HTMLElement): number {
   return Number.isFinite(value) && value >= 20 ? value : ROW_HEIGHT_PX
 }
 
-function canvasTop(editor: HTMLElement): number {
+function editorPaddingLeft(editor: HTMLElement): number {
+  return Number.parseFloat(getComputedStyle(editor).paddingLeft) || 0
+}
+
+function editorPaddingRight(editor: HTMLElement): number {
+  return Number.parseFloat(getComputedStyle(editor).paddingRight) || 0
+}
+
+function canvasOffset(editor: HTMLElement): number {
   const directDailyEntries = Array.from(editor.children).filter(
     (child): child is HTMLElement => child instanceof HTMLElement && child.dataset.dailyEntryBlock === 'true',
   )
   const lastDaily = directDailyEntries.at(-1)
-  return lastDaily?.getBoundingClientRect().bottom ?? editor.getBoundingClientRect().top
+  if (!lastDaily) return Number.parseFloat(getComputedStyle(editor).paddingTop) || 0
+  return Math.max(0, lastDaily.offsetTop + lastDaily.offsetHeight)
+}
+
+function isDailyEntry(block: Element): boolean {
+  return block instanceof HTMLElement && block.dataset.dailyEntryBlock === 'true'
+}
+
+function isImageBlock(block: Element): boolean {
+  return block instanceof HTMLElement && block.dataset.imageBlock === 'true'
+}
+
+function isCanvasBlock(block: Element): block is HTMLElement {
+  if (!(block instanceof HTMLElement) || isDailyEntry(block)) return false
+  return !!block.dataset.blockId
+}
+
+function directCanvasBlocks(editor: HTMLElement): LayoutBlock[] {
+  return Array.from(editor.children).filter(isCanvasBlock)
 }
 
 function blockId(block: LayoutBlock): string {
@@ -57,40 +85,20 @@ function createParagraph(): HTMLParagraphElement {
   return paragraph
 }
 
-function isImageBlock(block: Element): block is HTMLElement {
-  return block instanceof HTMLElement && block.dataset.imageBlock === 'true'
-}
-
-function directLayoutBlocks(editor: HTMLElement): LayoutBlock[] {
-  return Array.from(editor.children).filter(
-    (child): child is LayoutBlock => child instanceof HTMLParagraphElement || isImageBlock(child),
-  )
-}
-
-function directParagraphs(editor: HTMLElement): HTMLParagraphElement[] {
-  return directLayoutBlocks(editor).filter((block): block is HTMLParagraphElement => block instanceof HTMLParagraphElement)
-}
-
 function imageAllowsSideFlow(image: HTMLElement): boolean {
   if (image.dataset.imageCompact !== 'true') return false
   return image.dataset.imageAlignment === 'left' || image.dataset.imageAlignment === 'right'
 }
 
-function paragraphRows(paragraph: HTMLParagraphElement, rowPx: number): number {
-  // A floated image can make the paragraph's layout box much taller than its actual text.
-  // Counting scrollHeight therefore made one short line such as "Rios" occupy many logical
-  // rows. Measure rendered text-line rects instead, deduplicating inline fragments that share
-  // the same baseline. Empty paragraphs still consume exactly one logical row.
+function textRows(block: HTMLElement, rowPx: number): number {
+  if (isImageBlock(block)) return imageRows(block, rowPx)
   const range = document.createRange()
-  range.selectNodeContents(paragraph)
+  range.selectNodeContents(block)
   const rects = Array.from(range.getClientRects()).filter((rect) => rect.height > 0)
   const tops: number[] = []
-
   for (const rect of rects) {
-    const top = rect.top
-    if (!tops.some((value) => Math.abs(value - top) < Math.max(2, rowPx * 0.2))) tops.push(top)
+    if (!tops.some((top) => Math.abs(top - rect.top) < Math.max(2, rowPx * 0.18))) tops.push(rect.top)
   }
-
   return Math.max(1, tops.length)
 }
 
@@ -100,22 +108,63 @@ function imageRows(image: HTMLElement, rowPx: number): number {
 }
 
 function blockRows(block: LayoutBlock, rowPx: number): number {
-  return block instanceof HTMLParagraphElement ? paragraphRows(block, rowPx) : imageRows(block, rowPx)
+  return isImageBlock(block) ? imageRows(block, rowPx) : textRows(block, rowPx)
 }
 
-function visualRow(editor: HTMLElement, block: LayoutBlock): number {
-  return Math.max(0, Math.round((block.getBoundingClientRect().top - canvasTop(editor)) / rowHeight(editor)))
+function parseRow(block: HTMLElement): number | null {
+  const row = Number.parseInt(block.dataset.oanixLogicalRow ?? '', 10)
+  return Number.isSafeInteger(row) && row >= 0 ? row : null
 }
 
-function migrateVisualRows(editor: HTMLElement, rows: RowMap) {
+function rowOccupied(editor: HTMLElement, row: number, rows: RowMap, ignore?: HTMLElement): boolean {
+  const rowPx = rowHeight(editor)
+  return directCanvasBlocks(editor).some((block) => {
+    if (block === ignore) return false
+    const start = rows[blockId(block)] ?? parseRow(block)
+    if (!Number.isSafeInteger(start) || start < 0) return false
+    if (isImageBlock(block) && imageAllowsSideFlow(block)) return false
+    return row >= start && row < start + blockRows(block, rowPx)
+  })
+}
+
+function nextFreeRow(editor: HTMLElement, start: number, rows: RowMap): number {
+  let row = Math.max(0, start)
+  let guard = 0
+  while (rowOccupied(editor, row, rows) && guard < 2000) {
+    row += 1
+    guard += 1
+  }
+  return row
+}
+
+function assignMissingRows(editor: HTMLElement, rows: RowMap): boolean {
+  const rowPx = rowHeight(editor)
   let changed = false
-  for (const block of directLayoutBlocks(editor)) {
+  let cursor = 0
+
+  for (const block of directCanvasBlocks(editor)) {
     const id = blockId(block)
-    if (Number.isSafeInteger(rows[id]) && rows[id] >= 0) continue
-    rows[id] = visualRow(editor, block)
+    const saved = rows[id]
+    if (Number.isSafeInteger(saved) && saved >= 0) {
+      cursor = Math.max(cursor, saved + blockRows(block, rowPx))
+      continue
+    }
+
+    const previous = block.previousElementSibling
+    let proposed = cursor
+    if (previous instanceof HTMLElement && isCanvasBlock(previous)) {
+      const previousRow = rows[blockId(previous)] ?? parseRow(previous) ?? cursor
+      proposed = previousRow + blockRows(previous, rowPx)
+    }
+
+    const row = nextFreeRow(editor, proposed, rows)
+    rows[id] = row
+    block.dataset.oanixLogicalRow = String(row)
+    cursor = Math.max(cursor, row + blockRows(block, rowPx))
     changed = true
   }
-  if (changed) writeRows(rows)
+
+  return changed
 }
 
 function shiftRowsAtOrAfter(rows: RowMap, row: number, amount: number, exceptId?: string) {
@@ -126,142 +175,172 @@ function shiftRowsAtOrAfter(rows: RowMap, row: number, amount: number, exceptId?
   }
 }
 
-function previousLogicalBottom(editor: HTMLElement, image: HTMLElement, rows: RowMap): number {
-  const rowPx = rowHeight(editor)
-  const blocks = directLayoutBlocks(editor)
-  const index = blocks.indexOf(image)
-  if (index <= 0) return 0
-
-  for (let position = index - 1; position >= 0; position -= 1) {
-    const previous = blocks[position]
-    if (isImageBlock(previous) && imageAllowsSideFlow(previous)) continue
-    const id = blockId(previous)
-    const row = rows[id]
-    if (!Number.isSafeInteger(row)) continue
-    return row + blockRows(previous, rowPx)
-  }
-
-  return 0
-}
-
-function syncImageRows(
+function syncImageReservations(
   editor: HTMLElement,
   rows: RowMap,
-  imageStates: Map<string, ImageLayoutState>,
+  states: Map<string, ImageState>,
 ): boolean {
   const rowPx = rowHeight(editor)
-  const images = directLayoutBlocks(editor).filter(isImageBlock)
-  const presentIds = new Set(images.map((image) => blockId(image)))
+  const images = directCanvasBlocks(editor).filter((block) => isImageBlock(block))
+  const present = new Set(images.map((image) => blockId(image)))
   let changed = false
 
   for (const image of images) {
     const id = blockId(image)
-    const blocking = !imageAllowsSideFlow(image)
+    const row = rows[id] ?? 0
     const span = imageRows(image, rowPx)
-    const existing = imageStates.get(id)
+    const blocking = !imageAllowsSideFlow(image)
+    const previous = states.get(id)
 
-    if (!existing) {
-      const alreadyIntegrated = Number.isSafeInteger(rows[id]) && rows[id] >= 0
-      const row = alreadyIntegrated ? rows[id] : previousLogicalBottom(editor, image, rows)
-      rows[id] = row
-      if (!alreadyIntegrated && blocking) shiftRowsAtOrAfter(rows, row, span, id)
-      imageStates.set(id, { row, span, blocking })
-      image.dataset.oanixLogicalRow = String(row)
+    if (!previous) {
+      if (blocking) shiftRowsAtOrAfter(rows, row + 1, span, id)
+      states.set(id, { row, span, blocking })
       changed = true
       continue
     }
 
-    const row = rows[id] ?? existing.row
     let delta = 0
-    if (existing.blocking && blocking) delta = span - existing.span
-    else if (!existing.blocking && blocking) delta = span
-    else if (existing.blocking && !blocking) delta = -existing.span
+    if (previous.blocking && blocking) delta = span - previous.span
+    else if (!previous.blocking && blocking) delta = span
+    else if (previous.blocking && !blocking) delta = -previous.span
 
     if (delta !== 0) {
       shiftRowsAtOrAfter(rows, row + 1, delta, id)
       changed = true
     }
-
-    rows[id] = row
-    imageStates.set(id, { row, span, blocking })
-    image.dataset.oanixLogicalRow = String(row)
+    states.set(id, { row, span, blocking })
   }
 
-  for (const [id, state] of Array.from(imageStates.entries())) {
-    if (presentIds.has(id)) continue
+  for (const [id, state] of Array.from(states.entries())) {
+    if (present.has(id)) continue
     if (state.blocking) shiftRowsAtOrAfter(rows, state.row + 1, -state.span, id)
     delete rows[id]
-    imageStates.delete(id)
+    states.delete(id)
     changed = true
   }
 
   return changed
 }
 
-function applyLogicalLayout(editor: HTMLElement, rows: RowMap) {
-  migrateVisualRows(editor, rows)
+function sideImageForRow(editor: HTMLElement, row: number, rows: RowMap): HTMLElement | null {
   const rowPx = rowHeight(editor)
-  let previousBottomRow = 0
+  return directCanvasBlocks(editor).find((block) => {
+    if (!isImageBlock(block) || !imageAllowsSideFlow(block)) return false
+    const start = rows[blockId(block)] ?? 0
+    return row >= start && row < start + imageRows(block, rowPx)
+  }) ?? null
+}
 
-  for (const block of directLayoutBlocks(editor)) {
-    const id = blockId(block)
-    const desiredRow = Math.max(0, rows[id] ?? previousBottomRow)
-    block.dataset.oanixLogicalRow = String(desiredRow)
+function positionBlock(editor: HTMLElement, block: HTMLElement, row: number, rows: RowMap) {
+  const rowPx = rowHeight(editor)
+  const top = canvasOffset(editor) + row * rowPx
+  block.dataset.oanixLogicalRow = String(row)
+  block.dataset.oanixVirtualBlock = 'true'
+  block.style.position = 'absolute'
+  block.style.top = `${top}px`
+  block.style.marginTop = '0'
+  block.style.marginBottom = '0'
 
-    if (block instanceof HTMLParagraphElement) {
-      const gapRows = Math.max(0, desiredRow - previousBottomRow)
-      block.dataset.oanixLeadingRows = gapRows > 0 ? String(gapRows) : ''
-      if (gapRows > 0) block.style.paddingTop = `${gapRows * rowPx}px`
-      else block.style.removeProperty('padding-top')
-      previousBottomRow = Math.max(previousBottomRow, desiredRow + paragraphRows(block, rowPx))
-      continue
+  const padLeft = editorPaddingLeft(editor)
+  const padRight = editorPaddingRight(editor)
+  const contentWidth = Math.max(0, editor.clientWidth - padLeft - padRight)
+
+  if (isImageBlock(block)) {
+    const alignment = block.dataset.imageAlignment ?? 'center'
+    block.style.transform = 'none'
+    if (alignment === 'right') {
+      block.style.left = 'auto'
+      block.style.right = `${padRight}px`
+    } else if (alignment === 'center') {
+      block.style.left = '50%'
+      block.style.right = 'auto'
+      block.style.transform = 'translateX(-50%)'
+    } else {
+      block.style.left = `${padLeft}px`
+      block.style.right = 'auto'
     }
-
-    block.dataset.oanixLeadingRows = ''
-    if (!imageAllowsSideFlow(block)) {
-      previousBottomRow = Math.max(previousBottomRow, desiredRow + imageRows(block, rowPx))
-    }
+    return
   }
+
+  block.style.transform = 'none'
+  block.style.left = `${padLeft}px`
+  block.style.right = `${padRight}px`
+  block.style.width = 'auto'
+
+  const sideImage = sideImageForRow(editor, row, rows)
+  if (!sideImage) return
+
+  const imageWidth = sideImage.getBoundingClientRect().width
+  const gutter = 16
+  if (sideImage.dataset.imageAlignment === 'left') {
+    block.style.left = `${padLeft + imageWidth + gutter}px`
+  } else {
+    block.style.right = `${padRight + imageWidth + gutter}px`
+  }
+  block.style.width = 'auto'
+  if (contentWidth > 0) block.style.maxWidth = `${Math.max(80, contentWidth - imageWidth - gutter)}px`
+}
+
+function maxUsedRow(editor: HTMLElement, rows: RowMap): number {
+  const rowPx = rowHeight(editor)
+  let max = 0
+  for (const block of directCanvasBlocks(editor)) {
+    const row = rows[blockId(block)] ?? 0
+    max = Math.max(max, row + blockRows(block, rowPx))
+  }
+  return max
+}
+
+function applyVirtualCanvas(editor: HTMLElement, rows: RowMap) {
+  const offset = canvasOffset(editor)
+  for (const block of directCanvasBlocks(editor)) {
+    const row = rows[blockId(block)] ?? 0
+    positionBlock(editor, block, row, rows)
+  }
+
+  const focused = editor === document.activeElement || editor.contains(document.activeElement)
+  const used = maxUsedRow(editor, rows)
+  const virtualRows = focused ? Math.max(EDIT_ROWS, used + 80) : Math.max(used + VIEW_ROWS_AFTER_CONTENT, 18)
+  editor.dataset.oanixVirtualCanvas = 'true'
+  editor.style.minHeight = `${Math.ceil(offset + virtualRows * rowHeight(editor))}px`
 }
 
 function rowAtPoint(editor: HTMLElement, clientY: number): number {
-  return Math.max(0, Math.floor((clientY - canvasTop(editor)) / rowHeight(editor)))
+  const rect = editor.getBoundingClientRect()
+  const localY = clientY - rect.top - canvasOffset(editor)
+  return Math.max(0, Math.floor(localY / rowHeight(editor)))
 }
 
-function paragraphOccupiesRow(paragraph: HTMLParagraphElement, row: number, rowPx: number): boolean {
-  const start = Number.parseInt(paragraph.dataset.oanixLogicalRow ?? '-1', 10)
-  if (!Number.isSafeInteger(start) || start < 0) return false
-  const length = paragraphRows(paragraph, rowPx)
-  return row >= start && row < start + length
+function paragraphOccupiesRow(editor: HTMLElement, row: number, rows: RowMap): boolean {
+  const rowPx = rowHeight(editor)
+  return directCanvasBlocks(editor).some((block) => {
+    if (isImageBlock(block)) return false
+    const start = rows[blockId(block)] ?? 0
+    return row >= start && row < start + blockRows(block, rowPx)
+  })
 }
 
-function blockingImageOccupiesRow(editor: HTMLElement, row: number, rowPx: number): boolean {
-  return directLayoutBlocks(editor).some((block) => {
+function blockingImageOccupiesRow(editor: HTMLElement, row: number, rows: RowMap): boolean {
+  const rowPx = rowHeight(editor)
+  return directCanvasBlocks(editor).some((block) => {
     if (!isImageBlock(block) || imageAllowsSideFlow(block)) return false
-    const start = Number.parseInt(block.dataset.oanixLogicalRow ?? '-1', 10)
-    if (!Number.isSafeInteger(start) || start < 0) return false
+    const start = rows[blockId(block)] ?? 0
     return row >= start && row < start + imageRows(block, rowPx)
   })
 }
 
 function insertParagraphAtRow(editor: HTMLElement, targetRow: number, rows: RowMap): HTMLParagraphElement | null {
-  const rowPx = rowHeight(editor)
-  const paragraphs = directParagraphs(editor)
-  if (paragraphs.some((paragraph) => paragraphOccupiesRow(paragraph, targetRow, rowPx))) return null
-  if (blockingImageOccupiesRow(editor, targetRow, rowPx)) return null
+  if (paragraphOccupiesRow(editor, targetRow, rows)) return null
+  if (blockingImageOccupiesRow(editor, targetRow, rows)) return null
 
   const inserted = createParagraph()
   rows[blockId(inserted)] = targetRow
-
-  const next = directLayoutBlocks(editor).find((block) => {
-    const row = Number.parseInt(block.dataset.oanixLogicalRow ?? '0', 10)
-    return Number.isSafeInteger(row) && row > targetRow
-  })
+  const next = directCanvasBlocks(editor).find((block) => (rows[blockId(block)] ?? 0) > targetRow)
   if (next) next.before(inserted)
   else editor.append(inserted)
 
   writeRows(rows)
-  applyLogicalLayout(editor, rows)
+  applyVirtualCanvas(editor, rows)
   return inserted
 }
 
@@ -296,16 +375,18 @@ export function NotebookFreeRowsRuntime() {
     if (import.meta.env.MODE === 'capacitor') return
 
     const rows = readRows()
-    const imageStates = new Map<string, ImageLayoutState>()
+    const imageStates = new Map<string, ImageState>()
     let frame = 0
+
     const sync = () => {
       if (frame) cancelAnimationFrame(frame)
       frame = requestAnimationFrame(() => {
         frame = 0
         document.querySelectorAll<HTMLElement>('.editor-surface').forEach((editor) => {
-          const imagesChanged = syncImageRows(editor, rows, imageStates)
-          applyLogicalLayout(editor, rows)
-          if (imagesChanged) writeRows(rows)
+          const assigned = assignMissingRows(editor, rows)
+          const imagesChanged = syncImageReservations(editor, rows, imageStates)
+          applyVirtualCanvas(editor, rows)
+          if (assigned || imagesChanged) writeRows(rows)
         })
       })
     }
@@ -315,7 +396,6 @@ export function NotebookFreeRowsRuntime() {
       if (!(target instanceof Element)) return
       const editor = target.closest<HTMLElement>('.editor-surface')
       if (!editor || blockedTarget(target, editor)) return
-      if (event.clientY < canvasTop(editor)) return
 
       const row = rowAtPoint(editor, event.clientY)
       const paragraph = insertParagraphAtRow(editor, row, rows)
@@ -335,14 +415,13 @@ export function NotebookFreeRowsRuntime() {
       const node = selection?.anchorNode
       const paragraph = node instanceof Element ? node.closest<HTMLParagraphElement>('p') : node?.parentElement?.closest<HTMLParagraphElement>('p')
       if (!paragraph || paragraph.parentElement !== editor) return
-      const row = Number.parseInt(paragraph.dataset.oanixLogicalRow ?? '0', 10)
-      if (!Number.isSafeInteger(row)) return
+      const row = rows[blockId(paragraph)] ?? parseRow(paragraph) ?? 0
       shiftRowsAfter(rows, row, 1)
       writeRows(rows)
       requestAnimationFrame(sync)
     }
 
-    function allowManualViewportScroll(event: Event) {
+    function keepManualScroll(event: Event) {
       event.stopImmediatePropagation()
     }
 
@@ -355,7 +434,9 @@ export function NotebookFreeRowsRuntime() {
     })
     document.addEventListener('click', handleClick, true)
     document.addEventListener('keydown', handleKeyDown, true)
-    window.visualViewport?.addEventListener('scroll', allowManualViewportScroll, true)
+    document.addEventListener('focusin', sync, true)
+    document.addEventListener('focusout', sync, true)
+    window.visualViewport?.addEventListener('scroll', keepManualScroll, true)
     window.addEventListener('resize', sync)
     sync()
 
@@ -364,7 +445,9 @@ export function NotebookFreeRowsRuntime() {
       observer.disconnect()
       document.removeEventListener('click', handleClick, true)
       document.removeEventListener('keydown', handleKeyDown, true)
-      window.visualViewport?.removeEventListener('scroll', allowManualViewportScroll, true)
+      document.removeEventListener('focusin', sync, true)
+      document.removeEventListener('focusout', sync, true)
+      window.visualViewport?.removeEventListener('scroll', keepManualScroll, true)
       window.removeEventListener('resize', sync)
     }
   }, [])
