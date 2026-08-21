@@ -110,14 +110,17 @@ test('controlled 128 MiB upload resumes after a mid-chunk interruption without r
 
   const interrupted = await stateStore.load(objectId)
   assert.ok(interrupted)
+  const locallyCheckpointedBeforeDrop = interrupted.checkpoint.confirmedCiphertextBytes
   assert.equal(provider.confirmed, INTERRUPT_AFTER_BYTES)
-  assert.equal(interrupted.checkpoint.confirmedCiphertextBytes, INTERRUPT_AFTER_BYTES)
+  assert.ok(locallyCheckpointedBeforeDrop > 0)
+  assert.ok(provider.confirmed > locallyCheckpointedBeforeDrop)
+  assert.equal(locallyCheckpointedBeforeDrop, ranges[8].ciphertextOffset)
   assert.ok(interrupted.checkpoint.activeChunk)
   assert.ok(interrupted.retainedChunk)
-  assert.ok(interrupted.checkpoint.confirmedCiphertextBytes > 0)
-  const confirmedBeforeResume = provider.confirmed
+  assert.equal(interrupted.checkpoint.activeChunk.index, 8)
 
   provider.shouldInterrupt = false
+  const remoteConfirmedBeforeResume = provider.confirmed
   const resumedProgress: LargeObjectTransferProgress[] = []
   const result = await uploadLargeObjectResumable({
     blob,
@@ -128,7 +131,7 @@ test('controlled 128 MiB upload resumes after a mid-chunk interruption without r
     onProgress: (progress) => resumedProgress.push(progress),
   })
 
-  assert.equal(confirmedBeforeResume, INTERRUPT_AFTER_BYTES)
+  assert.equal(remoteConfirmedBeforeResume, INTERRUPT_AFTER_BYTES)
   assert.equal(provider.confirmed, expectedCiphertextBytes)
   assert.equal(result.manifests.length, 16)
   assert.equal(await stateStore.load(objectId), null)
