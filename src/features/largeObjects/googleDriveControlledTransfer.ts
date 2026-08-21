@@ -14,7 +14,7 @@ export interface ControlledGoogleDriveTransferOptions {
   blob: Blob
   vaultKey: CryptoKey
   objectId: string
-  fileName?: string
+  fileName: string
   mimeType?: string
 }
 
