@@ -14,12 +14,21 @@ import type {
 } from '../src/features/largeObjects/largeObjectTransferContract.ts'
 import type { LargeObjectChunkManifest, LargeObjectChunkPlan } from '../src/features/largeObjects/largeObjectProtocol.ts'
 
-const CHUNK_BYTES = 256 * 1024
+const CHUNK_BYTES = 1024 * 1024
 
 function ownedBuffer(bytes: Uint8Array): ArrayBuffer {
   const copy = new Uint8Array(bytes.byteLength)
   copy.set(bytes)
   return copy.buffer
+}
+
+function randomBytes(length: number): Uint8Array {
+  const bytes = new Uint8Array(length)
+  const maxRandomValues = 65_536
+  for (let offset = 0; offset < bytes.byteLength; offset += maxRandomValues) {
+    crypto.getRandomValues(bytes.subarray(offset, Math.min(offset + maxRandomValues, bytes.byteLength)))
+  }
+  return bytes
 }
 
 function decodeBase64Url(value: string): Uint8Array {
@@ -144,7 +153,7 @@ async function decryptRemote(
 }
 
 test('orchestrator survives a mid-chunk interruption and resumes without re-encrypting confirmed bytes', async () => {
-  const original = crypto.getRandomValues(new Uint8Array(CHUNK_BYTES * 2 + 91_337))
+  const original = randomBytes(CHUNK_BYTES * 2 + 91_337)
   const blob = new Blob([ownedBuffer(original)])
   const key = await generateVaultKey()
   const objectId = 'orchestrator-object-001'
