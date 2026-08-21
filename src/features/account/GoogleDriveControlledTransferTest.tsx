@@ -1,11 +1,19 @@
 import { useRef, useState } from 'react'
-import { transferControlledGoogleDriveLargeObject } from '../largeObjects/googleDriveControlledTransfer.ts'
+import {
+  transferControlledGoogleDriveLargeObject,
+  verifyControlledGoogleDriveRoundTrip,
+} from '../largeObjects/googleDriveControlledTransfer.ts'
 import { createControlledLargeObjectId } from '../largeObjects/controlledLargeObjectIdentity.ts'
 import {
   clearLargeObjectTransferCache,
   loadLargeObjectTransferCache,
 } from '../../storage/local/largeObjectTransferCache.ts'
 import { requireActiveVaultKey } from '../../security/vault/vaultSession.ts'
+
+function formatPercent(verifiedBytes: number, totalBytes: number): string {
+  if (totalBytes <= 0) return '0%'
+  return `${Math.min(100, Math.round((verifiedBytes / totalBytes) * 100))}%`
+}
 
 export function GoogleDriveControlledTransferTest({
   disabled = false,
@@ -25,18 +33,31 @@ export function GoogleDriveControlledTransferTest({
     setMessage('')
     try {
       const objectId = await createControlledLargeObjectId(file)
-      await transferControlledGoogleDriveLargeObject({
+      const vaultKey = requireActiveVaultKey()
+      const result = await transferControlledGoogleDriveLargeObject({
         blob: file,
-        vaultKey: requireActiveVaultKey(),
+        vaultKey,
         objectId,
         fileName: file.name,
         mimeType: file.type || undefined,
       })
-      setMessage('Prueba completada. Archivo cifrado y guardado en Google Drive.')
+
+      setMessage('Archivo guardado ✓ · verificando recuperación desde Google Drive…')
+      const verification = await verifyControlledGoogleDriveRoundTrip({
+        blob: file,
+        vaultKey,
+        objectId,
+        transferResult: result,
+        onProgress: (verifiedBytes, totalBytes) => {
+          setMessage(`Archivo guardado ✓ · verificando recuperación ${formatPercent(verifiedBytes, totalBytes)}`)
+        },
+      })
+
+      setMessage(`Recuperación verificada ✓ · ${verification.chunkCount} fragmentos íntegros y descifrados.`)
       await onStored?.()
     } catch (error) {
       setFailed(true)
-      setMessage(error instanceof Error ? error.message : 'No se pudo completar la prueba de transferencia.')
+      setMessage(error instanceof Error ? error.message : 'No se pudo completar la prueba de transferencia y recuperación.')
     } finally {
       setBusy(false)
     }
@@ -83,7 +104,7 @@ export function GoogleDriveControlledTransferTest({
         {busy ? 'Procesando…' : 'Probar archivo de 100–200 MiB'}
       </button>
       <small style={{ display: 'block', marginTop: '.45rem', opacity: .78, lineHeight: 1.4 }}>
-        Prueba controlada. OANIX rechazará cualquier archivo fuera de 100–200 MiB.
+        Prueba controlada. OANIX subirá el archivo cifrado y luego verificará su recuperación por fragmentos.
       </small>
       {message && (
         <p className="account-storage-card__message" role="status" style={{ marginTop: '.45rem' }}>

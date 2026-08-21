@@ -45,7 +45,7 @@ test('Drive crypto chunks produce 256 KiB-aligned ciphertext for every full chun
   )
 })
 
-test('controlled Google Drive entry reuses the real provider, persistent encrypted state and transfer service', async () => {
+test('controlled Google Drive upload and recovery reuse the provider without persisting credentials', async () => {
   const source = await readFile(
     new URL('../src/features/largeObjects/googleDriveControlledTransfer.ts', import.meta.url),
     'utf8',
@@ -56,6 +56,21 @@ test('controlled Google Drive entry reuses the real provider, persistent encrypt
   assert.match(source, /new PersistentLargeObjectTransferStateStore\(\)/u)
   assert.match(source, /chunkBytes: GOOGLE_DRIVE_PLAINTEXT_CHUNK_BYTES/u)
   assert.match(source, /return transferLargeObject\(/u)
+  assert.match(source, /verifyLargeObjectRoundTrip/u)
+  assert.match(source, /remoteObject: options\.transferResult\.remoteObject/u)
+  assert.match(source, /manifests: options\.transferResult\.manifests/u)
   assert.doesNotMatch(source, /connectGoogleDriveAndInspect|authorizeGoogleDriveOnWeb|authorizeGoogleDriveOnAndroid/u)
   assert.doesNotMatch(source, /localStorage|sessionStorage|refreshToken|oanix-vault/u)
+})
+
+test('controlled UI verifies recovery only after the upload returns stored metadata', async () => {
+  const source = await readFile(
+    new URL('../src/features/account/GoogleDriveControlledTransferTest.tsx', import.meta.url),
+    'utf8',
+  )
+
+  assert.match(source, /const result = await transferControlledGoogleDriveLargeObject/u)
+  assert.match(source, /await verifyControlledGoogleDriveRoundTrip/u)
+  assert.match(source, /transferResult: result/u)
+  assert.match(source, /Recuperación verificada/u)
 })

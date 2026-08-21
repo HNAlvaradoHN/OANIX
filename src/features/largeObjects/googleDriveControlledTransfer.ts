@@ -4,6 +4,7 @@ import {
   LARGE_OBJECT_AES_GCM_TAG_BYTES,
   LARGE_OBJECT_CHUNK_ALIGNMENT_BYTES,
 } from './largeObjectProtocol.ts'
+import { verifyLargeObjectRoundTrip, type VerifyLargeObjectRoundTripResult } from './largeObjectRoundTripVerifier.ts'
 import { PersistentLargeObjectTransferStateStore } from './persistentLargeObjectTransferStateStore.ts'
 import {
   transferLargeObject,
@@ -36,6 +37,14 @@ export interface ControlledGoogleDriveTransferOptions {
   mimeType?: string
 }
 
+export interface ControlledGoogleDriveRoundTripOptions {
+  blob: Blob
+  vaultKey: CryptoKey
+  objectId: string
+  transferResult: TransferLargeObjectResult
+  onProgress?: (verifiedPlaintextBytes: number, totalPlaintextBytes: number) => void
+}
+
 export function assertControlledGoogleDriveTransferSize(byteLength: number): void {
   if (!Number.isSafeInteger(byteLength)) {
     throw new Error('El tamaño del archivo de prueba no es válido.')
@@ -48,14 +57,17 @@ export function assertControlledGoogleDriveTransferSize(byteLength: number): voi
   }
 }
 
+function requireControlledDriveLease(): void {
+  if (!hasUsableGoogleDriveAccessTokenLease()) {
+    throw new Error('Conectá Google Drive antes de iniciar la prueba controlada.')
+  }
+}
+
 export async function transferControlledGoogleDriveLargeObject(
   options: ControlledGoogleDriveTransferOptions,
 ): Promise<TransferLargeObjectResult> {
   assertControlledGoogleDriveTransferSize(options.blob.size)
-
-  if (!hasUsableGoogleDriveAccessTokenLease()) {
-    throw new Error('Conectá Google Drive antes de iniciar la prueba controlada.')
-  }
+  requireControlledDriveLease()
 
   const provider = createGoogleDriveStorageProviderFromActiveLease()
   const stateStore = new PersistentLargeObjectTransferStateStore()
@@ -71,5 +83,22 @@ export async function transferControlledGoogleDriveLargeObject(
       fileName: options.fileName,
       mimeType: options.mimeType,
     },
+  })
+}
+
+export async function verifyControlledGoogleDriveRoundTrip(
+  options: ControlledGoogleDriveRoundTripOptions,
+): Promise<VerifyLargeObjectRoundTripResult> {
+  assertControlledGoogleDriveTransferSize(options.blob.size)
+  requireControlledDriveLease()
+
+  return verifyLargeObjectRoundTrip({
+    blob: options.blob,
+    vaultKey: options.vaultKey,
+    objectId: options.objectId,
+    provider: createGoogleDriveStorageProviderFromActiveLease(),
+    remoteObject: options.transferResult.remoteObject,
+    manifests: options.transferResult.manifests,
+    onProgress: options.onProgress,
   })
 }
