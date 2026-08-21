@@ -1,0 +1,111 @@
+.large-transfer {
+  position: fixed;
+  z-index: 2450;
+  right: max(.7rem, env(safe-area-inset-right));
+  bottom: max(.7rem, env(safe-area-inset-bottom));
+  display: grid;
+  gap: .55rem;
+  width: min(23rem, calc(100vw - 1.4rem));
+  padding: .78rem .82rem;
+  border: 1px solid rgba(125, 148, 181, .22);
+  border-radius: .95rem;
+  background: linear-gradient(145deg, rgba(15, 23, 42, .96), rgba(8, 13, 24, .97));
+  color: #e8eef8;
+  box-shadow: 0 14px 42px rgba(0, 0, 0, .28);
+  backdrop-filter: blur(14px);
+}
+
+.large-transfer__topline,
+.large-transfer__detail {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .7rem;
+}
+
+.large-transfer__file {
+  min-width: 0;
+  display: grid;
+  gap: .12rem;
+}
+
+.large-transfer__file strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: .74rem;
+}
+
+.large-transfer__file span {
+  color: #94a3b8;
+  font-size: .65rem;
+  font-weight: 760;
+}
+
+.large-transfer__bar {
+  overflow: hidden;
+  height: .38rem;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, .12);
+}
+
+.large-transfer__bar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(79, 112, 219, .94), rgba(80, 185, 190, .9));
+  transition: width .22s ease;
+}
+
+.large-transfer__detail {
+  min-width: 0;
+  color: #aebbd0;
+  font-size: .66rem;
+}
+
+.large-transfer__detail > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.large-transfer__detail small {
+  flex: 0 0 auto;
+  max-width: 42%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #728199;
+  font-size: .58rem;
+}
+
+.large-transfer__close {
+  flex: 0 0 auto;
+  width: 1.85rem;
+  height: 1.85rem;
+  border: 1px solid rgba(148, 163, 184, .15);
+  border-radius: .55rem;
+  background: rgba(148, 163, 184, .06);
+  color: #cbd5e1;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.large-transfer--terminal .large-transfer__bar > span {
+  background: linear-gradient(90deg, rgba(52, 211, 153, .86), rgba(80, 185, 190, .9));
+}
+
+@media (max-width: 520px) {
+  .large-transfer {
+    right: .55rem;
+    bottom: max(.55rem, env(safe-area-inset-bottom));
+    width: calc(100vw - 1.1rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .large-transfer__bar > span {
+    transition: none;
+  }
+}
