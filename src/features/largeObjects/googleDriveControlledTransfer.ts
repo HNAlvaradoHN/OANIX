@@ -12,9 +12,10 @@ import {
 } from './largeObjectTransferService.ts'
 
 const MiB = 1024 * 1024
+const GiB = 1024 * MiB
 
 export const CONTROLLED_GOOGLE_DRIVE_MIN_BYTES = 100 * MiB
-export const CONTROLLED_GOOGLE_DRIVE_MAX_BYTES = 200 * MiB
+export const CONTROLLED_GOOGLE_DRIVE_MAX_BYTES = 1 * GiB
 
 // Drive requires every non-final resumable upload request to be a multiple of
 // 256 KiB. AES-GCM adds a 16-byte authentication tag to each OANIX crypto chunk,
@@ -53,7 +54,7 @@ export function assertControlledGoogleDriveTransferSize(byteLength: number): voi
     byteLength < CONTROLLED_GOOGLE_DRIVE_MIN_BYTES ||
     byteLength > CONTROLLED_GOOGLE_DRIVE_MAX_BYTES
   ) {
-    throw new Error('La prueba controlada de Google Drive solo admite archivos entre 100 y 200 MiB.')
+    throw new Error('La prueba controlada de Google Drive solo admite archivos entre 100 MiB y 1 GiB.')
   }
 }
 
