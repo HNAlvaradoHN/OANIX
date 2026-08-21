@@ -56,6 +56,20 @@ function bytesToBase64Url(bytes: Uint8Array): string {
   return btoa(binary).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/u, '')
 }
 
+function asOwnedArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  if (
+    bytes.buffer instanceof ArrayBuffer &&
+    bytes.byteOffset === 0 &&
+    bytes.byteLength === bytes.buffer.byteLength
+  ) {
+    return bytes.buffer
+  }
+
+  const owned = new Uint8Array(bytes.byteLength)
+  owned.set(bytes)
+  return owned.buffer
+}
+
 function buildChunkAdditionalData(objectId: string, plan: LargeObjectChunkPlan): ArrayBuffer {
   const encoded = new TextEncoder().encode(JSON.stringify([
     'OANIX',
@@ -70,7 +84,7 @@ function buildChunkAdditionalData(objectId: string, plan: LargeObjectChunkPlan):
 }
 
 async function sha256Base64Url(bytes: Uint8Array): Promise<string> {
-  const digest = await requireCrypto().subtle.digest('SHA-256', bytes)
+  const digest = await requireCrypto().subtle.digest('SHA-256', asOwnedArrayBuffer(bytes))
   return bytesToBase64Url(new Uint8Array(digest))
 }
 
@@ -96,7 +110,7 @@ export async function encryptLargeObjectChunk(
       tagLength: GCM_TAG_LENGTH,
     },
     vaultKey,
-    plaintext,
+    asOwnedArrayBuffer(plaintext),
   )
   const ciphertext = new Uint8Array(ciphertextBuffer)
 
