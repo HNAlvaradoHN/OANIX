@@ -5,6 +5,7 @@ import {
   MemoryLargeObjectTransferStateStore,
   uploadLargeObjectResumable,
 } from '../src/features/largeObjects/largeObjectUploadOrchestrator.ts'
+import { verifyLargeObjectRoundTrip } from '../src/features/largeObjects/largeObjectRoundTripVerifier.ts'
 import {
   planLargeObjectCiphertextRanges,
   totalCiphertextBytesForRanges,
@@ -15,35 +16,10 @@ import {
   type LargeObjectUploadStatus,
   type OanixStorageProvider,
 } from '../src/features/largeObjects/largeObjectTransferContract.ts'
-import {
-  DEFAULT_LARGE_OBJECT_CHUNK_BYTES,
-  type LargeObjectChunkManifest,
-} from '../src/features/largeObjects/largeObjectProtocol.ts'
+import { DEFAULT_LARGE_OBJECT_CHUNK_BYTES } from '../src/features/largeObjects/largeObjectProtocol.ts'
 
 const MiB = 1024 * 1024
 const FILE_BYTES = 128 * MiB
-
-function base64UrlToBytes(value: string): Uint8Array {
-  const normalized = value.replaceAll('-', '+').replaceAll('_', '/')
-  const padded = normalized + '='.repeat((4 - (normalized.length % 4)) % 4)
-  return new Uint8Array(Buffer.from(padded, 'base64'))
-}
-
-function bytesToBase64Url(bytes: Uint8Array): string {
-  return Buffer.from(bytes).toString('base64url')
-}
-
-function chunkAdditionalData(objectId: string, manifest: LargeObjectChunkManifest): Uint8Array {
-  return new TextEncoder().encode(JSON.stringify([
-    'OANIX',
-    'large-object',
-    1,
-    objectId,
-    manifest.index,
-    manifest.plaintextOffset,
-    manifest.plaintextLength,
-  ]))
-}
 
 class VerifiableMemoryProvider implements OanixStorageProvider {
   readonly providerId = 'verifiable-memory-provider-v1'
@@ -105,7 +81,7 @@ async function createVaultKey(): Promise<CryptoKey> {
   )
 }
 
-test('controlled 128 MiB remote object verifies, decrypts chunk-by-chunk and deletes cleanly', async () => {
+test('controlled 128 MiB remote object verifies and decrypts chunk-by-chunk using the production verifier', async () => {
   const sourceChunk = new Uint8Array(DEFAULT_LARGE_OBJECT_CHUNK_BYTES)
   for (let index = 0; index < sourceChunk.length; index += 1) sourceChunk[index] = (index * 29 + 7) % 251
   const blob = new Blob(new Array(FILE_BYTES / sourceChunk.byteLength).fill(sourceChunk))
@@ -127,38 +103,56 @@ test('controlled 128 MiB remote object verifies, decrypts chunk-by-chunk and del
   assert.equal(result.manifests.length, 16)
   assert.equal(result.remoteObject.ciphertextByteLength, expectedCiphertextBytes)
 
-  for (const manifest of result.manifests) {
-    const range = ranges[manifest.index]
-    assert.ok(range)
-    const ciphertext = await provider.downloadCiphertextRange({
-      remoteObject: result.remoteObject,
-      ciphertextOffset: range.ciphertextOffset,
-      ciphertextByteLength: range.ciphertextByteLength,
-    })
+  const progress: number[] = []
+  const verified = await verifyLargeObjectRoundTrip({
+    blob,
+    vaultKey,
+    objectId,
+    provider,
+    remoteObject: result.remoteObject,
+    manifests: result.manifests,
+    onProgress: (verifiedBytes) => progress.push(verifiedBytes),
+  })
 
-    const digest = new Uint8Array(await globalThis.crypto.subtle.digest('SHA-256', ciphertext))
-    assert.equal(bytesToBase64Url(digest), manifest.sha256)
-
-    const plaintextBuffer = await globalThis.crypto.subtle.decrypt(
-      {
-        name: 'AES-GCM',
-        iv: base64UrlToBytes(manifest.iv),
-        additionalData: chunkAdditionalData(objectId, manifest),
-        tagLength: 128,
-      },
-      vaultKey,
-      ciphertext,
-    )
-    const plaintext = new Uint8Array(plaintextBuffer)
-    assert.equal(plaintext.byteLength, manifest.plaintextLength)
-    assert.deepEqual(plaintext, sourceChunk.subarray(0, manifest.plaintextLength))
-    plaintext.fill(0)
-    ciphertext.fill(0)
-  }
+  assert.equal(verified.chunkCount, 16)
+  assert.equal(verified.verifiedPlaintextBytes, FILE_BYTES)
+  assert.equal(verified.verifiedCiphertextBytes, expectedCiphertextBytes)
+  assert.equal(progress[0], 0)
+  assert.equal(progress.at(-1), FILE_BYTES)
+  assert.equal(await stateStore.load(objectId), null)
 
   await provider.deleteRemoteObject(result.remoteObject)
   assert.equal(provider.deleted, true)
   assert.equal(provider.confirmed, 0)
   assert.ok(provider.remote.every((byte) => byte === 0))
-  assert.equal(await stateStore.load(objectId), null)
+})
+
+test('round-trip verifier rejects remote ciphertext changed after upload', async () => {
+  const blob = new Blob([new Uint8Array(MiB).fill(0x3c)])
+  const ranges = planLargeObjectCiphertextRanges(blob.size, MiB)
+  const provider = new VerifiableMemoryProvider(totalCiphertextBytesForRanges(ranges))
+  const vaultKey = await createVaultKey()
+  const objectId = 'controlled-roundtrip-tamper-001'
+  const result = await uploadLargeObjectResumable({
+    blob,
+    vaultKey,
+    objectId,
+    provider,
+    stateStore: new MemoryLargeObjectTransferStateStore(),
+    chunkBytes: MiB,
+  })
+
+  provider.remote[0] ^= 0xff
+
+  await assert.rejects(
+    verifyLargeObjectRoundTrip({
+      blob,
+      vaultKey,
+      objectId,
+      provider,
+      remoteObject: result.remoteObject,
+      manifests: result.manifests,
+    }),
+    /integridad SHA-256/u,
+  )
 })
