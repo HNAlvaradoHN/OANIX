@@ -8,6 +8,7 @@ import {
   type GoogleDriveConnectionAvailability,
 } from '../largeObjects/googleDriveConnectionService.ts'
 import type { LargeObjectStorageCapacity } from '../largeObjects/largeObjectTransferContract.ts'
+import './googleDriveStorageCard.css'
 
 function formatBytes(value: number | null): string {
   if (value === null) return 'Sin límite informado'
