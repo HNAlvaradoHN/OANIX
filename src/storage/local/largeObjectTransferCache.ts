@@ -1,3 +1,4 @@
+import type { LargeObjectChunkManifest } from '../../features/largeObjects/largeObjectProtocol.ts'
 import {
   isLargeObjectTransferCheckpointV1,
   type LargeObjectTransferCheckpointV1,
@@ -12,6 +13,8 @@ const ACTIVE_TRANSFER_KEY = 'active'
 const CACHE_IV_BYTES = 12
 const CACHE_GCM_TAG_LENGTH = 128
 
+type TransferCachePurpose = 'checkpoint' | 'chunk' | 'manifests'
+
 interface SealedTransferCacheBytes {
   iv: ArrayBuffer
   ciphertext: ArrayBuffer
@@ -23,11 +26,13 @@ interface StoredLargeObjectTransferCache {
   chunkIndex: number | null
   checkpoint: SealedTransferCacheBytes
   retainedChunk: SealedTransferCacheBytes | null
+  manifests?: SealedTransferCacheBytes | null
 }
 
 export interface LoadedLargeObjectTransferCache {
   checkpoint: LargeObjectTransferCheckpointV1
   retainedChunk: RetainedLargeObjectChunk | null
+  manifests: LargeObjectChunkManifest[]
 }
 
 function requireCrypto(): Crypto {
@@ -44,7 +49,7 @@ function validateVaultKey(vaultKey: CryptoKey): void {
 }
 
 function cacheAdditionalData(
-  purpose: 'checkpoint' | 'chunk',
+  purpose: TransferCachePurpose,
   objectId: string,
   chunkIndex: number | null,
 ): ArrayBuffer {
@@ -62,7 +67,7 @@ function cacheAdditionalData(
 export async function sealLargeObjectTransferCacheBytes(
   vaultKey: CryptoKey,
   bytes: Uint8Array,
-  purpose: 'checkpoint' | 'chunk',
+  purpose: TransferCachePurpose,
   objectId: string,
   chunkIndex: number | null = null,
 ): Promise<SealedTransferCacheBytes> {
@@ -89,7 +94,7 @@ export async function sealLargeObjectTransferCacheBytes(
 export async function openLargeObjectTransferCacheBytes(
   vaultKey: CryptoKey,
   sealed: SealedTransferCacheBytes,
-  purpose: 'checkpoint' | 'chunk',
+  purpose: TransferCachePurpose,
   objectId: string,
   chunkIndex: number | null = null,
 ): Promise<Uint8Array> {
@@ -181,22 +186,68 @@ function validateCheckpointAndChunk(
   }
 }
 
+function validateManifests(manifests: unknown): LargeObjectChunkManifest[] {
+  if (!Array.isArray(manifests)) {
+    throw new Error('Los manifiestos temporales no son válidos.')
+  }
+  const seen = new Set<number>()
+  const validated: LargeObjectChunkManifest[] = []
+  for (const candidate of manifests) {
+    if (!candidate || typeof candidate !== 'object') {
+      throw new Error('Los manifiestos temporales no son válidos.')
+    }
+    const manifest = candidate as Partial<LargeObjectChunkManifest>
+    if (
+      !Number.isSafeInteger(manifest.index) || (manifest.index ?? -1) < 0 ||
+      !Number.isSafeInteger(manifest.plaintextOffset) || (manifest.plaintextOffset ?? -1) < 0 ||
+      !Number.isSafeInteger(manifest.plaintextLength) || (manifest.plaintextLength ?? 0) <= 0 ||
+      !Number.isSafeInteger(manifest.ciphertextByteLength) || (manifest.ciphertextByteLength ?? 0) <= 16 ||
+      typeof manifest.iv !== 'string' || !manifest.iv ||
+      typeof manifest.sha256 !== 'string' || !manifest.sha256 ||
+      seen.has(manifest.index as number)
+    ) {
+      throw new Error('Los manifiestos temporales no son válidos.')
+    }
+    seen.add(manifest.index as number)
+    validated.push({
+      index: manifest.index as number,
+      plaintextOffset: manifest.plaintextOffset as number,
+      plaintextLength: manifest.plaintextLength as number,
+      ciphertextByteLength: manifest.ciphertextByteLength as number,
+      iv: manifest.iv,
+      sha256: manifest.sha256,
+    })
+  }
+  return validated.sort((a, b) => a.index - b.index)
+}
+
 export async function saveLargeObjectTransferCache(
   checkpoint: LargeObjectTransferCheckpointV1,
   retainedChunk: RetainedLargeObjectChunk | null,
+  manifests: LargeObjectChunkManifest[] = [],
 ): Promise<void> {
   validateCheckpointAndChunk(checkpoint, retainedChunk)
+  const safeManifests = validateManifests(manifests)
   const vaultKey = requireActiveVaultKey()
   validateVaultKey(vaultKey)
   const checkpointBytes = new TextEncoder().encode(JSON.stringify(checkpoint))
+  const manifestsBytes = new TextEncoder().encode(JSON.stringify(safeManifests))
   let checkpointSealed: SealedTransferCacheBytes | null = null
   let retainedSealed: SealedTransferCacheBytes | null = null
+  let manifestsSealed: SealedTransferCacheBytes | null = null
 
   try {
     checkpointSealed = await sealLargeObjectTransferCacheBytes(
       vaultKey,
       checkpointBytes,
       'checkpoint',
+      checkpoint.objectId,
+      null,
+    )
+    manifestsSealed = await sealLargeObjectTransferCacheBytes(
+      vaultKey,
+      manifestsBytes,
+      'manifests',
       checkpoint.objectId,
       null,
     )
@@ -224,6 +275,7 @@ export async function saveLargeObjectTransferCache(
         chunkIndex: retainedChunk?.chunkIndex ?? null,
         checkpoint: checkpointSealed,
         retainedChunk: retainedSealed,
+        manifests: manifestsSealed,
       }
       transaction.objectStore(TRANSFER_CACHE_STORE).put(stored)
       await completion
@@ -232,6 +284,7 @@ export async function saveLargeObjectTransferCache(
     }
   } finally {
     checkpointBytes.fill(0)
+    manifestsBytes.fill(0)
   }
 }
 
@@ -255,10 +308,23 @@ export async function loadLargeObjectTransferCache(): Promise<LoadedLargeObjectT
     null,
   )
   let retainedBytes: Uint8Array | null = null
+  let manifestsBytes: Uint8Array | null = null
   try {
     const checkpoint = JSON.parse(new TextDecoder().decode(checkpointBytes)) as unknown
     if (!isLargeObjectTransferCheckpointV1(checkpoint) || checkpoint.objectId !== stored.objectId) {
       throw new Error('El checkpoint temporal no supera la validación de OANIX.')
+    }
+
+    let manifests: LargeObjectChunkManifest[] = []
+    if (stored.manifests) {
+      manifestsBytes = await openLargeObjectTransferCacheBytes(
+        vaultKey,
+        stored.manifests,
+        'manifests',
+        stored.objectId,
+        null,
+      )
+      manifests = validateManifests(JSON.parse(new TextDecoder().decode(manifestsBytes)) as unknown)
     }
 
     let retainedChunk: RetainedLargeObjectChunk | null = null
@@ -285,10 +351,11 @@ export async function loadLargeObjectTransferCache(): Promise<LoadedLargeObjectT
     }
 
     validateCheckpointAndChunk(checkpoint, retainedChunk)
-    return { checkpoint, retainedChunk }
+    return { checkpoint, retainedChunk, manifests }
   } finally {
     checkpointBytes.fill(0)
     retainedBytes?.fill(0)
+    manifestsBytes?.fill(0)
   }
 }
 
