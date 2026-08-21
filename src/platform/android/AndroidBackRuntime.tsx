@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useFolderNavigationRuntime } from '../../features/folders/folderNavigationRuntime'
 import {
   addAndroidBackPressedListener,
   exitAndroidApp,
@@ -7,6 +8,8 @@ import {
 } from './androidBack'
 
 export function AndroidBackRuntime() {
+  useFolderNavigationRuntime()
+
   const [exitPromptVisible, setExitPromptVisible] = useState(false)
   const exitPromptVisibleRef = useRef(false)
 
