@@ -17,9 +17,16 @@
   gap: .7rem;
 }
 
-.account-storage-card__header > div:nth-child(2) {
+.account-storage-card__heading {
   display: grid;
   gap: .16rem;
+  min-width: 0;
+}
+
+.account-storage-card__title-row {
+  display: flex;
+  align-items: center;
+  gap: .38rem;
   min-width: 0;
 }
 
@@ -34,6 +41,29 @@
   white-space: nowrap;
   color: #8493aa;
   font-size: .68rem;
+}
+
+.account-storage-card__help-button {
+  display: grid;
+  width: 1.28rem;
+  height: 1.28rem;
+  flex: 0 0 auto;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(148, 163, 184, .2);
+  border-radius: 999px;
+  background: rgba(148, 163, 184, .055);
+  color: #93a6c2;
+  font-size: .66rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.account-storage-card__help-button:hover,
+.account-storage-card__help-button:focus-visible {
+  border-color: rgba(125, 154, 230, .38);
+  background: rgba(79, 112, 219, .12);
+  color: #dbeafe;
 }
 
 .account-storage-card__icon {
@@ -154,6 +184,121 @@
   margin: 0;
 }
 
+.account-storage-help-overlay {
+  position: fixed;
+  z-index: 2900;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: max(.8rem, env(safe-area-inset-top)) .8rem max(.8rem, env(safe-area-inset-bottom));
+  background: rgba(2, 6, 15, .58);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.account-storage-help {
+  width: min(28rem, 100%);
+  max-height: min(38rem, calc(100dvh - 1.6rem));
+  overflow: auto;
+  padding: 1rem;
+  border: 1px solid rgba(135, 157, 194, .22);
+  border-radius: 1.15rem;
+  background:
+    radial-gradient(circle at 90% 0%, rgba(79, 112, 219, .14), transparent 34%),
+    linear-gradient(155deg, rgba(15, 24, 42, .98), rgba(7, 12, 22, .985));
+  color: #e9f0fa;
+  box-shadow: 0 28px 85px rgba(0,0,0,.48), inset 0 1px rgba(255,255,255,.03);
+}
+
+.account-storage-help__header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: .8rem;
+}
+
+.account-storage-help__header span {
+  display: block;
+  margin-bottom: .28rem;
+  color: #7085a5;
+  font-size: .58rem;
+  font-weight: 900;
+  letter-spacing: .11em;
+}
+
+.account-storage-help__header h3 {
+  margin: 0;
+  color: #f1f5fb;
+  font-size: 1rem;
+  line-height: 1.25;
+  letter-spacing: -.012em;
+}
+
+.account-storage-help__close {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(148,163,184,.15);
+  border-radius: .66rem;
+  background: rgba(148,163,184,.06);
+  color: #b7c4d7;
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+.account-storage-help__intro {
+  margin: .78rem 0 0;
+  color: #96a5bb;
+  font-size: .72rem;
+  line-height: 1.55;
+}
+
+.account-storage-help__benefits {
+  margin-top: .9rem;
+  padding: .78rem .82rem;
+  border: 1px solid rgba(96, 165, 250, .13);
+  border-radius: .85rem;
+  background: rgba(30, 64, 175, .055);
+}
+
+.account-storage-help__benefits > strong {
+  color: #dbeafe;
+  font-size: .72rem;
+}
+
+.account-storage-help__benefits ul {
+  display: grid;
+  gap: .38rem;
+  margin: .55rem 0 0;
+  padding-left: 1.05rem;
+  color: #91a0b5;
+  font-size: .68rem;
+  line-height: 1.42;
+}
+
+.account-storage-help__facts {
+  display: grid;
+  gap: .45rem;
+  margin-top: .78rem;
+}
+
+.account-storage-help__facts p {
+  margin: 0;
+  padding: .58rem .65rem;
+  border: 1px solid rgba(148, 163, 184, .095);
+  border-radius: .72rem;
+  background: rgba(148, 163, 184, .035);
+  color: #8798af;
+  font-size: .65rem;
+  line-height: 1.43;
+}
+
+.account-storage-help__facts strong {
+  color: #cbd8e8;
+}
+
 @media (max-width: 380px) {
   .account-storage-card__header {
     grid-template-columns: auto minmax(0, 1fr);
@@ -165,6 +310,9 @@
   .account-storage-card__numbers {
     display: grid;
     gap: .18rem;
+  }
+  .account-storage-help {
+    padding: .9rem;
   }
 }
 
