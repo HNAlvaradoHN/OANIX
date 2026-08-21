@@ -15,17 +15,19 @@ import {
 } from '../src/features/largeObjects/largeObjectProtocol.ts'
 
 const MiB = 1024 * 1024
+const GiB = 1024 * MiB
 
-test('controlled Google Drive entry is deliberately limited to 100–200 MiB', () => {
+test('controlled Google Drive entry is deliberately limited to 100 MiB–1 GiB', () => {
   assert.equal(CONTROLLED_GOOGLE_DRIVE_MIN_BYTES, 100 * MiB)
-  assert.equal(CONTROLLED_GOOGLE_DRIVE_MAX_BYTES, 200 * MiB)
+  assert.equal(CONTROLLED_GOOGLE_DRIVE_MAX_BYTES, 1 * GiB)
 
   assert.doesNotThrow(() => assertControlledGoogleDriveTransferSize(100 * MiB))
   assert.doesNotThrow(() => assertControlledGoogleDriveTransferSize(128 * MiB))
   assert.doesNotThrow(() => assertControlledGoogleDriveTransferSize(200 * MiB))
+  assert.doesNotThrow(() => assertControlledGoogleDriveTransferSize(1 * GiB))
 
-  assert.throws(() => assertControlledGoogleDriveTransferSize(99 * MiB), /100 y 200 MiB/u)
-  assert.throws(() => assertControlledGoogleDriveTransferSize(201 * MiB), /100 y 200 MiB/u)
+  assert.throws(() => assertControlledGoogleDriveTransferSize(99 * MiB), /100 MiB y 1 GiB/u)
+  assert.throws(() => assertControlledGoogleDriveTransferSize(1 * GiB + 1), /100 MiB y 1 GiB/u)
   assert.throws(() => assertControlledGoogleDriveTransferSize(Number.NaN), /no es válido/u)
 })
 

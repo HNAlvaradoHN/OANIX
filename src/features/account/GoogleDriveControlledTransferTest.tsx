@@ -101,10 +101,10 @@ export function GoogleDriveControlledTransferTest({
         onClick={() => inputRef.current?.click()}
         style={{ width: '100%' }}
       >
-        {busy ? 'Procesando…' : 'Probar archivo de 100–200 MiB'}
+        {busy ? 'Procesando…' : 'Probar archivo de 100 MiB–1 GiB'}
       </button>
       <small style={{ display: 'block', marginTop: '.45rem', opacity: .78, lineHeight: 1.4 }}>
-        Prueba controlada. OANIX subirá el archivo cifrado y luego verificará su recuperación por fragmentos.
+        Prueba controlada ampliada. OANIX subirá el archivo cifrado, permitirá reanudarlo si se interrumpe y luego verificará su recuperación por fragmentos.
       </small>
       {message && (
         <p className="account-storage-card__message" role="status" style={{ marginTop: '.45rem' }}>
