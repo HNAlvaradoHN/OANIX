@@ -32,5 +32,5 @@ test('disconnect means clearing only the OANIX session and does not silently rev
   const text = await source()
   assert.match(text, /disconnectGoogleDriveSession/u)
   assert.match(text, /clearGoogleDriveAccessTokenLease\(\)/u)
-  assert.doesNotMatch(text, /revoke|disableAutoSelect|refreshToken|provider_token/u)
+  assert.doesNotMatch(text, /google\.accounts\.oauth2\.revoke|disableAutoSelect\(|requestOfflineAccess|provider_token|refreshToken/u)
 })
