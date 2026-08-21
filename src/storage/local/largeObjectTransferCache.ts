@@ -3,7 +3,7 @@ import {
   type LargeObjectTransferCheckpointV1,
   type RetainedLargeObjectChunk,
 } from '../../features/largeObjects/largeObjectTransferCheckpoint.ts'
-import { requireActiveVaultKey } from '../../security/vault/vaultSession'
+import { requireActiveVaultKey } from '../../security/vault/vaultSession.ts'
 
 const TRANSFER_CACHE_DATABASE_NAME = 'oanix-large-object-transfer-cache-v1'
 const TRANSFER_CACHE_DATABASE_VERSION = 1
