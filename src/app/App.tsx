@@ -10,6 +10,7 @@ import { VersionHistoryCenter } from '../features/versionHistory/VersionHistoryC
 import { NotePrivacyRuntime } from '../features/privacy/NotePrivacyRuntime'
 import { NoteBulkPrivacyRuntime, NOTE_PRIVACY_REFRESH_EVENT } from '../features/privacy/NoteBulkPrivacyRuntime'
 import { PrivateBoxListHint } from '../features/privacy/PrivateBoxListHint'
+import { LargeObjectTransferIndicator } from '../features/largeObjects/LargeObjectTransferIndicator'
 import { AndroidAuthRuntime } from '../platform/android/AndroidAuthRuntime'
 import { NativeCameraRuntime } from '../platform/android/NativeCameraRuntime'
 import { NativeDocumentsRuntime } from '../platform/android/NativeDocumentsRuntime'
@@ -90,6 +91,7 @@ function UnlockedApp({ lockVault }: { lockVault: () => void }) {
       <PrivateBoxListHint key={`private-hint-${workspaceRevision}`} />
       <ConflictCenter onResolved={() => setWorkspaceRevision((value) => value + 1)} />
       <VersionHistoryCenter onRestored={() => setWorkspaceRevision((value) => value + 1)} />
+      <LargeObjectTransferIndicator />
       {accountHost && createPortal(
         <button
           className="icon-button account-header-action"
