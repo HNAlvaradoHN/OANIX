@@ -117,7 +117,7 @@ test('controlled 128 MiB upload resumes after a mid-chunk interruption without r
   assert.equal(locallyCheckpointedBeforeDrop, ranges[8].ciphertextOffset)
   assert.ok(interrupted.checkpoint.activeChunk)
   assert.ok(interrupted.retainedChunk)
-  assert.equal(interrupted.checkpoint.activeChunk.index, 8)
+  assert.equal(interrupted.checkpoint.activeChunk.chunkIndex, 8)
 
   provider.shouldInterrupt = false
   const remoteConfirmedBeforeResume = provider.confirmed
