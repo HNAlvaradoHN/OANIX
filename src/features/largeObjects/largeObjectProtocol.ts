@@ -1,12 +1,13 @@
 export const LARGE_OBJECT_PROTOCOL = 'oanix-large-object-v1' as const
 export const LARGE_OBJECT_ENCRYPTION_SCHEME = 'aes-gcm-chunk-v1' as const
 
-// 8 MiB keeps memory bounded while remaining a multiple of 256 KiB,
-// which is friendly to resumable cloud upload protocols.
+// 8 MiB keeps memory bounded. Individual providers may choose a nearby
+// plaintext chunk size when their transport imposes ciphertext alignment.
 export const DEFAULT_LARGE_OBJECT_CHUNK_BYTES = 8 * 1024 * 1024
 export const MIN_LARGE_OBJECT_CHUNK_BYTES = 1024 * 1024
 export const MAX_LARGE_OBJECT_CHUNK_BYTES = 64 * 1024 * 1024
 export const LARGE_OBJECT_CHUNK_ALIGNMENT_BYTES = 256 * 1024
+export const LARGE_OBJECT_AES_GCM_TAG_BYTES = 16
 
 // Initial safety ceiling. It is intentionally above the 5 GB target while
 // keeping manifests and local bookkeeping reasonably small for v1.
@@ -64,9 +65,6 @@ export function validateLargeObjectChunkBytes(value: number): number {
   requireSafePositiveInteger(value, 'El tamaño de fragmento')
   if (value < MIN_LARGE_OBJECT_CHUNK_BYTES || value > MAX_LARGE_OBJECT_CHUNK_BYTES) {
     throw new Error('El tamaño de fragmento está fuera del rango seguro de OANIX.')
-  }
-  if (value % LARGE_OBJECT_CHUNK_ALIGNMENT_BYTES !== 0) {
-    throw new Error('El tamaño de fragmento debe ser múltiplo de 256 KiB.')
   }
   return value
 }
