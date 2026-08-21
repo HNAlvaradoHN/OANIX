@@ -123,10 +123,11 @@ test('transfer service reports preflight failures to the compact transfer UI wit
   const provider = new CapacityProvider()
   provider.availableBytes = 512 * 1024
   const blob = new Blob([new Uint8Array(CHUNK_BYTES + 10)])
+  const vaultKey = await key()
 
   await assert.rejects(() => transferLargeObject({
     blob,
-    vaultKey: await key(),
+    vaultKey,
     objectId: 'progress-object-002',
     provider,
     stateStore: new MemoryLargeObjectTransferStateStore(),
