@@ -7,11 +7,12 @@
   left: 0;
   display: flex;
   flex-direction: column;
-  gap: .85rem;
+  gap: .9rem;
   overflow: auto;
-  padding: .9rem .72rem max(1rem, env(safe-area-inset-bottom));
+  padding: .95rem .72rem max(1rem, env(safe-area-inset-bottom));
   background:
-    radial-gradient(circle at 12% 0%, color-mix(in srgb, var(--theme-primary, #4f70db) 10%, transparent), transparent 34%),
+    radial-gradient(circle at 10% -4%, color-mix(in srgb, var(--theme-primary, #4f70db) 17%, transparent), transparent 31%),
+    radial-gradient(circle at 96% 12%, color-mix(in srgb, var(--theme-accent, #9a6df0) 10%, transparent), transparent 28%),
     var(--oanix-panel, #fff);
   color: var(--oanix-text, #172033);
   overscroll-behavior: contain;
@@ -22,29 +23,25 @@
   align-items: flex-end;
   justify-content: space-between;
   gap: .75rem;
-  padding: .1rem .18rem .15rem;
+  padding: .12rem .18rem .22rem;
 }
 
-.oanix-folder-grid__header > div {
-  min-width: 0;
-}
-
+.oanix-folder-grid__header > div { min-width: 0; }
 .oanix-folder-grid__header span,
 .oanix-folder-grid__header strong,
-.oanix-folder-grid__header small {
-  display: block;
-}
+.oanix-folder-grid__header small { display: block; }
 
 .oanix-folder-grid__header span {
   color: var(--theme-primary, #4f70db);
-  font-size: .6rem;
-  font-weight: 900;
-  letter-spacing: .09em;
+  font-size: .59rem;
+  font-weight: 950;
+  letter-spacing: .105em;
 }
 
 .oanix-folder-grid__header strong {
   margin-top: .12rem;
-  font-size: 1.05rem;
+  font-size: 1.08rem;
+  letter-spacing: -.025em;
 }
 
 .oanix-folder-grid__header small {
@@ -55,50 +52,143 @@
 
 .oanix-folder-grid__cards {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(3.45rem, 1fr));
-  gap: .55rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: .58rem;
   align-content: start;
 }
 
 .oanix-folder-card {
+  --oanix-card-glow: color-mix(in srgb, var(--theme-primary, #4f70db) 16%, transparent);
   position: relative;
+  isolation: isolate;
   min-width: 0;
-  min-height: 5.45rem;
+  min-height: 6rem;
   display: grid;
-  grid-template-rows: auto minmax(1.8rem, auto) auto;
+  grid-template-rows: auto minmax(1.75rem, auto) auto;
   place-items: center;
   align-content: center;
-  gap: .22rem;
-  padding: .55rem .28rem .42rem;
-  border: 1px solid color-mix(in srgb, var(--oanix-border, #d8e0ea) 84%, transparent);
-  border-radius: 1rem;
+  gap: .25rem;
+  overflow: hidden;
+  padding: .58rem .25rem .46rem;
+  border: 1px solid color-mix(in srgb, var(--oanix-border, #d8e0ea) 78%, transparent);
+  border-radius: 1.12rem;
   background:
-    linear-gradient(165deg, color-mix(in srgb, var(--oanix-panel, #fff) 94%, var(--theme-primary, #4f70db)), var(--oanix-panel-2, #f8fafc));
+    linear-gradient(155deg, color-mix(in srgb, var(--oanix-panel, #fff) 97%, var(--theme-primary, #4f70db)), var(--oanix-panel-2, #f8fafc));
   color: var(--oanix-text, #172033);
-  box-shadow: 0 4px 14px rgba(15, 23, 42, .055);
+  box-shadow:
+    0 5px 16px rgba(15, 23, 42, .06),
+    inset 0 1px 0 color-mix(in srgb, #fff 42%, transparent);
   font: inherit;
   text-align: center;
   cursor: pointer;
-  transition: transform .14s ease, border-color .14s ease, box-shadow .14s ease, background .14s ease;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  animation: oanix-folder-card-in .34s cubic-bezier(.2,.75,.25,1) both;
+  animation-delay: min(calc(var(--oanix-folder-index, 0) * 22ms), 154ms);
+  transition:
+    transform .18s cubic-bezier(.2,.75,.25,1),
+    border-color .18s ease,
+    box-shadow .18s ease,
+    background .18s ease;
+}
+
+.oanix-folder-card::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  top: -2.4rem;
+  left: 50%;
+  width: 5rem;
+  height: 5rem;
+  border-radius: 50%;
+  background: var(--oanix-card-glow);
+  filter: blur(8px);
+  transform: translateX(-50%);
+  opacity: .72;
+  transition: opacity .18s ease, transform .18s ease;
+}
+
+.oanix-folder-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 12%;
+  width: 42%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, #fff 72%, transparent), transparent);
+  opacity: .76;
 }
 
 .oanix-folder-card:hover,
 .oanix-folder-card:focus-visible {
   outline: none;
-  transform: translateY(-2px);
-  border-color: color-mix(in srgb, var(--theme-primary, #4f70db) 48%, var(--oanix-border, #d8e0ea));
-  box-shadow: 0 8px 20px rgba(15, 23, 42, .1);
+  transform: translateY(-3px) scale(1.015);
+  border-color: color-mix(in srgb, var(--theme-primary, #4f70db) 52%, var(--oanix-border, #d8e0ea));
+  box-shadow:
+    0 11px 26px rgba(15, 23, 42, .12),
+    0 0 0 1px color-mix(in srgb, var(--theme-primary, #4f70db) 10%, transparent);
 }
 
-.oanix-folder-card__icon {
+.oanix-folder-card:hover::before,
+.oanix-folder-card:focus-visible::before {
+  opacity: 1;
+  transform: translateX(-50%) scale(1.08);
+}
+
+.oanix-folder-card:active { transform: translateY(-1px) scale(.97); }
+
+.oanix-folder-card__visual {
+  position: relative;
   display: grid;
-  width: 2.05rem;
-  height: 2.05rem;
+  width: 2.65rem;
+  height: 2.65rem;
   place-items: center;
-  border-radius: .7rem;
-  background: color-mix(in srgb, var(--theme-primary, #4f70db) 9%, var(--oanix-panel-3, #e9eef5));
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--theme-primary, #4f70db) 16%, var(--oanix-border, #d8e0ea));
+  border-radius: .92rem;
+  background:
+    linear-gradient(145deg, color-mix(in srgb, var(--theme-primary, #4f70db) 13%, var(--oanix-panel-3, #e9eef5)), var(--oanix-panel-2, #f8fafc));
+  box-shadow: 0 4px 12px rgba(15, 23, 42, .08), inset 0 1px rgba(255,255,255,.38);
   font-size: 1.15rem;
   line-height: 1;
+}
+
+.oanix-folder-card__visual img,
+.oanix-folder-customizer__preview img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.oanix-folder-card--covered .oanix-folder-card__visual {
+  border-color: color-mix(in srgb, var(--theme-primary, #4f70db) 32%, var(--oanix-border, #d8e0ea));
+  box-shadow:
+    0 5px 15px rgba(15, 23, 42, .16),
+    0 0 0 2px color-mix(in srgb, var(--theme-primary, #4f70db) 8%, transparent);
+}
+
+.oanix-folder-card__folder-mark {
+  position: relative;
+  width: 1.85rem;
+  height: 1.32rem;
+  display: block;
+  border-radius: .32rem .42rem .42rem .42rem;
+  background: linear-gradient(145deg, color-mix(in srgb, var(--theme-primary, #4f70db) 88%, #fff), var(--theme-primary, #4f70db));
+  box-shadow: 0 3px 8px color-mix(in srgb, var(--theme-primary, #4f70db) 22%, transparent);
+  color: transparent;
+  font-size: 0;
+}
+
+.oanix-folder-card__folder-mark::before {
+  content: '';
+  position: absolute;
+  top: -.34rem;
+  left: .13rem;
+  width: .83rem;
+  height: .46rem;
+  border-radius: .28rem .28rem 0 0;
+  background: color-mix(in srgb, var(--theme-primary, #4f70db) 78%, #fff);
 }
 
 .oanix-folder-card strong {
@@ -107,38 +197,51 @@
   display: -webkit-box;
   overflow: hidden;
   color: var(--oanix-text, #172033);
-  font-size: .64rem;
-  font-weight: 850;
-  line-height: 1.15;
+  font-size: .66rem;
+  font-weight: 900;
+  line-height: 1.14;
   overflow-wrap: anywhere;
+  letter-spacing: -.01em;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
 
 .oanix-folder-card small {
   color: var(--oanix-muted, #64748b);
-  font-size: .58rem;
-  font-weight: 750;
+  font-size: .57rem;
+  font-weight: 760;
 }
 
 .oanix-folder-card--all {
-  border-color: color-mix(in srgb, var(--theme-primary, #4f70db) 30%, var(--oanix-border, #d8e0ea));
+  --oanix-card-glow: color-mix(in srgb, var(--theme-primary, #4f70db) 24%, transparent);
+  border-color: color-mix(in srgb, var(--theme-primary, #4f70db) 34%, var(--oanix-border, #d8e0ea));
 }
 
-.oanix-folder-card--all .oanix-folder-card__icon {
+.oanix-folder-card__visual--all {
   color: var(--theme-primary, #4f70db);
-  font-weight: 900;
+  font-size: 1.25rem;
+  font-weight: 950;
 }
 
 .oanix-folder-card--add {
+  --oanix-card-glow: color-mix(in srgb, var(--theme-primary, #4f70db) 10%, transparent);
   border-style: dashed;
   background: color-mix(in srgb, var(--theme-primary, #4f70db) 5%, var(--oanix-panel, #fff));
 }
 
-.oanix-folder-card--add .oanix-folder-card__icon {
+.oanix-folder-card__visual--add {
   color: var(--theme-primary, #4f70db);
-  font-size: 1.45rem;
-  font-weight: 750;
+  font-size: 1.55rem;
+  font-weight: 760;
+}
+
+.oanix-folder-grid__gesture-hint {
+  margin: -.05rem 0 0;
+  padding: .15rem .2rem 0;
+  color: var(--oanix-muted, #64748b);
+  font-size: .61rem;
+  text-align: center;
+  opacity: .78;
 }
 
 .oanix-folder-grid__empty,
@@ -167,9 +270,7 @@
   padding: .5rem .7rem;
 }
 
-.notes-tabs-shell[data-oanix-folder-compact='true'] > :not(.oanix-folder-breadcrumb) {
-  display: none !important;
-}
+.notes-tabs-shell[data-oanix-folder-compact='true'] > :not(.oanix-folder-breadcrumb) { display: none !important; }
 
 .oanix-folder-breadcrumb {
   width: 100%;
@@ -205,23 +306,140 @@
   white-space: nowrap;
 }
 
+.oanix-folder-customizer-backdrop {
+  position: fixed;
+  z-index: 2850;
+  inset: 0;
+  display: grid;
+  place-items: end center;
+  padding: 1rem;
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  background: rgba(2, 6, 23, .34);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  animation: oanix-folder-fade-in .18s ease both;
+}
+
+.oanix-folder-customizer {
+  width: min(29rem, 100%);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: .9rem;
+  padding: 1rem;
+  border: 1px solid color-mix(in srgb, var(--oanix-border, #d8e0ea) 76%, transparent);
+  border-radius: 1.25rem;
+  background: color-mix(in srgb, var(--oanix-panel, #fff) 96%, transparent);
+  color: var(--oanix-text, #172033);
+  box-shadow: 0 22px 70px rgba(2, 6, 23, .28);
+  animation: oanix-folder-sheet-in .24s cubic-bezier(.2,.8,.25,1) both;
+}
+
+.oanix-folder-customizer__preview {
+  width: 3.9rem;
+  height: 3.9rem;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--theme-primary, #4f70db) 28%, var(--oanix-border, #d8e0ea));
+  border-radius: 1.1rem;
+  background: color-mix(in srgb, var(--theme-primary, #4f70db) 10%, var(--oanix-panel-2, #f8fafc));
+  color: var(--theme-primary, #4f70db);
+  box-shadow: 0 8px 22px rgba(15,23,42,.14);
+  font-size: 1.7rem;
+}
+
+.oanix-folder-customizer__body { min-width: 0; }
+.oanix-folder-customizer__body > span {
+  display: block;
+  color: var(--theme-primary, #4f70db);
+  font-size: .59rem;
+  font-weight: 950;
+  letter-spacing: .09em;
+}
+
+.oanix-folder-customizer__body > strong {
+  display: block;
+  margin-top: .12rem;
+  overflow: hidden;
+  font-size: 1rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.oanix-folder-customizer__body > p {
+  margin: .3rem 0 0;
+  color: var(--oanix-muted, #64748b);
+  font-size: .7rem;
+  line-height: 1.4;
+}
+
+.oanix-folder-customizer__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: .45rem;
+  margin-top: .8rem;
+}
+
+.oanix-folder-customizer__actions button {
+  min-height: 2.35rem;
+  padding: .45rem .7rem;
+  border: 1px solid var(--oanix-border, #d8e0ea);
+  border-radius: .7rem;
+  background: var(--oanix-panel-2, #f8fafc);
+  color: var(--oanix-text, #172033);
+  font: inherit;
+  font-size: .7rem;
+  font-weight: 820;
+}
+
+.oanix-folder-customizer__actions button:first-child {
+  border-color: color-mix(in srgb, var(--theme-primary, #4f70db) 40%, var(--oanix-border, #d8e0ea));
+  background: color-mix(in srgb, var(--theme-primary, #4f70db) 10%, var(--oanix-panel, #fff));
+  color: var(--theme-primary, #4f70db);
+}
+
+.oanix-folder-customizer__actions .oanix-folder-customizer__remove { color: var(--theme-danger, #b42318); }
+.oanix-folder-customizer__actions button:disabled { opacity: .55; }
+.oanix-folder-customizer__input { position: fixed; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.oanix-folder-customizer__error { margin-top: .5rem; color: var(--theme-danger, #b42318); font-size: .68rem; }
+
+@keyframes oanix-folder-card-in {
+  from { opacity: 0; transform: translateY(8px) scale(.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes oanix-folder-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes oanix-folder-sheet-in {
+  from { opacity: 0; transform: translateY(14px) scale(.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .oanix-folder-card {
+  .oanix-folder-card,
+  .oanix-folder-customizer-backdrop,
+  .oanix-folder-customizer {
+    animation: none;
     transition: none;
   }
 
   .oanix-folder-card:hover,
-  .oanix-folder-card:focus-visible {
-    transform: none;
-  }
+  .oanix-folder-card:focus-visible,
+  .oanix-folder-card:active { transform: none; }
 }
 
 @media (max-width: 760px) {
-  .oanix-folder-grid {
-    padding-inline: .65rem;
-  }
+  .oanix-folder-grid { padding-inline: .65rem; }
+  .oanix-folder-grid__cards { gap: .52rem; }
+}
 
-  .oanix-folder-grid__cards {
-    gap: .5rem;
-  }
+@media (max-width: 350px) {
+  .oanix-folder-grid__cards { gap: .42rem; }
+  .oanix-folder-card { min-height: 5.65rem; border-radius: 1rem; }
+  .oanix-folder-card__visual { width: 2.35rem; height: 2.35rem; }
+  .oanix-folder-card strong { font-size: .61rem; }
 }
