@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { transferControlledGoogleDriveLargeObject } from '../largeObjects/googleDriveControlledTransfer.ts'
 import { createControlledLargeObjectId } from '../largeObjects/controlledLargeObjectIdentity.ts'
+import { clearLargeObjectTransferCache } from '../../storage/local/largeObjectTransferCache.ts'
 import { requireActiveVaultKey } from '../../security/vault/vaultSession.ts'
 
 export function GoogleDriveControlledTransferTest({
@@ -12,10 +13,12 @@ export function GoogleDriveControlledTransferTest({
 }) {
   const inputRef = useRef<HTMLInputElement | null>(null)
   const [busy, setBusy] = useState(false)
+  const [failed, setFailed] = useState(false)
   const [message, setMessage] = useState('')
 
   async function transfer(file: File) {
     setBusy(true)
+    setFailed(false)
     setMessage('')
     try {
       const objectId = await createControlledLargeObjectId(file)
@@ -29,7 +32,21 @@ export function GoogleDriveControlledTransferTest({
       setMessage('Prueba completada. Archivo cifrado y guardado en Google Drive.')
       await onStored?.()
     } catch (error) {
+      setFailed(true)
       setMessage(error instanceof Error ? error.message : 'No se pudo completar la prueba de transferencia.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function discardPendingTransfer() {
+    setBusy(true)
+    try {
+      await clearLargeObjectTransferCache()
+      setFailed(false)
+      setMessage('Transferencia pendiente descartada. Ya puedes iniciar una nueva prueba.')
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'No se pudo descartar la transferencia pendiente.')
     } finally {
       setBusy(false)
     }
@@ -53,7 +70,7 @@ export function GoogleDriveControlledTransferTest({
         onClick={() => inputRef.current?.click()}
         style={{ width: '100%' }}
       >
-        {busy ? 'Transfiriendo prueba…' : 'Probar archivo de 100–200 MiB'}
+        {busy ? 'Procesando…' : 'Probar archivo de 100–200 MiB'}
       </button>
       <small style={{ display: 'block', marginTop: '.45rem', opacity: .78, lineHeight: 1.4 }}>
         Prueba controlada. OANIX rechazará cualquier archivo fuera de 100–200 MiB.
@@ -62,6 +79,16 @@ export function GoogleDriveControlledTransferTest({
         <p className="account-storage-card__message" role="status" style={{ marginTop: '.45rem' }}>
           {message}
         </p>
+      )}
+      {failed && (
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => void discardPendingTransfer()}
+          style={{ width: '100%', marginTop: '.45rem' }}
+        >
+          Descartar transferencia pendiente
+        </button>
       )}
     </div>
   )
