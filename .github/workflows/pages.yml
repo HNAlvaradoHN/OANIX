@@ -35,6 +35,8 @@ jobs:
         run: npm install --no-audit --no-fund
 
       - name: Build OANIX
+        env:
+          VITE_GOOGLE_DRIVE_WEB_CLIENT_ID: ${{ vars.VITE_GOOGLE_DRIVE_WEB_CLIENT_ID }}
         run: npm run build
 
       - name: Upload Pages artifact
