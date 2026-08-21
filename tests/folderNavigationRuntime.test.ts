@@ -27,7 +27,10 @@ test('la respuesta visual sigue puntero y tacto sin bloquear gestos', () => {
   assert.match(runtime, /pointerup/)
   assert.match(runtime, /--oanix-folder-pointer-x/)
   assert.match(runtime, /--oanix-folder-rotate-x/)
-  assert.doesNotMatch(runtime, /preventDefault\(\).*pointermove/s)
+
+  const moveHandler = runtime.match(/function handlePointerMove\(event: PointerEvent\) \{([\s\S]*?)\n    \}/)?.[1] ?? ''
+  assert.ok(moveHandler)
+  assert.doesNotMatch(moveHandler, /preventDefault\(\)/)
 })
 
 test('las tarjetas usan profundidad, barrido cobre-plata y respetan movimiento reducido', () => {
