@@ -2,6 +2,10 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { MemoryLargeObjectTransferStateStore } from '../src/features/largeObjects/largeObjectUploadOrchestrator.ts'
 import { transferLargeObject } from '../src/features/largeObjects/largeObjectTransferService.ts'
+import {
+  clearLargeObjectTransferUi,
+  getLargeObjectTransferUiSnapshot,
+} from '../src/features/largeObjects/largeObjectTransferUiStore.ts'
 import type {
   LargeObjectDownloadRangeRequest,
   LargeObjectRemoteObject,
@@ -84,4 +88,56 @@ test('transfer service allows providers with enough space and returns the capaci
   assert.equal(provider.beginCalls, 1)
   assert.equal(result.capacityBeforeUpload?.availableBytes, 2 * 1024 ** 3)
   assert.ok(result.requiredCiphertextBytesBeforeUpload > blob.size)
+})
+
+test('transfer service can publish the real orchestrator progress into the compact transfer UI', async () => {
+  clearLargeObjectTransferUi()
+  const provider = new CapacityProvider()
+  provider.availableBytes = 2 * 1024 ** 3
+  const blob = new Blob([new Uint8Array(CHUNK_BYTES + 10)])
+
+  await transferLargeObject({
+    blob,
+    vaultKey: await key(),
+    objectId: 'progress-object-001',
+    provider,
+    stateStore: new MemoryLargeObjectTransferStateStore(),
+    chunkBytes: CHUNK_BYTES,
+    ui: { fileName: 'prueba-video.mp4', mimeType: 'video/mp4' },
+  })
+
+  const snapshot = getLargeObjectTransferUiSnapshot()
+  assert.ok(snapshot)
+  assert.equal(snapshot.objectId, 'progress-object-001')
+  assert.equal(snapshot.fileName, 'prueba-video.mp4')
+  assert.equal(snapshot.mimeType, 'video/mp4')
+  assert.equal(snapshot.phase, 'stored')
+  assert.equal(snapshot.percent, 100)
+  assert.equal(snapshot.processedBytes, blob.size)
+  assert.equal(snapshot.totalBytes, blob.size)
+  clearLargeObjectTransferUi()
+})
+
+test('transfer service reports preflight failures to the compact transfer UI without starting upload', async () => {
+  clearLargeObjectTransferUi()
+  const provider = new CapacityProvider()
+  provider.availableBytes = 512 * 1024
+  const blob = new Blob([new Uint8Array(CHUNK_BYTES + 10)])
+
+  await assert.rejects(() => transferLargeObject({
+    blob,
+    vaultKey: await key(),
+    objectId: 'progress-object-002',
+    provider,
+    stateStore: new MemoryLargeObjectTransferStateStore(),
+    chunkBytes: CHUNK_BYTES,
+    ui: { fileName: 'sin-espacio.zip', mimeType: 'application/zip' },
+  }))
+
+  const snapshot = getLargeObjectTransferUiSnapshot()
+  assert.ok(snapshot)
+  assert.equal(snapshot.phase, 'failed')
+  assert.match(snapshot.message ?? '', /no tiene espacio suficiente/u)
+  assert.equal(provider.beginCalls, 0)
+  clearLargeObjectTransferUi()
 })
