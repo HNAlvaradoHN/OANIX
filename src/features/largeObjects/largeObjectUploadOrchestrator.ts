@@ -11,6 +11,7 @@ import {
 import {
   planLargeObjectCiphertextRanges,
   totalCiphertextBytesForRanges,
+  type LargeObjectCiphertextRange,
   type LargeObjectRemoteObject,
   type OanixStorageProvider,
 } from './largeObjectTransferContract.ts'
@@ -26,6 +27,7 @@ import {
 export interface LargeObjectTransferSnapshot {
   checkpoint: LargeObjectTransferCheckpointV1
   retainedChunk: RetainedLargeObjectChunk | null
+  manifests: LargeObjectChunkManifest[]
 }
 
 export interface LargeObjectTransferStateStore {
@@ -57,11 +59,46 @@ function validateObjectId(objectId: string): string {
   return normalized
 }
 
+function clearBytes(bytes: Uint8Array | null | undefined): void {
+  bytes?.fill(0)
+}
+
+function cloneRetainedChunk(chunk: RetainedLargeObjectChunk | null): RetainedLargeObjectChunk | null {
+  return chunk ? { ...chunk, ciphertext: chunk.ciphertext.slice() } : null
+}
+
+function cloneManifests(manifests: LargeObjectChunkManifest[]): LargeObjectChunkManifest[] {
+  return manifests.map((manifest) => ({ ...manifest }))
+}
+
+function validateSavedManifests(
+  manifests: LargeObjectChunkManifest[],
+  ranges: LargeObjectCiphertextRange[],
+): void {
+  const seen = new Set<number>()
+  for (const manifest of manifests) {
+    const range = ranges[manifest.index]
+    if (
+      !range ||
+      seen.has(manifest.index) ||
+      manifest.plaintextOffset !== range.plaintextOffset ||
+      manifest.plaintextLength !== range.plaintextLength ||
+      manifest.ciphertextByteLength !== range.ciphertextByteLength ||
+      typeof manifest.iv !== 'string' || !manifest.iv ||
+      typeof manifest.sha256 !== 'string' || !manifest.sha256
+    ) {
+      throw new Error('Los manifiestos guardados del archivo grande no son válidos.')
+    }
+    seen.add(manifest.index)
+  }
+}
+
 function validateSnapshot(
   snapshot: LargeObjectTransferSnapshot,
   objectId: string,
   provider: OanixStorageProvider,
   expectedCiphertextBytes: number,
+  ranges: LargeObjectCiphertextRange[],
 ): void {
   if (!isLargeObjectTransferCheckpointV1(snapshot.checkpoint)) {
     throw new Error('El checkpoint guardado del archivo grande no es válido.')
@@ -76,6 +113,7 @@ function validateSnapshot(
   if (snapshot.retainedChunk && snapshot.retainedChunk.objectId !== objectId) {
     throw new Error('El fragmento temporal pertenece a otro archivo grande.')
   }
+  validateSavedManifests(snapshot.manifests, ranges)
 }
 
 function retainedMatchesActiveChunk(
@@ -95,8 +133,18 @@ function retainedMatchesActiveChunk(
   )
 }
 
-function clearBytes(bytes: Uint8Array | null | undefined): void {
-  bytes?.fill(0)
+function appendManifestOnce(
+  manifests: LargeObjectChunkManifest[],
+  manifest: LargeObjectChunkManifest,
+): LargeObjectChunkManifest[] {
+  const existing = manifests.find((candidate) => candidate.index === manifest.index)
+  if (existing) {
+    if (existing.iv !== manifest.iv || existing.sha256 !== manifest.sha256) {
+      throw new Error('El manifiesto cifrado cambió para un fragmento ya preparado.')
+    }
+    return manifests
+  }
+  return [...manifests, { ...manifest }].sort((a, b) => a.index - b.index)
 }
 
 export async function uploadLargeObjectResumable(
@@ -108,13 +156,12 @@ export async function uploadLargeObjectResumable(
   const plans = planLargeObjectChunks(options.blob.size, options.chunkBytes)
   const ranges = planLargeObjectCiphertextRanges(options.blob.size, options.chunkBytes)
   const expectedCiphertextBytes = totalCiphertextBytesForRanges(ranges)
-  const manifests: LargeObjectChunkManifest[] = []
   let snapshot = await options.stateStore.load(objectId)
 
   options.onProgress?.(createLargeObjectTransferProgress('preparing', 0, options.blob.size))
 
   if (snapshot) {
-    validateSnapshot(snapshot, objectId, options.provider, expectedCiphertextBytes)
+    validateSnapshot(snapshot, objectId, options.provider, expectedCiphertextBytes, ranges)
     const remoteStatus = await options.provider.inspectResumableUpload({
       providerId: snapshot.checkpoint.providerId,
       sessionRef: snapshot.checkpoint.sessionRef,
@@ -130,6 +177,7 @@ export async function uploadLargeObjectResumable(
     snapshot = {
       checkpoint: advanced.checkpoint,
       retainedChunk: advanced.clearRetainedChunk ? null : snapshot.retainedChunk,
+      manifests: snapshot.manifests,
     }
     await options.stateStore.save(snapshot)
   } else {
@@ -137,6 +185,7 @@ export async function uploadLargeObjectResumable(
     snapshot = {
       checkpoint: createLargeObjectTransferCheckpoint(session),
       retainedChunk: null,
+      manifests: [],
     }
     await options.stateStore.save(snapshot)
   }
@@ -183,6 +232,7 @@ export async function uploadLargeObjectResumable(
         snapshot = {
           checkpoint: retained.checkpoint,
           retainedChunk: retainedForSave,
+          manifests: appendManifestOnce(snapshot.manifests, encrypted.manifest),
         }
         await options.stateStore.save(snapshot)
       }
@@ -214,11 +264,11 @@ export async function uploadLargeObjectResumable(
         status.confirmedCiphertextBytes,
       )
 
-      if (encrypted) manifests.push(encrypted.manifest)
       if (advanced.clearRetainedChunk) clearBytes(retainedForSave.ciphertext)
       snapshot = {
         checkpoint: advanced.checkpoint,
         retainedChunk: advanced.clearRetainedChunk ? null : retainedForSave,
+        manifests: snapshot.manifests,
       }
       await options.stateStore.save(snapshot)
 
@@ -233,6 +283,10 @@ export async function uploadLargeObjectResumable(
     }
   }
 
+  if (snapshot.manifests.length !== ranges.length) {
+    throw new Error('La subida terminó sin conservar todos los manifiestos criptográficos necesarios.')
+  }
+
   options.onProgress?.(createLargeObjectTransferProgress('verifying', options.blob.size, options.blob.size))
   const remoteObject = await options.provider.finalizeResumableUpload({
     providerId: snapshot.checkpoint.providerId,
@@ -240,6 +294,7 @@ export async function uploadLargeObjectResumable(
     objectId,
     expectedCiphertextBytes,
   })
+  const manifests = cloneManifests(snapshot.manifests)
   clearBytes(snapshot.retainedChunk?.ciphertext)
   await options.stateStore.clear(objectId)
   options.onProgress?.(createLargeObjectTransferProgress('stored', options.blob.size, options.blob.size))
@@ -254,9 +309,8 @@ export class MemoryLargeObjectTransferStateStore implements LargeObjectTransferS
     if (!this.#snapshot || this.#snapshot.checkpoint.objectId !== objectId) return null
     return {
       checkpoint: structuredClone(this.#snapshot.checkpoint),
-      retainedChunk: this.#snapshot.retainedChunk
-        ? { ...this.#snapshot.retainedChunk, ciphertext: this.#snapshot.retainedChunk.ciphertext.slice() }
-        : null,
+      retainedChunk: cloneRetainedChunk(this.#snapshot.retainedChunk),
+      manifests: cloneManifests(this.#snapshot.manifests),
     }
   }
 
@@ -264,9 +318,8 @@ export class MemoryLargeObjectTransferStateStore implements LargeObjectTransferS
     clearBytes(this.#snapshot?.retainedChunk?.ciphertext)
     this.#snapshot = {
       checkpoint: structuredClone(snapshot.checkpoint),
-      retainedChunk: snapshot.retainedChunk
-        ? { ...snapshot.retainedChunk, ciphertext: snapshot.retainedChunk.ciphertext.slice() }
-        : null,
+      retainedChunk: cloneRetainedChunk(snapshot.retainedChunk),
+      manifests: cloneManifests(snapshot.manifests),
     }
   }
 
