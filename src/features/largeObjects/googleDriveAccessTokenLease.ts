@@ -1,6 +1,8 @@
 import { GoogleDriveStorageProvider } from './googleDriveStorageProvider.ts'
 
 const EXPIRY_SAFETY_WINDOW_MS = 60_000
+const DRIVE_RESUMABLE_UPLOAD_ORIGIN = 'https://www.googleapis.com'
+const DRIVE_RESUMABLE_UPLOAD_PATH = '/upload/drive/v3/files'
 
 interface GoogleDriveTokenLease {
   accessToken: string
@@ -22,6 +24,36 @@ function validateExpiry(expiresAtMs: number): number {
     throw new Error('Google Drive devolvió una vigencia de acceso no válida.')
   }
   return expiresAtMs
+}
+
+function isGoogleDriveResumableSessionPut(input: RequestInfo | URL, init?: RequestInit): boolean {
+  if ((init?.method ?? 'GET').toUpperCase() !== 'PUT') return false
+
+  let url: URL
+  try {
+    url = new URL(String(input))
+  } catch {
+    return false
+  }
+
+  return (
+    url.origin === DRIVE_RESUMABLE_UPLOAD_ORIGIN &&
+    url.pathname === DRIVE_RESUMABLE_UPLOAD_PATH &&
+    url.searchParams.has('upload_id')
+  )
+}
+
+export async function googleDriveBrowserFetch(
+  input: RequestInfo | URL,
+  init?: RequestInit,
+): Promise<Response> {
+  if (!isGoogleDriveResumableSessionPut(input, init)) {
+    return globalThis.fetch(input, init)
+  }
+
+  const headers = new Headers(init?.headers)
+  headers.delete('Authorization')
+  return globalThis.fetch(input, { ...init, headers })
 }
 
 export function setGoogleDriveAccessTokenLease(
@@ -58,6 +90,6 @@ export async function requireGoogleDriveAccessTokenLease(): Promise<string> {
 export function createGoogleDriveStorageProviderFromActiveLease(): GoogleDriveStorageProvider {
   return new GoogleDriveStorageProvider(
     requireGoogleDriveAccessTokenLease,
-    (...args) => globalThis.fetch(...args),
+    googleDriveBrowserFetch,
   )
 }
