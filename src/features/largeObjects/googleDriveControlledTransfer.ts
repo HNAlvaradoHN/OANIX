@@ -1,4 +1,9 @@
 import { createGoogleDriveStorageProviderFromActiveLease, hasUsableGoogleDriveAccessTokenLease } from './googleDriveAccessTokenLease.ts'
+import {
+  DEFAULT_LARGE_OBJECT_CHUNK_BYTES,
+  LARGE_OBJECT_AES_GCM_TAG_BYTES,
+  LARGE_OBJECT_CHUNK_ALIGNMENT_BYTES,
+} from './largeObjectProtocol.ts'
 import { PersistentLargeObjectTransferStateStore } from './persistentLargeObjectTransferStateStore.ts'
 import {
   transferLargeObject,
@@ -9,6 +14,19 @@ const MiB = 1024 * 1024
 
 export const CONTROLLED_GOOGLE_DRIVE_MIN_BYTES = 100 * MiB
 export const CONTROLLED_GOOGLE_DRIVE_MAX_BYTES = 200 * MiB
+
+// Drive requires every non-final resumable upload request to be a multiple of
+// 256 KiB. AES-GCM adds a 16-byte authentication tag to each OANIX crypto chunk,
+// so choosing plaintext at 8 MiB - 16 bytes yields exactly 8 MiB ciphertext.
+export const GOOGLE_DRIVE_PLAINTEXT_CHUNK_BYTES =
+  DEFAULT_LARGE_OBJECT_CHUNK_BYTES - LARGE_OBJECT_AES_GCM_TAG_BYTES
+
+if (
+  (GOOGLE_DRIVE_PLAINTEXT_CHUNK_BYTES + LARGE_OBJECT_AES_GCM_TAG_BYTES) %
+    LARGE_OBJECT_CHUNK_ALIGNMENT_BYTES !== 0
+) {
+  throw new Error('La configuración de fragmentos cifrados de Google Drive no está alineada a 256 KiB.')
+}
 
 export interface ControlledGoogleDriveTransferOptions {
   blob: Blob
@@ -48,6 +66,7 @@ export async function transferControlledGoogleDriveLargeObject(
     objectId: options.objectId,
     provider,
     stateStore,
+    chunkBytes: GOOGLE_DRIVE_PLAINTEXT_CHUNK_BYTES,
     ui: {
       fileName: options.fileName,
       mimeType: options.mimeType,
