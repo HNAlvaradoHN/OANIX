@@ -8,7 +8,7 @@ import {
   createLargeObjectTransferProgress,
   planLargeObjectChunks,
   validateLargeObjectChunkBytes,
-} from '../src/features/largeObjects/largeObjectProtocol'
+} from '../src/features/largeObjects/largeObjectProtocol.ts'
 
 const MiB = 1024 * 1024
 const GiB = 1024 * MiB
@@ -35,7 +35,7 @@ test('planifica 5 GiB con una cantidad razonable de fragmentos', () => {
   const chunks = planLargeObjectChunks(5 * GiB)
   assert.equal(chunks.length, 640)
   assert.equal(chunks.at(-1)?.plaintextLength, DEFAULT_LARGE_OBJECT_CHUNK_BYTES)
-  assert.equal(chunks.at(-1)?.plaintextOffset, (640 - 1) * DEFAULT_LARGE_OBJECT_CHUNK_BYTES)
+  assert.equal(chunks.at(-1]?.plaintextOffset, (640 - 1) * DEFAULT_LARGE_OBJECT_CHUNK_BYTES)
 })
 
 test('acepta tamaños de fragmento alineados a 256 KiB y rechaza los demás', () => {
