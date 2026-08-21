@@ -56,5 +56,8 @@ export async function requireGoogleDriveAccessTokenLease(): Promise<string> {
 }
 
 export function createGoogleDriveStorageProviderFromActiveLease(): GoogleDriveStorageProvider {
-  return new GoogleDriveStorageProvider(requireGoogleDriveAccessTokenLease)
+  return new GoogleDriveStorageProvider(
+    requireGoogleDriveAccessTokenLease,
+    (...args) => globalThis.fetch(...args),
+  )
 }
