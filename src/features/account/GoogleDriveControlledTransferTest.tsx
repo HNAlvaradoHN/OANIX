@@ -1,7 +1,10 @@
 import { useRef, useState } from 'react'
 import { transferControlledGoogleDriveLargeObject } from '../largeObjects/googleDriveControlledTransfer.ts'
 import { createControlledLargeObjectId } from '../largeObjects/controlledLargeObjectIdentity.ts'
-import { clearLargeObjectTransferCache } from '../../storage/local/largeObjectTransferCache.ts'
+import {
+  clearLargeObjectTransferCache,
+  loadLargeObjectTransferCache,
+} from '../../storage/local/largeObjectTransferCache.ts'
 import { requireActiveVaultKey } from '../../security/vault/vaultSession.ts'
 
 export function GoogleDriveControlledTransferTest({
@@ -43,9 +46,16 @@ export function GoogleDriveControlledTransferTest({
     setBusy(true)
     try {
       await clearLargeObjectTransferCache()
+      const remaining = await loadLargeObjectTransferCache()
+      if (remaining) {
+        setFailed(true)
+        setMessage('OANIX borró la transferencia, pero otra instancia o tarea volvió a crear una transferencia pendiente. Cerrá otras instancias de OANIX y volvé a descartarla.')
+        return
+      }
       setFailed(false)
-      setMessage('Transferencia pendiente descartada. Ya puedes iniciar una nueva prueba.')
+      setMessage('Transferencia pendiente descartada y caché verificada. Ya puedes iniciar una nueva prueba.')
     } catch (error) {
+      setFailed(true)
       setMessage(error instanceof Error ? error.message : 'No se pudo descartar la transferencia pendiente.')
     } finally {
       setBusy(false)
