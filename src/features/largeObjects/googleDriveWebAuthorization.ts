@@ -159,6 +159,6 @@ export async function authorizeGoogleDriveOnWeb(): Promise<void> {
       },
     })
 
-    client.requestAccessToken({ prompt: '' })
+    client.requestAccessToken({ prompt: 'select_account' })
   })
 }
