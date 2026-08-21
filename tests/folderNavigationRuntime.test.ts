@@ -40,6 +40,14 @@ test('las tarjetas usan profundidad, barrido cobre-plata y respetan movimiento r
   assert.match(motionCss, /prefers-reduced-motion: reduce/)
 })
 
+test('las carpetas respiran en reposo de forma discreta sin competir con la interacción', () => {
+  assert.match(motionCss, /oanix-folder-idle-breathe 7\.6s/)
+  assert.match(motionCss, /translateY\(-1\.35px\)/)
+  assert.match(motionCss, /animation-delay: calc\(var\(--oanix-folder-index, 0\) \* -430ms\)/)
+  assert.match(motionCss, /:is\(:hover, :focus-visible\) \.oanix-folder-card__visual[\s\S]*animation: none/)
+  assert.match(motionCss, /prefers-reduced-motion: reduce[\s\S]*animation: none !important/)
+})
+
 test('el runtime compartido se monta también en PWA desde el runtime ya global', () => {
   assert.match(androidBackRuntime, /useFolderNavigationRuntime/)
   assert.match(androidBackRuntime, /useFolderNavigationRuntime\(\)/)
