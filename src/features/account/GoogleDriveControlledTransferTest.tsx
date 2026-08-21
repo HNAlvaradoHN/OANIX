@@ -1,12 +1,7 @@
 import { useRef, useState } from 'react'
 import { transferControlledGoogleDriveLargeObject } from '../largeObjects/googleDriveControlledTransfer.ts'
+import { createControlledLargeObjectId } from '../largeObjects/controlledLargeObjectIdentity.ts'
 import { requireActiveVaultKey } from '../../security/vault/vaultSession.ts'
-
-function randomObjectId(): string {
-  const bytes = new Uint8Array(16)
-  globalThis.crypto.getRandomValues(bytes)
-  return `field-${Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('')}`
-}
 
 export function GoogleDriveControlledTransferTest({
   disabled = false,
@@ -23,10 +18,11 @@ export function GoogleDriveControlledTransferTest({
     setBusy(true)
     setMessage('')
     try {
+      const objectId = await createControlledLargeObjectId(file)
       await transferControlledGoogleDriveLargeObject({
         blob: file,
         vaultKey: requireActiveVaultKey(),
-        objectId: randomObjectId(),
+        objectId,
         fileName: file.name,
         mimeType: file.type || undefined,
       })
