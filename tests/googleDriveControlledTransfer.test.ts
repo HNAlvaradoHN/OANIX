@@ -6,7 +6,13 @@ import {
   assertControlledGoogleDriveTransferSize,
   CONTROLLED_GOOGLE_DRIVE_MAX_BYTES,
   CONTROLLED_GOOGLE_DRIVE_MIN_BYTES,
+  GOOGLE_DRIVE_PLAINTEXT_CHUNK_BYTES,
 } from '../src/features/largeObjects/googleDriveControlledTransfer.ts'
+import {
+  DEFAULT_LARGE_OBJECT_CHUNK_BYTES,
+  LARGE_OBJECT_AES_GCM_TAG_BYTES,
+  LARGE_OBJECT_CHUNK_ALIGNMENT_BYTES,
+} from '../src/features/largeObjects/largeObjectProtocol.ts'
 
 const MiB = 1024 * 1024
 
@@ -23,6 +29,22 @@ test('controlled Google Drive entry is deliberately limited to 100–200 MiB', (
   assert.throws(() => assertControlledGoogleDriveTransferSize(Number.NaN), /no es válido/u)
 })
 
+test('Drive crypto chunks produce 256 KiB-aligned ciphertext for every full chunk', () => {
+  assert.equal(
+    GOOGLE_DRIVE_PLAINTEXT_CHUNK_BYTES,
+    DEFAULT_LARGE_OBJECT_CHUNK_BYTES - LARGE_OBJECT_AES_GCM_TAG_BYTES,
+  )
+  assert.equal(
+    (GOOGLE_DRIVE_PLAINTEXT_CHUNK_BYTES + LARGE_OBJECT_AES_GCM_TAG_BYTES) %
+      LARGE_OBJECT_CHUNK_ALIGNMENT_BYTES,
+    0,
+  )
+  assert.equal(
+    GOOGLE_DRIVE_PLAINTEXT_CHUNK_BYTES + LARGE_OBJECT_AES_GCM_TAG_BYTES,
+    DEFAULT_LARGE_OBJECT_CHUNK_BYTES,
+  )
+})
+
 test('controlled Google Drive entry reuses the real provider, persistent encrypted state and transfer service', async () => {
   const source = await readFile(
     new URL('../src/features/largeObjects/googleDriveControlledTransfer.ts', import.meta.url),
@@ -32,6 +54,7 @@ test('controlled Google Drive entry reuses the real provider, persistent encrypt
   assert.match(source, /hasUsableGoogleDriveAccessTokenLease/u)
   assert.match(source, /createGoogleDriveStorageProviderFromActiveLease/u)
   assert.match(source, /new PersistentLargeObjectTransferStateStore\(\)/u)
+  assert.match(source, /chunkBytes: GOOGLE_DRIVE_PLAINTEXT_CHUNK_BYTES/u)
   assert.match(source, /return transferLargeObject\(/u)
   assert.doesNotMatch(source, /connectGoogleDriveAndInspect|authorizeGoogleDriveOnWeb|authorizeGoogleDriveOnAndroid/u)
   assert.doesNotMatch(source, /localStorage|sessionStorage|refreshToken|oanix-vault/u)
