@@ -38,6 +38,13 @@ export interface LargeObjectUploadStatus {
   complete: boolean
 }
 
+export interface LargeObjectStorageCapacity {
+  providerId: string
+  usageBytes: number
+  limitBytes: number | null
+  availableBytes: number | null
+}
+
 export interface LargeObjectUploadRangeRequest {
   session: LargeObjectUploadSession
   ciphertextOffset: number
@@ -53,6 +60,7 @@ export interface LargeObjectDownloadRangeRequest {
 
 export interface OanixStorageProvider {
   readonly providerId: string
+  getStorageCapacity?(): Promise<LargeObjectStorageCapacity>
   beginResumableUpload(input: {
     objectId: string
     expectedCiphertextBytes: number
@@ -69,6 +77,47 @@ function requireSafeNonNegativeInteger(value: number, label: string): number {
     throw new Error(`${label} debe ser un entero seguro mayor o igual a cero.`)
   }
   return value
+}
+
+export function validateStorageCapacity(
+  provider: OanixStorageProvider,
+  capacity: LargeObjectStorageCapacity,
+): LargeObjectStorageCapacity {
+  if (capacity.providerId !== provider.providerId) {
+    throw new Error('La capacidad reportada pertenece a otro proveedor de almacenamiento.')
+  }
+  const usageBytes = requireSafeNonNegativeInteger(capacity.usageBytes, 'El almacenamiento usado')
+  const limitBytes = capacity.limitBytes === null
+    ? null
+    : requireSafeNonNegativeInteger(capacity.limitBytes, 'El límite de almacenamiento')
+  const availableBytes = capacity.availableBytes === null
+    ? null
+    : requireSafeNonNegativeInteger(capacity.availableBytes, 'El almacenamiento disponible')
+  if (limitBytes !== null) {
+    if (usageBytes > limitBytes) {
+      throw new Error('El proveedor reportó un uso superior a su límite de almacenamiento.')
+    }
+    const expectedAvailable = limitBytes - usageBytes
+    if (availableBytes !== expectedAvailable) {
+      throw new Error('El proveedor reportó una capacidad disponible inconsistente.')
+    }
+  } else if (availableBytes !== null) {
+    throw new Error('Un proveedor sin límite conocido no debe inventar capacidad disponible.')
+  }
+  return { providerId: capacity.providerId, usageBytes, limitBytes, availableBytes }
+}
+
+export async function ensureProviderCapacityForBytes(
+  provider: OanixStorageProvider,
+  requiredBytes: number,
+): Promise<LargeObjectStorageCapacity | null> {
+  const required = requireSafeNonNegativeInteger(requiredBytes, 'Los bytes requeridos')
+  if (!provider.getStorageCapacity) return null
+  const capacity = validateStorageCapacity(provider, await provider.getStorageCapacity())
+  if (capacity.availableBytes !== null && capacity.availableBytes < required) {
+    throw new Error('El almacenamiento seleccionado no tiene espacio suficiente para este archivo.')
+  }
+  return capacity
 }
 
 export function planLargeObjectCiphertextRanges(

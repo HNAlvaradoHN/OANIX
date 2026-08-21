@@ -2,6 +2,7 @@ import {
   validateUploadRangeRequest,
   type LargeObjectDownloadRangeRequest,
   type LargeObjectRemoteObject,
+  type LargeObjectStorageCapacity,
   type LargeObjectUploadRangeRequest,
   type LargeObjectUploadSession,
   type LargeObjectUploadStatus,
@@ -12,6 +13,7 @@ export const GOOGLE_DRIVE_APPDATA_SCOPE = 'https://www.googleapis.com/auth/drive
 export const GOOGLE_DRIVE_PROVIDER_ID = 'google-drive-appdata-v1'
 
 const DRIVE_FILES_URL = 'https://www.googleapis.com/drive/v3/files'
+const DRIVE_ABOUT_URL = 'https://www.googleapis.com/drive/v3/about'
 const DRIVE_UPLOAD_FILES_URL = 'https://www.googleapis.com/upload/drive/v3/files'
 const DRIVE_UPLOAD_HOST = 'www.googleapis.com'
 const DRIVE_UPLOAD_PATH = '/upload/drive/v3/files'
@@ -22,6 +24,13 @@ export type GoogleDriveFetch = typeof fetch
 
 interface GoogleDriveFileMetadata {
   id?: unknown
+}
+
+interface GoogleDriveAboutResponse {
+  storageQuota?: {
+    limit?: unknown
+    usage?: unknown
+  }
 }
 
 function requireSafeNonNegativeInteger(value: number, label: string): number {
@@ -35,6 +44,14 @@ function requirePositiveSafeInteger(value: number, label: string): number {
   const checked = requireSafeNonNegativeInteger(value, label)
   if (checked <= 0) throw new Error(`${label} debe ser mayor que cero.`)
   return checked
+}
+
+function parseDriveQuotaBytes(value: unknown, label: string): number {
+  if (typeof value !== 'string' || !/^\d+$/.test(value)) {
+    throw new Error(`Google Drive devolvió ${label} con un formato no válido.`)
+  }
+  const parsed = Number(value)
+  return requireSafeNonNegativeInteger(parsed, label)
 }
 
 function requireOpaqueIdentifier(value: string, label: string): string {
@@ -141,6 +158,42 @@ export class GoogleDriveStorageProvider implements OanixStorageProvider {
   ) {
     this.getAccessToken = getAccessToken
     this.fetchImpl = fetchImpl
+  }
+
+  async getStorageCapacity(): Promise<LargeObjectStorageCapacity> {
+    const token = await requireAccessToken(this.getAccessToken)
+    const response = await this.fetchImpl(
+      `${DRIVE_ABOUT_URL}?fields=storageQuota(limit,usage)`,
+      {
+        method: 'GET',
+        headers: authorizedHeaders(token),
+      },
+    )
+    if (!response.ok) {
+      throw new Error(await responseMessage(response, 'Google Drive no pudo consultar el espacio disponible'))
+    }
+
+    let parsed: GoogleDriveAboutResponse
+    try {
+      parsed = await response.json() as GoogleDriveAboutResponse
+    } catch {
+      throw new Error('Google Drive devolvió información de almacenamiento no válida.')
+    }
+    const quota = parsed.storageQuota
+    if (!quota) throw new Error('Google Drive no devolvió información de almacenamiento.')
+    const usageBytes = parseDriveQuotaBytes(quota.usage, 'el almacenamiento usado')
+    const limitBytes = quota.limit === undefined
+      ? null
+      : parseDriveQuotaBytes(quota.limit, 'el límite de almacenamiento')
+    if (limitBytes !== null && usageBytes > limitBytes) {
+      throw new Error('Google Drive reportó un uso superior al límite de la cuenta.')
+    }
+    return {
+      providerId: this.providerId,
+      usageBytes,
+      limitBytes,
+      availableBytes: limitBytes === null ? null : limitBytes - usageBytes,
+    }
   }
 
   async beginResumableUpload(input: {
