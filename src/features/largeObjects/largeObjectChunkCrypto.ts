@@ -57,7 +57,7 @@ function bytesToBase64Url(bytes: Uint8Array): string {
   return btoa(binary).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/u, '')
 }
 
-function base64UrlToBytes(value: string): Uint8Array {
+function base64UrlToBytes(value: string): Uint8Array<ArrayBuffer> {
   const normalized = value.replaceAll('-', '+').replaceAll('_', '/')
   const padded = normalized + '='.repeat((4 - (normalized.length % 4)) % 4)
   let binary: string
