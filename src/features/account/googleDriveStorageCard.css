@@ -1,0 +1,175 @@
+.account-storage-card {
+  display: grid;
+  gap: .78rem;
+  padding: .9rem;
+  border: 1px solid rgba(125, 148, 181, .18);
+  border-radius: 1rem;
+  background:
+    radial-gradient(circle at 85% 0%, rgba(79, 112, 219, .13), transparent 36%),
+    linear-gradient(145deg, rgba(14, 23, 40, .88), rgba(7, 12, 22, .92));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.025), 0 12px 30px rgba(0,0,0,.16);
+}
+
+.account-storage-card__header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .7rem;
+}
+
+.account-storage-card__header > div:nth-child(2) {
+  display: grid;
+  gap: .16rem;
+  min-width: 0;
+}
+
+.account-storage-card__header strong {
+  color: #edf3fc;
+  font-size: .82rem;
+}
+
+.account-storage-card__header span:not(.account-storage-card__badge) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #8493aa;
+  font-size: .68rem;
+}
+
+.account-storage-card__icon {
+  display: grid;
+  width: 2.35rem;
+  height: 2.35rem;
+  place-items: center;
+  border: 1px solid rgba(111, 145, 255, .2);
+  border-radius: .78rem;
+  background: rgba(45, 70, 135, .14);
+  color: #bfdbfe;
+  font-size: 1.05rem;
+  box-shadow: inset 0 0 18px rgba(79,112,219,.08);
+}
+
+.account-storage-card__badge {
+  padding: .34rem .52rem;
+  border: 1px solid rgba(148, 163, 184, .15);
+  border-radius: 999px;
+  background: rgba(148, 163, 184, .05);
+  color: #8493aa;
+  font-size: .61rem;
+  font-weight: 850;
+  letter-spacing: .02em;
+}
+
+.account-storage-card__badge--active {
+  border-color: rgba(52, 211, 153, .2);
+  background: rgba(6, 78, 59, .14);
+  color: #a7f3d0;
+}
+
+.account-storage-card__capacity {
+  display: grid;
+  gap: .45rem;
+}
+
+.account-storage-card__numbers {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: .7rem;
+  color: #8090a7;
+  font-size: .66rem;
+}
+
+.account-storage-card__numbers strong {
+  color: #dbeafe;
+  font-size: .72rem;
+}
+
+.account-storage-card__bar {
+  overflow: hidden;
+  height: .38rem;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, .11);
+}
+
+.account-storage-card__bar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(79,112,219,.9), rgba(80,185,190,.86));
+  transition: width .35s ease;
+}
+
+.account-storage-card__capacity small,
+.account-storage-card__hint {
+  color: #6f7f96;
+  font-size: .62rem;
+  line-height: 1.45;
+}
+
+.account-storage-card__message {
+  margin: 0;
+  padding: .55rem .62rem;
+  border: 1px solid rgba(148, 163, 184, .12);
+  border-radius: .7rem;
+  background: rgba(148, 163, 184, .045);
+  color: #a9b6c9;
+  font-size: .67rem;
+  line-height: 1.4;
+}
+
+.account-storage-card__actions {
+  display: flex;
+  gap: .5rem;
+}
+
+.account-storage-card__actions button {
+  flex: 1 1 0;
+  min-height: 2.45rem;
+  border: 1px solid rgba(111, 145, 255, .24);
+  border-radius: .72rem;
+  background: rgba(55, 84, 163, .14);
+  color: #dbeafe;
+  font-size: .69rem;
+  font-weight: 820;
+}
+
+.account-storage-card__actions button:hover:not(:disabled) {
+  background: rgba(70, 101, 190, .19);
+  border-color: rgba(126, 158, 255, .34);
+}
+
+.account-storage-card__actions button:disabled {
+  opacity: .48;
+  cursor: not-allowed;
+}
+
+.account-storage-card__actions .account-storage-card__disconnect {
+  border-color: rgba(248, 113, 113, .14);
+  background: rgba(127, 29, 29, .07);
+  color: #fca5a5;
+}
+
+.account-storage-card__hint {
+  margin: 0;
+}
+
+@media (max-width: 380px) {
+  .account-storage-card__header {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .account-storage-card__badge {
+    grid-column: 2;
+    justify-self: start;
+  }
+  .account-storage-card__numbers {
+    display: grid;
+    gap: .18rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .account-storage-card__bar > span {
+    transition: none;
+  }
+}
