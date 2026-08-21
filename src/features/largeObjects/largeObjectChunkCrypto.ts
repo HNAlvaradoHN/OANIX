@@ -4,7 +4,7 @@ import {
   type LargeObjectChunkManifest,
   type LargeObjectChunkPlan,
   type LargeObjectTransferProgress,
-} from './largeObjectProtocol'
+} from './largeObjectProtocol.ts'
 
 const GCM_TAG_LENGTH = 128
 const LARGE_OBJECT_IV_BYTES = 12
