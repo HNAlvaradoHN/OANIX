@@ -31,6 +31,14 @@ export function AndroidBackRuntime() {
         return
       }
 
+      const modalBackClose = document.querySelector<HTMLButtonElement>(
+        '[data-oanix-back-close="true"]',
+      )
+      if (modalBackClose) {
+        modalBackClose.click()
+        return
+      }
+
       const openNoteBack = document.querySelector<HTMLButtonElement>(
         '.notes-shell--open .back-button',
       )
