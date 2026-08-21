@@ -200,3 +200,23 @@ test('Drive provider fails closed when a resumable session expires or belongs to
     /pertenece a otro proveedor/,
   )
 })
+
+test('Drive resumable sessions are pinned to Google before OANIX can send a bearer token', async () => {
+  let fetchCalls = 0
+  const fetchImpl = (async () => {
+    fetchCalls += 1
+    return new Response(null, { status: 500 })
+  }) as typeof fetch
+  const provider = providerWithFetch(fetchImpl)
+
+  await assert.rejects(
+    () => provider.inspectResumableUpload({
+      providerId: GOOGLE_DRIVE_PROVIDER_ID,
+      sessionRef: 'https://evil.example/upload/drive/v3/files?upload_id=stolen-session',
+      objectId: 'hostile-object',
+      expectedCiphertextBytes: 100,
+    }),
+    /no pertenece al endpoint de Google Drive/,
+  )
+  assert.equal(fetchCalls, 0)
+})
