@@ -113,11 +113,16 @@ function statusFromResumeResponse(response: Response, expectedCiphertextBytes: n
 
 export class GoogleDriveStorageProvider implements OanixStorageProvider {
   readonly providerId = GOOGLE_DRIVE_PROVIDER_ID
+  private readonly getAccessToken: GoogleDriveAccessTokenProvider
+  private readonly fetchImpl: GoogleDriveFetch
 
   constructor(
-    private readonly getAccessToken: GoogleDriveAccessTokenProvider,
-    private readonly fetchImpl: GoogleDriveFetch = fetch,
-  ) {}
+    getAccessToken: GoogleDriveAccessTokenProvider,
+    fetchImpl: GoogleDriveFetch = fetch,
+  ) {
+    this.getAccessToken = getAccessToken
+    this.fetchImpl = fetchImpl
+  }
 
   async beginResumableUpload(input: {
     objectId: string
