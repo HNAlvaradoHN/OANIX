@@ -1,4 +1,5 @@
 import {
+  LARGE_OBJECT_AES_GCM_TAG_BYTES,
   createLargeObjectTransferProgress,
   planLargeObjectChunks,
   type LargeObjectChunkManifest,
@@ -6,7 +7,7 @@ import {
   type LargeObjectTransferProgress,
 } from './largeObjectProtocol.ts'
 
-const GCM_TAG_LENGTH = 128
+const GCM_TAG_LENGTH = LARGE_OBJECT_AES_GCM_TAG_BYTES * 8
 const LARGE_OBJECT_IV_BYTES = 12
 
 export interface EncryptedLargeObjectChunk {
