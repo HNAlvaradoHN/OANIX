@@ -98,7 +98,14 @@
 }
 
 .oanix-folder-card__visual {
+  animation: oanix-folder-idle-breathe 7.6s cubic-bezier(.45,.05,.55,.95) infinite;
+  animation-delay: calc(var(--oanix-folder-index, 0) * -430ms);
   transition: transform .2s cubic-bezier(.2,.75,.2,1), filter .2s ease;
+}
+
+.oanix-folder-card:is(:hover, :focus-visible) .oanix-folder-card__visual,
+.oanix-folder-card[data-oanix-folder-engaged='true'] .oanix-folder-card__visual {
+  animation: none;
 }
 
 .oanix-folder-card__folder-mark {
@@ -119,6 +126,8 @@
     -.12rem -.28rem 0 color-mix(in srgb, #b87333 72%, #d9dee7);
   opacity: .72;
   transform: rotate(6deg);
+  animation: oanix-folder-idle-spark 6.4s ease-in-out infinite;
+  animation-delay: calc(var(--oanix-folder-index, 0) * -510ms);
   transition: transform .2s ease, opacity .2s ease;
 }
 
@@ -126,6 +135,7 @@
 .oanix-folder-card[data-oanix-folder-engaged='true'] .oanix-folder-card__folder-mark::after {
   opacity: 1;
   transform: translate(.08rem, -.08rem) rotate(18deg) scale(1.08);
+  animation: none;
 }
 
 @keyframes oanix-folder-vault-scan {
@@ -134,6 +144,32 @@
   }
   100% {
     transform: skewX(-17deg) translateX(650%);
+  }
+}
+
+@keyframes oanix-folder-idle-breathe {
+  0%, 100% {
+    transform: translateZ(7px) translateY(0) scale(1);
+    filter: saturate(1) brightness(1);
+  }
+  48% {
+    transform: translateZ(9px) translateY(-1.35px) scale(1.008);
+    filter: saturate(1.018) brightness(1.012);
+  }
+  62% {
+    transform: translateZ(8px) translateY(-.45px) scale(1.003);
+    filter: saturate(1.008) brightness(1.006);
+  }
+}
+
+@keyframes oanix-folder-idle-spark {
+  0%, 100% {
+    opacity: .58;
+    filter: brightness(.94);
+  }
+  50% {
+    opacity: .82;
+    filter: brightness(1.08);
   }
 }
 
@@ -157,6 +193,7 @@
   .oanix-folder-card__visual,
   .oanix-folder-card__folder-mark::after {
     transition: none !important;
+    animation: none !important;
   }
 
   .oanix-folder-card::after {
