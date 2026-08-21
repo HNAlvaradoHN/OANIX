@@ -9,6 +9,7 @@ import {
   subscribeOnlineAccountSession,
   type OnlineAccountSession,
 } from './accountService'
+import { GoogleDriveStorageCard } from './GoogleDriveStorageCard.tsx'
 import './account.css'
 
 interface AccountPanelProps {
@@ -221,6 +222,8 @@ export function AccountPanel({
                 <p>Texto, carpetas, etiquetas, contactos, checklists e imágenes se sincronizan cifrados automáticamente. Si estás sin Internet, OANIX continúa guardando localmente y se pone al día al reconectarse.</p>
               </div>
             )}
+
+            {context === 'workspace' && <GoogleDriveStorageCard />}
 
             {message && (
               <p className={`account-form__message${success ? ' account-form__message--success' : ''}`} role={success ? 'status' : 'alert'}>
