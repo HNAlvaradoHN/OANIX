@@ -3,6 +3,7 @@ import test from 'node:test'
 
 import {
   DEFAULT_LARGE_OBJECT_CHUNK_BYTES,
+  LARGE_OBJECT_AES_GCM_TAG_BYTES,
   LARGE_OBJECT_CHUNK_ALIGNMENT_BYTES,
   MAX_LARGE_OBJECT_BYTES,
   createLargeObjectTransferProgress,
@@ -38,10 +39,14 @@ test('planifica 5 GiB con una cantidad razonable de fragmentos', () => {
   assert.equal(chunks.at(-1)?.plaintextOffset, (640 - 1) * DEFAULT_LARGE_OBJECT_CHUNK_BYTES)
 })
 
-test('acepta tamaños de fragmento alineados a 256 KiB y rechaza los demás', () => {
-  assert.equal(validateLargeObjectChunkBytes(4 * MiB), 4 * MiB)
-  assert.equal((4 * MiB) % LARGE_OBJECT_CHUNK_ALIGNMENT_BYTES, 0)
-  assert.throws(() => validateLargeObjectChunkBytes((4 * MiB) + 1))
+test('permite que un proveedor ajuste el plaintext para alinear el ciphertext', () => {
+  const drivePlaintextChunk = DEFAULT_LARGE_OBJECT_CHUNK_BYTES - LARGE_OBJECT_AES_GCM_TAG_BYTES
+  assert.equal(validateLargeObjectChunkBytes(drivePlaintextChunk), drivePlaintextChunk)
+  assert.equal(
+    (drivePlaintextChunk + LARGE_OBJECT_AES_GCM_TAG_BYTES) % LARGE_OBJECT_CHUNK_ALIGNMENT_BYTES,
+    0,
+  )
+  assert.throws(() => validateLargeObjectChunkBytes(512 * 1024))
 })
 
 test('no permite que el progreso anuncie 100% antes de verificar almacenamiento', () => {
