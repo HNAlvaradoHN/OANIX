@@ -52,11 +52,12 @@ test('transfer service rejects insufficient capacity before creating a remote up
   const provider = new CapacityProvider()
   provider.availableBytes = 512 * 1024
   const blob = new Blob([new Uint8Array(CHUNK_BYTES + 10)])
+  const vaultKey = await key()
 
   await assert.rejects(
     () => transferLargeObject({
       blob,
-      vaultKey: await key(),
+      vaultKey,
       objectId: 'capacity-object-001',
       provider,
       stateStore: new MemoryLargeObjectTransferStateStore(),
