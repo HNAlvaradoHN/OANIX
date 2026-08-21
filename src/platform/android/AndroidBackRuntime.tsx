@@ -36,6 +36,14 @@ export function AndroidBackRuntime() {
         return
       }
 
+      const folderHomeBack = document.querySelector<HTMLButtonElement>(
+        '[data-oanix-folder-home-back="true"]',
+      )
+      if (folderHomeBack) {
+        folderHomeBack.click()
+        return
+      }
+
       setExitPromptVisible(true)
     }
 
