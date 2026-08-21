@@ -9,6 +9,7 @@ import {
   type GoogleDriveConnectionAvailability,
 } from '../largeObjects/googleDriveConnectionService.ts'
 import type { LargeObjectStorageCapacity } from '../largeObjects/largeObjectTransferContract.ts'
+import { GoogleDriveControlledTransferTest } from './GoogleDriveControlledTransferTest.tsx'
 import './googleDriveStorageCard.css'
 
 function formatBytes(value: number | null): string {
@@ -222,6 +223,13 @@ export function GoogleDriveStorageCard() {
             </>
           )}
         </div>
+
+        {connected && (
+          <GoogleDriveControlledTransferTest
+            disabled={busy}
+            onStored={() => refreshCapacity()}
+          />
+        )}
 
         <p className="account-storage-card__hint">
           OANIX solo solicita su espacio privado de aplicación. Las credenciales de Drive no se guardan en la bóveda ni en el navegador.
