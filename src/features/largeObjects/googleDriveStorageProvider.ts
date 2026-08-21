@@ -13,6 +13,8 @@ export const GOOGLE_DRIVE_PROVIDER_ID = 'google-drive-appdata-v1'
 
 const DRIVE_FILES_URL = 'https://www.googleapis.com/drive/v3/files'
 const DRIVE_UPLOAD_FILES_URL = 'https://www.googleapis.com/upload/drive/v3/files'
+const DRIVE_UPLOAD_HOST = 'www.googleapis.com'
+const DRIVE_UPLOAD_PATH = '/upload/drive/v3/files'
 const OPAQUE_FILE_PREFIX = 'oanix-object-'
 
 export type GoogleDriveAccessTokenProvider = () => Promise<string>
@@ -41,6 +43,23 @@ function requireOpaqueIdentifier(value: string, label: string): string {
     throw new Error(`${label} no es un identificador opaco válido.`)
   }
   return normalized
+}
+
+function requireGoogleUploadSessionUrl(value: string): string {
+  let url: URL
+  try {
+    url = new URL(value)
+  } catch {
+    throw new Error('La URL de sesión reanudable de Google Drive no es válida.')
+  }
+  if (
+    url.protocol !== 'https:' ||
+    url.hostname !== DRIVE_UPLOAD_HOST ||
+    url.pathname !== DRIVE_UPLOAD_PATH
+  ) {
+    throw new Error('OANIX rechazó una URL reanudable que no pertenece al endpoint de Google Drive.')
+  }
+  return url.toString()
 }
 
 function parseConfirmedCiphertextBytes(rangeHeader: string | null): number {
@@ -155,14 +174,15 @@ export class GoogleDriveStorageProvider implements OanixStorageProvider {
     if (!response.ok) {
       throw new Error(await responseMessage(response, 'Google Drive no pudo iniciar la subida reanudable'))
     }
-    const location = response.headers.get('Location')?.trim()
-    if (!location || !location.startsWith('https://')) {
-      throw new Error('Google Drive no devolvió una URL segura para reanudar la subida.')
+    const rawLocation = response.headers.get('Location')?.trim()
+    if (!rawLocation) {
+      throw new Error('Google Drive no devolvió una URL para reanudar la subida.')
     }
+    const sessionRef = requireGoogleUploadSessionUrl(rawLocation)
 
     return {
       providerId: this.providerId,
-      sessionRef: location,
+      sessionRef,
       objectId,
       expectedCiphertextBytes,
     }
@@ -278,9 +298,7 @@ export class GoogleDriveStorageProvider implements OanixStorageProvider {
     }
     requireOpaqueIdentifier(session.objectId, 'El objectId de la sesión')
     requirePositiveSafeInteger(session.expectedCiphertextBytes, 'El tamaño cifrado de la sesión')
-    if (!session.sessionRef.startsWith('https://')) {
-      throw new Error('La URL de sesión reanudable no es segura.')
-    }
+    requireGoogleUploadSessionUrl(session.sessionRef)
   }
 
   private validateRemoteObject(remoteObject: LargeObjectRemoteObject): void {
