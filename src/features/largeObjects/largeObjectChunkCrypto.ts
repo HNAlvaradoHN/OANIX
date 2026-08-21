@@ -31,12 +31,12 @@ function requireCrypto(): Crypto {
   return globalThis.crypto
 }
 
-function validateVaultKey(vaultKey: CryptoKey): void {
+function validateVaultKey(vaultKey: CryptoKey, usage: 'encrypt' | 'decrypt'): void {
   if (vaultKey.algorithm.name !== 'AES-GCM') {
     throw new Error('La clave activa de la bóveda no es compatible con AES-GCM.')
   }
-  if (!vaultKey.usages.includes('encrypt')) {
-    throw new Error('La clave activa de la bóveda no permite cifrar archivos grandes.')
+  if (!vaultKey.usages.includes(usage)) {
+    throw new Error(`La clave activa de la bóveda no permite ${usage === 'encrypt' ? 'cifrar' : 'descifrar'} archivos grandes.`)
   }
 }
 
@@ -55,6 +55,20 @@ function bytesToBase64Url(bytes: Uint8Array): string {
     binary += String.fromCharCode(...bytes.subarray(offset, offset + step))
   }
   return btoa(binary).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/u, '')
+}
+
+function base64UrlToBytes(value: string): Uint8Array {
+  const normalized = value.replaceAll('-', '+').replaceAll('_', '/')
+  const padded = normalized + '='.repeat((4 - (normalized.length % 4)) % 4)
+  let binary: string
+  try {
+    binary = atob(padded)
+  } catch {
+    throw new Error('El IV cifrado del fragmento no es válido.')
+  }
+  const bytes = new Uint8Array(binary.length)
+  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index)
+  return bytes
 }
 
 function asOwnedArrayBuffer(bytes: Uint8Array): ArrayBuffer {
@@ -89,13 +103,67 @@ async function sha256Base64Url(bytes: Uint8Array): Promise<string> {
   return bytesToBase64Url(new Uint8Array(digest))
 }
 
+export async function verifyLargeObjectChunkSha256(
+  ciphertext: Uint8Array,
+  expectedSha256: string,
+): Promise<void> {
+  const actual = await sha256Base64Url(ciphertext)
+  if (actual !== expectedSha256) {
+    throw new Error('La integridad SHA-256 del fragmento cifrado no coincide con el manifiesto.')
+  }
+}
+
+export async function decryptLargeObjectChunk(
+  vaultKey: CryptoKey,
+  objectId: string,
+  manifest: LargeObjectChunkManifest,
+  ciphertext: Uint8Array,
+): Promise<Uint8Array> {
+  validateVaultKey(vaultKey, 'decrypt')
+  const normalizedObjectId = validateObjectId(objectId)
+  if (ciphertext.byteLength !== manifest.ciphertextByteLength) {
+    throw new Error('El fragmento cifrado descargado no coincide con la longitud del manifiesto.')
+  }
+  await verifyLargeObjectChunkSha256(ciphertext, manifest.sha256)
+
+  const iv = base64UrlToBytes(manifest.iv)
+  if (iv.byteLength !== LARGE_OBJECT_IV_BYTES) {
+    iv.fill(0)
+    throw new Error('El IV cifrado del fragmento no tiene la longitud esperada.')
+  }
+
+  try {
+    const plaintextBuffer = await requireCrypto().subtle.decrypt(
+      {
+        name: 'AES-GCM',
+        iv,
+        additionalData: buildChunkAdditionalData(normalizedObjectId, manifest),
+        tagLength: GCM_TAG_LENGTH,
+      },
+      vaultKey,
+      asOwnedArrayBuffer(ciphertext),
+    )
+    const plaintext = new Uint8Array(plaintextBuffer)
+    if (plaintext.byteLength !== manifest.plaintextLength) {
+      plaintext.fill(0)
+      throw new Error('El fragmento descifrado no coincide con la longitud esperada.')
+    }
+    return plaintext
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith('El fragmento descifrado')) throw error
+    throw new Error('No se pudo autenticar y descifrar el fragmento remoto de OANIX.')
+  } finally {
+    iv.fill(0)
+  }
+}
+
 export async function encryptLargeObjectChunk(
   vaultKey: CryptoKey,
   objectId: string,
   plan: LargeObjectChunkPlan,
   plaintext: Uint8Array,
 ): Promise<EncryptedLargeObjectChunk> {
-  validateVaultKey(vaultKey)
+  validateVaultKey(vaultKey, 'encrypt')
   const normalizedObjectId = validateObjectId(objectId)
   if (plaintext.byteLength !== plan.plaintextLength) {
     throw new Error('El fragmento leído no coincide con el plan del archivo grande.')
@@ -130,7 +198,7 @@ export async function processLargeObjectChunks(
   options: ProcessLargeObjectChunksOptions,
 ): Promise<LargeObjectChunkManifest[]> {
   const { blob, vaultKey, consumeEncryptedChunk, onProgress } = options
-  validateVaultKey(vaultKey)
+  validateVaultKey(vaultKey, 'encrypt')
   const objectId = validateObjectId(options.objectId)
   const plans = planLargeObjectChunks(blob.size, options.chunkBytes)
   const manifests: LargeObjectChunkManifest[] = []
