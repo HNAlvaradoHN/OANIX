@@ -54,21 +54,28 @@ Implementado:
 - abstracción `OanixStorageProvider`;
 - Google Drive como primer proveedor.
 
-Validado en PWA con archivo real de ~120 MiB:
-- subida cifrada completa;
-- recuperación remota, hashes y descifrado íntegros;
-- corte de Internet, cierre de PWA, reapertura y reanudación desde progreso remoto confirmado.
+Validado en PWA:
+- archivo real de ~120 MiB con subida, recuperación íntegra y reanudación tras corte de Internet/cierre de PWA;
+- archivo real de **818 MB** con subida completa y **103 fragmentos íntegros y descifrados** en la verificación final.
 
 PR #219 amplió la prueba controlada a **100 MiB–1 GiB**.
 
 ### Orden inmediato
 
-1. Probar archivo cercano a **1 GiB** hasta Guardado + recuperación verificada.
-2. Repetirlo con interrupción alrededor del 30–50%, cerrar/reabrir OANIX y confirmar reanudación sin reiniciar.
-3. Aumentar tamaños gradualmente después de validar estabilidad. **No saltar directamente a 5 GB.**
-4. Integrar archivos grandes al flujo normal de notas solo después de estabilizar el motor y la UX de transferencia.
+1. Repetir la prueba de ~818 MB con interrupción alrededor del 30–50%, cerrar/reabrir OANIX y confirmar reanudación sin reiniciar.
+2. Aumentar tamaños gradualmente después de validar estabilidad. **No saltar directamente a 5 GB.**
+3. Integrar archivos grandes al flujo normal de notas solo después de estabilizar el motor y la UX de transferencia.
 
 Objetivo inicial de producto: **5 GB por archivo**, sin convertir 5 GB en techo arquitectónico.
+
+## Transferencias en segundo plano
+
+Antes de considerar terminado el sistema de archivos grandes en Android:
+- la APK deberá poder continuar transferencias grandes en segundo plano cuando el usuario cambie de app o apague la pantalla, respetando las restricciones del sistema Android;
+- el progreso y checkpoint deberán sobrevivir interrupciones del proceso cuando sea posible y reanudarse sin volver a empezar;
+- la PWA no prometerá ejecución continua en background, porque el navegador puede suspenderla; allí la garantía será reanudación fiable desde checkpoint/progreso remoto confirmado.
+
+No implementar este bloque antes de estabilizar el motor de transferencia actual.
 
 ## Después de estabilizar transferencias
 
