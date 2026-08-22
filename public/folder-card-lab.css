@@ -1,139 +1,351 @@
 html.oanix-folder-card-lab .oanix-folder-grid__cards {
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: .9rem;
+  gap: 1rem;
 }
 
 html.oanix-folder-card-lab .oanix-folder-card--custom {
-  min-height: 11.8rem;
+  min-height: 12rem;
   overflow: hidden;
-  border-radius: 1.28rem;
+  border-radius: 1.35rem;
+  background: #08101d;
+  border: 1px solid rgba(133, 166, 211, .16);
+  box-shadow: 0 1rem 2.6rem rgba(0, 0, 0, .28), inset 0 1px rgba(255,255,255,.04);
 }
 
-html.oanix-folder-card-lab .oanix-folder-card--custom::before {
+html.oanix-folder-card-lab .oanix-folder-card--custom::before,
+html.oanix-folder-card-lab .oanix-folder-card--custom::after {
+  content: none !important;
+}
+
+html.oanix-folder-card-lab .oanix-folder-lab__open {
+  position: relative;
+  width: 100%;
+  min-height: 12rem;
+  display: block;
+  padding: 0;
+  overflow: hidden;
+}
+
+html.oanix-folder-card-lab .oanix-folder-lab__label {
   position: absolute;
-  top: .55rem;
-  left: .55rem;
-  z-index: 20;
-  width: 1.55rem;
-  height: 1.55rem;
-  display: grid;
-  place-items: center;
-  border: 1px solid rgba(255,255,255,.18);
-  border-radius: .55rem;
-  background: rgba(3,7,18,.68);
-  color: #dff7ff;
-  box-shadow: 0 .25rem .8rem rgba(0,0,0,.22);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  font-size: .62rem;
+  z-index: 18;
+  top: .6rem;
+  left: .6rem;
+  padding: .32rem .46rem;
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: .6rem;
+  background: rgba(3,8,18,.72);
+  color: #d8f7ff;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  font-size: .48rem;
   font-weight: 950;
-  letter-spacing: .04em;
-  filter: none;
-  transform: none;
-  opacity: 1;
+  letter-spacing: .08em;
+  pointer-events: none;
 }
 
-html.oanix-folder-card-lab .oanix-folder-card--custom:nth-child(4n + 2)::before { content: 'A'; }
-html.oanix-folder-card-lab .oanix-folder-card--custom:nth-child(4n + 3)::before { content: 'B'; }
-html.oanix-folder-card-lab .oanix-folder-card--custom:nth-child(4n + 4)::before { content: 'C'; }
-html.oanix-folder-card-lab .oanix-folder-card--custom:nth-child(4n + 5)::before { content: 'D'; }
-
-/* A · Cinemática: portada dominante y cuerpo muy limpio */
-html.oanix-folder-card-lab .oanix-folder-card--custom:nth-child(4n + 2) {
-  border-color: rgba(107, 213, 255, .19);
-  background: linear-gradient(180deg, #09111f, #070c16 72%);
-  box-shadow: 0 1.1rem 2.8rem rgba(0,0,0,.3), inset 0 1px rgba(255,255,255,.05);
-}
-html.oanix-folder-card-lab .oanix-folder-card--custom:nth-child(4n + 2) .oanix-folder-card__open {
-  min-height: 11.8rem;
-  grid-template-rows: 7.25rem auto auto;
-}
-html.oanix-folder-card-lab .oanix-folder-card--custom:nth-child(4n + 2) .oanix-folder-card__visual {
-  height: 7.25rem;
-  border-radius: 1.22rem 1.22rem .9rem .9rem;
-  background: radial-gradient(circle at 20% 20%, rgba(0,200,255,.35), transparent 26%), linear-gradient(145deg,#111b36,#080e1c);
-}
-html.oanix-folder-card-lab .oanix-folder-card--custom:nth-child(4n + 2) strong { font-size: .88rem; }
-
-/* B · Biblioteca: información protagonista, portada más sobria */
-html.oanix-folder-card-lab .oanix-folder-card--custom:nth-child(4n + 3) {
-  min-height: 10.2rem;
-  border: 1px solid rgba(148,163,184,.17);
-  background: linear-gradient(145deg, rgba(18,27,45,.98), rgba(7,12,22,.98));
-  box-shadow: 0 .8rem 2rem rgba(0,0,0,.24);
-}
-html.oanix-folder-card-lab .oanix-folder-card--custom:nth-child(4n + 3) .oanix-folder-card__open {
-  min-height: 10.2rem;
-  grid-template-rows: 5.35rem auto auto;
-}
-html.oanix-folder-card-lab .oanix-folder-card--custom:nth-child(4n + 3) .oanix-folder-card__visual {
-  width: calc(100% - 1rem);
-  height: 5.35rem;
-  margin: .5rem .5rem 0;
-  border-radius: .92rem;
-}
-html.oanix-folder-card-lab .oanix-folder-card--custom:nth-child(4n + 3) strong {
-  margin-top: .62rem;
-  font-size: .86rem;
-  letter-spacing: -.02em;
-}
-
-/* C · Glass: cristal oscuro, profundidad y acento frío */
-html.oanix-folder-card-lab .oanix-folder-card--custom:nth-child(4n + 4) {
-  border: 1px solid rgba(126,226,255,.2);
-  background: linear-gradient(145deg, rgba(17,28,49,.76), rgba(7,13,25,.84));
-  box-shadow: 0 1rem 2.5rem rgba(0,0,0,.28), inset 0 1px rgba(255,255,255,.08), 0 0 2rem rgba(0,174,255,.05);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-}
-html.oanix-folder-card-lab .oanix-folder-card--custom:nth-child(4n + 4) .oanix-folder-card__open {
-  min-height: 11.8rem;
-  grid-template-rows: 6.5rem auto auto;
-}
-html.oanix-folder-card-lab .oanix-folder-card--custom:nth-child(4n + 4) .oanix-folder-card__visual {
-  width: calc(100% - 1rem);
-  height: 6.5rem;
-  margin: .5rem .5rem 0;
-  border-radius: 1rem;
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.07), 0 .7rem 1.5rem rgba(0,0,0,.18);
-}
-html.oanix-folder-card-lab .oanix-folder-card--custom:nth-child(4n + 4) strong { color: #eefbff; font-size: .87rem; }
-
-/* D · OANIX futurista: recorte visual y línea de energía */
-html.oanix-folder-card-lab .oanix-folder-card--custom:nth-child(4n + 5) {
-  border: 1px solid rgba(81,154,255,.24);
-  background: linear-gradient(160deg,#0b1325 0%,#070b14 75%);
-  box-shadow: 0 .9rem 2.4rem rgba(0,0,0,.3), inset 0 1px rgba(255,255,255,.05);
-}
-html.oanix-folder-card-lab .oanix-folder-card--custom:nth-child(4n + 5)::after {
-  content: '';
-  position: absolute;
-  left: .72rem;
-  right: .72rem;
-  bottom: .55rem;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, rgba(39,206,255,.9), rgba(112,92,255,.65), transparent);
-  opacity: .75;
-}
-html.oanix-folder-card-lab .oanix-folder-card--custom:nth-child(4n + 5) .oanix-folder-card__open {
-  min-height: 11.8rem;
-  grid-template-rows: 6.7rem auto auto;
-}
-html.oanix-folder-card-lab .oanix-folder-card--custom:nth-child(4n + 5) .oanix-folder-card__visual {
-  height: 6.7rem;
-  border-radius: 1.16rem 1.16rem .35rem .35rem;
-  clip-path: polygon(0 0,100% 0,100% 87%,92% 100%,0 100%);
-}
-html.oanix-folder-card-lab .oanix-folder-card--custom:nth-child(4n + 5) strong {
-  text-transform: none;
-  font-size: .87rem;
+html.oanix-folder-card-lab .oanix-folder-card__menu {
+  top: .58rem;
+  right: .58rem;
+  bottom: auto;
+  left: auto;
+  z-index: 24;
+  width: 2rem;
+  height: 2rem;
+  border-radius: .72rem;
+  background: rgba(2,7,17,.74);
+  border: 1px solid rgba(255,255,255,.14);
+  color: #eef7ff;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 html.oanix-folder-card-lab .oanix-folder-card--custom:hover,
 html.oanix-folder-card-lab .oanix-folder-card--custom:focus-within {
   transform: translateY(-4px) scale(1.012);
+  box-shadow: 0 1.3rem 3rem rgba(0,0,0,.34), 0 0 0 1px rgba(72,200,255,.08);
+}
+
+/* A · CINEMA — imagen a sangre y texto superpuesto */
+html.oanix-folder-card-lab [data-folder-lab-variant='a'] {
+  min-height: 13rem;
+  border-color: rgba(78,205,255,.2);
+}
+
+html.oanix-folder-card-lab [data-folder-lab-variant='a'] .oanix-folder-lab__open {
+  min-height: 13rem;
+}
+
+html.oanix-folder-card-lab [data-folder-lab-variant='a'] .oanix-folder-card__visual {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  border-radius: inherit;
+  background:
+    radial-gradient(circle at 18% 18%, rgba(32,198,255,.42), transparent 28%),
+    radial-gradient(circle at 85% 12%, rgba(116,79,255,.28), transparent 24%),
+    linear-gradient(145deg,#14254b,#08111f 62%,#050914);
+}
+
+html.oanix-folder-card-lab [data-folder-lab-variant='a'] .oanix-folder-card__visual::after {
+  content: none;
+}
+
+html.oanix-folder-card-lab [data-folder-lab-variant='a'] .oanix-folder-lab__cinema-shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, rgba(3,7,16,.05) 30%, rgba(3,7,16,.62) 68%, rgba(3,7,16,.96) 100%);
+  pointer-events: none;
+}
+
+html.oanix-folder-card-lab [data-folder-lab-variant='a'] .oanix-folder-lab__cinema-content {
+  position: absolute;
+  z-index: 5;
+  left: .9rem;
+  right: .9rem;
+  bottom: .9rem;
+  display: grid;
+  gap: .2rem;
+}
+
+html.oanix-folder-card-lab [data-folder-lab-variant='a'] .oanix-folder-lab__cinema-content strong,
+html.oanix-folder-card-lab [data-folder-lab-variant='a'] .oanix-folder-lab__cinema-content small {
+  margin: 0;
+  color: #f7fbff;
+}
+
+html.oanix-folder-card-lab [data-folder-lab-variant='a'] .oanix-folder-lab__cinema-content strong {
+  font-size: .95rem;
+  line-height: 1.08;
+  text-shadow: 0 2px 12px rgba(0,0,0,.45);
+}
+
+html.oanix-folder-card-lab [data-folder-lab-variant='a'] .oanix-folder-lab__cinema-content small {
+  font-size: .62rem;
+  color: rgba(224,237,249,.72);
+}
+
+/* B · EDITORIAL — media lateral + texto, nada de foto arriba */
+html.oanix-folder-card-lab [data-folder-lab-variant='b'] {
+  min-height: 9.4rem;
+  background: linear-gradient(135deg, #0d1728 0%, #070d17 100%);
+  border-color: rgba(170,188,214,.16);
+}
+
+html.oanix-folder-card-lab [data-folder-lab-variant='b'] .oanix-folder-lab__open {
+  min-height: 9.4rem;
+  display: grid;
+  grid-template-columns: 42% minmax(0,1fr);
+  align-items: stretch;
+}
+
+html.oanix-folder-card-lab [data-folder-lab-variant='b'] .oanix-folder-card__visual {
+  position: relative;
+  width: auto;
+  height: auto;
+  min-height: 9.4rem;
+  margin: 0;
+  border: 0;
+  border-radius: 1.3rem .45rem .45rem 1.3rem;
+  background: linear-gradient(145deg,#182a50,#0a1324);
+}
+
+html.oanix-folder-card-lab [data-folder-lab-variant='b'] .oanix-folder-lab__editorial-info {
+  position: relative;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: .45rem;
+  padding: 2.15rem .78rem .85rem .85rem;
+}
+
+html.oanix-folder-card-lab [data-folder-lab-variant='b'] .oanix-folder-lab__editorial-info strong,
+html.oanix-folder-card-lab [data-folder-lab-variant='b'] .oanix-folder-lab__editorial-info small {
+  margin: 0;
+  width: 100%;
+  text-align: left;
+}
+
+html.oanix-folder-card-lab [data-folder-lab-variant='b'] .oanix-folder-lab__editorial-info strong {
+  color: #f0f5fb;
+  font-size: .9rem;
+  line-height: 1.12;
+  -webkit-line-clamp: 3;
+}
+
+html.oanix-folder-card-lab [data-folder-lab-variant='b'] .oanix-folder-lab__editorial-info small {
+  color: #8290a5;
+  font-size: .6rem;
+}
+
+html.oanix-folder-card-lab [data-folder-lab-variant='b'] .oanix-folder-lab__editorial-arrow {
+  margin-top: auto;
+  color: #5fdcff;
+  font-size: 1rem;
+  opacity: .8;
+}
+
+/* C · GLASS — imagen ambiente + panel flotante independiente */
+html.oanix-folder-card-lab [data-folder-lab-variant='c'] {
+  min-height: 12.6rem;
+  border-color: rgba(105,222,255,.24);
+  background: #060c16;
+}
+
+html.oanix-folder-card-lab [data-folder-lab-variant='c'] .oanix-folder-lab__open {
+  min-height: 12.6rem;
+}
+
+html.oanix-folder-card-lab [data-folder-lab-variant='c'] .oanix-folder-card__visual {
+  position: absolute;
+  inset: .45rem;
+  width: auto;
+  height: auto;
+  margin: 0;
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: 1.05rem;
+  background:
+    radial-gradient(circle at 20% 15%, rgba(60,221,255,.36), transparent 26%),
+    radial-gradient(circle at 80% 82%, rgba(104,72,255,.32), transparent 28%),
+    linear-gradient(145deg,#12223c,#070d18 72%);
+  filter: saturate(1.06);
+}
+
+html.oanix-folder-card-lab [data-folder-lab-variant='c'] .oanix-folder-lab__glass-panel {
+  position: absolute;
+  z-index: 5;
+  left: .78rem;
+  right: .78rem;
+  bottom: .78rem;
+  display: grid;
+  gap: .18rem;
+  padding: .78rem .85rem;
+  border: 1px solid rgba(255,255,255,.13);
+  border-radius: .95rem;
+  background: rgba(6,14,28,.58);
+  box-shadow: 0 .8rem 1.8rem rgba(0,0,0,.26), inset 0 1px rgba(255,255,255,.05);
+  backdrop-filter: blur(18px) saturate(1.16);
+  -webkit-backdrop-filter: blur(18px) saturate(1.16);
+}
+
+html.oanix-folder-card-lab [data-folder-lab-variant='c'] .oanix-folder-lab__glass-eyebrow {
+  color: #64dfff;
+  font-size: .45rem;
+  font-weight: 950;
+  letter-spacing: .12em;
+}
+
+html.oanix-folder-card-lab [data-folder-lab-variant='c'] .oanix-folder-lab__glass-panel strong,
+html.oanix-folder-card-lab [data-folder-lab-variant='c'] .oanix-folder-lab__glass-panel small {
+  margin: 0;
+  color: #f4fbff;
+}
+
+html.oanix-folder-card-lab [data-folder-lab-variant='c'] .oanix-folder-lab__glass-panel strong { font-size: .88rem; }
+html.oanix-folder-card-lab [data-folder-lab-variant='c'] .oanix-folder-lab__glass-panel small { font-size: .58rem; color: #93a7ba; }
+
+/* D · OANIX — asimétrica, número técnico y rail de energía */
+html.oanix-folder-card-lab [data-folder-lab-variant='d'] {
+  min-height: 11rem;
+  border-color: rgba(81,143,255,.25);
+  border-radius: 1.2rem .5rem 1.2rem 1.2rem;
+  background:
+    linear-gradient(120deg, rgba(42,103,255,.1), transparent 32%),
+    linear-gradient(160deg,#0b1425,#050a12 76%);
+}
+
+html.oanix-folder-card-lab [data-folder-lab-variant='d'] .oanix-folder-lab__open {
+  min-height: 11rem;
+  display: grid;
+  grid-template-columns: 2.15rem minmax(0,1fr);
+  grid-template-rows: 5.2rem auto;
+  gap: .7rem;
+  padding: .9rem .85rem .9rem .75rem;
+}
+
+html.oanix-folder-card-lab [data-folder-lab-variant='d'] .oanix-folder-lab__future-id {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  align-self: stretch;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: .2rem;
+  border-right: 1px solid rgba(91,205,255,.18);
+  color: rgba(107,218,255,.55);
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: .55rem;
+  letter-spacing: .18em;
+}
+
+html.oanix-folder-card-lab [data-folder-lab-variant='d'] .oanix-folder-card__visual {
+  grid-column: 2;
+  grid-row: 1;
+  width: 76%;
+  height: 5.2rem;
+  justify-self: end;
+  margin: 0;
+  border: 1px solid rgba(105,178,255,.14);
+  border-radius: .85rem .28rem .85rem .85rem;
+  clip-path: polygon(0 0,100% 0,100% 78%,86% 100%,0 100%);
+  background: linear-gradient(145deg,#172a52,#080f1d);
+}
+
+html.oanix-folder-card-lab [data-folder-lab-variant='d'] .oanix-folder-lab__future-info {
+  grid-column: 2;
+  grid-row: 2;
+  min-width: 0;
+  display: grid;
+  gap: .22rem;
+  align-self: end;
+}
+
+html.oanix-folder-card-lab [data-folder-lab-variant='d'] .oanix-folder-lab__future-info strong,
+html.oanix-folder-card-lab [data-folder-lab-variant='d'] .oanix-folder-lab__future-info small {
+  margin: 0;
+}
+
+html.oanix-folder-card-lab [data-folder-lab-variant='d'] .oanix-folder-lab__future-info strong {
+  color: #edf7ff;
+  font-size: .88rem;
+  line-height: 1.08;
+}
+
+html.oanix-folder-card-lab [data-folder-lab-variant='d'] .oanix-folder-lab__future-info small {
+  color: #72849b;
+  font-size: .57rem;
+}
+
+html.oanix-folder-card-lab [data-folder-lab-variant='d'] .oanix-folder-lab__future-rail {
+  position: absolute;
+  right: .65rem;
+  bottom: .52rem;
+  width: 42%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #38d7ff 38%, #6e63ff 78%, transparent);
+  box-shadow: 0 0 .65rem rgba(56,215,255,.5);
+}
+
+html.oanix-folder-card-lab .oanix-folder-card--all,
+html.oanix-folder-card-lab .oanix-folder-card--add {
+  opacity: .42;
+  filter: saturate(.65);
 }
 
 @media (min-width: 880px) {
-  html.oanix-folder-card-lab .oanix-folder-grid__cards { grid-template-columns: repeat(4, minmax(0,1fr)); }
+  html.oanix-folder-card-lab .oanix-folder-grid__cards {
+    grid-template-columns: repeat(4, minmax(0,1fr));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.oanix-folder-card-lab .oanix-folder-card--custom {
+    transition: none;
+  }
 }
