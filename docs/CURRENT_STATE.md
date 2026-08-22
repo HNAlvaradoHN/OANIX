@@ -1,208 +1,103 @@
 # OANIX — Estado actual para continuidad
 
-**Última actualización:** 2026-08-20
+**Última actualización:** 2026-08-21
 
-Este archivo es el checkpoint operativo corto para retomar OANIX desde otro chat o con otro agente sin reconstruir conversaciones. Contrastar siempre con `main`, `AGENTS.md`, `docs/PROJECT_MEMORY.md`, `docs/ROADMAP.md`, `docs/ARCHITECTURE.md`, `docs/SECURITY.md` y los issues/PRs citados.
+Checkpoint operativo corto. Antes de trabajar, verificar siempre el `main` real y PR recientes; GitHub es la fuente de verdad del código.
 
-## Estado general
+## Estado actual
 
-- **V1 — Núcleo local:** cerrada.
-- **V2 — Cuenta y sincronización:** cerrada funcionalmente. #69 conflictos y #73 recuperación Email OTP están cerrados; #73 conserva deuda multidispositivo adicional explícitamente no bloqueante.
-- **V3 — Android con Capacitor:** cerrada formalmente en #79.
-- **RC Android — #124:** CERRADO COMO COMPLETADO ✅ el 19 ago 2026 tras smoke test físico completo.
-- **Pre-Pro Free — adjuntos cifrados #174:** primer bloque implementado en PR #176; validación física Android pendiente. Se adelanta por decisión explícita del usuario antes del entitlement Free/Pro.
-- **V4 / OANIX Pro — #80:** ACTIVO, pero el primer cambio técnico de entitlement queda después de cerrar/validar el bloque Free #174.
-- **Publicación Android — #125:** preparación activa; por decisión del producto no existe periodo de soak obligatorio.
-- La APK debug interna usa firma estable; la firma definitiva de Play Store será independiente.
+- V1 local, V2 cuenta/sync y V3 Android/Capacitor están cerradas funcionalmente.
+- OANIX sigue siendo offline-first y debe funcionar sin nube.
+- No dividir por ahora OANIX en Free/Pro ni bloquear funciones artificialmente. La monetización queda para una decisión posterior.
 - PWA y Android comparten la misma base React + TypeScript + Vite/Capacitor.
+- `main` al actualizar este documento: `b0e23a7df2f125c010a42b87bfba0450babe2980` (PR #219). Verificarlo, no asumir que sigue vigente.
 
-## Checkpoints y puntos estables
+## Reglas de trabajo
 
-- Checkpoint de repositorio inmediatamente anterior a adjuntos/Pro: `04c6848fb22980a9ba15381c987d81fd7ceb992d`.
-- Rama congelada de recuperación: `checkpoint/pre-pro-v1-2026-08-20` apuntando al checkpoint anterior.
-- Base funcional de aplicación previa al cambio documental de alcance: `1ad13a27c1a2e429be1beb839aa3992586361103`.
-- Punto inmediatamente anterior a la paridad de imágenes Android: `d6d847e7a053f05808518b4e18f871855eb0e9a7`.
-- PR #169 retiró del montaje activo `NotebookCanvasRuntime`, `NotebookFreeRowsRuntime` y `NotebookSimpleImageRuntime`, junto con sus CSS experimentales. Permanecen dormidos en el repositorio y **no deben reactivarse sin autorización explícita del usuario**.
-- No volver al sistema experimental de tocar cualquier renglón para escribir, texto lateral de imágenes, filas virtuales ni posiciones absolutas del cuaderno.
+- Cambios pequeños y aislados; una función importante = rama + PR.
+- Ejecutar OANIX CI y OANIX Android. No fusionar si alguno falla; si ambos pasan y el cambio ya está autorizado, puede fusionarse automáticamente.
+- No hacer refactorizaciones generales para resolver problemas pequeños.
+- No tocar cifrado, notas, sync, bóveda o almacenamiento existente sin necesidad real.
 
-## Imágenes — experiencia aprobada compartida
+## Imágenes — experiencia congelada
 
-PR #170 definió la tarjeta fija/visor táctil en PWA; #171 ocultó el nombre del archivo; #172 llevó la misma experiencia a Capacitor/APK.
+PR #169 retiró del montaje activo `NotebookCanvasRuntime`, `NotebookFreeRowsRuntime` y `NotebookSimpleImageRuntime`. No reactivarlos sin autorización.
 
-Estado aprobado para PWA y Android:
-- tarjeta fija, proporcionada y compacta;
-- vista previa a la izquierda y controles a la derecha;
+PR #170–#172 fijaron la experiencia compartida PWA/APK:
+- tarjeta fija y compacta; miniatura izquierda, controles derecha;
 - sin mover, alinear, redimensionar manualmente ni candado;
-- sin nombre de archivo ni control Mostrar/Ocultar nombre;
-- se conservan Abrir, Quitar imagen y tamaño del archivo;
-- descripción como único texto identificativo de la imagen, ocupando toda la franja inferior;
-- descripción larga con elipsis + botón `+` y burbuja completa cerrable con X, toque fuera o Atrás;
-- tocar miniatura abre original;
-- visor cerrable con X, toque fuera o Atrás;
-- pellizco de zoom hasta aproximadamente 4x y desplazamiento cuando está ampliada.
+- no mostrar nombre del archivo;
+- mantener Abrir, Quitar y tamaño cuando corresponda;
+- descripción en franja inferior; texto largo con elipsis + `+`;
+- descripción y visor se cierran con X, toque fuera y Atrás;
+- tocar miniatura abre original; visor con zoom aproximado 4x y desplazamiento.
 
-No modificar ampliamente `ImageNoteEditor.tsx`, el formato persistido de imágenes, cifrado, almacenamiento, notas o sincronización para ajustes visuales de esta experiencia.
+No modificar ampliamente `ImageNoteEditor.tsx` ni el formato persistido de imágenes para ajustes menores.
 
-## Adjuntos cifrados Free — #174 / PR #176
+## Carpetas
 
-### Decisión de producto vigente
+- Inicio visual de carpetas: 4 por fila.
+- Imagen personalizada por pulsación larga, cifrada y separada del registro de carpeta.
+- Animación ambiental y respuesta 3D/brillo discretas; respetar `prefers-reduced-motion`.
+- Navegación Atrás aprobada: nota → lista → inicio de carpetas → salir, incluyendo historial real en PWA.
 
-OANIX permanece centrada en **notas**. Se descartó por ahora crear un nuevo inicio con gestor de archivos/bóveda independiente. En su lugar, cada nota puede reunir texto, imágenes y archivos relacionados dentro de la misma hoja.
+## Archivos grandes — motor actual
 
-### Primer bloque implementado
+Objetivo de producto inicial: manejar archivos de 5 GB sin diseñar el motor con un techo arquitectónico de 5 GB. El protocolo conserva un límite de seguridad mayor (~20 GiB) por ahora.
 
-- clip `📎` en las herramientas del editor y opción `Archivo` dentro de Insertar;
-- acepta archivos generales: PDF, Word/Office, ZIP/comprimidos, APK, imágenes, video, audio y otros binarios;
-- OANIX importa una copia real: borrar el original externo después de importar no debe borrar la copia guardada por OANIX;
-- los bytes se cifran con la clave activa de la bóveda y se guardan como registros binarios `attachment` dentro del `encrypted_records` existente;
-- el índice `note-attachments` también permanece cifrado y solo contiene metadatos necesarios de la tarjeta;
-- la nota no incrusta el binario ni Base64 dentro de `blocks-v1`; el formato persistido de notas e imágenes existentes no cambia;
-- tarjeta ligera con nombre, tamaño, tipo y acciones Abrir / Exportar / Quitar;
-- APK y otros binarios se tratan como archivos opacos: OANIX no los ejecuta;
-- al quitar un adjunto se elimina su blob cifrado; al eliminar una nota se intenta limpiar también todos sus adjuntos;
-- el backup `.oanixbackup` los incluye automáticamente porque ya copia todos los registros cifrados de la bóveda;
-- límite inicial deliberado: **50 MiB por archivo**, porque el cifrado binario local actual todavía materializa el archivo completo en memoria.
+Implementado:
+- planificación y procesamiento secuencial por fragmentos;
+- AES-GCM por fragmento con IV independiente;
+- SHA-256 y manifiestos criptográficos;
+- checkpoints persistentes y transferencias reanudables por rangos;
+- caché temporal cifrada separada de `oanix-vault`, conservando un solo bloque activo;
+- reanudación desde mitad de bloque/avance remoto confirmado;
+- preflight de destino y cuota;
+- orquestador completo de transferencia;
+- abstracción `OanixStorageProvider` para no acoplar el motor a un proveedor concreto.
 
-### Sincronización y archivos grandes
+Para Google Drive, el plaintext del bloque se ajusta para que el ciphertext AES-GCM completo quede alineado a 256 KiB; los bloques completos enviados son de aproximadamente 8 MiB.
 
-- `attachment` se marca como binario para que el sync no binario actual no intente enviar un archivo grande como una fila pequeña.
-- `note-attachments` se mantiene local-only en esta primera fase.
-- La sincronización E2EE de adjuntos entre dispositivos **todavía no está implementada**. No presentar aún OANIX como única copia cloud de estos archivos.
-- Archivos mayores de 50 MiB, cifrado/lectura por fragmentos, reanudación, descarga bajo demanda y nube de archivos se diseñan después; referencia #175.
-- No prometer almacenamiento ilimitado. Cualquier nube propia necesita cuotas/costos; también se estudiará almacenamiento aportado por el usuario y un modelo híbrido, siempre cifrando antes de subir.
+Nunca cargar archivos gigantes completos en RAM. Limpiar buffers temporales y mantener el procesamiento acotado por fragmentos.
 
-## Dirección visual aprobada
+## Google Drive
 
-- Diseño general de la aplicación aprobado; no rediseñar la interfaz principal sin una necesidad real.
-- **Identidad oficial definida:** fondo negro mate/grafito; C abierta grande en plata; candado cobrizo dentro; bloc/documento cobrizo a la derecha con renglones, esquina superior doblada y remate de hoja inferior; píxeles cuadrados cobrizos arriba; palabra `OANIX` completa abajo con `OANI` plata y `X` naranja.
-- Mantener sombra negra suave, profundidad premium y margen seguro. No introducir colores ajenos a negro/plata/cobrizo ni glow exagerado.
-- El SVG oficial PWA es `public/oanix-icon.svg`.
-- PWA y bundle Capacitor usan la misma identidad dentro de la interfaz mediante una ruta resuelta con `import.meta.env.BASE_URL`.
-- Android launcher normal/redondo/adaptive usa una adaptación VectorDrawable del mismo sello, escalada dentro de la safe zone para evitar recortes por máscaras del fabricante.
-- El splash bitmap existente es un asset separado y no se considera sustituido por el cambio de launcher; cerrarlo explícitamente antes del AAB release si sigue pendiente.
+Google Drive es el primer proveedor, no la nube obligatoria de OANIX.
 
-## Bloqueadores cerrados
+- Uso opcional; OANIX debe seguir funcionando sin Drive.
+- Usa almacenamiento de la cuenta Google del usuario.
+- Scope: `drive.appdata`; archivos remotos en `appDataFolder`, sin acceso general al Drive.
+- Los archivos se cifran antes de salir del dispositivo.
+- Tokens Google son temporales y solo en memoria: nunca localStorage, IndexedDB, notas, bóveda o repositorio.
+- PWA: Google Identity Services y `VITE_GOOGLE_DRIVE_WEB_CLIENT_ID`; no inventar un client ID si falta.
+- Android: autorización nativa mediante `AuthorizationClient`, separada del login OANIX.
+- La tarjeta de Cuenta y acceso muestra conexión/cuota y ayuda `?` discreta; conectar Drive no inicia una subida automáticamente.
+- URLs reanudables se restringen al host/ruta esperados de Google; no filtrar Bearer tokens a destinos arbitrarios.
 
-- #105 biometría/cold start ✅.
-- #70 historial/restauración reversible ✅.
-- #68 privacidad por nota + Caja privada ✅.
-- #69 conflictos multidispositivo ✅.
-- #73 recuperación principal por Email OTP ✅.
+## Transferencias — UI y pruebas validadas
 
-## Base funcional validada
+Fases del motor/UI: Preparando → Cifrando → Subiendo → Verificando → Guardado ✓, además de pausado/error/reanudación. `100% transferido` no equivale a `Guardado` hasta terminar la verificación.
 
-- RC físico #124 ✅.
-- PR #172 merge `1ad13a27c1a2e429be1beb839aa3992586361103` ✅.
-- OANIX CI y OANIX Android del PR #172 ✅.
-- `oanix/stable-debug-signing = success` ✅.
-- Smoke test físico completo previo de #124 ✅: notas, carpetas/etiquetas, avatar, imágenes, temas, contraseña maestra, biometría/timeout, privacidad/Caja privada, backup, sincronización Google/reapertura, compartir/recibir, cámara/documentos/permisos y CI.
-- La experiencia visual/táctil exacta de imágenes del PR #172 debe comprobarse físicamente en APK; una diferencia frente a PWA se trata como regresión puntual, no como rediseño del editor.
-- Para PR #176, CI/build no sustituye la validación física Android de selector, archivo persistido, Abrir/Exportar/Quitar y reinstalación/backup.
+Validado en PWA con archivo de video real de ~120 MiB:
+- subida cifrada completa a Google Drive;
+- recuperación remota por rangos;
+- SHA-256 de fragmentos;
+- descifrado y comparación contra el archivo original;
+- 15 fragmentos íntegros y descifrados;
+- corte de Wi-Fi alrededor del 30%, cierre completo de la PWA, reapertura, reconexión de Drive, selección del mismo archivo y continuación desde el progreso remoto ya confirmado.
 
-## OANIX Free — alcance fijado
-
-OANIX Free seguirá siendo una aplicación completa. **No se moverá detrás de pago ninguna función que ya exista y haya sido validada en el RC.**
-
-Free conserva/incluye:
-- notas y editor de texto enriquecido;
-- bloques de código, checklists, contactos, entradas por día e imágenes con la experiencia aprobada actual;
-- adjuntos básicos cifrados dentro de notas (#174): importar, conservar original, ver tarjeta, abrir/exportar/quitar y backup cifrado;
-- cifrado local, contraseña maestra y funcionamiento offline-first;
-- cuenta opcional, autenticación y sincronización E2EE de las funciones ya soportadas;
-- resolución de conflictos, historial y recuperación principal ya implementados;
-- backup/exportación/restauración cifrada básica;
-- biometría/credencial segura, timeout, protección por nota y Caja privada;
-- carpetas, etiquetas y búsqueda;
-- compartir/recibir contenido y funciones Android existentes de cámara/archivos;
-- temas y personalización que ya existen en la versión gratuita.
-
-Regla: **cifrado, seguridad esencial, acceso a los datos propios, adjuntos básicos y backup básico no son funciones premium.**
-
-## OANIX Pro v1 — alcance fijado
-
-Modelo comercial objetivo: **compra única / desbloqueo permanente**, con restauración de compra en reinstalación o dispositivo compatible. No se introduce suscripción obligatoria en Pro v1.
-
-### Núcleo Pro v1
-
-1. **Escáner Seguro de Documentos**
-   - captura/importación de páginas;
-   - detección de bordes y recorte;
-   - corrección de perspectiva;
-   - mejora visual del documento;
-   - varias páginas por documento;
-   - generación de PDF;
-   - cifrado y guardado dentro de la bóveda.
-
-2. **OCR y búsqueda documental**
-   - extracción de texto del documento;
-   - texto OCR guardado cifrado;
-   - búsqueda dentro de documentos sin crear un índice privado en texto plano;
-   - priorizar procesamiento local/offline cuando sea técnicamente viable; cualquier dependencia de servidor requerirá una decisión explícita posterior de privacidad.
-
-3. **PDF / exportación avanzada**
-   - PDF generado por el escáner;
-   - exportación/compartición avanzada a PDF de contenido compatible de OANIX;
-   - diseño y paginación controlados sin alterar el formato persistido de las notas existentes.
-
-4. **Personalización premium adicional**
-   - nuevos paquetes/presets visuales Pro;
-   - no retirar ni degradar los temas que ya existen gratis.
-
-### Monetización / entitlement
-
-Antes de exponer funciones Pro:
-- diseñar un estado `free/pro` aislado de la bóveda y del contenido de notas;
-- durante desarrollo, Pro se puede habilitar solo en builds internas de prueba sin introducir un bypass en producción;
-- integrar más adelante compra única mediante Google Play Billing y testers con licencia;
-- validar el derecho Pro de forma robusta y restaurable;
-- no guardar secretos de facturación ni un simple `isPro=true` manipulable como fuente final de verdad;
-- una pérdida temporal de verificación de compra no debe borrar, corromper ni volver inaccesibles los datos privados del usuario.
-
-### Fuera de Pro v1 por ahora
-
-Quedan diferidos para no inflar la primera versión premium:
-- audio/notas de voz avanzadas;
-- dibujos;
-- tablas;
-- IA de servidor;
-- almacenamiento cloud adicional de pago;
-- suscripción recurrente.
-
-## Recuperación #73
-
-El flujo principal de Email OTP está cerrado y validado. Persisten como cobertura adicional no bloqueante:
-- confirmar contraseña nueva desde un segundo dispositivo;
-- confirmar que un OTP usado no se reutiliza;
-- probar reconciliación de un dispositivo que estuvo offline durante rotación.
-
-No bloquean RC ni publicación.
-
-## Publicación — #125
-
-**Estado:** preparación activa; todavía no enviar a producción.
-
-Orden actual:
-1. alcance exacto OANIX Free vs Pro v1 — **FIJADO**;
-2. implementar y validar adjuntos cifrados Free #174 / PR #176;
-3. crear un nuevo checkpoint estable posterior a adjuntos y previo a Pro;
-4. diseñar entitlement `free/pro` sin tocar datos/cifrado;
-5. cerrar/verificar identidad oficial y splash;
-6. confirmar `appId`, `versionCode` y `versionName`;
-7. crear/custodiar firma release definitiva;
-8. implementar Pro v1 de forma incremental e integrar Google Play Billing;
-9. generar/verificar AAB release;
-10. preparar política de privacidad, ficha, textos y capturas;
-11. verificación final y envío a Play Store.
-
-## Forma de trabajo acordada
-
-- Revisar el `main` real antes de cada cambio.
-- Cambios pequeños, aislados y con PR para cada bloque importante.
-- OANIX CI y OANIX Android deben pasar antes de fusionar.
-- Si ambos pasan y el cambio ya fue autorizado, puede fusionarse automáticamente a `main`.
-- El agente hace directamente GitHub cuando las herramientas lo permiten; el usuario interviene principalmente en pruebas físicas inevitables.
-- No reactivar los runtimes experimentales de cuaderno ni introducir refactorizaciones generales por un problema pequeño.
+PR #219 amplió la prueba controlada a **100 MiB–1 GiB**. Todavía no saltar directamente a 5 GB.
 
 ## Próximo paso exacto
 
-Cerrar PR #176 solo con CI + Android verdes, entregar APK de prueba y validar físicamente en Android: adjuntar PDF/ZIP/APK u otro archivo, cerrar/reabrir la nota, Abrir/Exportar, Quitar, eliminación de nota y backup/restauración. Después crear un nuevo checkpoint estable **post-adjuntos / pre-Pro**. Solo entonces retomar el entitlement mínimo `free/pro`.
+1. Probar un archivo cercano a **1 GiB** sin interrupciones y confirmar subida + recuperación/verificación completas.
+2. Repetir con interrupción de red aproximadamente al 30–50%, cerrar/reabrir OANIX y confirmar reanudación sin empezar desde cero.
+3. Solo después aumentar gradualmente el tamaño; 5 GB es una meta posterior, no la siguiente prueba inmediata.
+4. Más adelante: reproducción de video por rangos/seek, caché bajo demanda, Guardar sin conexión y Liberar del dispositivo (distinto de Eliminar de OANIX).
+
+## Checkpoints históricos útiles
+
+- Base funcional estable histórica: `1ad13a27c1a2e429be1beb839aa3992586361103`.
+- Antes de paridad de imágenes Android: `d6d847e7a053f05808518b4e18f871855eb0e9a7`.
+
+Los detalles históricos pertenecen a `CHANGELOG.md`, PRs/issues y `PROJECT_MEMORY.md`; no duplicarlos aquí salvo que afecten el siguiente trabajo.

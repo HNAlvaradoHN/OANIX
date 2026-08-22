@@ -1,292 +1,114 @@
 # OANIX — Memoria operativa del proyecto
 
-Este documento conserva decisiones, pendientes, cambios pospuestos y contexto de continuidad que no deben depender de un chat concreto.
+Este documento conserva **decisiones duraderas y restricciones de producto/arquitectura** que no deben depender de un chat. No es un changelog ni un duplicado de `CURRENT_STATE.md`.
 
-Su propósito es permitir que otra IA o colaborador continúe OANIX sin reconstruir conversaciones anteriores ni inventar requisitos.
+Antes de trabajar: leer `AGENTS.md` y `docs/CURRENT_STATE.md`, verificar `main` y PR recientes. GitHub es la fuente de verdad del código actual.
 
-> Antes de usar este archivo, leer también `AGENTS.md`, `docs/ROADMAP.md` y verificar el estado real de `main`.
+**Última actualización:** 2026-08-21
 
----
+## 1. Principios permanentes
 
-## 1. Estado actual
+- OANIX es offline-first. La nube es opcional.
+- PWA y Android/Capacitor comparten una sola base de aplicación; no crear lógica paralela por plataforma salvo integración nativa necesaria.
+- Reutilizar módulos/stores existentes antes de crear persistencias paralelas.
+- Conservar datos tiene prioridad ante incertidumbre; no sobrescribir silenciosamente.
+- En conflictos multidispositivo: detectar → conservar ambos lados → mostrar → usuario decide. Si se combinan notas compatibles, va primero el cambio aceptado primero por la sincronización remota y después el otro; #69 validó este flujo. Etiqueta histórica de validación: `VALIDATION_DEBT`; verificar el issue antes de asumir que sigue pendiente.
+- Cambios pequeños y aislados. No refactorizar ampliamente para arreglar un problema local.
+- Una función importante usa rama + PR. OANIX CI y OANIX Android deben pasar antes de fusionar.
+- Seguridad, cifrado, bóveda, notas y sync no se modifican por comodidad.
+- No guardar secretos, tokens Google, refresh tokens ni credenciales en código, repositorio, notas, localStorage, IndexedDB o bóveda.
 
-**Última actualización:** 2026-08-18
+## 2. Producto y monetización
 
-**Fase activa:** rediseño/pulido visual post-V3.
+OANIX comenzó como bloc de notas privado y evoluciona para permitir guardar dentro de las notas imágenes y archivos generales, incluidos PDF, Office, ZIP, APK, audio y video.
 
-**V1 — Núcleo local:** CERRADA.
+Decisión vigente: **no dividir por ahora OANIX en Free/Pro ni bloquear funciones artificialmente**. Primero terminar una OANIX realmente buena y útil. La arquitectura puede permitir monetización futura, pero no debe diseñarse alrededor de candados Premium ni impedir probar el producto.
 
-**V2 — Cuenta y sincronización:** CERRADA FUNCIONALMENTE. Mantener visibles las deudas de validación #69, #70 y #73.
+## 3. Experiencia de imágenes aprobada
 
-**V3 — Android con Capacitor:** CERRADA formalmente en issue #79. Las funciones principales se validaron en dispositivo real. La firma debug interna estable quedó configurada y verificada por CI con huella exacta; también se validó en teléfono una actualización APK `versionCode 1` → `versionCode 2` sin desinstalar. La clave definitiva de Play Store sigue siendo independiente.
+PR #169 desactivó `NotebookCanvasRuntime`, `NotebookFreeRowsRuntime` y `NotebookSimpleImageRuntime`. No reactivarlos sin autorización explícita.
 
-**Deuda Android diferida:** issue #105 — la huella puede tardar 2–3 cold starts. Se retoma durante el pulido Android/RC junto con pantalla de bloqueo, arranque y transiciones; no reducir requisitos de seguridad biométrica para ocultarlo.
+PR #170–#172 fijaron la experiencia PWA/APK:
+- tarjeta fija, compacta, miniatura izquierda y controles derecha;
+- sin mover/alinear/redimensionar manualmente y sin candado;
+- nombre del archivo oculto;
+- Abrir, Quitar y tamaño cuando corresponda;
+- descripción en franja inferior; texto largo termina en elipsis + `+`;
+- descripción completa y visor cerrables con X, toque fuera y Atrás;
+- tocar miniatura abre original; zoom táctil aproximado 4x con desplazamiento.
 
-**Dirección visual aprobada:**
-- Base oscura premium; primer preset `Midnight Violet` (negro + morado, cian técnico secundario).
-- Tipografía con espacio suficiente para descendentes; no aceptar `g`, `p`, `q`, `y` o títulos recortados.
-- `O` de OANIX como núcleo tecnológico con anillos/orbita sutil, animación discreta y fallback de movimiento reducido.
-- Bordes definidos con glow suave controlado por variables de tema.
-- Notas visualmente separadas como tarjetas/papel digital tecnológico.
-- El círculo de nota puede mostrar automáticamente la primera imagen ya cifrada de esa nota; si no existe, conserva la inicial. No crear una copia plaintext ni persistencia paralela para la miniatura.
-- Construir el sistema de temas ahora; añadir presets/selector después de validar la base.
+No cambiar el formato persistido de imágenes ni modificar ampliamente `ImageNoteEditor.tsx` salvo necesidad demostrada.
 
-**Regla actual:** no meter funciones de V4 para retrasar el rediseño. Primero consolidar PWA, luego Android + #105, luego identidad final/publicación.
+## 4. Carpetas
 
----
+- Inicio visual: 4 carpetas por fila.
+- Imagen personalizada por pulsación larga.
+- Imagen de carpeta cifrada y almacenada separadamente del registro de carpeta.
+- Movimiento ambiental premium, suave y discreto; respuesta 3D/brillo a dedo/puntero; respetar `prefers-reduced-motion`.
+- Atrás: nota → lista → inicio de carpetas → salir; conservar historial real correcto en PWA y comportamiento equivalente en APK.
 
-## 2. Forma de trabajo acordada
+## 5. Archivos grandes
 
-### 2.1 Desarrollo por versiones
-OANIX se desarrolla estrictamente por versiones y en el orden oficial del roadmap. Las ideas futuras se documentan en vez de implementarse por impulso.
+Objetivo inicial de producto: **5 GB por archivo**, sin diseñar el motor con un techo arquitectónico de 5 GB. El límite de seguridad del protocolo puede ser mayor (~20 GiB actualmente).
 
-### 2.2 Modularidad
-Reutilizar de forma segura lo existente antes que crear bases, stores, cachés o capas paralelas. Mantener módulos suficientemente independientes para modificar funciones sin afectar innecesariamente al resto.
+Reglas:
+- procesamiento secuencial por fragmentos, alrededor de 8 MiB;
+- AES-GCM por fragmento, IV independiente y autenticación;
+- SHA-256/manifiestos para integridad y reconstrucción;
+- nunca materializar archivos gigantes completos en RAM;
+- limpiar buffers temporales;
+- checkpoint persistente y subida reanudable;
+- reanudar desde progreso remoto confirmado, incluso después de caída de red/app;
+- descargas por rangos;
+- caché local limitada y bajo demanda;
+- `Liberar del dispositivo` debe ser distinto de `Eliminar de OANIX`.
 
-En Android, Capacitor envuelve la misma aplicación. No crear una segunda lógica de notas, cifrado, imágenes o sincronización solo para la APK.
+La UI de transferencia distingue Preparando → Cifrando → Subiendo → Verificando → Guardado ✓. Llegar a 100% transferido no significa Guardado hasta terminar la verificación.
 
-### 2.3 Seguridad y datos
-- Offline-first sigue siendo fundamental.
-- El contenido privado permanece cifrado localmente.
-- El transporte normal de sincronización mantiene E2EE y sobres opacos.
-- Una sesión normal de Google/correo no desbloquea por sí sola la bóveda.
-- **Excepción explícita:** la recuperación por correo confía en el backend/proveedor de autenticación para recuperar temporalmente la misma clave de bóveda después de un OTP reciente. No describir este mecanismo como zero-knowledge frente al proveedor.
-- La contraseña maestra no se guarda en Supabase ni en Android.
-- La clave de bóveda no se guarda en claro en tablas de cliente ni en preferencias Android.
-- La `CryptoKey` activa del runtime web sigue siendo no extraíble.
-- Ante incertidumbre de sincronización, conservar datos tiene prioridad sobre sobrescribir silenciosamente.
+## 6. Proveedores de almacenamiento
 
-### 2.4 Continuidad entre IAs
-Una IA que continúe OANIX debe leer `AGENTS.md`, `ROADMAP.md`, esta memoria, `ARCHITECTURE.md`, `SECURITY.md` y `CHANGELOG.md`; verificar `main`; no pedir al usuario decisiones ya documentadas; no inventar requisitos; registrar cambios, aplazamientos y excepciones.
+Principio arquitectónico: **OANIX nunca depende de un único proveedor**.
 
-### 2.5 Avance automático de ajustes pequeños
-El usuario pidió explícitamente no perder tiempo deteniéndose por ajustes pequeños. Cuando un cambio es local, de bajo riesgo, no altera seguridad/datos/alcance ni una decisión importante y puede validarse con pruebas, la IA debe corregirlo, probarlo, integrarlo y continuar automáticamente.
+El motor usa la abstracción `OanixStorageProvider`. Google Drive es el primer proveedor demostrado, no una dependencia conceptual del motor. Proveedores futuros posibles: almacenamiento local, OneDrive, S3 compatible, WebDAV/NAS o nube propia; no implementarlos hasta necesitarlos.
 
-Sí debe pedir decisión cuando haya alternativas reales que cambien seguridad, datos, alcance o experiencia importante.
+### Google Drive
 
----
+- Opcional; OANIX funciona sin Drive.
+- Usa el almacenamiento de la cuenta Google del usuario.
+- Scope exclusivo `drive.appdata` y `appDataFolder`; no pedir acceso general al Drive.
+- Los bytes se cifran antes de salir del dispositivo.
+- Token temporal exclusivamente en memoria.
+- PWA usa Google Identity Services con `VITE_GOOGLE_DRIVE_WEB_CLIENT_ID`.
+- Android usa `AuthorizationClient` mediante integración Capacitor independiente.
+- El login OANIX y la autorización Drive son dominios separados.
+- Antes de una transferencia grande comprobar destino/cuota y, cuando corresponda, conectividad.
+- Las URLs de sesión reanudable deben validarse/restringirse para evitar fuga de credenciales.
 
-## 3. Registro de decisiones
+## 7. Seguridad existente que no debe degradarse
 
-### DEC-2026-08-16-001 — Resolución de conflictos multidispositivo
-**Estado:** IMPLEMENTED / VALIDATION_DEBT
+- Contraseña maestra y clave de bóveda son conceptos separados.
+- La clave activa web permanece como `CryptoKey` no extraíble.
+- El contenido local privado se cifra antes de persistirse.
+- El transporte normal de sync conserva E2EE; la recuperación Email OTP es una excepción de confianza explícita documentada en `SECURITY.md`.
+- Android Keystore/biometría no sustituyen la contraseña maestra ni convierten la clave activa web en exportable.
+- No describir OANIX completo como zero-knowledge frente al proveedor mientras exista el broker de recuperación por correo.
 
-Cuando existe divergencia real OANIX conserva ambos lados y el usuario decide. Para notas compatibles puede elegir la versión sincronizada, la local o combinar ambas. La combinación conserva completos ambos contenidos: primero el cambio aceptado primero por la sincronización remota y luego el otro, sin merge semántico, sin rótulos permanentes y sin convertir bloques estructurados a texto plano. Principio: `detectar -> conservar -> mostrar -> usuario decide`.
+## 8. Evidencia validada de archivos grandes
 
-PR #66 cubre conflictos no binarios y PR #67 imágenes originales/previews. La detección real fue comprobada; deuda restante en #69.
+En PWA se validó con un video real de ~120 MiB:
+- subida cifrada completa a Google Drive;
+- descarga posterior por rangos;
+- hashes, descifrado y comparación íntegra del archivo;
+- interrupción de Wi-Fi alrededor del 30%;
+- cierre completo de PWA;
+- reapertura y nueva autorización Drive;
+- selección del mismo archivo y reanudación desde el progreso remoto confirmado, sin reiniciar desde cero.
 
-### DEC-2026-08-16-002 — Criterio de verdad
-**Estado:** DECIDED
+PR #219 amplió la prueba controlada a 100 MiB–1 GiB. La siguiente validación es cercana a 1 GiB; no saltar todavía directamente a 5 GB.
 
-El repositorio es la fuente persistente de verdad. Conversaciones previas ayudan con intención, pero si contradicen código/documentación actual se debe resolver la discrepancia con evidencia.
+## 9. Checkpoints históricos que vale conservar
 
-### DEC-2026-08-16-003 — Memoria operativa en repositorio
-**Estado:** IMPLEMENTED
+- `1ad13a27c1a2e429be1beb839aa3992586361103`: base funcional estable histórica importante.
+- `d6d847e7a053f05808518b4e18f871855eb0e9a7`: inmediatamente anterior a llevar la experiencia aprobada de imágenes a Android.
 
-`AGENTS.md` guarda reglas estables; `PROJECT_MEMORY.md` decisiones/pendientes; `ROADMAP.md` orden oficial; `CHANGELOG.md` implementación; issues de deuda/diferidos conservan contexto específico.
-
-### DEC-2026-08-16-004 — Historial de versiones cifrado
-**Estado:** IMPLEMENTED / VALIDATION_DEBT
-
-- Snapshots `note-history` dentro de `encrypted_records`.
-- Máximo 5 snapshots por nota; al sexto se elimina el más antiguo.
-- Ventana automática mínima de 5 minutos.
-- Centro `🕘`, vista previa y restauración con checkpoint `pre-restore`.
-- Historial puede sincronizarse con transporte E2EE no binario.
-- No duplica binarios históricos; si falta una imagen original requerida, bloquea la restauración en lugar de producir una nota incompleta.
-- Al eliminar permanentemente una nota se elimina su historial.
-- Validación real restante en #70.
-
-### DEC-2026-08-16-005 — Recuperación con clave permanente bajo control del usuario
-**Estado:** SUPERSEDED
-
-La propuesta inicial era exigir una segunda clave/código de recuperación permanente guardado por el usuario. Esta propuesta fue descartada por fricción de uso.
-
-**Sustituida por:** DEC-2026-08-16-006.
-
-### DEC-2026-08-16-006 — Recuperación de contraseña maestra por Email OTP
-**Estado:** IMPLEMENTED / VALIDATION_DEBT
-
-**Versión / bloque:** V2 — Recuperación de acceso
-
-**Referencia:** issue #73, PR #74 y PR #75.
-
-**Decisión funcional definitiva:**
-- Solo existe una contraseña maestra permanente para la bóveda sincronizada.
-- No existe una segunda clave permanente que el usuario tenga que recordar o guardar.
-- Si se olvida la contraseña: `Recuperar por correo` → código temporal al correo → introducir código → crear y confirmar obligatoriamente una nueva contraseña maestra.
-- Un nuevo proceso futuro genera otro OTP; el código anterior no es una credencial permanente.
-- El modo exclusivamente local no puede usar recuperación por correo.
-
-**Cambio explícito del modelo de confianza:**
-La comodidad de recuperación por correo implica confiar en el proveedor de autenticación/backend durante ese flujo. El transporte normal sigue cifrado/E2EE, pero la solución completa ya no es zero-knowledge frente al proveedor porque el broker puede recuperar temporalmente la clave de bóveda después de una autenticación OTP reciente.
-
-**Implementación:**
-- PR #74: reenvoltorio de la misma clave de bóveda al cambiar contraseña; no recifra todas las notas ni crea una segunda bóveda.
-- PR #75: flujo Email OTP y broker de recuperación.
-- Supabase producción: `oanix_recovery_root` y `vault_recovery_envelopes`, sin grants directos a `anon`/`authenticated`.
-- `vault-recovery-broker` exige JWT y OTP reciente para recuperar.
-- `securityGeneration` evita que dispositivos obsoletos reviertan silenciosamente la protección.
-
-**Deuda que permanece visible al haber avanzado a V3:**
-- Confirmar flujo real completo OTP → nueva contraseña → misma bóveda → contraseña anterior inválida.
-- Validar segundo dispositivo, reutilización de OTP y comportamiento de dispositivo offline.
-- Un dispositivo completamente offline puede conservar una protección antigua hasta reconectarse; no prometer revocación instantánea.
-
-### DEC-2026-08-16-007 — Android usa una sola base de aplicación
-**Estado:** IMPLEMENTED
-
-**Referencia:** issue #79, PR #81 y #82.
-
-- Capacitor envuelve la misma base React + TypeScript + Vite/PWA.
-- La PWA conserva su estrategia de Service Worker y `/OANIX/`; el bundle nativo usa rutas apropiadas para WebView y no registra el Service Worker de actualización de la PWA.
-- No mantener una implementación paralela de notas/cifrado/sync para Android.
-- App ID actual: `io.github.hnalvaradohn.oanix`. Se considera provisional antes de publicación; después de publicar en Play Store no debe cambiarse.
-- La firma definitiva de Play Store todavía no fue creada ni almacenada; tratar esa credencial permanente de forma explícita antes de publicación.
-
-### DEC-2026-08-16-008 — Android Keystore separado de la clave activa web
-**Estado:** IMPLEMENTED / VALIDATION_DEBT
-
-**Referencia:** PR #83.
-
-- `OanixKeystorePlugin` genera una clave AES-256-GCM no exportable dentro de `AndroidKeyStore` con alias `oanix.device-seal.v1`.
-- Usa IV aleatorio, AAD de propósito y limita el material sellado a 4 KiB.
-- Esta clave genérica NO es la `CryptoKey` activa de la bóveda y no almacena contraseña maestra.
-- Se mantiene deliberadamente separada de la clave usada por biometría para evitar cambiar silenciosamente los parámetros de un alias que ya pueda existir en un dispositivo.
-- Compilación APK/AAB pasó; falta una prueba real específica `seal/open` en teléfono.
-
-### DEC-2026-08-16-009 — Desbloqueo rápido Android con biometría fuerte o credencial del dispositivo
-**Estado:** IMPLEMENTED / VALIDATION_DEBT
-
-**Referencia:** PR #84, issue #79.
-
-**UX aprobada por el usuario:**
-- La contraseña maestra continúa siendo la credencial principal y el fallback.
-- Después de un desbloqueo correcto con contraseña, OANIX puede activar acceso rápido en ese teléfono.
-- En aperturas posteriores puede usar huella/rostro fuerte o PIN/patrón/contraseña segura del dispositivo.
-- Si la autenticación se cancela, se invalida la clave, cambia el entorno o no es compatible, OANIX vuelve al flujo normal de contraseña maestra.
-
-**Modelo técnico:**
-- Alias separado `oanix.biometric-vault.v1` dentro de Android Keystore.
-- AES-256-GCM y autenticación obligatoria por cada uso (`timeout = 0`).
-- Solo `BIOMETRIC_STRONG | DEVICE_CREDENTIAL`; no usar `BIOMETRIC_WEAK` para liberar material criptográfico de bóveda.
-- La implementación se habilita desde Android 11 / API 30 para mantener un camino criptográfico coherente con biometría fuerte + credencial del dispositivo. Android anterior conserva la contraseña maestra.
-- La clave de bóveda se guarda nativamente únicamente como ciphertext autenticado por Keystore, con IV y binding; nunca como texto plano en SharedPreferences.
-- El binding es `primary:${metadata.createdAt}`. Una envoltura de otra bóveda no debe abrir una bóveda reemplazada accidentalmente.
-- Tras autenticar, los 32 bytes de clave cruzan el bridge solo de forma temporal; el lado TypeScript los importa inmediatamente como `CryptoKey` AES-GCM **no extraíble** y limpia los arrays temporales.
-- La `CryptoKey` activa existente no se vuelve exportable para implementar biometría.
-- CI web + auditoría offline + compilación Android APK/AAB pasaron antes del merge.
-- Falta prueba en teléfono real: enrolar acceso rápido, cerrar/reabrir, autenticar, cancelar, usar contraseña fallback e invalidación de credencial/biometría.
-
-### DEC-2026-08-16-010 — Identidad visual Android pendiente de publicación
-**Estado:** DECIDED / DEFERRED_WITHIN_V3
-
-- El icono Android actual es provisional.
-- Dirección aprobada: identidad premium de OANIX basada en hoja/bloc de notas, una `O` integrada y un detalle de seguridad sutil.
-- Paleta preferida: azul noche/negro azulado + cian/azul brillante + blanco/plateado.
-- Evitar candado grande, aspecto genérico o texto pequeño/ilegible dentro del icono.
-- Sustituir los assets provisionales antes de publicación, sin bloquear Cámara/Archivos/Compartir.
-
-### DEC-2026-08-16-011 — Cámara nativa usa temporales privados y el mismo cifrado de imágenes
-**Estado:** IMPLEMENTED / VALIDATION_DEBT
-
-**Referencia:** PR #86, issue #79.
-
-- La cámara nativa no crea una galería, base o store de imágenes paralelo.
-- OANIX usa `ACTION_IMAGE_CAPTURE` con un `FileProvider` y un JPEG temporal dentro de la caché privada de la aplicación.
-- El flujo no guarda la foto automáticamente en la galería y no añade permisos `CAMERA`, `READ_MEDIA_IMAGES` ni almacenamiento; se declara únicamente la visibilidad del intent de cámara.
-- La foto original no cruza el bridge como Base64: Android devuelve un URI `content://`, el WebView lo lee mediante `Capacitor.convertFileSrc` y construye un `File` JPEG.
-- `NativeCameraRuntime` entrega ese archivo al input de imágenes ya existente. La ruta autoritativa sigue siendo `insertFiles -> storeEncryptedImage`, incluyendo original cifrado y preview cifrada.
-- El límite específico de cámara es 24 MiB. El importador general conserva sus propias reglas existentes.
-- El temporal se elimina al cancelar o después de que JavaScript termina la importación; temporales abandonados se limpian en un arranque posterior después de una hora.
-- `saveInstanceState/restoreState` conserva ruta y URI de una captura activa frente a recreación de Activity.
-- La UI muestra `Cámara` dentro de Insertar y también en la toolbar nativa para anchos mayores; antes de abrir la cámara conserva el punto actual de inserción.
-- CI web, build, auditoría offline y compilación APK/AAB pasaron antes del merge.
-- Falta prueba real en teléfono: capturar, cancelar, insertar en la posición esperada, confirmar que la foto reaparece tras cerrar/abrir la nota y revisar que no se copie a la galería.
-
-### DEC-2026-08-16-012 — Archivos nativos usan Storage Access Framework sin permisos amplios
-**Estado:** IMPLEMENTED / VALIDATION_DEBT
-
-**Referencia:** PR #87, issue #79.
-
-- OANIX no crea una carpeta de almacenamiento paralela para Android. El usuario elige archivos/destinos mediante el selector de documentos del sistema.
-- Guardar backup usa `ACTION_CREATE_DOCUMENT`; el formato sigue siendo exactamente `.oanixbackup` producido por `serializeEncryptedBackup`.
-- El JSON ya cifrado se envía al `ContentResolver` por fragmentos UTF-8 acotados mediante una sesión nativa efímera. Si falla, OANIX cierra la sesión e intenta eliminar el documento parcial.
-- Restaurar usa `ACTION_OPEN_DOCUMENT`; Android entrega únicamente el URI elegido por el usuario y OANIX lo transforma en `File` para alimentar el control de restauración ya existente.
-- La ruta autoritativa de restauración sigue siendo `restoreEncryptedBackupFromFile`: parsea el formato, abre la protección con la contraseña, autentica secuencialmente cada registro AES-GCM y solo después sustituye la bóveda en una transacción.
-- No se solicitan `READ_EXTERNAL_STORAGE`, `WRITE_EXTERNAL_STORAGE`, `MANAGE_EXTERNAL_STORAGE` ni `READ_MEDIA_IMAGES`.
-- No se llama a `takePersistableUriPermission`; OANIX no conserva acceso permanente al documento seleccionado.
-- No se crea otra copia durable del backup dentro de Android. La PWA conserva su descarga/selector web actual.
-- Cancelar el selector de guardar/restaurar no se trata como fallo de datos; errores reales sí permanecen visibles.
-- OANIX CI y compilación Android APK/AAB pasaron antes de cerrar técnicamente el bloque.
-- Falta prueba real en teléfono: guardar y cancelar, restaurar el mismo backup, probar ubicación local y al menos un proveedor de documentos disponible, y confirmar que la validación de contraseña sigue precediendo cualquier sustitución de la bóveda.
-
----
-
-## 4. Ideas y funciones diferidas
-
-### DEFERRED — Protección opcional por nota + sesión de desbloqueo
-**Referencia:** issue #68.
-
-Decisiones ya tomadas:
-- El título real de una nota protegida permanece visible por defecto con indicador `🔒`.
-- Mientras está bloqueada no muestra preview, contenido ni coincidencias internas de búsqueda.
-- Búsqueda por título sí puede localizarla.
-- Ocultar también el título podría ser opción futura, no predeterminada.
-- Se estudia contraseña por nota y política configurable de re-bloqueo.
-- La biometría global Android de V3 no implementa automáticamente una capa de cifrado independiente por nota.
-
-No implementar esta función solo por existir biometría global; requiere su propio bloque/decisión de seguridad.
-
-### V3 pendiente en orden
-1. Compartir hacia OANIX desde Android — ACTIVO.
-2. Validaciones de campo restantes, identidad visual/firma/publicación cuando corresponda.
-
-### DEFERRED — V4 funciones avanzadas
-PDF, audio, dibujos, tablas, OCR, compartir notas, personalización avanzada, avatar/foto opcional por nota e IA opcional con modelo de privacidad definido.
-
----
-
-## 5. Excepciones de orden y deudas no bloqueantes
-
-### Avance desde Resolución de conflictos con deuda de validación
-Por decisión explícita del usuario se inició Historial de versiones sin completar todas las pruebas reales de conflictos. Deuda #69. No afirmar pruebas que no ocurrieron.
-
-### Avance desde Historial de versiones con deuda de validación
-Por decisión explícita del usuario se inició Recuperación de acceso con Historial ya implementado/publicado pero sin completar toda la prueba real. Deuda #70.
-
-### Avance desde V2 a V3 con deuda de validación
-Se avanzó a V3 sin borrar las deudas reales de #69, #70 y #73. La implementación principal de V2 existe; estas validaciones deben seguir visibles y cualquier regresión se corrige.
-
-### Android real
-- APK/mode local: VALIDADO EN TELÉFONO REAL.
-- Android online/sync: NO VALIDADO / actualmente no funciona o no se comprobó correctamente.
-- Keystore `seal/open`: implementación y build completos; prueba real pendiente.
-- Biometría/credencial: implementación y build completos; prueba real pendiente.
-- Cámara nativa: implementación y build completos; prueba real pendiente.
-- Archivos nativos: implementación y build completos; prueba real pendiente.
-
----
-
-## 6. Problemas o discrepancias a recordar
-
-### Repositorio actualmente público
-**Estado:** ATTENTION
-
-El repositorio aparece actualmente con visibilidad pública. No cambiar visibilidad, permisos ni configuración sensible sin instrucción explícita del usuario.
-
-### Android online/sincronización
-**Estado:** VALIDATION_REQUIRED
-
-El usuario confirmó que en la APK actual funciona el modo local. No afirmar que cuenta/bóveda sincronizada funciona dentro de Android hasta diagnosticarla y validarla en dispositivo.
-
-### Firma de Play Store
-**Estado:** NOT_CONFIGURED
-
-No existe todavía una clave privada definitiva de publicación registrada por este proyecto. No inventar, subir ni pedir una clave privada en chat. Diseñar su manejo explícitamente cuando llegue la etapa de publicación.
-
----
-
-## 7. Regla de cierre
-
-Antes de cerrar un bloque relevante revisar: implementación exacta, nuevas decisiones, pendientes, excepciones, roadmap, changelog, CI y discrepancias. Cualquier contexto necesario para continuidad debe quedar documentado antes del cierre.
+El resto del historial de implementación pertenece a `CHANGELOG.md`, PRs e issues. No acumular aquí detalles triviales, números de CI o estados transitorios.
