@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import test from 'node:test'
 
 const runtime = readFileSync('src/features/folders/folderNavigationRuntime.ts', 'utf8')
-const motionCss = readFileSync('src/features/folders/folderMotion.css', 'utf8')
+const main = readFileSync('src/main.tsx', 'utf8')
 const androidBackRuntime = readFileSync('src/platform/android/AndroidBackRuntime.tsx', 'utf8')
 
 test('las carpetas forman un nivel real del historial antes de la lista', () => {
@@ -21,35 +21,20 @@ test('el botón de volver a carpetas usa history.back cuando viene de la lista',
   assert.match(runtime, /event\.stopPropagation\(\)/)
 })
 
-test('la respuesta visual sigue puntero y tacto sin bloquear gestos', () => {
-  assert.match(runtime, /pointerdown/)
-  assert.match(runtime, /pointermove/)
-  assert.match(runtime, /pointerup/)
-  assert.match(runtime, /--oanix-folder-pointer-x/)
-  assert.match(runtime, /--oanix-folder-rotate-x/)
-
-  const moveHandler = runtime.match(/function handlePointerMove\(event: PointerEvent\) \{([\s\S]*?)\n    \}/)?.[1] ?? ''
-  assert.ok(moveHandler)
-  assert.doesNotMatch(moveHandler, /preventDefault\(\)/)
+test('la navegación ya no impone respuesta visual de puntero ni transformaciones 3D', () => {
+  assert.doesNotMatch(runtime, /pointerdown|pointermove|pointerup/)
+  assert.doesNotMatch(runtime, /--oanix-folder-pointer-x|--oanix-folder-rotate-x/)
+  assert.doesNotMatch(runtime, /folderMotion\.css/)
 })
 
-test('las tarjetas usan profundidad, barrido cobre-plata y respetan movimiento reducido', () => {
-  assert.match(motionCss, /perspective\(520px\)/)
-  assert.match(motionCss, /#b87333/)
-  assert.match(motionCss, /oanix-folder-vault-scan/)
-  assert.match(motionCss, /prefers-reduced-motion: reduce/)
+test('las capas visuales heredadas de movimiento y slider quedan fuera del código activo', () => {
+  assert.equal(existsSync('src/features/folders/folderMotion.css'), false)
+  assert.equal(existsSync('src/features/folders/folderKineticSlide.css'), false)
+  assert.equal(existsSync('src/features/folders/FolderKineticSlideRuntime.tsx'), false)
+  assert.doesNotMatch(main, /FolderKineticSlideRuntime/)
 })
 
-test('las carpetas respiran en reposo de forma visible sin competir con la interacción', () => {
-  assert.match(motionCss, /oanix-folder-idle-breathe 6\.8s/)
-  assert.match(motionCss, /translateY\(-2\.15px\)/)
-  assert.match(motionCss, /scale\(1\.012\)/)
-  assert.match(motionCss, /animation-delay: calc\(var\(--oanix-folder-index, 0\) \* -430ms\)/)
-  assert.match(motionCss, /:is\(:hover, :focus-visible\) \.oanix-folder-card__visual[\s\S]*animation: none/)
-  assert.match(motionCss, /prefers-reduced-motion: reduce[\s\S]*animation: none !important/)
-})
-
-test('el runtime compartido se monta también en PWA desde el runtime ya global', () => {
+test('el runtime compartido conserva solo historial y se monta también en PWA desde el runtime ya global', () => {
   assert.match(androidBackRuntime, /useFolderNavigationRuntime/)
   assert.match(androidBackRuntime, /useFolderNavigationRuntime\(\)/)
   assert.match(androidBackRuntime, /if \(!isAndroidBackRuntime\(\) \|\| !exitPromptVisible\) return null/)
