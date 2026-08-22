@@ -8,6 +8,7 @@ import {
 
 interface NativeDriveAuthorizationResult {
   cancelled: boolean
+  interactionRequired?: boolean
   accessToken?: string
   expiresInSeconds?: number
   scope?: string
@@ -15,17 +16,12 @@ interface NativeDriveAuthorizationResult {
 
 interface OanixDriveAuthPlugin {
   authorize(): Promise<NativeDriveAuthorizationResult>
+  refresh(): Promise<NativeDriveAuthorizationResult>
 }
 
 const OanixDriveAuth = registerPlugin<OanixDriveAuthPlugin>('OanixDriveAuth')
 
-export async function authorizeGoogleDriveOnAndroid(): Promise<boolean> {
-  clearGoogleDriveAccessTokenLease()
-  if (!isAndroidNativeAccountAuth()) {
-    throw new Error('La autorización nativa de Google Drive solo está disponible en Android.')
-  }
-
-  const result = await OanixDriveAuth.authorize()
+function acceptAuthorizationResult(result: NativeDriveAuthorizationResult): boolean {
   if (result.cancelled) return false
 
   const token = result.accessToken?.trim()
@@ -42,4 +38,23 @@ export async function authorizeGoogleDriveOnAndroid(): Promise<boolean> {
     Date.now() + Math.floor(expiresInSeconds * 1000),
   )
   return true
+}
+
+export async function authorizeGoogleDriveOnAndroid(): Promise<boolean> {
+  clearGoogleDriveAccessTokenLease()
+  if (!isAndroidNativeAccountAuth()) {
+    throw new Error('La autorización nativa de Google Drive solo está disponible en Android.')
+  }
+
+  return acceptAuthorizationResult(await OanixDriveAuth.authorize())
+}
+
+export async function refreshGoogleDriveOnAndroidSilently(): Promise<boolean> {
+  if (!isAndroidNativeAccountAuth()) return false
+  try {
+    return acceptAuthorizationResult(await OanixDriveAuth.refresh())
+  } catch {
+    clearGoogleDriveAccessTokenLease()
+    return false
+  }
 }
