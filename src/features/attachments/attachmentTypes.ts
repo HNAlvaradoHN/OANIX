@@ -1,4 +1,4 @@
-import { MAX_LARGE_OBJECT_BYTES, type LargeObjectChunkManifest } from '../largeObjects/largeObjectProtocol'
+import { MAX_LARGE_OBJECT_BYTES, type LargeObjectChunkManifest } from '../largeObjects/largeObjectProtocol.ts'
 
 export const MAX_LOCAL_ATTACHMENT_BYTES = 50 * 1024 * 1024
 export const MAX_ATTACHMENT_BYTES = MAX_LARGE_OBJECT_BYTES
