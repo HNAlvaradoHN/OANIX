@@ -17,18 +17,22 @@ const androidStyles = readFileSync('android/app/src/main/res/values/styles.xml',
 const mainActivity = readFileSync('android/app/src/main/java/io/github/hnalvaradohn/oanix/MainActivity.java', 'utf8')
 const systemUiPlugin = readFileSync('android/app/src/main/java/io/github/hnalvaradohn/oanix/OanixSystemUiPlugin.java', 'utf8')
 
-test('personalization keeps ten styled presets plus classic day and night bases', () => {
-  const styledIds = [
+test('personalization exposes only classic day and night and migrates retired presets safely', () => {
+  assert.match(catalog, /id: 'classic-day'/)
+  assert.match(catalog, /id: 'classic-night'/)
+  assert.match(catalog, /DEFAULT_OANIX_THEME[^\n]*= 'classic-night'/)
+  assert.equal((catalog.match(/\bid: '/g) ?? []).length, 2)
+
+  const retiredIds = [
     'midnight-violet', 'cyber-blue', 'graphite-neon', 'obsidian-gold', 'crimson-core',
     'aurora-rose', 'pearl-violet', 'blush-glass', 'lavender-mist', 'ocean-pearl',
   ]
-  for (const id of styledIds) assert.match(catalog, new RegExp(`id: '${id}'`))
-  assert.match(catalog, /id: 'classic-day'/)
-  assert.match(catalog, /id: 'classic-night'/)
-  assert.match(catalog, /kind: 'base'/)
-  assert.match(catalog, /kind: 'style'/)
-  assert.match(catalog, /DEFAULT_OANIX_THEME = 'midnight-violet'/)
-  assert.equal((catalog.match(/\bid: '/g) ?? []).length, 12)
+  for (const id of retiredIds) assert.doesNotMatch(catalog, new RegExp(`id: '${id}'`))
+
+  assert.match(catalog, /LEGACY_LIGHT_THEMES/)
+  assert.match(catalog, /'pearl-violet'/)
+  assert.match(catalog, /return 'classic-day'/)
+  assert.match(catalog, /return 'classic-night'/)
 })
 
 test('theme choice is only a local UI preference and applies before React paints', () => {
@@ -42,13 +46,14 @@ test('theme choice is only a local UI preference and applies before React paints
   assert.match(main, /styles\/final-visual-polish\.css/)
 })
 
-test('personalization lives inside the workspace three-dot menu instead of a floating header trigger', () => {
+test('appearance lives inside the workspace three-dot menu without retired environments', () => {
   assert.match(menu, /querySelector<HTMLElement>\('\.workspace-menu\[role="menu"\]'\)/)
   assert.match(menu, /createPortal/)
   assert.match(menu, /role="menuitem"/)
-  assert.match(menu, />Personalización</)
+  assert.match(menu, />Apariencia</)
   assert.match(menu, /OANIX_BASE_THEMES/)
-  assert.match(menu, /OANIX_STYLE_THEMES/)
+  assert.doesNotMatch(menu, /OANIX_STYLE_THEMES/)
+  assert.doesNotMatch(menu, /Ambientes/)
   assert.doesNotMatch(menu, /oanix-personalization__trigger-label/)
   assert.match(workspaceMenuCss, /\.oanix-personalization__workspace-entry/)
   assert.match(workspaceMenuCss, /\.workspace-menu > button:last-of-type/)
@@ -62,7 +67,7 @@ test('theme panel is part of the safe menu area so clicks cannot fall through to
   assert.match(workspaceMenuCss, /\.oanix-theme-backdrop/)
 })
 
-test('closing personalization also closes the workspace menu left behind it', () => {
+test('closing appearance also closes the workspace menu left behind it', () => {
   assert.match(menu, /function closeThemeAndWorkspaceMenu\(\)/)
   assert.match(menu, /aria-label="Menú de OANIX"/)
   assert.match(menu, /getAttribute\('aria-expanded'\) === 'true'/)
@@ -71,9 +76,10 @@ test('closing personalization also closes the workspace menu left behind it', ()
   assert.match(menu, /onClick=\{closeThemeAndWorkspaceMenu\}/)
 })
 
-test('personalization panel still exposes dark and light options', () => {
-  assert.match(menu, /Elegí tu ambiente/)
+test('appearance panel exposes only day and night while keeping security controls', () => {
+  assert.match(menu, /Día o Noche/)
   assert.match(menu, /theme\.mode === 'dark' \? 'Oscuro' : 'Claro'/)
+  assert.match(menu, /AUTO_LOCK_OPTIONS/)
   assert.match(menuCss, /\.oanix-theme-menu/)
   assert.match(menuCss, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/)
 })
@@ -84,6 +90,10 @@ test('classic day and night define neutral semantic palettes', () => {
   assert.match(baseThemesCss, /--theme-bg:/)
   assert.match(baseThemesCss, /--theme-surface:/)
   assert.match(baseThemesCss, /--theme-text:/)
+  assert.match(baseThemesCss, /classic-day'[\s\S]*--theme-bg: #eef2f5/)
+  assert.match(baseThemesCss, /classic-day'[\s\S]*--theme-accent: #2563eb/)
+  assert.match(baseThemesCss, /classic-night'[\s\S]*--theme-bg: #05070b/)
+  assert.match(baseThemesCss, /classic-night'[\s\S]*--theme-accent: #8aaeff/)
 })
 
 test('classic day explicitly neutralizes dark-first legacy surfaces', () => {
@@ -125,7 +135,7 @@ test('notebook cues stay subtle and theme-aware', () => {
   assert.doesNotMatch(notebookCss, /spiral|binder|paper texture/i)
 })
 
-test('all presets define shared semantic tokens used by major surfaces', () => {
+test('shared theme layer still maps semantic tokens used by major surfaces', () => {
   assert.match(themesCss, /--theme-bg:/)
   assert.match(themesCss, /--theme-surface:/)
   assert.match(themesCss, /--theme-accent:/)
