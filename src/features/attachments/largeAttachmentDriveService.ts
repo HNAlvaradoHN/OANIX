@@ -5,7 +5,7 @@ import { GOOGLE_DRIVE_PLAINTEXT_CHUNK_BYTES } from '../largeObjects/googleDriveC
 import { decryptLargeObjectChunk } from '../largeObjects/largeObjectChunkCrypto'
 import { PersistentLargeObjectTransferStateStore } from '../largeObjects/persistentLargeObjectTransferStateStore'
 import { transferLargeObject } from '../largeObjects/largeObjectTransferService'
-import type { LargeObjectRemoteObject } from '../largeObjects/largeObjectTransferContract'
+import type { LargeObjectRemoteObject, OanixStorageProvider } from '../largeObjects/largeObjectTransferContract'
 import {
   MAX_LOCAL_ATTACHMENT_BYTES,
   normalizeAttachmentMimeType,
@@ -15,9 +15,86 @@ import {
 
 const GiB = 1024 * 1024 * 1024
 export const MAX_DRIVE_LARGE_ATTACHMENT_BYTES = 1 * GiB
+const ONLINE_RETRY_DELAYS_MS = [700, 1500, 3000] as const
 
 function toHex(bytes: Uint8Array): string {
   return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('')
+}
+
+function throwIfAborted(signal?: AbortSignal): void {
+  if (signal?.aborted) throw new DOMException('La recuperación fue cancelada.', 'AbortError')
+}
+
+function isAbortError(error: unknown): boolean {
+  return error instanceof DOMException && error.name === 'AbortError'
+}
+
+function waitWithAbort(milliseconds: number, signal?: AbortSignal): Promise<void> {
+  throwIfAborted(signal)
+  return new Promise((resolve, reject) => {
+    const timer = globalThis.setTimeout(() => {
+      signal?.removeEventListener('abort', abort)
+      resolve()
+    }, milliseconds)
+    const abort = () => {
+      globalThis.clearTimeout(timer)
+      reject(new DOMException('La recuperación fue cancelada.', 'AbortError'))
+    }
+    signal?.addEventListener('abort', abort, { once: true })
+  })
+}
+
+function waitUntilOnline(signal?: AbortSignal): Promise<void> {
+  throwIfAborted(signal)
+  if (typeof navigator === 'undefined' || navigator.onLine) return Promise.resolve()
+  return new Promise((resolve, reject) => {
+    const cleanup = () => {
+      globalThis.removeEventListener?.('online', online)
+      signal?.removeEventListener('abort', abort)
+    }
+    const online = () => {
+      cleanup()
+      resolve()
+    }
+    const abort = () => {
+      cleanup()
+      reject(new DOMException('La recuperación fue cancelada.', 'AbortError'))
+    }
+    globalThis.addEventListener?.('online', online, { once: true })
+    signal?.addEventListener('abort', abort, { once: true })
+  })
+}
+
+async function downloadRangeResilient(
+  provider: OanixStorageProvider,
+  input: Parameters<OanixStorageProvider['downloadCiphertextRange']>[0],
+  signal: AbortSignal | undefined,
+  onWaitingForNetwork: (waiting: boolean) => void,
+): Promise<Uint8Array> {
+  let attempt = 0
+  while (true) {
+    throwIfAborted(signal)
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      onWaitingForNetwork(true)
+      await waitUntilOnline(signal)
+      onWaitingForNetwork(false)
+    }
+    try {
+      return await provider.downloadCiphertextRange({ ...input, signal })
+    } catch (error) {
+      if (isAbortError(error)) throw error
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        onWaitingForNetwork(true)
+        await waitUntilOnline(signal)
+        onWaitingForNetwork(false)
+        continue
+      }
+      const delay = ONLINE_RETRY_DELAYS_MS[attempt]
+      if (delay === undefined) throw error
+      attempt += 1
+      await waitWithAbort(delay, signal)
+    }
+  }
 }
 
 async function createLargeAttachmentObjectId(noteId: string, file: File): Promise<string> {
@@ -82,6 +159,7 @@ export interface RecoverLargeAttachmentProgress {
   recoveredPlaintextBytes: number
   totalPlaintextBytes: number
   percent: number
+  waitingForNetwork?: boolean
 }
 
 export async function recoverLargeAttachmentFromDrive(
@@ -89,9 +167,11 @@ export async function recoverLargeAttachmentFromDrive(
   expectedPlaintextBytes: number,
   consumePlaintextChunk: (bytes: Uint8Array, index: number) => Promise<void>,
   onProgress?: (progress: RecoverLargeAttachmentProgress) => void,
+  signal?: AbortSignal,
 ): Promise<void> {
   assertLargeAttachmentSize(expectedPlaintextBytes)
   if (storage.chunks.length === 0) throw new Error('El adjunto remoto no contiene manifiestos cifrados.')
+  throwIfAborted(signal)
 
   const provider = createGoogleDriveStorageProviderFromActiveLease()
   if (storage.providerId !== provider.providerId) {
@@ -106,10 +186,24 @@ export async function recoverLargeAttachmentFromDrive(
   const vaultKey = requireActiveVaultKey()
   let expectedPlaintextOffset = 0
   let ciphertextOffset = 0
+  let waitingForNetwork = false
 
-  onProgress?.({ recoveredPlaintextBytes: 0, totalPlaintextBytes: expectedPlaintextBytes, percent: 0 })
+  const emitProgress = () => onProgress?.({
+    recoveredPlaintextBytes: expectedPlaintextOffset,
+    totalPlaintextBytes: expectedPlaintextBytes,
+    percent: Math.min(100, Math.round((expectedPlaintextOffset / expectedPlaintextBytes) * 100)),
+    waitingForNetwork,
+  })
+  const setWaitingForNetwork = (waiting: boolean) => {
+    if (waitingForNetwork === waiting) return
+    waitingForNetwork = waiting
+    emitProgress()
+  }
+
+  emitProgress()
 
   for (let index = 0; index < storage.chunks.length; index += 1) {
+    throwIfAborted(signal)
     const manifest = storage.chunks[index]
     if (
       manifest.index !== index ||
@@ -125,12 +219,14 @@ export async function recoverLargeAttachmentFromDrive(
     let ciphertext: Uint8Array | null = null
     let plaintext: Uint8Array | null = null
     try {
-      ciphertext = await provider.downloadCiphertextRange({
+      ciphertext = await downloadRangeResilient(provider, {
         remoteObject,
         ciphertextOffset,
         ciphertextByteLength: manifest.ciphertextByteLength,
-      })
+      }, signal, setWaitingForNetwork)
+      throwIfAborted(signal)
       plaintext = await decryptLargeObjectChunk(vaultKey, storage.objectId, manifest, ciphertext)
+      throwIfAborted(signal)
       await consumePlaintextChunk(plaintext, index)
     } finally {
       ciphertext?.fill(0)
@@ -139,11 +235,7 @@ export async function recoverLargeAttachmentFromDrive(
 
     expectedPlaintextOffset += manifest.plaintextLength
     ciphertextOffset += manifest.ciphertextByteLength
-    onProgress?.({
-      recoveredPlaintextBytes: expectedPlaintextOffset,
-      totalPlaintextBytes: expectedPlaintextBytes,
-      percent: Math.min(100, Math.round((expectedPlaintextOffset / expectedPlaintextBytes) * 100)),
-    })
+    emitProgress()
   }
 
   if (expectedPlaintextOffset !== expectedPlaintextBytes) {
