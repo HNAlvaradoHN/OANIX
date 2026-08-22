@@ -10,10 +10,16 @@ import {
 } from '../../storage/repositories/encryptedRecordRepository'
 import {
   isAttachmentIndex,
+  isRemoteLargeAttachment,
+  MAX_LOCAL_ATTACHMENT_BYTES,
   validateAttachmentCandidate,
   type AttachmentIndex,
   type AttachmentMetadata,
 } from './attachmentTypes'
+import {
+  deleteLargeAttachmentFromDrive,
+  uploadLargeAttachmentToDrive,
+} from './largeAttachmentDriveService'
 
 export const ATTACHMENT_BLOB_RECORD_TYPE = 'attachment'
 export const ATTACHMENT_INDEX_RECORD_TYPE = 'note-attachments'
@@ -64,6 +70,10 @@ export async function storeEncryptedAttachment(
 ): Promise<AttachmentMetadata> {
   const normalizedNoteId = requireNoteId(noteId)
   const validated = validateAttachmentCandidate(file)
+  if (validated.byteLength > MAX_LOCAL_ATTACHMENT_BYTES) {
+    throw new Error('Este archivo necesita almacenamiento por fragmentos. La integración con la tarjeta de adjuntos todavía no está activada.')
+  }
+
   const attachmentId = createAttachmentId()
   const metadata: AttachmentMetadata = {
     attachmentId,
@@ -82,10 +92,7 @@ export async function storeEncryptedAttachment(
 
   try {
     const index = await readAttachmentIndex(normalizedNoteId)
-    await writeAttachmentIndex({
-      ...index,
-      items: [...index.items, metadata],
-    })
+    await writeAttachmentIndex({ ...index, items: [...index.items, metadata] })
   } catch (error) {
     try {
       await deleteEncryptedBlob(ATTACHMENT_BLOB_RECORD_TYPE, attachmentId)
@@ -98,9 +105,45 @@ export async function storeEncryptedAttachment(
   return metadata
 }
 
+export async function storeRemoteLargeAttachment(
+  noteId: string,
+  file: File,
+): Promise<AttachmentMetadata> {
+  const normalizedNoteId = requireNoteId(noteId)
+  const validated = validateAttachmentCandidate(file)
+  if (validated.byteLength <= MAX_LOCAL_ATTACHMENT_BYTES) {
+    throw new Error('Este archivo cabe en el almacenamiento local normal de adjuntos.')
+  }
+
+  const storage = await uploadLargeAttachmentToDrive(normalizedNoteId, file)
+  const metadata: AttachmentMetadata = {
+    attachmentId: createAttachmentId(),
+    name: validated.name,
+    mimeType: validated.mimeType,
+    byteLength: validated.byteLength,
+    createdAt: new Date().toISOString(),
+    storage,
+  }
+
+  try {
+    const index = await readAttachmentIndex(normalizedNoteId)
+    await writeAttachmentIndex({ ...index, items: [...index.items, metadata] })
+  } catch (error) {
+    try {
+      await deleteLargeAttachmentFromDrive(storage)
+    } catch {
+      // Preserve the indexing failure; remote cleanup can be retried if the provider failed too.
+    }
+    throw error
+  }
+
+  return metadata
+}
+
 export async function loadEncryptedAttachmentFile(
   metadata: AttachmentMetadata,
 ): Promise<File | null> {
+  if (isRemoteLargeAttachment(metadata)) return null
   const bytes = await readEncryptedBlob(ATTACHMENT_BLOB_RECORD_TYPE, metadata.attachmentId)
   if (!bytes) return null
 
@@ -122,6 +165,15 @@ export async function removeEncryptedAttachment(
   const existing = index.items.find((item) => item.attachmentId === attachmentId)
   if (!existing) return
 
+  if (isRemoteLargeAttachment(existing) && existing.storage) {
+    await deleteLargeAttachmentFromDrive(existing.storage)
+    await writeAttachmentIndex({
+      ...index,
+      items: index.items.filter((item) => item.attachmentId !== attachmentId),
+    })
+    return
+  }
+
   const nextIndex: AttachmentIndex = {
     ...index,
     items: index.items.filter((item) => item.attachmentId !== attachmentId),
@@ -140,9 +192,19 @@ export async function removeEncryptedAttachment(
   }
 }
 
+export async function assertAttachmentsAllowNoteDeletion(noteId: string): Promise<void> {
+  const index = await readAttachmentIndex(noteId)
+  if (index.items.some(isRemoteLargeAttachment)) {
+    throw new Error('Quita primero los archivos grandes remotos de esta nota para evitar dejar datos huérfanos en la nube.')
+  }
+}
+
 export async function deleteAllEncryptedAttachmentsForNote(noteId: string): Promise<void> {
   const index = await readAttachmentIndex(noteId)
   if (index.items.length === 0) return
+  if (index.items.some(isRemoteLargeAttachment)) {
+    throw new Error('No se eliminará una nota con archivos grandes remotos sin quitarlos primero.')
+  }
 
   const results = await Promise.allSettled(
     index.items.map((item) => deleteEncryptedBlob(ATTACHMENT_BLOB_RECORD_TYPE, item.attachmentId)),

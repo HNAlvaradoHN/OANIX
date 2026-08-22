@@ -1,4 +1,7 @@
-export const MAX_ATTACHMENT_BYTES = 50 * 1024 * 1024
+import { MAX_LARGE_OBJECT_BYTES, type LargeObjectChunkManifest } from '../largeObjects/largeObjectProtocol.ts'
+
+export const MAX_LOCAL_ATTACHMENT_BYTES = 50 * 1024 * 1024
+export const MAX_ATTACHMENT_BYTES = MAX_LARGE_OBJECT_BYTES
 export const DEFAULT_ATTACHMENT_MIME_TYPE = 'application/octet-stream'
 
 export type AttachmentKind =
@@ -13,12 +16,23 @@ export type AttachmentKind =
   | 'text'
   | 'file'
 
+export interface RemoteLargeAttachmentStorage {
+  mode: 'remote-large-v1'
+  providerId: string
+  objectId: string
+  objectRef: string
+  ciphertextByteLength: number
+  chunkBytes: number
+  chunks: LargeObjectChunkManifest[]
+}
+
 export interface AttachmentMetadata {
   attachmentId: string
   name: string
   mimeType: string
   byteLength: number
   createdAt: string
+  storage?: RemoteLargeAttachmentStorage
 }
 
 export interface AttachmentIndex {
@@ -62,7 +76,7 @@ export function validateAttachmentCandidate(candidate: AttachmentCandidate): {
     throw new Error('El archivo está vacío o tiene un tamaño no válido.')
   }
   if (candidate.size > MAX_ATTACHMENT_BYTES) {
-    throw new Error('El archivo supera el límite actual de 50 MB. Los archivos grandes se habilitarán cuando OANIX use almacenamiento por fragmentos.')
+    throw new Error('El archivo supera el límite de seguridad actual de OANIX para archivos grandes.')
   }
 
   return {
@@ -72,18 +86,49 @@ export function validateAttachmentCandidate(candidate: AttachmentCandidate): {
   }
 }
 
+function isChunkManifest(value: unknown): value is LargeObjectChunkManifest {
+  if (!value || typeof value !== 'object') return false
+  const chunk = value as Partial<LargeObjectChunkManifest>
+  return (
+    Number.isSafeInteger(chunk.index) && Number(chunk.index) >= 0 &&
+    Number.isSafeInteger(chunk.plaintextOffset) && Number(chunk.plaintextOffset) >= 0 &&
+    Number.isSafeInteger(chunk.plaintextLength) && Number(chunk.plaintextLength) > 0 &&
+    Number.isSafeInteger(chunk.ciphertextByteLength) && Number(chunk.ciphertextByteLength) > Number(chunk.plaintextLength) &&
+    typeof chunk.iv === 'string' && chunk.iv.length > 0 &&
+    typeof chunk.sha256 === 'string' && chunk.sha256.length > 0
+  )
+}
+
+function isRemoteLargeAttachmentStorage(value: unknown): value is RemoteLargeAttachmentStorage {
+  if (!value || typeof value !== 'object') return false
+  const storage = value as Partial<RemoteLargeAttachmentStorage>
+  return (
+    storage.mode === 'remote-large-v1' &&
+    typeof storage.providerId === 'string' && storage.providerId.length > 0 &&
+    typeof storage.objectId === 'string' && storage.objectId.length >= 8 && storage.objectId.length <= 120 &&
+    typeof storage.objectRef === 'string' && storage.objectRef.length > 0 &&
+    Number.isSafeInteger(storage.ciphertextByteLength) && Number(storage.ciphertextByteLength) > 0 &&
+    Number.isSafeInteger(storage.chunkBytes) && Number(storage.chunkBytes) > 0 &&
+    Array.isArray(storage.chunks) && storage.chunks.length > 0 && storage.chunks.every(isChunkManifest)
+  )
+}
+
 export function isAttachmentMetadata(value: unknown): value is AttachmentMetadata {
   if (!value || typeof value !== 'object') return false
   const item = value as Partial<AttachmentMetadata>
-  return (
+  const byteLength = item.byteLength
+  const baseValid = (
     typeof item.attachmentId === 'string' && item.attachmentId.length > 0 &&
     typeof item.name === 'string' && item.name.length > 0 && item.name.length <= 180 &&
     typeof item.mimeType === 'string' && item.mimeType.length > 0 && item.mimeType.length <= 120 &&
-    typeof item.byteLength === 'number' && Number.isSafeInteger(item.byteLength) &&
-    item.byteLength > 0 && item.byteLength <= MAX_ATTACHMENT_BYTES &&
+    typeof byteLength === 'number' && Number.isSafeInteger(byteLength) &&
+    byteLength > 0 && byteLength <= MAX_ATTACHMENT_BYTES &&
     typeof item.createdAt === 'string' && item.createdAt.length > 0 &&
     Number.isFinite(Date.parse(item.createdAt))
   )
+  if (!baseValid || typeof byteLength !== 'number') return false
+  if (item.storage === undefined) return byteLength <= MAX_LOCAL_ATTACHMENT_BYTES
+  return byteLength > MAX_LOCAL_ATTACHMENT_BYTES && isRemoteLargeAttachmentStorage(item.storage)
 }
 
 export function isAttachmentIndex(value: unknown, noteId: string): value is AttachmentIndex {
@@ -96,6 +141,10 @@ export function isAttachmentIndex(value: unknown, noteId: string): value is Atta
     seen.add(item.attachmentId)
     return true
   })
+}
+
+export function isRemoteLargeAttachment(item: AttachmentMetadata): boolean {
+  return item.storage?.mode === 'remote-large-v1'
 }
 
 export function attachmentKind(item: Pick<AttachmentMetadata, 'name' | 'mimeType'>): AttachmentKind {
@@ -141,7 +190,8 @@ export function attachmentIcon(item: Pick<AttachmentMetadata, 'name' | 'mimeType
 export function formatAttachmentSize(byteLength: number): string {
   if (byteLength < 1024) return `${byteLength} B`
   if (byteLength < 1024 * 1024) return `${Math.max(1, Math.round(byteLength / 1024))} KB`
-  return `${(byteLength / (1024 * 1024)).toFixed(1)} MB`
+  if (byteLength < 1024 * 1024 * 1024) return `${(byteLength / (1024 * 1024)).toFixed(1)} MB`
+  return `${(byteLength / (1024 * 1024 * 1024)).toFixed(2)} GB`
 }
 
 export function attachmentTypeLabel(item: Pick<AttachmentMetadata, 'name' | 'mimeType'>): string {
