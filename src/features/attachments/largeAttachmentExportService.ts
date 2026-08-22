@@ -35,6 +35,7 @@ interface SaveFilePickerWindow extends Window {
 export interface RemoteAttachmentExportOptions {
   openAfterSave?: boolean
   onProgress?: (progress: RecoverLargeAttachmentProgress) => void
+  signal?: AbortSignal
 }
 
 function extensionOf(name: string): string {
@@ -73,6 +74,7 @@ async function exportOnAndroid(
   options: RemoteAttachmentExportOptions,
 ): Promise<'saved' | 'cancelled'> {
   if (!item.storage) throw new Error('El adjunto remoto no contiene información de almacenamiento.')
+  if (options.signal?.aborted) return 'cancelled'
   const session = await beginAndroidBinaryFileSave(item.name, item.mimeType)
   if (!session) return 'cancelled'
 
@@ -83,11 +85,16 @@ async function exportOnAndroid(
       item.byteLength,
       async (bytes) => writeAndroidBinaryFileChunk(session, bytes),
       options.onProgress,
+      options.signal,
     )
+    if (options.signal?.aborted) return 'cancelled'
     const uri = await finishAndroidBinaryFileSave(session, item.byteLength)
     completed = true
     if (options.openAfterSave) await openAndroidSavedFile(uri, item.mimeType)
     return 'saved'
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') return 'cancelled'
+    throw error
   } finally {
     if (!completed) {
       try {
@@ -105,6 +112,7 @@ async function exportWithFileSystemAccess(
   picker: NonNullable<SaveFilePickerWindow['showSaveFilePicker']>,
 ): Promise<'saved' | 'cancelled'> {
   if (!item.storage) throw new Error('El adjunto remoto no contiene información de almacenamiento.')
+  if (options.signal?.aborted) return 'cancelled'
 
   let handle: FileSystemFileHandleLike
   try {
@@ -129,11 +137,16 @@ async function exportWithFileSystemAccess(
       item.byteLength,
       async (bytes) => writable.write(Uint8Array.from(bytes)),
       options.onProgress,
+      options.signal,
     )
+    if (options.signal?.aborted) return 'cancelled'
     await writable.close()
     completed = true
     if (options.openAfterSave) openFileInBrowser(await handle.getFile())
     return 'saved'
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') return 'cancelled'
+    throw error
   } finally {
     if (!completed && writable.abort) {
       try {
@@ -148,19 +161,27 @@ async function exportWithFileSystemAccess(
 async function exportWithBlobFallback(
   item: AttachmentMetadata,
   options: RemoteAttachmentExportOptions,
-): Promise<'saved'> {
+): Promise<'saved' | 'cancelled'> {
   if (!item.storage) throw new Error('El adjunto remoto no contiene información de almacenamiento.')
   if (item.byteLength > FALLBACK_BLOB_LIMIT_BYTES) {
     throw new Error('Este navegador no permite guardar archivos tan grandes de forma progresiva. Usa la app Android de OANIX o un navegador compatible con guardado directo.')
   }
+  if (options.signal?.aborted) return 'cancelled'
 
   const parts: BlobPart[] = []
-  await recoverLargeAttachmentFromDrive(
-    item.storage,
-    item.byteLength,
-    async (bytes) => { parts.push(Uint8Array.from(bytes)) },
-    options.onProgress,
-  )
+  try {
+    await recoverLargeAttachmentFromDrive(
+      item.storage,
+      item.byteLength,
+      async (bytes) => { parts.push(Uint8Array.from(bytes)) },
+      options.onProgress,
+      options.signal,
+    )
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') return 'cancelled'
+    throw error
+  }
+  if (options.signal?.aborted) return 'cancelled'
   const file = new File(parts, item.name, {
     type: item.mimeType,
     lastModified: Date.parse(item.createdAt) || Date.now(),
