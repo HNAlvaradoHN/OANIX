@@ -279,7 +279,7 @@ export function NoteAttachmentsRuntime() {
           setNewAttachmentIds(new Set())
           setStatus('')
           highlightTimerRef.current = null
-        }, 3200)
+        }, 2400)
       }
     } catch (storeError) {
       setError(storeError instanceof Error ? storeError.message : 'No se pudo guardar el archivo cifrado.')
