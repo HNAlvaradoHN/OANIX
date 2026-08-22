@@ -129,7 +129,7 @@ async function requestGoogleDriveAccessToken(prompt: string): Promise<void> {
     const client = oauth2.initTokenClient({
       client_id: clientId,
       scope: GOOGLE_DRIVE_APPDATA_SCOPE,
-      include_granted_scopes: true,
+      include_granted_scopes: false,
       callback: (response) => {
         if (settled) return
         if (response.error) {
