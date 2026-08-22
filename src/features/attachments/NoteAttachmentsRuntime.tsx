@@ -77,6 +77,14 @@ function isPreviewable(item: AttachmentMetadata): boolean {
   return ['pdf', 'image', 'video', 'audio', 'text'].includes(kind)
 }
 
+function formatEta(seconds: number): string {
+  if (!Number.isFinite(seconds) || seconds < 0) return ''
+  if (seconds < 1) return '<1 s'
+  if (seconds < 60) return `~${Math.ceil(seconds)} s`
+  const minutes = Math.ceil(seconds / 60)
+  return `~${minutes} min`
+}
+
 function downloadFile(file: File): void {
   const url = URL.createObjectURL(file)
   const anchor = document.createElement('a')
@@ -134,13 +142,32 @@ export function NoteAttachmentsRuntime() {
   const inputRef = useRef<HTMLInputElement>(null)
   const pickerNoteIdRef = useRef<string | null>(null)
   const highlightTimerRef = useRef<number | null>(null)
+  const statusTimerRef = useRef<number | null>(null)
+  const recoveryAbortRef = useRef<AbortController | null>(null)
   const [targets, setTargets] = useState<AttachmentTargets>(() => currentTargets())
   const [attachments, setAttachments] = useState<AttachmentMetadata[]>([])
   const [newAttachmentIds, setNewAttachmentIds] = useState<Set<string>>(() => new Set())
   const [loading, setLoading] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [recovering, setRecovering] = useState(false)
   const [status, setStatus] = useState('')
   const [error, setError] = useState('')
+
+  function clearStatusTimer() {
+    if (statusTimerRef.current !== null) {
+      window.clearTimeout(statusTimerRef.current)
+      statusTimerRef.current = null
+    }
+  }
+
+  function showTransientStatus(message: string, milliseconds = 2000) {
+    clearStatusTimer()
+    setStatus(message)
+    statusTimerRef.current = window.setTimeout(() => {
+      setStatus('')
+      statusTimerRef.current = null
+    }, milliseconds)
+  }
 
   useEffect(() => {
     let frame = 0
@@ -187,7 +214,7 @@ export function NoteAttachmentsRuntime() {
     setAttachments([])
     setNewAttachmentIds(new Set())
     setError('')
-    setStatus('')
+    if (!recovering) setStatus('')
     if (highlightTimerRef.current !== null) {
       window.clearTimeout(highlightTimerRef.current)
       highlightTimerRef.current = null
@@ -213,7 +240,7 @@ export function NoteAttachmentsRuntime() {
       })
 
     return () => { active = false }
-  }, [targets.noteId])
+  }, [targets.noteId, recovering])
 
   useEffect(() => {
     if (newAttachmentIds.size === 0 || !targets.editorRoot) return
@@ -228,6 +255,8 @@ export function NoteAttachmentsRuntime() {
 
   useEffect(() => () => {
     if (highlightTimerRef.current !== null) window.clearTimeout(highlightTimerRef.current)
+    if (statusTimerRef.current !== null) window.clearTimeout(statusTimerRef.current)
+    recoveryAbortRef.current?.abort()
   }, [])
 
   function beginAttachmentSelection() {
@@ -238,6 +267,7 @@ export function NoteAttachmentsRuntime() {
     }
 
     pickerNoteIdRef.current = noteId
+    clearStatusTimer()
     setError('')
     setStatus('')
     closeEditorCommandPanel()
@@ -253,6 +283,7 @@ export function NoteAttachmentsRuntime() {
 
     setBusy(true)
     setError('')
+    clearStatusTimer()
     try {
       const storedItems: AttachmentMetadata[] = []
       for (let index = 0; index < files.length; index += 1) {
@@ -269,20 +300,20 @@ export function NoteAttachmentsRuntime() {
         setAttachments(items)
         setNewAttachmentIds(new Set(storedItems.map((item) => item.attachmentId)))
         const remoteCount = storedItems.filter(isRemoteLargeAttachment).length
-        setStatus(
+        showTransientStatus(
           files.length === 1
-            ? remoteCount === 1 ? 'Archivo grande cifrado y guardado en Drive ↓' : 'Archivo agregado ↓'
-            : `${files.length} archivos agregados · ${remoteCount} en Drive ↓`,
+            ? remoteCount === 1 ? 'Archivo grande cifrado y guardado en Drive.' : 'Archivo agregado.'
+            : `${files.length} archivos agregados · ${remoteCount} en Drive.`,
         )
 
         if (highlightTimerRef.current !== null) window.clearTimeout(highlightTimerRef.current)
         highlightTimerRef.current = window.setTimeout(() => {
           setNewAttachmentIds(new Set())
-          setStatus('')
           highlightTimerRef.current = null
-        }, 2400)
+        }, 2000)
       }
     } catch (storeError) {
+      setStatus('')
       setError(storeError instanceof Error ? storeError.message : 'No se pudo guardar el archivo cifrado.')
     } finally {
       setBusy(false)
@@ -304,16 +335,52 @@ export function NoteAttachmentsRuntime() {
     }
   }
 
+  function cancelRecovery() {
+    const controller = recoveryAbortRef.current
+    if (!controller || controller.signal.aborted) return
+    setStatus('Cancelando recuperación…')
+    controller.abort()
+  }
+
   async function recoverRemoteAttachment(item: AttachmentMetadata, openAfterSave: boolean): Promise<void> {
+    clearStatusTimer()
     setError('')
+    const controller = new AbortController()
+    recoveryAbortRef.current = controller
+    setRecovering(true)
+    const startedAt = performance.now()
     setStatus(openAfterSave ? 'Preparando archivo grande para abrir…' : 'Preparando descarga del archivo grande…')
-    const result = await exportRemoteLargeAttachment(item, {
-      openAfterSave,
-      onProgress: ({ percent }) => {
-        setStatus(`${openAfterSave ? 'Recuperando' : 'Exportando'} desde Drive… ${percent}%`)
-      },
-    })
-    setStatus(result === 'saved' ? (openAfterSave ? 'Archivo recuperado y abierto.' : 'Archivo recuperado y guardado.') : '')
+
+    try {
+      const result = await exportRemoteLargeAttachment(item, {
+        openAfterSave,
+        signal: controller.signal,
+        onProgress: ({ percent, recoveredPlaintextBytes, totalPlaintextBytes, waitingForNetwork }) => {
+          if (controller.signal.aborted) return
+          if (waitingForNetwork) {
+            setStatus(`Sin conexión · esperando red… ${percent}%`)
+            return
+          }
+          const elapsedSeconds = Math.max((performance.now() - startedAt) / 1000, 0.001)
+          const bytesPerSecond = recoveredPlaintextBytes / elapsedSeconds
+          const remainingBytes = Math.max(0, totalPlaintextBytes - recoveredPlaintextBytes)
+          const eta = bytesPerSecond > 0 ? formatEta(remainingBytes / bytesPerSecond) : ''
+          const detail = recoveredPlaintextBytes > 0
+            ? ` · ${formatAttachmentSize(recoveredPlaintextBytes)} de ${formatAttachmentSize(totalPlaintextBytes)} · ${formatAttachmentSize(Math.round(bytesPerSecond))}/s${eta ? ` · ${eta}` : ''}`
+            : ''
+          setStatus(`${openAfterSave ? 'Recuperando' : 'Exportando'} desde Drive… ${percent}%${detail}`)
+        },
+      })
+
+      if (result === 'cancelled') {
+        showTransientStatus('Recuperación cancelada.')
+        return
+      }
+      showTransientStatus(openAfterSave ? 'Archivo recuperado y abierto.' : 'Archivo recuperado y guardado.')
+    } finally {
+      if (recoveryAbortRef.current === controller) recoveryAbortRef.current = null
+      setRecovering(false)
+    }
   }
 
   async function handleOpen(item: AttachmentMetadata) {
@@ -344,7 +411,9 @@ export function NoteAttachmentsRuntime() {
       window.setTimeout(() => URL.revokeObjectURL(url), 60_000)
     } catch (openError) {
       setStatus('')
-      setError(openError instanceof Error ? openError.message : 'No se pudo recuperar el archivo desde Drive.')
+      if (!(openError instanceof DOMException && openError.name === 'AbortError')) {
+        setError(openError instanceof Error ? openError.message : 'No se pudo recuperar el archivo desde Drive.')
+      }
     } finally {
       setBusy(false)
     }
@@ -363,7 +432,9 @@ export function NoteAttachmentsRuntime() {
       if (file) await shareOrDownloadFile(file)
     } catch (exportError) {
       setStatus('')
-      setError(exportError instanceof Error ? exportError.message : 'No se pudo exportar el archivo desde Drive.')
+      if (!(exportError instanceof DOMException && exportError.name === 'AbortError')) {
+        setError(exportError instanceof Error ? exportError.message : 'No se pudo exportar el archivo desde Drive.')
+      }
     } finally {
       setBusy(false)
     }
@@ -490,7 +561,14 @@ export function NoteAttachmentsRuntime() {
           )}
 
           {loading && <p className="note-attachments__status">Cargando adjuntos cifrados…</p>}
-          {status && <p className="note-attachments__status note-attachments__status--added" role="status">{status}</p>}
+          {status && (
+            <div className="note-attachments__status-row" role="status">
+              <p className="note-attachments__status note-attachments__status--added">{status}</p>
+              {recovering && (
+                <button className="note-attachments__cancel" type="button" onClick={cancelRecovery}>Cancelar</button>
+              )}
+            </div>
+          )}
           {error && <p className="note-attachments__error" role="alert">{error}</p>}
           <p className="note-attachments__scope">
             Locales: incluidos en el backup cifrado. Grandes en Drive: el backup conserva referencia y manifiestos cifrados, no el contenido remoto.
