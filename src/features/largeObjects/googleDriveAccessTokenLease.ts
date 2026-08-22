@@ -9,7 +9,11 @@ interface GoogleDriveTokenLease {
   expiresAtMs: number
 }
 
+type GoogleDriveLeaseRefresher = () => Promise<boolean>
+
 let activeLease: GoogleDriveTokenLease | null = null
+let leaseRefresher: GoogleDriveLeaseRefresher | null = null
+let refreshPromise: Promise<boolean> | null = null
 
 function validateAccessToken(accessToken: string): string {
   const normalized = accessToken.trim()
@@ -110,6 +114,10 @@ export function clearGoogleDriveAccessTokenLease(): void {
   activeLease = null
 }
 
+export function setGoogleDriveAccessTokenRefresher(refresher: GoogleDriveLeaseRefresher): void {
+  leaseRefresher = refresher
+}
+
 export function hasUsableGoogleDriveAccessTokenLease(nowMs = Date.now()): boolean {
   return Boolean(
     activeLease &&
@@ -119,10 +127,24 @@ export function hasUsableGoogleDriveAccessTokenLease(nowMs = Date.now()): boolea
   )
 }
 
+async function tryRefreshLease(): Promise<boolean> {
+  if (!leaseRefresher) return false
+  if (!refreshPromise) {
+    refreshPromise = leaseRefresher()
+      .catch(() => false)
+      .finally(() => { refreshPromise = null })
+  }
+  return refreshPromise
+}
+
 export async function requireGoogleDriveAccessTokenLease(): Promise<string> {
   if (!hasUsableGoogleDriveAccessTokenLease()) {
     clearGoogleDriveAccessTokenLease()
-    throw new Error('Google Drive necesita autorización antes de continuar.')
+    const refreshed = await tryRefreshLease()
+    if (!refreshed || !hasUsableGoogleDriveAccessTokenLease()) {
+      clearGoogleDriveAccessTokenLease()
+      throw new Error('Google Drive necesita autorización antes de continuar.')
+    }
   }
   return activeLease!.accessToken
 }
