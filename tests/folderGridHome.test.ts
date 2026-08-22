@@ -39,13 +39,26 @@ test('el inicio oculta la lista a primera vista y conserva una vuelta funcional 
   assert.match(css, /> :not\(\.oanix-folder-breadcrumb\)/)
 })
 
-test('la base visual queda neutra y no obliga al próximo inicio a heredar la cuadrícula premium anterior', () => {
-  assert.match(css, /Intentionally contains no card design language/)
+test('el nuevo inicio usa una sola galería vertical con snap y desvanecido de bordes', () => {
+  assert.match(css, /vertical gallery v1/)
   assert.match(css, /\.oanix-folder-grid__cards[\s\S]*display: flex;[\s\S]*flex-direction: column;/)
+  assert.match(css, /scroll-snap-type: y mandatory/)
+  assert.match(css, /scroll-snap-align: center/)
+  assert.match(css, /scroll-snap-stop: always/)
+  assert.match(css, /mask-image: linear-gradient\(to bottom, transparent 0, #000 \d+%, #000 \d+%, transparent 100%\)/)
   assert.doesNotMatch(css, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/)
   assert.doesNotMatch(interactiveCss, /oanix-folder-premium-jiggle/)
-  assert.doesNotMatch(interactiveCss, /@keyframes oanix-folder/)
   assert.match(interactiveCss, /\.oanix-folder-drag-ghost/)
+})
+
+test('la tarjeta visual conserva tamaño completo, portada, nombre en una línea, contador y menú de esquina', () => {
+  assert.match(css, /height: clamp\(9\.2rem, 22dvh, 10\.8rem\)/)
+  assert.match(css, /@media \(max-height: 700px\)[\s\S]*height: 8\.8rem;[\s\S]*min-height: 8\.8rem;/)
+  assert.match(css, /\.oanix-folder-card__visual[\s\S]*grid-column: 1;/)
+  assert.match(css, /text-overflow: ellipsis/)
+  assert.match(css, /white-space: nowrap/)
+  assert.match(css, /\.oanix-folder-card__menu[\s\S]*right: \.58rem;[\s\S]*bottom: \.56rem;/)
+  assert.match(css, /var\(--oanix-folder-color\)/)
 })
 
 test('mantener presionada una carpeta activa orden manual y el menú conserva personalización', () => {
