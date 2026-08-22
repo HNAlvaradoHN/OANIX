@@ -10,7 +10,6 @@ import {
   applyOanixTheme,
   getOanixTheme,
   OANIX_BASE_THEMES,
-  OANIX_STYLE_THEMES,
   readSavedOanixTheme,
   type OanixThemePreset,
 } from './themeCatalog'
@@ -56,7 +55,7 @@ export function ThemeMenu() {
   useEffect(() => {
     function handleThemeChange(event: Event) {
       const nextTheme = (event as CustomEvent<string>).detail
-      if (nextTheme) setThemeId(nextTheme)
+      if (nextTheme) setThemeId(nextTheme as ReturnType<typeof readSavedOanixTheme>)
     }
 
     function handlePointerDown(event: PointerEvent) {
@@ -125,9 +124,9 @@ export function ThemeMenu() {
         aria-expanded={open}
         aria-haspopup="dialog"
       >
-        <span className="oanix-personalization__menuitem-icon" aria-hidden="true">✦</span>
+        <span className="oanix-personalization__menuitem-icon" aria-hidden="true">◐</span>
         <span className="oanix-personalization__menuitem-copy">
-          <strong>Personalización</strong>
+          <strong>Apariencia</strong>
           <small>{currentTheme.name}</small>
         </span>
         <span className="oanix-personalization__menuitem-chevron" aria-hidden="true">›</span>
@@ -141,29 +140,29 @@ export function ThemeMenu() {
       <button
         className="oanix-theme-backdrop"
         type="button"
-        aria-label="Cerrar personalización"
+        aria-label="Cerrar apariencia"
         data-note-menu-root="true"
         onPointerDown={(event) => event.stopPropagation()}
         onClick={closeThemeAndWorkspaceMenu}
       />
       <section
         className="oanix-theme-menu oanix-theme-menu--workspace"
-        aria-label="Personalización de OANIX"
+        aria-label="Apariencia de OANIX"
         data-note-menu-root="true"
         ref={panelRef}
         onPointerDown={(event) => event.stopPropagation()}
       >
         <header className="oanix-theme-menu__header">
           <div>
-            <span className="oanix-theme-menu__eyebrow">PERSONALIZACIÓN</span>
-            <strong>Elegí tu ambiente</strong>
-            <p>El tema y el tiempo de bloqueo se guardan solo en este dispositivo.</p>
+            <span className="oanix-theme-menu__eyebrow">APARIENCIA</span>
+            <strong>Día o Noche</strong>
+            <p>OANIX conserva solo los dos modos base. La preferencia se guarda en este dispositivo.</p>
           </div>
           <button
             className="oanix-theme-menu__close"
             type="button"
             onClick={closeThemeAndWorkspaceMenu}
-            aria-label="Cerrar personalización"
+            aria-label="Cerrar apariencia"
           >
             ×
           </button>
@@ -172,10 +171,10 @@ export function ThemeMenu() {
         <div className="oanix-theme-menu__content">
           <section className="oanix-theme-section" aria-labelledby="oanix-theme-base-title">
             <div className="oanix-theme-section__heading">
-              <strong id="oanix-theme-base-title">Base</strong>
-              <span>Día y noche sin estilo dominante</span>
+              <strong id="oanix-theme-base-title">Modo visual</strong>
+              <span>Claro para el día · oscuro para la noche</span>
             </div>
-            <div className="oanix-theme-menu__grid oanix-theme-menu__grid--base" role="list" aria-label="Temas base">
+            <div className="oanix-theme-menu__grid oanix-theme-menu__grid--base" role="list" aria-label="Modos de apariencia">
               {OANIX_BASE_THEMES.map(renderThemeOption)}
             </div>
           </section>
@@ -207,16 +206,6 @@ export function ThemeMenu() {
             <p className="oanix-auto-lock__hint">
               Si volvés antes del tiempo elegido, seguís donde estabas. El botón 🔒 siempre bloquea de inmediato.
             </p>
-          </section>
-
-          <section className="oanix-theme-section" aria-labelledby="oanix-theme-style-title">
-            <div className="oanix-theme-section__heading">
-              <strong id="oanix-theme-style-title">Ambientes</strong>
-              <span>Presets con personalidad propia</span>
-            </div>
-            <div className="oanix-theme-menu__grid" role="list" aria-label="Temas especiales">
-              {OANIX_STYLE_THEMES.map(renderThemeOption)}
-            </div>
           </section>
         </div>
       </section>
