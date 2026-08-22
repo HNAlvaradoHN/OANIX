@@ -57,7 +57,7 @@ test('la tarjeta visual conserva tamaño completo, portada, nombre en una línea
   assert.match(css, /\.oanix-folder-card__visual[\s\S]*grid-column: 1;/)
   assert.match(css, /text-overflow: ellipsis/)
   assert.match(css, /white-space: nowrap/)
-  assert.match(css, /\.oanix-folder-card__menu[\s\S]*right: \.52rem;[\s\S]*bottom: \.48rem;/)
+  assert.match(css, /\.oanix-folder-card__menu[\s\S]*right: \.58rem;[\s\S]*bottom: \.56rem;/)
   assert.match(css, /var\(--oanix-folder-color\)/)
 })
 
