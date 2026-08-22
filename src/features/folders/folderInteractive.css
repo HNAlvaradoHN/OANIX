@@ -1,53 +1,54 @@
 .oanix-folder-grid__cards {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: .7rem;
+  gap: .58rem;
   align-content: start;
 }
 
 .oanix-folder-card {
   min-width: 0;
-  min-height: 5.55rem;
+  min-height: 4.45rem;
   overflow: visible;
-  border-radius: 1rem;
+  border-radius: .9rem;
 }
 
 .oanix-folder-card--custom {
   position: relative;
   display: block;
   padding: 0;
-  border: 1px solid color-mix(in srgb, var(--oanix-border, #d8e0ea) 72%, transparent);
+  border: 1px solid color-mix(in srgb, var(--oanix-border, #d8e0ea) 74%, transparent);
   background:
-    linear-gradient(145deg, color-mix(in srgb, var(--oanix-panel, #fff) 98%, var(--theme-primary, #4f70db) 2%), var(--oanix-panel-2, #f8fafc));
+    linear-gradient(145deg, color-mix(in srgb, var(--oanix-panel, #fff) 99%, var(--theme-primary, #4f70db) 1%), var(--oanix-panel-2, #f8fafc));
   box-shadow:
-    0 .45rem 1.15rem rgba(2, 6, 23, .08),
-    inset 0 1px 0 color-mix(in srgb, #fff 38%, transparent);
+    0 .32rem .9rem rgba(2, 6, 23, .07),
+    inset 0 1px 0 color-mix(in srgb, #fff 32%, transparent);
   transition:
     transform 160ms cubic-bezier(.2,.75,.25,1),
     box-shadow 160ms ease,
     border-color 160ms ease,
-    background 160ms ease;
+    background 160ms ease,
+    opacity 140ms ease;
 }
 
 .oanix-folder-card--custom:hover,
 .oanix-folder-card--custom:focus-within {
   transform: translateY(-2px);
-  border-color: color-mix(in srgb, var(--theme-primary, #4f70db) 34%, var(--oanix-border, #d8e0ea));
+  border-color: color-mix(in srgb, var(--theme-primary, #4f70db) 38%, var(--oanix-border, #d8e0ea));
   box-shadow:
-    0 .7rem 1.5rem rgba(2, 6, 23, .12),
+    0 .58rem 1.25rem rgba(2, 6, 23, .11),
     0 0 0 1px color-mix(in srgb, var(--theme-primary, #4f70db) 7%, transparent);
 }
 
 .oanix-folder-card__open {
   width: 100%;
-  min-height: 5.55rem;
+  min-height: 4.45rem;
   display: grid;
-  grid-template-columns: 2.7rem minmax(0, 1fr);
-  grid-template-rows: auto auto;
-  column-gap: .62rem;
+  grid-template-columns: 2.15rem minmax(0, 1fr);
+  grid-template-rows: minmax(1.5rem, auto) auto;
+  column-gap: .5rem;
   row-gap: .08rem;
   align-items: center;
-  padding: .72rem 2.25rem .72rem .7rem;
+  padding: .5rem 1.65rem .5rem .5rem;
   border: 0;
   border-radius: inherit;
   background: transparent;
@@ -59,61 +60,66 @@
 }
 
 .oanix-folder-card__open > strong,
-.oanix-folder-card > strong {
+.oanix-folder-card > strong,
+.oanix-folder-drag-ghost strong {
   grid-column: 2;
   grid-row: 1;
   min-width: 0;
   width: 100%;
+  display: -webkit-box;
   overflow: hidden;
   color: var(--oanix-text, #172033);
-  font-size: .78rem;
+  font-size: .7rem;
   font-weight: 900;
-  line-height: 1.2;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  letter-spacing: -.015em;
+  line-height: 1.12;
+  overflow-wrap: anywhere;
+  letter-spacing: -.012em;
+  white-space: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .oanix-folder-card__open > small,
-.oanix-folder-card > small {
+.oanix-folder-card > small,
+.oanix-folder-drag-ghost small {
   grid-column: 2;
   grid-row: 2;
   min-width: 0;
   color: var(--oanix-muted, #64748b);
-  font-size: .64rem;
+  font-size: .56rem;
   font-weight: 720;
-  line-height: 1.2;
-  opacity: .78;
+  line-height: 1.15;
+  opacity: .76;
 }
 
-.oanix-folder-card__visual {
+.oanix-folder-card__visual,
+.oanix-folder-drag-ghost .oanix-folder-card__visual {
   grid-column: 1;
   grid-row: 1 / span 2;
-  width: 2.7rem;
-  height: 2.7rem;
+  width: 2.15rem;
+  height: 2.15rem;
   margin: 0;
   display: grid;
   place-items: center;
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--theme-primary, #4f70db) 18%, var(--oanix-border, #d8e0ea));
-  border-radius: .78rem;
+  border-radius: .65rem;
   background:
     linear-gradient(145deg, color-mix(in srgb, var(--theme-primary, #4f70db) 14%, var(--oanix-panel-3, #e9eef5)), var(--oanix-panel-2, #f8fafc));
   box-shadow:
-    0 .28rem .68rem rgba(2,6,23,.12),
-    inset 0 1px 0 rgba(255,255,255,.22);
+    0 .22rem .52rem rgba(2,6,23,.11),
+    inset 0 1px 0 rgba(255,255,255,.2);
 }
 
 .oanix-folder-card--covered .oanix-folder-card__visual {
-  width: 2.7rem;
-  height: 2.7rem;
-  border-color: color-mix(in srgb, var(--theme-primary, #4f70db) 30%, var(--oanix-border, #d8e0ea));
+  border-color: color-mix(in srgb, var(--theme-primary, #4f70db) 31%, var(--oanix-border, #d8e0ea));
   box-shadow:
-    0 .3rem .74rem rgba(2,6,23,.17),
-    0 0 0 2px color-mix(in srgb, var(--theme-primary, #4f70db) 8%, transparent);
+    0 .25rem .58rem rgba(2,6,23,.16),
+    0 0 0 2px color-mix(in srgb, var(--theme-primary, #4f70db) 7%, transparent);
 }
 
-.oanix-folder-card__visual img {
+.oanix-folder-card__visual img,
+.oanix-folder-drag-ghost img {
   width: 100%;
   height: 100%;
   display: block;
@@ -121,30 +127,35 @@
 }
 
 .oanix-folder-card__folder-mark {
-  width: 1.85rem;
-  height: 1.28rem;
+  width: 1.48rem;
+  height: 1.02rem;
   transform: none;
+}
+
+.oanix-folder-card__folder-mark::before {
+  top: -.27rem;
+  width: .68rem;
+  height: .36rem;
 }
 
 .oanix-folder-card__menu {
   position: absolute;
-  top: 50%;
-  right: .45rem;
+  top: .27rem;
+  right: .17rem;
   z-index: 4;
-  width: 1.7rem;
-  height: 2.3rem;
+  width: 1.5rem;
+  height: 1.7rem;
   display: grid;
   place-items: center;
   padding: 0;
-  transform: translateY(-50%);
   border: 0;
-  border-radius: .68rem;
+  border-radius: .55rem;
   background: transparent;
   color: var(--oanix-muted, #64748b);
-  font-size: 1.1rem;
+  font-size: 1rem;
   line-height: 1;
   cursor: pointer;
-  transition: background 140ms ease, color 140ms ease, transform 140ms ease;
+  transition: background 140ms ease, color 140ms ease, transform 140ms ease, opacity 140ms ease;
 }
 
 .oanix-folder-card__menu:hover,
@@ -154,27 +165,25 @@
   color: var(--theme-primary, #4f70db);
 }
 
-.oanix-folder-card__menu:active {
-  transform: translateY(-50%) scale(.94);
-}
+.oanix-folder-card__menu:active { transform: scale(.93); }
 
 .oanix-folder-card__menu:disabled {
-  opacity: 0;
+  opacity: .34;
   pointer-events: none;
 }
 
 .oanix-folder-card--all,
 .oanix-folder-card--add {
-  min-height: 5.55rem;
+  min-height: 4.45rem;
   display: grid;
-  grid-template-columns: 2.7rem minmax(0, 1fr);
-  grid-template-rows: auto auto;
-  column-gap: .62rem;
+  grid-template-columns: 2.15rem minmax(0, 1fr);
+  grid-template-rows: minmax(1.5rem, auto) auto;
+  column-gap: .5rem;
   row-gap: .08rem;
   align-items: center;
   place-items: initial;
   align-content: center;
-  padding: .72rem;
+  padding: .5rem;
   text-align: left;
 }
 
@@ -196,6 +205,11 @@
   grid-row: 2;
 }
 
+.oanix-folder-card--add {
+  min-height: 4rem;
+  opacity: .82;
+}
+
 .oanix-folder-grid__done {
   min-height: 2.15rem;
   padding: .38rem .74rem;
@@ -207,146 +221,165 @@
 }
 
 .oanix-folder-grid--reordering .oanix-folder-card--custom {
-  animation: oanix-folder-jiggle .38s ease-in-out infinite alternate;
+  animation: oanix-folder-jiggle .42s ease-in-out infinite alternate;
   cursor: grab;
 }
 
 .oanix-folder-grid--reordering .oanix-folder-card--custom:nth-child(even) {
-  animation-delay: -.19s;
+  animation-delay: -.21s;
+}
+
+.oanix-folder-grid--drag-active .oanix-folder-card--custom:not(.oanix-folder-card--dragging) {
+  animation: none;
 }
 
 .oanix-folder-grid--reordering .oanix-folder-card--dragging {
-  z-index: 8;
+  z-index: 5;
   animation: none;
-  transform: translateY(-4px) scale(1.035) rotate(.18deg);
-  border: 2px dashed color-mix(in srgb, var(--theme-primary, #4f70db) 82%, #fff 18%);
-  background:
-    linear-gradient(145deg, color-mix(in srgb, var(--theme-primary, #4f70db) 13%, var(--oanix-panel, #fff)), var(--oanix-panel-2, #f8fafc));
+  transform: none;
+  border: 1.5px dashed color-mix(in srgb, var(--theme-primary, #4f70db) 74%, var(--oanix-border, #d8e0ea));
+  background: color-mix(in srgb, var(--theme-primary, #4f70db) 7%, var(--oanix-panel, #fff));
   box-shadow:
-    0 1.05rem 2.2rem rgba(2,6,23,.25),
-    0 0 0 3px color-mix(in srgb, var(--theme-primary, #4f70db) 10%, transparent);
+    inset 0 0 0 2px color-mix(in srgb, var(--theme-primary, #4f70db) 6%, transparent),
+    0 .3rem .8rem rgba(2,6,23,.07);
   cursor: grabbing;
 }
 
-.oanix-folder-grid--reordering .oanix-folder-card--dragging::after {
-  content: 'Soltar aquí';
-  position: absolute;
-  left: 50%;
-  bottom: -.55rem;
-  z-index: 10;
-  padding: .2rem .44rem;
-  transform: translate(-50%, 100%);
-  border: 1px solid color-mix(in srgb, var(--theme-primary, #4f70db) 48%, transparent);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--oanix-panel, #fff) 94%, var(--theme-primary, #4f70db) 6%);
-  color: var(--theme-primary, #4f70db);
-  box-shadow: 0 .32rem .8rem rgba(2,6,23,.14);
-  font-size: .54rem;
-  font-weight: 900;
-  letter-spacing: .02em;
-  white-space: nowrap;
-  pointer-events: none;
-}
-
-.oanix-folder-grid--reordering .oanix-folder-card--dragging .oanix-folder-card__open {
-  opacity: .76;
+.oanix-folder-grid--reordering .oanix-folder-card--dragging .oanix-folder-card__open,
+.oanix-folder-grid--reordering .oanix-folder-card--dragging .oanix-folder-card__menu {
+  opacity: .12;
 }
 
 .oanix-folder-grid--reordering .oanix-folder-card--all,
 .oanix-folder-grid--reordering .oanix-folder-card--add {
-  opacity: .36;
+  opacity: .32;
   filter: saturate(.65);
 }
 
+.oanix-folder-drag-ghost {
+  position: fixed;
+  z-index: 5200;
+  display: grid;
+  grid-template-columns: 2.15rem minmax(0, 1fr) 1rem;
+  grid-template-rows: minmax(1.5rem, auto) auto;
+  column-gap: .5rem;
+  row-gap: .08rem;
+  align-items: center;
+  padding: .5rem .48rem;
+  border: 1px solid color-mix(in srgb, var(--theme-primary, #4f70db) 58%, var(--oanix-border, #d8e0ea));
+  border-radius: .9rem;
+  background: color-mix(in srgb, var(--oanix-panel, #fff) 94%, var(--theme-primary, #4f70db) 6%);
+  box-shadow:
+    0 1.15rem 2.4rem rgba(2,6,23,.3),
+    0 0 0 3px color-mix(in srgb, var(--theme-primary, #4f70db) 10%, transparent),
+    inset 0 1px 0 rgba(255,255,255,.24);
+  opacity: .94;
+  transform: rotate(.7deg) scale(1.035);
+  transform-origin: center;
+  pointer-events: none;
+  user-select: none;
+  will-change: left, top, transform;
+}
+
+.oanix-folder-drag-ghost__dots {
+  grid-column: 3;
+  grid-row: 1 / span 2;
+  align-self: start;
+  justify-self: end;
+  color: var(--oanix-muted, #64748b);
+  font-size: .95rem;
+  line-height: 1;
+  opacity: .74;
+}
+
 @keyframes oanix-folder-jiggle {
-  from { transform: rotate(-.28deg) translateY(-.15px); }
-  to { transform: rotate(.28deg) translateY(.15px); }
+  from { transform: rotate(-.22deg) translateY(-.1px); }
+  to { transform: rotate(.22deg) translateY(.1px); }
 }
 
 @media (max-width: 520px) {
-  .oanix-folder-grid__cards {
-    gap: .56rem;
-  }
+  .oanix-folder-grid__cards { gap: .48rem; }
 
   .oanix-folder-card,
   .oanix-folder-card--custom,
   .oanix-folder-card__open,
-  .oanix-folder-card--all,
-  .oanix-folder-card--add {
-    min-height: 5.15rem;
+  .oanix-folder-card--all {
+    min-height: 4.15rem;
   }
+
+  .oanix-folder-card--add { min-height: 3.85rem; }
 
   .oanix-folder-card__open,
   .oanix-folder-card--all,
   .oanix-folder-card--add {
-    grid-template-columns: 2.35rem minmax(0, 1fr);
-    column-gap: .45rem;
-    padding: .6rem;
+    grid-template-columns: 1.92rem minmax(0, 1fr);
+    column-gap: .38rem;
+    padding: .43rem;
   }
 
-  .oanix-folder-card__open {
-    padding-right: 1.9rem;
-  }
+  .oanix-folder-card__open { padding-right: 1.45rem; }
 
   .oanix-folder-card__visual,
   .oanix-folder-card--covered .oanix-folder-card__visual {
-    width: 2.35rem;
-    height: 2.35rem;
-    border-radius: .68rem;
+    width: 1.92rem;
+    height: 1.92rem;
+    border-radius: .58rem;
   }
 
   .oanix-folder-card__folder-mark {
-    width: 1.62rem;
-    height: 1.12rem;
+    width: 1.35rem;
+    height: .94rem;
   }
 
   .oanix-folder-card__open > strong,
-  .oanix-folder-card > strong {
-    font-size: .7rem;
+  .oanix-folder-card > strong,
+  .oanix-folder-drag-ghost strong {
+    font-size: .64rem;
+    -webkit-line-clamp: 2;
   }
 
   .oanix-folder-card__open > small,
-  .oanix-folder-card > small {
-    font-size: .57rem;
-  }
+  .oanix-folder-card > small,
+  .oanix-folder-drag-ghost small { font-size: .52rem; }
 
   .oanix-folder-card__menu {
-    right: .2rem;
-    width: 1.55rem;
+    top: .15rem;
+    right: .06rem;
+    width: 1.38rem;
+    height: 1.55rem;
+    font-size: .92rem;
   }
 }
 
 @media (max-width: 350px) {
-  .oanix-folder-grid__cards {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: .42rem;
-  }
+  .oanix-folder-grid__cards { gap: .38rem; }
 
   .oanix-folder-card__open,
   .oanix-folder-card--all,
   .oanix-folder-card--add {
-    grid-template-columns: 2.05rem minmax(0, 1fr);
-    column-gap: .34rem;
-    padding: .5rem;
+    grid-template-columns: 1.7rem minmax(0, 1fr);
+    column-gap: .28rem;
+    padding: .38rem;
   }
 
-  .oanix-folder-card__open { padding-right: 1.65rem; }
+  .oanix-folder-card__open { padding-right: 1.28rem; }
 
   .oanix-folder-card__visual,
   .oanix-folder-card--covered .oanix-folder-card__visual {
-    width: 2.05rem;
-    height: 2.05rem;
+    width: 1.7rem;
+    height: 1.7rem;
   }
 
   .oanix-folder-card__open > strong,
-  .oanix-folder-card > strong { font-size: .64rem; }
+  .oanix-folder-card > strong { font-size: .59rem; }
 
   .oanix-folder-card__open > small,
-  .oanix-folder-card > small { font-size: .52rem; }
+  .oanix-folder-card > small { font-size: .49rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .oanix-folder-grid--reordering .oanix-folder-card--custom { animation: none; }
   .oanix-folder-card--custom,
   .oanix-folder-card__menu { transition: none; }
+  .oanix-folder-drag-ghost { transform: none; }
 }
