@@ -1,0 +1,139 @@
+html.oanix-folder-card-lab .oanix-folder-grid__cards {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .9rem;
+}
+
+html.oanix-folder-card-lab .oanix-folder-card--custom {
+  min-height: 11.8rem;
+  overflow: hidden;
+  border-radius: 1.28rem;
+}
+
+html.oanix-folder-card-lab .oanix-folder-card--custom::before {
+  position: absolute;
+  top: .55rem;
+  left: .55rem;
+  z-index: 20;
+  width: 1.55rem;
+  height: 1.55rem;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255,255,255,.18);
+  border-radius: .55rem;
+  background: rgba(3,7,18,.68);
+  color: #dff7ff;
+  box-shadow: 0 .25rem .8rem rgba(0,0,0,.22);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  font-size: .62rem;
+  font-weight: 950;
+  letter-spacing: .04em;
+  filter: none;
+  transform: none;
+  opacity: 1;
+}
+
+html.oanix-folder-card-lab .oanix-folder-card--custom:nth-child(4n + 2)::before { content: 'A'; }
+html.oanix-folder-card-lab .oanix-folder-card--custom:nth-child(4n + 3)::before { content: 'B'; }
+html.oanix-folder-card-lab .oanix-folder-card--custom:nth-child(4n + 4)::before { content: 'C'; }
+html.oanix-folder-card-lab .oanix-folder-card--custom:nth-child(4n + 5)::before { content: 'D'; }
+
+/* A · Cinemática: portada dominante y cuerpo muy limpio */
+html.oanix-folder-card-lab .oanix-folder-card--custom:nth-child(4n + 2) {
+  border-color: rgba(107, 213, 255, .19);
+  background: linear-gradient(180deg, #09111f, #070c16 72%);
+  box-shadow: 0 1.1rem 2.8rem rgba(0,0,0,.3), inset 0 1px rgba(255,255,255,.05);
+}
+html.oanix-folder-card-lab .oanix-folder-card--custom:nth-child(4n + 2) .oanix-folder-card__open {
+  min-height: 11.8rem;
+  grid-template-rows: 7.25rem auto auto;
+}
+html.oanix-folder-card-lab .oanix-folder-card--custom:nth-child(4n + 2) .oanix-folder-card__visual {
+  height: 7.25rem;
+  border-radius: 1.22rem 1.22rem .9rem .9rem;
+  background: radial-gradient(circle at 20% 20%, rgba(0,200,255,.35), transparent 26%), linear-gradient(145deg,#111b36,#080e1c);
+}
+html.oanix-folder-card-lab .oanix-folder-card--custom:nth-child(4n + 2) strong { font-size: .88rem; }
+
+/* B · Biblioteca: información protagonista, portada más sobria */
+html.oanix-folder-card-lab .oanix-folder-card--custom:nth-child(4n + 3) {
+  min-height: 10.2rem;
+  border: 1px solid rgba(148,163,184,.17);
+  background: linear-gradient(145deg, rgba(18,27,45,.98), rgba(7,12,22,.98));
+  box-shadow: 0 .8rem 2rem rgba(0,0,0,.24);
+}
+html.oanix-folder-card-lab .oanix-folder-card--custom:nth-child(4n + 3) .oanix-folder-card__open {
+  min-height: 10.2rem;
+  grid-template-rows: 5.35rem auto auto;
+}
+html.oanix-folder-card-lab .oanix-folder-card--custom:nth-child(4n + 3) .oanix-folder-card__visual {
+  width: calc(100% - 1rem);
+  height: 5.35rem;
+  margin: .5rem .5rem 0;
+  border-radius: .92rem;
+}
+html.oanix-folder-card-lab .oanix-folder-card--custom:nth-child(4n + 3) strong {
+  margin-top: .62rem;
+  font-size: .86rem;
+  letter-spacing: -.02em;
+}
+
+/* C · Glass: cristal oscuro, profundidad y acento frío */
+html.oanix-folder-card-lab .oanix-folder-card--custom:nth-child(4n + 4) {
+  border: 1px solid rgba(126,226,255,.2);
+  background: linear-gradient(145deg, rgba(17,28,49,.76), rgba(7,13,25,.84));
+  box-shadow: 0 1rem 2.5rem rgba(0,0,0,.28), inset 0 1px rgba(255,255,255,.08), 0 0 2rem rgba(0,174,255,.05);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+html.oanix-folder-card-lab .oanix-folder-card--custom:nth-child(4n + 4) .oanix-folder-card__open {
+  min-height: 11.8rem;
+  grid-template-rows: 6.5rem auto auto;
+}
+html.oanix-folder-card-lab .oanix-folder-card--custom:nth-child(4n + 4) .oanix-folder-card__visual {
+  width: calc(100% - 1rem);
+  height: 6.5rem;
+  margin: .5rem .5rem 0;
+  border-radius: 1rem;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.07), 0 .7rem 1.5rem rgba(0,0,0,.18);
+}
+html.oanix-folder-card-lab .oanix-folder-card--custom:nth-child(4n + 4) strong { color: #eefbff; font-size: .87rem; }
+
+/* D · OANIX futurista: recorte visual y línea de energía */
+html.oanix-folder-card-lab .oanix-folder-card--custom:nth-child(4n + 5) {
+  border: 1px solid rgba(81,154,255,.24);
+  background: linear-gradient(160deg,#0b1325 0%,#070b14 75%);
+  box-shadow: 0 .9rem 2.4rem rgba(0,0,0,.3), inset 0 1px rgba(255,255,255,.05);
+}
+html.oanix-folder-card-lab .oanix-folder-card--custom:nth-child(4n + 5)::after {
+  content: '';
+  position: absolute;
+  left: .72rem;
+  right: .72rem;
+  bottom: .55rem;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(39,206,255,.9), rgba(112,92,255,.65), transparent);
+  opacity: .75;
+}
+html.oanix-folder-card-lab .oanix-folder-card--custom:nth-child(4n + 5) .oanix-folder-card__open {
+  min-height: 11.8rem;
+  grid-template-rows: 6.7rem auto auto;
+}
+html.oanix-folder-card-lab .oanix-folder-card--custom:nth-child(4n + 5) .oanix-folder-card__visual {
+  height: 6.7rem;
+  border-radius: 1.16rem 1.16rem .35rem .35rem;
+  clip-path: polygon(0 0,100% 0,100% 87%,92% 100%,0 100%);
+}
+html.oanix-folder-card-lab .oanix-folder-card--custom:nth-child(4n + 5) strong {
+  text-transform: none;
+  font-size: .87rem;
+}
+
+html.oanix-folder-card-lab .oanix-folder-card--custom:hover,
+html.oanix-folder-card-lab .oanix-folder-card--custom:focus-within {
+  transform: translateY(-4px) scale(1.012);
+}
+
+@media (min-width: 880px) {
+  html.oanix-folder-card-lab .oanix-folder-grid__cards { grid-template-columns: repeat(4, minmax(0,1fr)); }
+}
