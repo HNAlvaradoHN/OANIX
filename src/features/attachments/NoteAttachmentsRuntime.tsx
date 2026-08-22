@@ -214,7 +214,8 @@ export function NoteAttachmentsRuntime() {
     setAttachments([])
     setNewAttachmentIds(new Set())
     setError('')
-    if (!recovering) setStatus('')
+    clearStatusTimer()
+    setStatus('')
     if (highlightTimerRef.current !== null) {
       window.clearTimeout(highlightTimerRef.current)
       highlightTimerRef.current = null
@@ -240,7 +241,7 @@ export function NoteAttachmentsRuntime() {
       })
 
     return () => { active = false }
-  }, [targets.noteId, recovering])
+  }, [targets.noteId])
 
   useEffect(() => {
     if (newAttachmentIds.size === 0 || !targets.editorRoot) return
