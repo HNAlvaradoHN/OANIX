@@ -1,0 +1,20 @@
+.oanix-folder-card--custom[data-oanix-kinetic='true'] {
+  animation: none !important;
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+  will-change: transform, opacity;
+  transition:
+    box-shadow .2s ease,
+    border-color .2s ease;
+}
+
+.oanix-folder-card--custom[data-oanix-kinetic='true'] .oanix-folder-card__visual {
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .oanix-folder-card--custom[data-oanix-kinetic='true'] {
+    transform: none !important;
+    opacity: 1 !important;
+  }
+}
