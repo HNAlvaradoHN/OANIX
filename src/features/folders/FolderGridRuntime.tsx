@@ -8,9 +8,10 @@ import {
   removeFolderCover,
   saveFolderCover,
 } from './folderCoverService'
-import { loadFolders } from './folderService'
+import { loadFolders, reorderFolder } from './folderService'
 import type { FolderRecord } from './folderTypes'
 import './folderGrid.css'
+import './folderInteractive.css'
 
 interface FolderGridTargets {
   sidebar: HTMLElement | null
@@ -34,7 +35,7 @@ const EMPTY_DATA: FolderGridData = {
   covers: new Map(),
 }
 
-const FOLDER_LONG_PRESS_MS = 520
+const FOLDER_LONG_PRESS_MS = 460
 
 function currentTargets(): FolderGridTargets {
   const sidebar = document.querySelector<HTMLElement>('.notes-sidebar')
@@ -65,6 +66,19 @@ function visibleFolderTabButtons(tabsShell: HTMLElement | null): HTMLButtonEleme
   return Array.from(tabsShell.querySelectorAll<HTMLButtonElement>('.notes-tab:not(.notes-tab--add)'))
 }
 
+function moveFolderBeforeTarget(folders: FolderRecord[], draggedId: string, targetId: string): FolderRecord[] {
+  if (draggedId === targetId) return folders
+  const fromIndex = folders.findIndex((folder) => folder.id === draggedId)
+  const targetIndex = folders.findIndex((folder) => folder.id === targetId)
+  if (fromIndex < 0 || targetIndex < 0) return folders
+
+  const next = [...folders]
+  const [dragged] = next.splice(fromIndex, 1)
+  const insertionIndex = next.findIndex((folder) => folder.id === targetId)
+  next.splice(insertionIndex < 0 ? next.length : insertionIndex, 0, dragged)
+  return next
+}
+
 export function FolderGridRuntime() {
   const [targets, setTargets] = useState<FolderGridTargets>(() => currentTargets())
   const [gridOpen, setGridOpen] = useState(true)
@@ -74,12 +88,16 @@ export function FolderGridRuntime() {
   const [customFolder, setCustomFolder] = useState<FolderRecord | null>(null)
   const [customBusy, setCustomBusy] = useState(false)
   const [customError, setCustomError] = useState('')
+  const [reorderMode, setReorderMode] = useState(false)
+  const [draggingFolderId, setDraggingFolderId] = useState<string | null>(null)
+  const [orderingBusy, setOrderingBusy] = useState(false)
   const gridOpenRef = useRef(gridOpen)
   const refreshTimerRef = useRef<number | null>(null)
   const refreshRequestRef = useRef(0)
   const longPressTimerRef = useRef<number | null>(null)
   const suppressFolderOpenRef = useRef<string | null>(null)
   const coverInputRef = useRef<HTMLInputElement | null>(null)
+  const dragStartOrderRef = useRef<string[]>([])
 
   useEffect(() => {
     gridOpenRef.current = gridOpen
@@ -184,7 +202,7 @@ export function FolderGridRuntime() {
 
   useEffect(() => {
     function scheduleRefresh() {
-      if (!gridOpenRef.current) return
+      if (!gridOpenRef.current || reorderMode) return
       if (refreshTimerRef.current !== null) window.clearTimeout(refreshTimerRef.current)
       refreshTimerRef.current = window.setTimeout(() => {
         refreshTimerRef.current = null
@@ -197,7 +215,7 @@ export function FolderGridRuntime() {
       window.removeEventListener('oanix:local-data-changed', scheduleRefresh)
       if (refreshTimerRef.current !== null) window.clearTimeout(refreshTimerRef.current)
     }
-  }, [])
+  }, [reorderMode])
 
   useEffect(() => {
     if (gridOpen) void refreshData()
@@ -219,6 +237,7 @@ export function FolderGridRuntime() {
   )
 
   function openAllNotes() {
+    if (reorderMode) return
     const button = visibleFolderTabButtons(targets.tabsShell)[0]
     if (!button) return
     setGridOpen(false)
@@ -226,7 +245,7 @@ export function FolderGridRuntime() {
   }
 
   function openFolder(folder: FolderRecord) {
-    if (suppressFolderOpenRef.current === folder.id) {
+    if (reorderMode || suppressFolderOpenRef.current === folder.id) {
       suppressFolderOpenRef.current = null
       return
     }
@@ -253,16 +272,120 @@ export function FolderGridRuntime() {
     longPressTimerRef.current = null
   }
 
-  function beginFolderLongPress(folder: FolderRecord, event: ReactPointerEvent<HTMLButtonElement>) {
-    if (event.button !== 0 || customBusy) return
+  function startFolderDrag(folder: FolderRecord, event: ReactPointerEvent<HTMLButtonElement>) {
+    suppressFolderOpenRef.current = folder.id
+    dragStartOrderRef.current = data.folders.map((item) => item.id)
+    setDraggingFolderId(folder.id)
+    try {
+      event.currentTarget.setPointerCapture(event.pointerId)
+    } catch {
+      // Pointer capture is best-effort; desktop mouse still works without it.
+    }
+  }
+
+  function beginFolderPointerDown(folder: FolderRecord, event: ReactPointerEvent<HTMLButtonElement>) {
+    if (event.button !== 0 || customBusy || orderingBusy) return
     clearLongPress()
+
+    if (reorderMode) {
+      event.preventDefault()
+      startFolderDrag(folder, event)
+      return
+    }
+
+    const button = event.currentTarget
+    const pointerId = event.pointerId
     longPressTimerRef.current = window.setTimeout(() => {
       longPressTimerRef.current = null
       suppressFolderOpenRef.current = folder.id
-      setCustomError('')
-      setCustomFolder(folder)
-      if ('vibrate' in navigator) navigator.vibrate?.(22)
+      dragStartOrderRef.current = data.folders.map((item) => item.id)
+      setReorderMode(true)
+      setDraggingFolderId(folder.id)
+      try {
+        button.setPointerCapture(pointerId)
+      } catch {
+        // See startFolderDrag.
+      }
+      if ('vibrate' in navigator) navigator.vibrate?.(18)
     }, FOLDER_LONG_PRESS_MS)
+  }
+
+  function handleFolderPointerMove(event: ReactPointerEvent<HTMLButtonElement>) {
+    if (!draggingFolderId) return
+    event.preventDefault()
+    const target = document.elementFromPoint(event.clientX, event.clientY)
+      ?.closest<HTMLElement>('[data-oanix-folder-id]')
+    const targetId = target?.dataset.oanixFolderId
+    if (!targetId || targetId === draggingFolderId) return
+
+    setData((current) => ({
+      ...current,
+      folders: moveFolderBeforeTarget(current.folders, draggingFolderId, targetId),
+    }))
+  }
+
+  async function finishFolderDrag(event: ReactPointerEvent<HTMLButtonElement>) {
+    clearLongPress()
+    const folderId = draggingFolderId
+    if (!folderId) return
+    suppressFolderOpenRef.current = folderId
+    setDraggingFolderId(null)
+
+    try {
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId)
+      }
+    } catch {
+      // No-op when capture was not available.
+    }
+
+    const startIndex = dragStartOrderRef.current.indexOf(folderId)
+    const finalIndex = data.folders.findIndex((folder) => folder.id === folderId)
+    if (startIndex < 0 || finalIndex < 0 || startIndex === finalIndex) return
+
+    setOrderingBusy(true)
+    try {
+      const direction = finalIndex < startIndex ? 'up' : 'down'
+      let remaining = Math.abs(finalIndex - startIndex)
+      let nextFolders = await loadFolders()
+      while (remaining > 0) {
+        nextFolders = await reorderFolder(folderId, direction)
+        remaining -= 1
+      }
+      setData((current) => ({ ...current, folders: nextFolders }))
+    } catch {
+      setError('No se pudo guardar el nuevo orden de las carpetas.')
+      await refreshData()
+    } finally {
+      setOrderingBusy(false)
+    }
+  }
+
+  function cancelFolderGesture() {
+    clearLongPress()
+    if (!draggingFolderId) return
+    setDraggingFolderId(null)
+    const startOrder = dragStartOrderRef.current
+    setData((current) => {
+      const rank = new Map(startOrder.map((id, index) => [id, index]))
+      return {
+        ...current,
+        folders: [...current.folders].sort((left, right) => (rank.get(left.id) ?? 9999) - (rank.get(right.id) ?? 9999)),
+      }
+    })
+  }
+
+  function finishReorderMode() {
+    clearLongPress()
+    setDraggingFolderId(null)
+    setReorderMode(false)
+    suppressFolderOpenRef.current = null
+  }
+
+  function openCustomizer(folder: FolderRecord) {
+    if (reorderMode || customBusy) return
+    setCustomError('')
+    setCustomFolder(folder)
   }
 
   async function handleCoverFile(file: File | null) {
@@ -312,50 +435,72 @@ export function FolderGridRuntime() {
   return (
     <>
       {dashboardVisible && targets.sidebar && createPortal(
-        <section className="oanix-folder-grid" aria-label="Inicio de carpetas">
+        <section className={`oanix-folder-grid${reorderMode ? ' oanix-folder-grid--reordering' : ''}`} aria-label="Inicio de carpetas">
           <div className="oanix-folder-grid__header">
             <div>
-              <span>ORGANIZA TU ESPACIO</span>
+              <span>{reorderMode ? 'ORDENA A TU GUSTO' : 'ORGANIZA TU ESPACIO'}</span>
               <strong>Carpetas</strong>
             </div>
-            <small>{data.folders.length} carpeta{data.folders.length === 1 ? '' : 's'}</small>
+            {reorderMode ? (
+              <button className="oanix-folder-grid__done" type="button" onClick={finishReorderMode} disabled={orderingBusy}>
+                {orderingBusy ? 'Guardando…' : 'Listo'}
+              </button>
+            ) : (
+              <small>{data.folders.length} carpeta{data.folders.length === 1 ? '' : 's'}</small>
+            )}
           </div>
 
           {loading && data.folders.length === 0 ? (
             <div className="oanix-folder-grid__empty">Cargando carpetas…</div>
           ) : (
             <div className="oanix-folder-grid__cards">
-              <button className="oanix-folder-card oanix-folder-card--all" type="button" onClick={openAllNotes}>
+              <button className="oanix-folder-card oanix-folder-card--all" type="button" onClick={openAllNotes} disabled={reorderMode}>
                 <span className="oanix-folder-card__visual oanix-folder-card__visual--all" aria-hidden="true">▦</span>
                 <strong>Todas las notas</strong>
                 <small>{data.allCount} nota{data.allCount === 1 ? '' : 's'}</small>
               </button>
 
               {folderCards.map((folder, index) => (
-                <button
-                  className={`oanix-folder-card${folder.cover ? ' oanix-folder-card--covered' : ''}`}
-                  type="button"
+                <article
+                  className={`oanix-folder-card oanix-folder-card--custom${folder.cover ? ' oanix-folder-card--covered' : ''}${draggingFolderId === folder.id ? ' oanix-folder-card--dragging' : ''}`}
                   key={folder.id}
-                  onClick={() => openFolder(folder)}
-                  onPointerDown={(event) => beginFolderLongPress(folder, event)}
-                  onPointerUp={clearLongPress}
-                  onPointerCancel={clearLongPress}
-                  onPointerLeave={clearLongPress}
-                  onContextMenu={(event) => event.preventDefault()}
-                  title={`${folder.name} · Mantén presionado para personalizar`}
+                  data-oanix-folder-id={folder.id}
                   style={{ '--oanix-folder-index': index } as React.CSSProperties}
                 >
-                  <span className="oanix-folder-card__visual" aria-hidden="true">
-                    {folder.cover
-                      ? <img src={folder.cover} alt="" draggable={false} />
-                      : <span className="oanix-folder-card__folder-mark">⌑</span>}
-                  </span>
-                  <strong>{folder.name}</strong>
-                  <small>{folder.noteCount} nota{folder.noteCount === 1 ? '' : 's'}</small>
-                </button>
+                  <button
+                    className="oanix-folder-card__open"
+                    type="button"
+                    onClick={() => openFolder(folder)}
+                    onPointerDown={(event) => beginFolderPointerDown(folder, event)}
+                    onPointerMove={handleFolderPointerMove}
+                    onPointerUp={(event) => void finishFolderDrag(event)}
+                    onPointerCancel={cancelFolderGesture}
+                    onContextMenu={(event) => event.preventDefault()}
+                    aria-label={reorderMode ? `Mover carpeta ${folder.name}` : `Abrir carpeta ${folder.name}`}
+                    title={reorderMode ? 'Arrastra para cambiar de lugar' : `${folder.name} · Mantén presionado para ordenar`}
+                  >
+                    <span className="oanix-folder-card__visual" aria-hidden="true">
+                      {folder.cover
+                        ? <img src={folder.cover} alt="" draggable={false} />
+                        : <span className="oanix-folder-card__folder-mark">⌑</span>}
+                    </span>
+                    <strong>{folder.name}</strong>
+                    <small>{folder.noteCount} nota{folder.noteCount === 1 ? '' : 's'}</small>
+                  </button>
+                  <button
+                    className="oanix-folder-card__menu"
+                    type="button"
+                    onClick={() => openCustomizer(folder)}
+                    disabled={reorderMode || customBusy}
+                    aria-label={`Personalizar ${folder.name}`}
+                    title="Cambiar carpeta"
+                  >
+                    ⋮
+                  </button>
+                </article>
               ))}
 
-              <button className="oanix-folder-card oanix-folder-card--add" type="button" onClick={openFolderManager}>
+              <button className="oanix-folder-card oanix-folder-card--add" type="button" onClick={openFolderManager} disabled={reorderMode}>
                 <span className="oanix-folder-card__visual oanix-folder-card__visual--add" aria-hidden="true">＋</span>
                 <strong>Nueva carpeta</strong>
                 <small>Agregar</small>
@@ -364,7 +509,9 @@ export function FolderGridRuntime() {
           )}
 
           {data.folders.length > 0 && !loading && (
-            <p className="oanix-folder-grid__gesture-hint">Mantén presionada una carpeta para ponerle una imagen.</p>
+            <p className="oanix-folder-grid__gesture-hint">
+              {reorderMode ? 'Arrastra las carpetas y toca “Listo” cuando termines.' : 'Mantén presionada una carpeta para ordenar · ⋮ para personalizar.'}
+            </p>
           )}
           {data.folders.length === 0 && !loading && !error && (
             <p className="oanix-folder-grid__hint">Crea tu primera carpeta o entra a “Todas las notas”.</p>
@@ -401,17 +548,27 @@ export function FolderGridRuntime() {
             <div className="oanix-folder-customizer__body">
               <span>PERSONALIZAR CARPETA</span>
               <strong id="oanix-folder-customizer-title">{customFolder.name}</strong>
-              <p>Usaremos una miniatura pequeña y cifrada. Tus notas no se modifican.</p>
+              <p>La portada es una miniatura pequeña y cifrada. También puedes cambiar el nombre o eliminar la carpeta desde Administrar.</p>
               {customError && <div className="oanix-folder-customizer__error" role="alert">{customError}</div>}
               <div className="oanix-folder-customizer__actions">
                 <button type="button" onClick={() => coverInputRef.current?.click()} disabled={customBusy}>
-                  {customBusy ? 'Guardando…' : 'Elegir imagen'}
+                  {customBusy ? 'Guardando…' : selectedCover ? 'Cambiar imagen' : 'Poner imagen'}
                 </button>
                 {selectedCover && (
                   <button className="oanix-folder-customizer__remove" type="button" onClick={() => void handleRemoveCover()} disabled={customBusy}>
                     Quitar imagen
                   </button>
                 )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCustomFolder(null)
+                    openFolderManager()
+                  }}
+                  disabled={customBusy}
+                >
+                  Administrar nombre / eliminar
+                </button>
                 <button type="button" onClick={() => setCustomFolder(null)} disabled={customBusy}>Cancelar</button>
               </div>
               <input

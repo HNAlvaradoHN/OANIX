@@ -5,6 +5,7 @@ import test from 'node:test'
 const runtime = readFileSync('src/features/folders/FolderGridRuntime.tsx', 'utf8')
 const coverService = readFileSync('src/features/folders/folderCoverService.ts', 'utf8')
 const css = readFileSync('src/features/folders/folderGrid.css', 'utf8')
+const interactiveCss = readFileSync('src/features/folders/folderInteractive.css', 'utf8')
 const app = readFileSync('src/app/App.tsx', 'utf8')
 const androidBack = readFileSync('src/platform/android/AndroidBackRuntime.tsx', 'utf8')
 
@@ -37,18 +38,22 @@ test('el inicio oculta la lista a primera vista y deja una vuelta clara a carpet
   assert.match(css, /notes-tabs-shell\[data-oanix-folder-compact='true'\]/)
 })
 
-test('la cuadrícula usa cuatro tarjetas por fila y movimiento suave reducible', () => {
-  assert.match(css, /grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)/)
-  assert.match(css, /@keyframes oanix-folder-card-in/)
-  assert.match(css, /prefers-reduced-motion: reduce/)
+test('la cuadrícula visible usa tres tarjetas por fila y conserva movimiento reducible', () => {
+  assert.match(interactiveCss, /grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/)
+  assert.match(interactiveCss, /@keyframes oanix-folder-jiggle/)
+  assert.match(interactiveCss, /prefers-reduced-motion: reduce/)
 })
 
-test('mantener presionada una carpeta abre personalización sin cambiar FolderRecord', () => {
-  assert.match(runtime, /FOLDER_LONG_PRESS_MS = 520/)
-  assert.match(runtime, /beginFolderLongPress/)
-  assert.match(runtime, /Mantén presionada una carpeta para ponerle una imagen/)
-  assert.match(runtime, /Elegir imagen/)
+test('mantener presionada una carpeta activa orden manual y el menú conserva personalización', () => {
+  assert.match(runtime, /FOLDER_LONG_PRESS_MS = 460/)
+  assert.match(runtime, /beginFolderPointerDown/)
+  assert.match(runtime, /setReorderMode\(true\)/)
+  assert.match(runtime, /reorderFolder\(folderId, direction\)/)
+  assert.match(runtime, /Mantén presionada una carpeta para ordenar/)
+  assert.match(runtime, /className="oanix-folder-card__menu"/)
+  assert.match(runtime, /Cambiar imagen/)
   assert.match(runtime, /Quitar imagen/)
+  assert.match(runtime, /Administrar nombre \/ eliminar/)
   assert.match(coverService, /FOLDER_COVER_RECORD = 'folder-cover'/)
   assert.match(coverService, /writeEncryptedRecord\(FOLDER_COVER_RECORD, folderId, record\)/)
   assert.match(coverService, /COVER_SIZE = 256/)

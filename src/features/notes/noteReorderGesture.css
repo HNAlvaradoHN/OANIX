@@ -1,0 +1,88 @@
+button[aria-label="Ordenar notas manualmente"],
+button[aria-label="Terminar de ordenar notas"] {
+  display: none !important;
+}
+
+body[data-oanix-note-reorder-mode] .note-row {
+  position: relative;
+  animation: oanix-note-jiggle .32s ease-in-out infinite alternate;
+  transform-origin: center;
+}
+
+body[data-oanix-note-reorder-mode] .note-row:nth-child(even) {
+  animation-delay: -.16s;
+}
+
+body[data-oanix-note-reorder-mode] .note-row > [aria-label^="Orden manual de "] {
+  position: absolute;
+  inset: 0 3.15rem 0 0;
+  z-index: 6;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: block !important;
+}
+
+body[data-oanix-note-reorder-mode] .note-row > [aria-label^="Orden manual de "] > button {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 100% !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: transparent !important;
+  opacity: 0;
+  cursor: grab;
+  touch-action: none;
+}
+
+body[data-oanix-note-reorder-mode] .note-row:has(> [aria-label^="Orden manual de "] > button:active) {
+  animation: none;
+  transform: scale(1.012);
+  box-shadow: 0 .75rem 1.6rem rgba(15, 23, 42, .15);
+  z-index: 8;
+}
+
+.oanix-note-reorder-menu-proxy {
+  position: absolute;
+  z-index: 9;
+  top: 50%;
+  right: .55rem;
+  width: 2.2rem;
+  height: 2.2rem;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, currentColor 15%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, Canvas 92%, currentColor 8%);
+  color: inherit;
+  font-size: 1.15rem;
+  line-height: 1;
+  box-shadow: 0 .22rem .6rem rgba(15, 23, 42, .1);
+}
+
+.oanix-note-reorder-done {
+  position: absolute;
+  z-index: 18;
+  top: calc(var(--oanix-folder-grid-top, 4rem) + .45rem);
+  right: .7rem;
+  min-height: 2.2rem;
+  padding: .4rem .78rem;
+  border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
+  border-radius: .75rem;
+  background: color-mix(in srgb, Canvas 90%, currentColor 10%);
+  color: inherit;
+  font-weight: 850;
+  box-shadow: 0 .35rem .9rem rgba(15, 23, 42, .12);
+  backdrop-filter: blur(10px);
+}
+
+@keyframes oanix-note-jiggle {
+  from { transform: rotate(-.28deg) translateX(-.15px); }
+  to { transform: rotate(.28deg) translateX(.15px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body[data-oanix-note-reorder-mode] .note-row { animation: none; }
+}
