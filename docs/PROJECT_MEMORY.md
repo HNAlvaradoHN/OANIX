@@ -4,7 +4,7 @@ Este documento conserva **decisiones duraderas y restricciones de producto/arqui
 
 Antes de trabajar: leer `AGENTS.md` y `docs/CURRENT_STATE.md`, verificar `main` y PR recientes. GitHub es la fuente de verdad del código actual.
 
-**Última actualización:** 2026-08-21
+**Última actualización:** 2026-08-22
 
 ## 1. Principios permanentes
 
@@ -24,6 +24,8 @@ OANIX comenzó como bloc de notas privado y evoluciona para permitir guardar den
 
 Decisión vigente: **no dividir por ahora OANIX en Free/Pro ni bloquear funciones artificialmente**. Primero terminar una OANIX realmente buena y útil. La arquitectura puede permitir monetización futura, pero no debe diseñarse alrededor de candados Premium ni impedir probar el producto.
 
+La apariencia global expone únicamente **Día** y **Noche**. Los ambientes/presets visuales antiguos no forman parte del producto activo; una preferencia antigua debe migrar al modo base claro u oscuro equivalente sin afectar datos de la bóveda.
+
 ## 3. Experiencia de imágenes aprobada
 
 PR #169 desactivó `NotebookCanvasRuntime`, `NotebookFreeRowsRuntime` y `NotebookSimpleImageRuntime`. No reactivarlos sin autorización explícita.
@@ -41,10 +43,13 @@ No cambiar el formato persistido de imágenes ni modificar ampliamente `ImageNot
 
 ## 4. Carpetas
 
-- Inicio visual: 4 carpetas por fila.
-- Imagen personalizada por pulsación larga.
-- Imagen de carpeta cifrada y almacenada separadamente del registro de carpeta.
-- Movimiento ambiental premium, suave y discreto; respuesta 3D/brillo a dedo/puntero; respetar `prefers-reduced-motion`.
+- El inicio de carpetas es una superficie de **workspace completo** compartida por PWA y Android: selector vertical compacto de iconos a la izquierda y panel visual de la carpeta seleccionada ocupando el resto del espacio.
+- El inicio no debe quedar encerrado dentro del ancho de la lista normal de notas ni mostrar el FAB `Nueva nota`; la creación de notas pertenece a la vista interna después de abrir una carpeta/lista.
+- El panel mantiene búsqueda de notas limitada a la carpeta seleccionada y no expone notas de Caja privada.
+- Imagen personalizada de carpeta cifrada y almacenada separadamente del registro de carpeta.
+- Color e icono de carpeta se guardan cifrados en `folder-appearance`; conservar compatibilidad con registros de color anteriores y no borrar una preferencia al modificar la otra.
+- La personalización de carpeta debe conservar un menú de acciones compacto/profesional y desplegar la paleta/iconos solo cuando el usuario los solicita.
+- Reordenamiento manual por pulsación larga reutiliza el orden cifrado existente; no crear otra persistencia.
 - Atrás: nota → lista → inicio de carpetas → salir; conservar historial real correcto en PWA y comportamiento equivalente en APK.
 
 ## 5. Archivos grandes
