@@ -28,6 +28,19 @@ interface FolderGridData {
   covers: Map<string, string>
 }
 
+interface FolderDragGhost {
+  folderId: string
+  name: string
+  noteCount: number
+  cover: string
+  left: number
+  top: number
+  width: number
+  height: number
+  offsetX: number
+  offsetY: number
+}
+
 const EMPTY_DATA: FolderGridData = {
   folders: [],
   allCount: 0,
@@ -66,7 +79,12 @@ function visibleFolderTabButtons(tabsShell: HTMLElement | null): HTMLButtonEleme
   return Array.from(tabsShell.querySelectorAll<HTMLButtonElement>('.notes-tab:not(.notes-tab--add)'))
 }
 
-function moveFolderBeforeTarget(folders: FolderRecord[], draggedId: string, targetId: string): FolderRecord[] {
+function moveFolderAroundTarget(
+  folders: FolderRecord[],
+  draggedId: string,
+  targetId: string,
+  placeAfter: boolean,
+): FolderRecord[] {
   if (draggedId === targetId) return folders
   const fromIndex = folders.findIndex((folder) => folder.id === draggedId)
   const targetIndex = folders.findIndex((folder) => folder.id === targetId)
@@ -74,9 +92,43 @@ function moveFolderBeforeTarget(folders: FolderRecord[], draggedId: string, targ
 
   const next = [...folders]
   const [dragged] = next.splice(fromIndex, 1)
-  const insertionIndex = next.findIndex((folder) => folder.id === targetId)
-  next.splice(insertionIndex < 0 ? next.length : insertionIndex, 0, dragged)
+  const insertionTarget = next.findIndex((folder) => folder.id === targetId)
+  if (insertionTarget < 0) return folders
+  next.splice(insertionTarget + (placeAfter ? 1 : 0), 0, dragged)
   return next
+}
+
+function captureFolderRects(): Map<string, DOMRect> {
+  const rects = new Map<string, DOMRect>()
+  document.querySelectorAll<HTMLElement>('[data-oanix-folder-id]').forEach((element) => {
+    const folderId = element.dataset.oanixFolderId
+    if (folderId) rects.set(folderId, element.getBoundingClientRect())
+  })
+  return rects
+}
+
+function animateFolderReflow(before: Map<string, DOMRect>, draggingFolderId: string) {
+  window.requestAnimationFrame(() => {
+    window.requestAnimationFrame(() => {
+      document.querySelectorAll<HTMLElement>('[data-oanix-folder-id]').forEach((element) => {
+        const folderId = element.dataset.oanixFolderId
+        if (!folderId || folderId === draggingFolderId) return
+        const previous = before.get(folderId)
+        if (!previous) return
+        const next = element.getBoundingClientRect()
+        const deltaX = previous.left - next.left
+        const deltaY = previous.top - next.top
+        if (Math.abs(deltaX) < 1 && Math.abs(deltaY) < 1) return
+        element.animate(
+          [
+            { transform: `translate(${deltaX}px, ${deltaY}px)` },
+            { transform: 'translate(0, 0)' },
+          ],
+          { duration: 165, easing: 'cubic-bezier(.2,.75,.25,1)' },
+        )
+      })
+    })
+  })
 }
 
 export function FolderGridRuntime() {
@@ -90,6 +142,7 @@ export function FolderGridRuntime() {
   const [customError, setCustomError] = useState('')
   const [reorderMode, setReorderMode] = useState(false)
   const [draggingFolderId, setDraggingFolderId] = useState<string | null>(null)
+  const [dragGhost, setDragGhost] = useState<FolderDragGhost | null>(null)
   const [orderingBusy, setOrderingBusy] = useState(false)
   const gridOpenRef = useRef(gridOpen)
   const refreshTimerRef = useRef<number | null>(null)
@@ -272,15 +325,39 @@ export function FolderGridRuntime() {
     longPressTimerRef.current = null
   }
 
-  function startFolderDrag(folder: FolderRecord, event: ReactPointerEvent<HTMLButtonElement>) {
+  function beginDragAt(
+    folder: FolderRecord,
+    button: HTMLButtonElement,
+    pointerId: number,
+    clientX: number,
+    clientY: number,
+  ) {
+    const card = button.closest<HTMLElement>('[data-oanix-folder-id]')
+    const rect = card?.getBoundingClientRect() ?? button.getBoundingClientRect()
     suppressFolderOpenRef.current = folder.id
     dragStartOrderRef.current = data.folders.map((item) => item.id)
     setDraggingFolderId(folder.id)
+    setDragGhost({
+      folderId: folder.id,
+      name: folder.name,
+      noteCount: data.counts.get(folder.id) ?? 0,
+      cover: data.covers.get(folder.id) ?? '',
+      left: rect.left,
+      top: rect.top,
+      width: rect.width,
+      height: rect.height,
+      offsetX: Math.max(0, Math.min(rect.width, clientX - rect.left)),
+      offsetY: Math.max(0, Math.min(rect.height, clientY - rect.top)),
+    })
     try {
-      event.currentTarget.setPointerCapture(event.pointerId)
+      button.setPointerCapture(pointerId)
     } catch {
       // Pointer capture is best-effort; desktop mouse still works without it.
     }
+  }
+
+  function startFolderDrag(folder: FolderRecord, event: ReactPointerEvent<HTMLButtonElement>) {
+    beginDragAt(folder, event.currentTarget, event.pointerId, event.clientX, event.clientY)
   }
 
   function beginFolderPointerDown(folder: FolderRecord, event: ReactPointerEvent<HTMLButtonElement>) {
@@ -295,17 +372,12 @@ export function FolderGridRuntime() {
 
     const button = event.currentTarget
     const pointerId = event.pointerId
+    const clientX = event.clientX
+    const clientY = event.clientY
     longPressTimerRef.current = window.setTimeout(() => {
       longPressTimerRef.current = null
-      suppressFolderOpenRef.current = folder.id
-      dragStartOrderRef.current = data.folders.map((item) => item.id)
       setReorderMode(true)
-      setDraggingFolderId(folder.id)
-      try {
-        button.setPointerCapture(pointerId)
-      } catch {
-        // See startFolderDrag.
-      }
+      beginDragAt(folder, button, pointerId, clientX, clientY)
       if ('vibrate' in navigator) navigator.vibrate?.(18)
     }, FOLDER_LONG_PRESS_MS)
   }
@@ -313,15 +385,32 @@ export function FolderGridRuntime() {
   function handleFolderPointerMove(event: ReactPointerEvent<HTMLButtonElement>) {
     if (!draggingFolderId) return
     event.preventDefault()
+    setDragGhost((current) => current
+      ? {
+          ...current,
+          left: event.clientX - current.offsetX,
+          top: event.clientY - current.offsetY,
+        }
+      : current)
+
     const target = document.elementFromPoint(event.clientX, event.clientY)
       ?.closest<HTMLElement>('[data-oanix-folder-id]')
     const targetId = target?.dataset.oanixFolderId
-    if (!targetId || targetId === draggingFolderId) return
+    if (!targetId || targetId === draggingFolderId || !target) return
 
-    setData((current) => ({
-      ...current,
-      folders: moveFolderBeforeTarget(current.folders, draggingFolderId, targetId),
-    }))
+    const rect = target.getBoundingClientRect()
+    const verticalDistance = event.clientY - (rect.top + rect.height / 2)
+    const placeAfter = Math.abs(verticalDistance) > rect.height * .22
+      ? verticalDistance > 0
+      : event.clientX > rect.left + rect.width / 2
+    const beforeRects = captureFolderRects()
+
+    setData((current) => {
+      const nextFolders = moveFolderAroundTarget(current.folders, draggingFolderId, targetId, placeAfter)
+      if (nextFolders.every((folder, index) => folder.id === current.folders[index]?.id)) return current
+      animateFolderReflow(beforeRects, draggingFolderId)
+      return { ...current, folders: nextFolders }
+    })
   }
 
   async function finishFolderDrag(event: ReactPointerEvent<HTMLButtonElement>) {
@@ -330,6 +419,7 @@ export function FolderGridRuntime() {
     if (!folderId) return
     suppressFolderOpenRef.current = folderId
     setDraggingFolderId(null)
+    setDragGhost(null)
 
     try {
       if (event.currentTarget.hasPointerCapture(event.pointerId)) {
@@ -365,6 +455,7 @@ export function FolderGridRuntime() {
     clearLongPress()
     if (!draggingFolderId) return
     setDraggingFolderId(null)
+    setDragGhost(null)
     const startOrder = dragStartOrderRef.current
     setData((current) => {
       const rank = new Map(startOrder.map((id, index) => [id, index]))
@@ -378,6 +469,7 @@ export function FolderGridRuntime() {
   function finishReorderMode() {
     clearLongPress()
     setDraggingFolderId(null)
+    setDragGhost(null)
     setReorderMode(false)
     suppressFolderOpenRef.current = null
   }
@@ -435,7 +527,7 @@ export function FolderGridRuntime() {
   return (
     <>
       {dashboardVisible && targets.sidebar && createPortal(
-        <section className={`oanix-folder-grid${reorderMode ? ' oanix-folder-grid--reordering' : ''}`} aria-label="Inicio de carpetas">
+        <section className={`oanix-folder-grid${reorderMode ? ' oanix-folder-grid--reordering' : ''}${draggingFolderId ? ' oanix-folder-grid--drag-active' : ''}`} aria-label="Inicio de carpetas">
           <div className="oanix-folder-grid__header">
             <div>
               <span>{reorderMode ? 'ORDENA A TU GUSTO' : 'ORGANIZA TU ESPACIO'}</span>
@@ -510,7 +602,7 @@ export function FolderGridRuntime() {
 
           {data.folders.length > 0 && !loading && (
             <p className="oanix-folder-grid__gesture-hint">
-              {reorderMode ? 'Arrastra las carpetas y toca “Listo” cuando termines.' : 'Mantén presionada una carpeta para ordenar · ⋮ para personalizar.'}
+              {reorderMode ? 'Arrastra la carpeta flotante hasta el hueco deseado y toca “Listo” cuando termines.' : 'Mantén presionada una carpeta para ordenar · ⋮ para personalizar.'}
             </p>
           )}
           {data.folders.length === 0 && !loading && !error && (
@@ -519,6 +611,29 @@ export function FolderGridRuntime() {
           {error && <p className="oanix-folder-grid__error" role="alert">{error}</p>}
         </section>,
         targets.sidebar,
+      )}
+
+      {dragGhost && createPortal(
+        <div
+          className="oanix-folder-drag-ghost"
+          aria-hidden="true"
+          style={{
+            left: `${dragGhost.left}px`,
+            top: `${dragGhost.top}px`,
+            width: `${dragGhost.width}px`,
+            minHeight: `${dragGhost.height}px`,
+          }}
+        >
+          <span className="oanix-folder-card__visual">
+            {dragGhost.cover
+              ? <img src={dragGhost.cover} alt="" draggable={false} />
+              : <span className="oanix-folder-card__folder-mark">⌑</span>}
+          </span>
+          <strong>{dragGhost.name}</strong>
+          <small>{dragGhost.noteCount} nota{dragGhost.noteCount === 1 ? '' : 's'}</small>
+          <span className="oanix-folder-drag-ghost__dots">⋮</span>
+        </div>,
+        document.body,
       )}
 
       {!gridOpen && !targets.searchOpen && targets.tabsShell && createPortal(
