@@ -10,6 +10,7 @@ import { VersionHistoryCenter } from '../features/versionHistory/VersionHistoryC
 import { NotePrivacyRuntime } from '../features/privacy/NotePrivacyRuntime'
 import { NoteBulkPrivacyRuntime, NOTE_PRIVACY_REFRESH_EVENT } from '../features/privacy/NoteBulkPrivacyRuntime'
 import { PrivateBoxListHint } from '../features/privacy/PrivateBoxListHint'
+import { NoteAttachmentsRuntime } from '../features/attachments/NoteAttachmentsRuntime'
 import { LargeObjectTransferIndicator } from '../features/largeObjects/LargeObjectTransferIndicator'
 import { AndroidAuthRuntime } from '../platform/android/AndroidAuthRuntime'
 import { NativeCameraRuntime } from '../platform/android/NativeCameraRuntime'
@@ -85,6 +86,7 @@ function UnlockedApp({ lockVault }: { lockVault: () => void }) {
       <NativeNoteShareRuntime />
       <AndroidKeystoreDiagnosticRuntime />
       <NotesWorkspace key={workspaceRevision} onLock={lockVault} />
+      <NoteAttachmentsRuntime key={`attachments-${workspaceRevision}`} />
       <FolderGridRuntime />
       <NotePrivacyRuntime key={`privacy-${workspaceRevision}-${privacyRevision}`} />
       <NoteBulkPrivacyRuntime key={`privacy-bulk-${workspaceRevision}`} />
