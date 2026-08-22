@@ -94,6 +94,7 @@ export function NoteListReorderGestureRuntime() {
       const row = openButton?.closest<HTMLElement>('.note-row[data-reorder-note-id]') ?? null
       if (!avatar || !row || !openButton) return
 
+      event.stopImmediatePropagation()
       clearPress()
       pressedRow = row
       pointerId = event.pointerId
