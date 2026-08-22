@@ -270,7 +270,7 @@ export function NoteAttachmentsRuntime() {
         const remoteCount = storedItems.filter(isRemoteLargeAttachment).length
         setStatus(
           files.length === 1
-            ? remoteCount === 1 ? 'Archivo grande cifrado y guardado en Drive ↓' : 'Archivo cifrado agregado ↓'
+            ? remoteCount === 1 ? 'Archivo grande cifrado y guardado en Drive ↓' : 'Archivo agregado ↓'
             : `${files.length} archivos agregados · ${remoteCount} en Drive ↓`,
         )
 
