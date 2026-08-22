@@ -102,3 +102,15 @@ test('temporary decrypted buffers are explicitly cleared after save or load path
   assert.match(source, /checkpointBytes\.fill\(0\)/u)
   assert.match(source, /retainedBytes\?\.fill\(0\)/u)
 })
+
+test('persistent transfer state automatically discards a different stale transfer before starting a new file', async () => {
+  const source = await readFile(
+    new URL('../src/features/largeObjects/persistentLargeObjectTransferStateStore.ts', import.meta.url),
+    'utf8',
+  )
+
+  assert.match(source, /loaded\.checkpoint\.objectId !== objectId/u)
+  assert.match(source, /await clearLargeObjectTransferCache\(\)/u)
+  assert.match(source, /return null/u)
+  assert.doesNotMatch(source, /debe finalizarse o descartarse primero/u)
+})
