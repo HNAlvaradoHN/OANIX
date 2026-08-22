@@ -106,7 +106,7 @@ function scopeWasGranted(rawScope: string | undefined): boolean {
   return rawScope.split(/\s+/u).includes(GOOGLE_DRIVE_APPDATA_SCOPE)
 }
 
-export async function authorizeGoogleDriveOnWeb(): Promise<void> {
+async function requestGoogleDriveAccessToken(prompt: string): Promise<void> {
   clearGoogleDriveAccessTokenLease()
   const clientId = driveWebClientId()
   if (!clientId) {
@@ -129,7 +129,7 @@ export async function authorizeGoogleDriveOnWeb(): Promise<void> {
     const client = oauth2.initTokenClient({
       client_id: clientId,
       scope: GOOGLE_DRIVE_APPDATA_SCOPE,
-      include_granted_scopes: false,
+      include_granted_scopes: true,
       callback: (response) => {
         if (settled) return
         if (response.error) {
@@ -159,6 +159,21 @@ export async function authorizeGoogleDriveOnWeb(): Promise<void> {
       },
     })
 
-    client.requestAccessToken({ prompt: 'select_account' })
+    client.requestAccessToken({ prompt })
   })
+}
+
+export async function authorizeGoogleDriveOnWeb(): Promise<void> {
+  await requestGoogleDriveAccessToken('select_account')
+}
+
+export async function refreshGoogleDriveOnWebSilently(): Promise<boolean> {
+  if (!isGoogleDriveWebAuthorizationConfigured()) return false
+  try {
+    await requestGoogleDriveAccessToken('')
+    return true
+  } catch {
+    clearGoogleDriveAccessTokenLease()
+    return false
+  }
 }
