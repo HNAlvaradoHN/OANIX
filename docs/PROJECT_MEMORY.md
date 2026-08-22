@@ -12,7 +12,7 @@ Antes de trabajar: leer `AGENTS.md` y `docs/CURRENT_STATE.md`, verificar `main` 
 - PWA y Android/Capacitor comparten una sola base de aplicación; no crear lógica paralela por plataforma salvo integración nativa necesaria.
 - Reutilizar módulos/stores existentes antes de crear persistencias paralelas.
 - Conservar datos tiene prioridad ante incertidumbre; no sobrescribir silenciosamente.
-- En conflictos multidispositivo: detectar → conservar ambos lados → mostrar → usuario decide. Si se combinan notas compatibles, va primero el cambio aceptado primero por la sincronización remota y después el otro; #69 validó este flujo.
+- En conflictos multidispositivo: detectar → conservar ambos lados → mostrar → usuario decide. Si se combinan notas compatibles, va primero el cambio aceptado primero por la sincronización remota y después el otro; #69 validó este flujo. Etiqueta histórica de validación: `VALIDATION_DEBT`; verificar el issue antes de asumir que sigue pendiente.
 - Cambios pequeños y aislados. No refactorizar ampliamente para arreglar un problema local.
 - Una función importante usa rama + PR. OANIX CI y OANIX Android deben pasar antes de fusionar.
 - Seguridad, cifrado, bóveda, notas y sync no se modifican por comodidad.
