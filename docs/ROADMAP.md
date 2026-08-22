@@ -16,6 +16,8 @@ PWA offline-first con bóveda local, contraseña maestra, cifrado, notas y edito
 
 Cuenta opcional, autenticación, backend de sincronización, transporte E2EE, multidispositivo, conflictos, historial y recuperación de acceso.
 
+- [x] Resolución de conflictos
+
 La recuperación Email OTP es una frontera de confianza explícita distinta del transporte normal E2EE; ver `SECURITY.md`.
 
 Deudas de validación de campo que siguen siendo reales:
