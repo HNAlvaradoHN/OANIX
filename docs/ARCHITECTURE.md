@@ -1,230 +1,138 @@
-# OANIX — Architecture
+# OANIX — Arquitectura actual
 
-## Objetivo
+**Última actualización:** 2026-08-21
 
-Mantener OANIX modular, clara y fácil de modificar sin convertir el repositorio en una proliferación de carpetas y archivos.
+Este documento describe fronteras arquitectónicas vigentes. El estado operativo y el siguiente trabajo pertenecen a `CURRENT_STATE.md`; las decisiones permanentes, a `PROJECT_MEMORY.md`.
 
 ## Principios
 
-1. Cada módulo tiene una responsabilidad clara.
-2. La interfaz no conoce detalles internos de almacenamiento o cifrado.
-3. El almacenamiento no depende de la interfaz.
-4. El cifrado se concentra en una capa de seguridad dedicada.
-5. Las funciones compartidas viven únicamente en `shared/` cuando realmente son compartidas.
-6. No se crea una carpeta por cada botón, componente pequeño o función trivial.
-7. Los cambios deben afectar el menor número razonable de módulos.
-8. Antes de modificar una función existente se revisa su implementación actual.
-9. Ninguna función debe dejar copias, cachés, blobs o registros persistentes auxiliares sin una necesidad explícita y una política de limpieza definida.
+- Una sola base React + TypeScript + Vite para PWA y Android/Capacitor.
+- La UI no conoce detalles internos de persistencia, cifrado ni proveedores remotos.
+- Reutilizar repositorios/stores existentes antes de crear persistencia paralela.
+- El contenido privado se cifra antes de persistirse o salir del dispositivo, salvo fronteras de confianza explícitamente documentadas en `SECURITY.md`.
+- Cambios pequeños: modificar el menor número razonable de módulos.
+- Todo recurso temporal debe tener ciclo de vida y limpieza definidos.
+- No crear carpetas, capas o abstracciones sin una responsabilidad real.
 
-## Estructura prevista
-
-La estructura se crea gradualmente a medida que los módulos sean necesarios.
-
-```text
-src/
-├── app/
-├── features/
-│   ├── notes/
-│   ├── editor/
-│   ├── attachments/
-│   ├── folders/
-│   ├── tags/
-│   ├── search/
-│   └── backup/
-├── security/
-│   ├── crypto/
-│   ├── keys/
-│   └── vault/
-├── storage/
-│   ├── local/
-│   └── repositories/
-├── shared/
-└── pwa/
-```
-
-La carpeta `sync/` se incorporará en V2 y la integración Android/Capacitor en V3. No se implementan antes de su versión correspondiente.
-
-## Flujo de dependencias
+## Capas principales
 
 ```text
 UI / Editor
     ↓
-Feature service
+Features / Services
     ↓
-Repository
+Repositories / Transfer orchestration
     ↓
-Security / Encryption
+Security / Crypto
     ↓
-Local storage
+Local storage o OanixStorageProvider
 ```
 
-La UI no debe acceder directamente a IndexedDB ni manipular claves criptográficas.
+La UI no accede directamente a IndexedDB ni manipula material criptográfico persistente.
 
-## Dirección de interfaz
-
-OANIX adopta una experiencia de navegación inspirada en la claridad de aplicaciones de mensajería como Telegram, pero mantiene una identidad y arquitectura propias orientadas exclusivamente a notas privadas.
-
-Principios de esta experiencia:
-
-- la lista principal presenta las notas como entradas compactas similares a una lista de conversaciones;
-- abrir una nota debe sentirse tan directo como entrar a una conversación, sin convertir el contenido en un chat ni introducir mensajería entre personas;
-- en móvil se navega de la lista a la nota abierta y se vuelve con una acción clara;
-- en tablet y PC se aprovecha un diseño de dos paneles: lista a la izquierda y nota abierta a la derecha;
-- las carpetas se representarán como pestañas sobre la lista cuando llegue el punto `Carpetas` del roadmap; no se implementan antes;
-- fijados, archivo, etiquetas y búsqueda se añadirán únicamente cuando su alcance correspondiente esté activo;
-- no se copian logotipos, activos gráficos ni funciones sociales de Telegram.
-
-La inspiración es de interacción y organización, no una dependencia técnica ni una copia literal de interfaz.
-
-## Contenido de una nota
-
-OANIX se diseña alrededor de bloques para evitar que una nota dependa de un único documento HTML gigante.
-
-Tipos previstos para V1:
-
-- texto enriquecido;
-- encabezado;
-- lista;
-- checklist;
-- cita;
-- separador;
-- código;
-- imagen;
-- ficha de contacto privada.
-
-La ficha de contacto permitirá guardar dentro de una nota información como nombre, teléfono, correo y observaciones. No convierte OANIX en una red social ni sincroniza contactos del sistema por defecto.
-
-Los archivos adjuntos generales se prepararán arquitectónicamente, pero su alcance exacto se confirmará antes de implementarlos.
-
-## Modelo inicial de nota
-
-Una nota V1 contiene:
-
-- identificador aleatorio;
-- título;
-- fecha de creación;
-- fecha de actualización;
-- contenido `blocks-v1` cifrado.
-
-El editor de texto enriquecido amplía `blocks-v1` sin cambiar el contenedor ni guardar HTML arbitrario. Los bloques de texto almacenan segmentos de texto y únicamente las marcas que OANIX entiende, como negrita, cursiva o un enlace validado. Encabezados, listas, citas y separadores se representan como tipos de bloque explícitos.
-
-El DOM editable del navegador es solo una vista temporal. Antes de persistir una nota, OANIX lo transforma a su modelo estructurado y el repositorio cifra ese modelo completo. Al volver a abrir la nota, la vista se reconstruye desde esos bloques validados.
-
-Esto permite agregar posteriormente bloques de código, imágenes, checklists y fichas de contacto sin convertir notas antiguas en documentos incompatibles ni depender de HTML almacenado.
-
-## Mutaciones y autoguardado
-
-Las mutaciones de una misma nota se serializan en el servicio de notas para evitar que una actualización de título y una actualización de contenido se sobrescriban entre sí.
-
-El editor usa autoguardado con una espera breve después de escribir y fuerza una escritura pendiente antes de cambiar de nota, volver a la lista o bloquear la bóveda. No existe un botón obligatorio de `Guardar`.
-
-## Regla de cambios
-
-Antes de modificar código existente:
-
-1. revisar el estado actual del repositorio;
-2. identificar el módulo responsable;
-3. modificar solo lo necesario;
-4. ejecutar las pruebas relacionadas;
-5. registrar el cambio mediante Git.
-
-No se reescriben archivos completos basándose en memoria o suposiciones cuando ya existe una implementación funcional.
-
-## Higiene de almacenamiento
-
-- Se reutilizan los repositorios y stores existentes antes de crear una nueva capa persistente.
-- Un recurso temporal debe permanecer en memoria siempre que sea razonable y debe liberarse al terminar su operación.
-- Si una función requiere persistencia auxiliar, debe justificarla, documentar su ciclo de vida y eliminar los datos cuando dejan de ser necesarios.
-- Backups, exportaciones y procesos de validación no crean por defecto una segunda copia permanente de la bóveda dentro de OANIX.
-- Antes de cerrar V1 se revisarán posibles registros o blobs huérfanos para evitar crecimiento innecesario del almacenamiento local.
-
-## Regla responsive de OANIX
-
-- Cada cambio de interfaz se diseña como un único comportamiento para móvil, tablet y PC; no se mantienen versiones paralelas del mismo componente.
-- El contenedor y el viewport visible gobiernan el tamaño mediante `minmax`, `clamp`, flex/grid, wrapping y container queries.
-- Los breakpoints se reservan para cambios estructurales reales (por ejemplo, una o dos columnas), no para parchear modelos concretos de dispositivo.
-- Menús, overlays, imágenes, código y controles deben permanecer dentro del espacio visible y considerar teclado virtual, safe areas, zoom y textos largos.
-- Toda modificación visual debe revisarse en un rango continuo de anchos antes de considerarse cerrada.
-
-Los checklists de V1 son bloques estructurados dentro de `blocks-v1`: cada elemento guarda únicamente su texto y estado completado. Se cifran junto con el resto de la nota y no dependen de HTML persistido.
-
-## Fichas de contacto privadas V1
-
-- Una ficha de contacto es un bloque `contact` dentro de `blocks-v1`; se cifra y guarda junto con la nota.
-- V1 no escribe en la agenda del sistema ni sincroniza contactos con servicios externos.
-- Los campos iniciales son nombre, teléfono, correo, organización y notas; todos permanecen opcionales para permitir fichas parciales.
-- La tarjeta usa una sola implementación fluida por contenedor para móvil, tablet y PC.
-
-## Entradas por día dentro de una nota
-
-- Cada cambio de día se representa con un bloque marcador `dailyEntry` dentro de `blocks-v1`; el contenido continúa siendo una lista plana de bloques y no se anidan documentos dentro de documentos.
-- El marcador guarda la fecha local `YYYY-MM-DD` y un título opcional de la entrada.
-- Las notas antiguas se preparan en memoria con un primer marcador basado en su fecha de creación y se persistirán de forma natural en la siguiente edición.
-- Al abrir una nota en un día distinto al último marcador, el editor prepara una nueva entrada para la fecha local actual; el contenido solo se persiste cuando existe una edición real.
-- El marcador de día es estructural y no debe desaparecer por una selección global accidental.
-
-## Carpetas V1
-
-- Las carpetas son registros cifrados independientes de tipo `folder`; sus nombres no se almacenan en texto plano.
-- Cada nota guarda opcionalmente `folderId` dentro de su propio registro cifrado; notas antiguas sin este campo siguen siendo válidas.
-- Eliminar una carpeta nunca elimina notas: primero se desvinculan y vuelven al estado `Sin carpeta`.
-- La lista usa una única fila de pestañas fluida para `Todas` y las carpetas creadas; la misma estructura funciona en móvil, tablet y PC.
-
-## Backend de sincronización V2 — diseño previo
-
-El backend de V2 se diseña primero como un almacén de sobres cifrados. Supabase autentica al usuario y autoriza filas, pero no recibe la contraseña maestra ni claves capaces de descifrar la bóveda.
-
-### Superficie mínima del servidor
-
-La primera migración debe preferir **una sola tabla general de registros sincronizados**, en lugar de crear tablas separadas por notas, carpetas, etiquetas, imágenes o futuras funciones. El tipo semántico del registro permanece dentro del payload cifrado siempre que el protocolo no necesite conocerlo.
-
-Cada fila necesita únicamente metadatos operativos mínimos:
-
-- `user_id`: propietario Supabase, usado exclusivamente para RLS;
-- `record_key`: identificador opaco generado por el cliente, sin título ni nombre legible;
-- `ciphertext`: sobre cifrado versionado producido en el cliente;
-- `version`: contador/versionado necesario para sincronización y conflictos posteriores;
-- `updated_at`: marca temporal del servidor para consultas incrementales;
-- estado de borrado lógico únicamente si el protocolo de sincronización lo requiere para propagar eliminaciones.
-
-No se almacenarán en columnas separadas títulos, nombres de carpeta, etiquetas, texto de notas, nombres de contactos ni descripciones de imágenes.
-
-### RLS y acceso
-
-La tabla expuesta a la aplicación debe tener RLS habilitado desde su creación. Las políticas se limitan al rol `authenticated` y comprueban que `(select auth.uid()) = user_id` tanto al leer como al insertar/modificar. `anon` no recibe acceso a registros sincronizados.
-
-El `user_id` debe estar indexado porque participa en todas las políticas y consultas. Las consultas del cliente también filtrarán explícitamente por `user_id`, aun cuando RLS ya imponga el mismo límite, para permitir mejores planes de ejecución.
-
-La clave `service_role` o cualquier secreto capaz de saltarse RLS nunca se incluye en el navegador, el repositorio público ni la PWA.
-
-### Separación entre autenticación y cifrado
+Áreas relevantes actuales:
 
 ```text
-Cuenta Google / correo
-        ↓
-Supabase Auth
-        ↓
-JWT de usuario
-        ↓
-RLS: solo sus filas
-
-Contraseña maestra
-        ↓
-Clave de bóveda local
-        ↓
-Cifrado E2EE del registro
-        ↓
-Servidor recibe solo ciphertext
+src/
+├── app/                 composición y navegación
+├── features/            notas, editor, cuenta, sync, archivos grandes…
+├── security/            crypto, vault y claves
+├── storage/             persistencia local y repositorios
+├── shared/              utilidades realmente compartidas
+└── pwa/                 integración web/PWA
+android/                  integración nativa Capacitor
 ```
 
-Una sesión Supabase válida autoriza transporte y almacenamiento, pero no desbloquea la bóveda local. Un usuario puede cerrar sesión online sin borrar ni bloquear sus datos locales.
+## Notas y contenido estructurado
 
-### Higiene local durante V2
+Las notas usan un modelo versionado de bloques (`blocks-v1`), no HTML persistido. El DOM editable es una vista temporal que se transforma al modelo reconocido por OANIX antes de guardar.
 
-La sincronización no debe crear un segundo IndexedDB ni stores por función. Cuando haga falta persistir estado técnico de sync, se reutilizará la infraestructura local existente y se mantendrá el mínimo estado necesario; los cursores o metadatos que deban sobrevivir reinicios se guardarán de forma compacta y, si contienen información sensible, cifrada.
+Los registros privados se cifran antes de entrar en IndexedDB. Imágenes y otros binarios privados se almacenan separadamente del JSON de la nota y se referencian mediante identificadores opacos.
 
-No se implementará una caché paralela de registros remotos. El servidor es una réplica cifrada para sincronización, no un tercer formato local de la bóveda.
+Las mutaciones de una misma nota se serializan. El autoguardado fuerza escrituras pendientes antes de transiciones que puedan desmontar el editor.
 
-### Fuera de este primer bloque
+## Persistencia local
 
-Todavía no pertenecen al backend base: protocolo E2EE multi-dispositivo, envoltura de claves por dispositivo, resolución de conflictos, historial, recuperación y estrategia definitiva para binarios grandes. Esos puntos tienen bloques propios en V2 y se diseñan sobre esta base sin debilitar el modelo local existente.
+- La bóveda y registros privados usan la infraestructura local existente; no crear una segunda bóveda/store por función.
+- Cachés y temporales no son una segunda fuente de verdad.
+- Un dato auxiliar persistente debe ser mínimo, justificable y eliminable.
+- Backups, exportaciones y verificaciones no dejan por defecto copias permanentes adicionales.
+
+La caché técnica de transferencias grandes está separada de `oanix-vault` y conserva únicamente el estado necesario para reanudar; no debe convertirse en un almacén alternativo de archivos.
+
+## Sincronización de registros
+
+La sincronización normal usa sobres cifrados y metadatos operativos mínimos. El backend autoriza por usuario, pero no necesita interpretar el contenido privado durante el transporte normal.
+
+El estado técnico de sync se mantiene compacto y reutiliza la infraestructura existente. No crear una caché local paralela de la réplica remota.
+
+Conflictos siguen la regla `detectar → conservar → mostrar → usuario decide`; no existe overwrite silencioso deliberado. Las deudas de validación de campo se conservan en los issues correspondientes.
+
+La recuperación por correo es una frontera de confianza separada y está descrita en `SECURITY.md`.
+
+## Archivos grandes
+
+El motor de archivos grandes está diseñado para procesamiento acotado por fragmentos y no para materializar el archivo completo en RAM.
+
+```text
+Archivo original
+    ↓ planificación por fragmentos
+Fragmento plaintext (~8 MiB)
+    ↓ AES-GCM + IV independiente
+Ciphertext autenticado
+    ↓ SHA-256 / manifiesto / checkpoint
+OanixStorageProvider
+    ↓
+Proveedor concreto (Google Drive primero)
+```
+
+Propiedades:
+- cifrado AES-GCM secuencial por fragmento;
+- IV independiente por fragmento;
+- hashes/manifiestos necesarios para integridad y reconstrucción;
+- checkpoint persistente para reanudación;
+- subida y descarga por rangos;
+- un solo bloque activo cuando sea posible y limpieza de buffers temporales;
+- progreso separado de confirmación final: `100% transferido` no implica `Guardado` hasta verificar.
+
+El objetivo inicial de producto es 5 GB por archivo, pero el motor no se diseña con 5 GB como techo arquitectónico. El protocolo mantiene actualmente un límite de seguridad mayor (~20 GiB).
+
+## OanixStorageProvider
+
+`OanixStorageProvider` es la frontera entre el motor de archivos y el destino físico. El motor de cifrado/reanudación no debe contener lógica específica de Google Drive.
+
+Google Drive es el primer proveedor implementado. Otros proveedores futuros (local, OneDrive, S3 compatible, WebDAV/NAS u otro) deben poder añadirse mediante la misma frontera cuando exista una necesidad real; no implementarlos anticipadamente.
+
+### Google Drive
+
+- Scope `drive.appdata` y destino `appDataFolder`.
+- No solicitar acceso general al Drive del usuario.
+- PWA y Android tienen mecanismos de autorización distintos, pero alimentan el mismo dominio de almacenamiento.
+- Tokens de acceso son temporales y permanecen en memoria.
+- Las URLs de sesión reanudable se validan/restringen antes de enviar credenciales.
+- Antes de transferencias grandes se comprueba destino/cuota.
+- Drive exige alineación de los bloques intermedios reanudables a 256 KiB; el tamaño plaintext se ajusta considerando el tag AES-GCM para que el ciphertext completo quede alineado.
+
+Drive es opcional: ninguna capa central de notas/bóveda debe depender de que esté conectado.
+
+## Android / Capacitor
+
+Android reutiliza la aplicación web y añade únicamente integraciones nativas que lo requieren: autorización nativa, Keystore/biometría, cámara, archivos, compartir y navegación del sistema.
+
+La lógica de negocio compartida no se duplica en Kotlin. Las integraciones nativas entregan datos al mismo flujo seguro de la aplicación siempre que sea posible.
+
+## Responsive
+
+- Un solo comportamiento adaptable para móvil, tablet y PC.
+- `minmax`, `clamp`, flex/grid, wrapping y container queries antes que parches por modelo de dispositivo.
+- Breakpoints solo para cambios estructurales reales.
+- Overlays, menús, imágenes, código y controles deben respetar viewport, safe areas, teclado virtual, zoom y textos largos.
+
+## Regla para cambios arquitectónicos
+
+Antes de crear una nueva capa, store, formato o dependencia:
+1. comprobar el código actual;
+2. demostrar que la responsabilidad no cabe limpiamente en una abstracción existente;
+3. definir ciclo de vida, seguridad y limpieza si persiste datos;
+4. evitar migraciones de formato por conveniencia;
+5. documentar aquí solo la decisión arquitectónica estable, no cada PR que la implementó.
