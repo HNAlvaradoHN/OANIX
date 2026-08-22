@@ -49,7 +49,7 @@ export function FolderAppearanceRuntime() {
 
       const heading = document.createElement('div')
       heading.className = 'oanix-folder-appearance-picker__heading'
-      heading.innerHTML = '<strong>Color de tarjeta</strong><small>Elige un tono o personalízalo.</small>'
+      heading.innerHTML = '<strong>Color de carpeta</strong><small>Elige un tono o personalízalo.</small>'
 
       const row = document.createElement('div')
       row.className = 'oanix-folder-appearance-picker__row'
@@ -89,8 +89,10 @@ export function FolderAppearanceRuntime() {
     const captureMenuTarget = (event: Event) => {
       const target = event.target as Element | null
       const card = target?.closest<HTMLElement>('[data-oanix-folder-id]')
-      const menu = target?.closest('.oanix-folder-card__menu')
-      if (card && menu) lastFolderId = card.dataset.oanixFolderId ?? ''
+      const customizeTrigger = target?.closest(
+        '.oanix-folder-card__menu, .oanix-folder-focus__menu, [data-oanix-folder-customize]',
+      )
+      if (card && customizeTrigger) lastFolderId = card.dataset.oanixFolderId ?? ''
     }
 
     const observer = new MutationObserver(() => {

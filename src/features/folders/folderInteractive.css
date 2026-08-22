@@ -1,19 +1,18 @@
-/* Interaction-only compatibility styles for the folder home clean slate.
-   No permanent visual design belongs here. */
+/* Interaction-only styles for the folder focus home.
+   Visual layout belongs in folderGrid.css; this file keeps drag/customizer behavior. */
 
-.oanix-folder-grid--reordering .oanix-folder-card--custom {
+.oanix-folder-grid--reordering .oanix-folder-rail__item[data-oanix-folder-id] {
   cursor: grab;
 }
 
-.oanix-folder-grid--reordering .oanix-folder-card--dragging {
-  opacity: .28;
-  border-style: dashed;
+.oanix-folder-grid--reordering .oanix-folder-rail__item.is-dragging {
+  opacity: .22;
   cursor: grabbing;
 }
 
-.oanix-folder-grid--reordering .oanix-folder-card--all,
-.oanix-folder-grid--reordering .oanix-folder-card--add {
-  opacity: .45;
+.oanix-folder-grid--reordering .oanix-folder-rail__item--all,
+.oanix-folder-grid--reordering .oanix-folder-rail__item--add {
+  opacity: .42;
   pointer-events: none;
 }
 
@@ -21,25 +20,40 @@
   position: fixed;
   z-index: 5200;
   display: grid;
-  grid-template-columns: 3.25rem minmax(0,1fr);
+  grid-template-columns: 2.8rem minmax(0,1fr);
   grid-template-rows: auto auto;
   align-items: center;
-  column-gap: .75rem;
+  column-gap: .62rem;
+  max-width: min(15rem, 72vw);
   overflow: hidden;
-  padding: .7rem;
-  border: 1px solid var(--oanix-border, rgba(148,163,184,.35));
-  border-radius: .8rem;
-  background: var(--oanix-panel, #0f1725);
-  color: var(--oanix-text, #eef3ff);
-  box-shadow: 0 .8rem 2rem rgba(0,0,0,.3);
-  opacity: .94;
+  padding: .55rem;
+  border: 1px solid rgba(191,204,236,.3);
+  border-radius: .9rem;
+  background: #101827;
+  color: #eef3ff;
+  box-shadow: 0 .8rem 2rem rgba(0,0,0,.38);
+  opacity: .96;
   pointer-events: none;
   user-select: none;
 }
 
-.oanix-folder-drag-ghost .oanix-folder-card__visual {
+.oanix-folder-drag-ghost__visual {
   grid-column: 1;
   grid-row: 1 / 3;
+  width: 2.8rem;
+  height: 2.8rem;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.18);
+  border-radius: 1rem;
+  background: #283858;
+}
+
+.oanix-folder-drag-ghost__visual img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .oanix-folder-drag-ghost strong {
@@ -48,14 +62,14 @@
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  font-size: .9rem;
+  font-size: .82rem;
 }
 
 .oanix-folder-drag-ghost small {
   grid-column: 2;
   grid-row: 2;
-  color: var(--oanix-muted, #8b96aa);
-  font-size: .68rem;
+  color: #8b96aa;
+  font-size: .63rem;
 }
 
 .oanix-folder-customizer-backdrop {
@@ -65,7 +79,7 @@
   display: grid;
   place-items: center;
   padding: 1rem;
-  background: rgba(0,0,0,.62);
+  background: rgba(0,0,0,.68);
 }
 
 .oanix-folder-customizer {
@@ -158,6 +172,4 @@
 .oanix-folder-appearance-picker__custom::-webkit-color-swatch-wrapper { padding: 0; }
 .oanix-folder-appearance-picker__custom::-webkit-color-swatch { border: 0; }
 
-.oanix-folder-appearance-picker__reset {
-  margin-top: .6rem;
-}
+.oanix-folder-appearance-picker__reset { margin-top: .6rem; }
