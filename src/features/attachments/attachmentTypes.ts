@@ -116,18 +116,19 @@ function isRemoteLargeAttachmentStorage(value: unknown): value is RemoteLargeAtt
 export function isAttachmentMetadata(value: unknown): value is AttachmentMetadata {
   if (!value || typeof value !== 'object') return false
   const item = value as Partial<AttachmentMetadata>
+  const byteLength = item.byteLength
   const baseValid = (
     typeof item.attachmentId === 'string' && item.attachmentId.length > 0 &&
     typeof item.name === 'string' && item.name.length > 0 && item.name.length <= 180 &&
     typeof item.mimeType === 'string' && item.mimeType.length > 0 && item.mimeType.length <= 120 &&
-    typeof item.byteLength === 'number' && Number.isSafeInteger(item.byteLength) &&
-    item.byteLength > 0 && item.byteLength <= MAX_ATTACHMENT_BYTES &&
+    typeof byteLength === 'number' && Number.isSafeInteger(byteLength) &&
+    byteLength > 0 && byteLength <= MAX_ATTACHMENT_BYTES &&
     typeof item.createdAt === 'string' && item.createdAt.length > 0 &&
     Number.isFinite(Date.parse(item.createdAt))
   )
-  if (!baseValid) return false
-  if (item.storage === undefined) return item.byteLength <= MAX_LOCAL_ATTACHMENT_BYTES
-  return item.byteLength > MAX_LOCAL_ATTACHMENT_BYTES && isRemoteLargeAttachmentStorage(item.storage)
+  if (!baseValid || typeof byteLength !== 'number') return false
+  if (item.storage === undefined) return byteLength <= MAX_LOCAL_ATTACHMENT_BYTES
+  return byteLength > MAX_LOCAL_ATTACHMENT_BYTES && isRemoteLargeAttachmentStorage(item.storage)
 }
 
 export function isAttachmentIndex(value: unknown, noteId: string): value is AttachmentIndex {
