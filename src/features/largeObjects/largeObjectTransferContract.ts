@@ -56,6 +56,7 @@ export interface LargeObjectDownloadRangeRequest {
   remoteObject: LargeObjectRemoteObject
   ciphertextOffset: number
   ciphertextByteLength: number
+  signal?: AbortSignal
 }
 
 export interface OanixStorageProvider {
