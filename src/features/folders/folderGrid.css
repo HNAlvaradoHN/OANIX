@@ -65,17 +65,17 @@
   align-self: center;
   display: flex;
   flex-direction: column;
-  gap: clamp(.48rem, 1.15dvh, .7rem);
+  gap: clamp(.62rem, 1.45dvh, .86rem);
   overflow-x: hidden;
   overflow-y: auto;
-  padding: clamp(.55rem, 2.3dvh, 1rem) .12rem clamp(5rem, 9dvh, 6.2rem);
+  padding: clamp(.7rem, 2.3dvh, 1.1rem) .12rem clamp(3.8rem, 7dvh, 5rem);
   scroll-padding-block: 18%;
   scroll-snap-type: y mandatory;
   overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 7%, #000 91%, transparent 100%);
-  mask-image: linear-gradient(to bottom, transparent 0, #000 7%, #000 91%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 6%, #000 92%, transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 6%, #000 92%, transparent 100%);
 }
 
 .oanix-folder-grid__cards::-webkit-scrollbar { display: none; }
@@ -86,12 +86,12 @@
   isolation: isolate;
   width: 100%;
   min-width: 0;
-  height: clamp(5.8rem, 15.2dvh, 6.9rem);
-  min-height: clamp(5.8rem, 15.2dvh, 6.9rem);
+  height: clamp(9.2rem, 22dvh, 10.8rem);
+  min-height: clamp(9.2rem, 22dvh, 10.8rem);
   flex: 0 0 auto;
   overflow: hidden;
   scroll-snap-align: center;
-  scroll-snap-stop: normal;
+  scroll-snap-stop: always;
   border: 1.5px solid color-mix(in srgb, var(--oanix-folder-color) 64%, rgba(202, 216, 255, .52));
   border-radius: 1.42rem 1.03rem 1.36rem 1.08rem;
   background:
@@ -138,11 +138,11 @@
   height: 100%;
   min-height: 0;
   display: grid;
-  grid-template-columns: minmax(7.2rem, 38%) minmax(0, 1fr);
+  grid-template-columns: minmax(8.4rem, 42%) minmax(0, 1fr);
   grid-template-rows: 1fr auto auto 1fr;
   align-items: center;
-  column-gap: .82rem;
-  padding: .48rem 2.9rem .48rem .48rem;
+  column-gap: .9rem;
+  padding: .68rem 3rem .68rem .68rem;
   border: 0;
   background: transparent;
   color: inherit;
@@ -223,7 +223,7 @@
   white-space: nowrap;
   text-overflow: ellipsis;
   color: #f8f9ff;
-  font-size: clamp(.82rem, 3.4vw, .98rem);
+  font-size: clamp(.86rem, 3.6vw, 1rem);
   font-weight: 900;
   line-height: 1.12;
   letter-spacing: -.018em;
@@ -234,19 +234,19 @@
 .oanix-folder-card__open > small {
   grid-column: 2;
   grid-row: 3;
-  margin-top: .23rem;
+  margin-top: .28rem;
   color: rgba(224,230,246,.7);
-  font-size: .66rem;
+  font-size: .68rem;
   font-weight: 720;
 }
 
 .oanix-folder-card__menu {
   position: absolute;
   z-index: 4;
-  right: .52rem;
-  bottom: .48rem;
-  width: 2rem;
-  height: 2rem;
+  right: .58rem;
+  bottom: .56rem;
+  width: 2.05rem;
+  height: 2.05rem;
   display: grid;
   place-items: center;
   padding: 0;
@@ -358,15 +358,17 @@
   white-space: nowrap;
 }
 
+/* Short screens keep the complete panel; we show fewer cards instead of crushing their design. */
 @media (max-height: 700px) {
   .oanix-folder-card {
-    height: 5.45rem;
-    min-height: 5.45rem;
+    height: 8.8rem;
+    min-height: 8.8rem;
   }
 
   .oanix-folder-grid__cards {
-    gap: .42rem;
-    padding-top: .42rem;
+    gap: .62rem;
+    padding-top: .55rem;
+    padding-bottom: 3.4rem;
   }
 }
 
@@ -374,14 +376,14 @@
   .oanix-folder-grid { padding-inline: 1rem; }
 
   .oanix-folder-card {
-    height: 6.6rem;
-    min-height: 6.6rem;
+    height: 10rem;
+    min-height: 10rem;
   }
 
   .oanix-folder-card__open,
   .oanix-folder-card--all,
   .oanix-folder-card--add {
-    grid-template-columns: minmax(9.5rem, 34%) minmax(0, 1fr);
+    grid-template-columns: minmax(10.5rem, 36%) minmax(0, 1fr);
   }
 }
 
