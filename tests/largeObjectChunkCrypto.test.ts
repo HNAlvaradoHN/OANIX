@@ -24,12 +24,14 @@ test('cifra un fragmento con AES-GCM, IV aleatorio e integridad SHA-256', async 
   plaintext.fill(0x5a)
 
   const encrypted = await encryptLargeObjectChunk(key, 'object-test-0001', plan, plaintext)
+  const ciphertextDigest = await globalThis.crypto.subtle.digest('SHA-256', encrypted.ciphertext)
+  const expectedSha256 = Buffer.from(ciphertextDigest).toString('base64url')
 
   assert.equal(encrypted.ciphertext.byteLength, plaintext.byteLength + 16)
   assert.equal(encrypted.manifest.ciphertextByteLength, encrypted.ciphertext.byteLength)
   assert.match(encrypted.manifest.iv, /^[A-Za-z0-9_-]{16}$/)
   assert.match(encrypted.manifest.sha256, /^[A-Za-z0-9_-]{43}$/)
-  assert.notEqual(encrypted.ciphertext[0], plaintext[0])
+  assert.equal(encrypted.manifest.sha256, expectedSha256)
 })
 
 test('procesa un Blob grande de forma secuencial sin conservar ciphertext entre fragmentos', async () => {
