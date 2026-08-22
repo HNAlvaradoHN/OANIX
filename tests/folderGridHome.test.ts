@@ -38,10 +38,12 @@ test('el inicio oculta la lista a primera vista y deja una vuelta clara a carpet
   assert.match(css, /notes-tabs-shell\[data-oanix-folder-compact='true'\]/)
 })
 
-test('la cuadrícula visible usa tres tarjetas por fila y conserva movimiento reducible', () => {
-  assert.match(interactiveCss, /grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/)
-  assert.match(interactiveCss, /@keyframes oanix-folder-jiggle/)
+test('la cuadrícula premium prioriza dos tarjetas en móvil y conserva movimiento reducible', () => {
+  assert.match(interactiveCss, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/)
+  assert.match(interactiveCss, /@media \(min-width: 880px\)[\s\S]*grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/)
+  assert.match(interactiveCss, /@keyframes oanix-folder-premium-jiggle/)
   assert.match(interactiveCss, /prefers-reduced-motion: reduce/)
+  assert.match(interactiveCss, /\.oanix-folder-drag-ghost/)
 })
 
 test('mantener presionada una carpeta activa orden manual y el menú conserva personalización', () => {
