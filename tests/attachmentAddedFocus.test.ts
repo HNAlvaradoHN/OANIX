@@ -18,9 +18,11 @@ test('la nota desplaza la vista a la tarjeta nueva sin cambiar su persistencia',
   assert.doesNotMatch(runtime, /writeEncryptedBlob|writeEncryptedRecord/)
 })
 
-test('la orientación visual es temporal y comunica hacia dónde quedó el archivo', () => {
-  assert.match(runtime, /Archivo agregado ↓/)
-  assert.match(runtime, /2400/)
+test('la orientación visual y el aviso de éxito desaparecen automáticamente', () => {
+  assert.match(runtime, /Archivo agregado\./)
+  assert.match(runtime, /showTransientStatus/)
+  assert.match(runtime, /milliseconds = 2000/)
+  assert.match(runtime, /\}, 2000\)/)
   assert.match(runtime, /setNewAttachmentIds\(new Set\(\)\)/)
   assert.match(css, /note-attachment-card\[data-oanix-new='true'\]/)
   assert.match(css, /oanix-attachment-added/)
