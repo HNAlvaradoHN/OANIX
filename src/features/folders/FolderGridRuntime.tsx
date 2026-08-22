@@ -274,6 +274,15 @@ export function FolderGridRuntime() {
   }, [gridOpen, targets.searchOpen, targets.tabsShell])
 
   useEffect(() => {
+    document.documentElement.classList.toggle('oanix-folder-home-open', gridOpen)
+    document.body?.classList.toggle('oanix-folder-home-open', gridOpen)
+    return () => {
+      document.documentElement.classList.remove('oanix-folder-home-open')
+      document.body?.classList.remove('oanix-folder-home-open')
+    }
+  }, [gridOpen])
+
+  useEffect(() => {
     function scheduleRefresh() {
       if (!gridOpenRef.current || reorderMode) return
       if (refreshTimerRef.current !== null) window.clearTimeout(refreshTimerRef.current)
@@ -584,7 +593,7 @@ export function FolderGridRuntime() {
 
   return (
     <>
-      {dashboardVisible && targets.sidebar && createPortal(
+      {dashboardVisible && createPortal(
         <section
           className={`oanix-folder-grid${reorderMode ? ' oanix-folder-grid--reordering' : ''}${draggingFolderId ? ' oanix-folder-grid--drag-active' : ''}`}
           aria-label="Inicio de carpetas"
@@ -766,7 +775,7 @@ export function FolderGridRuntime() {
           )}
           {error && <p className="oanix-folder-grid__error" role="alert">{error}</p>}
         </section>,
-        targets.sidebar,
+        document.body,
       )}
 
       {dragGhost && createPortal(
@@ -811,14 +820,18 @@ export function FolderGridRuntime() {
             if (event.target === event.currentTarget && !customBusy) setCustomFolder(null)
           }}
         >
-          <section className="oanix-folder-customizer">
+          <section
+            className="oanix-folder-customizer"
+            data-oanix-folder-id={customFolder.id}
+            style={{ '--oanix-folder-color': data.colors.get(customFolder.id) ?? '#111b31' } as CSSProperties}
+          >
             <div className="oanix-folder-customizer__preview" aria-hidden="true">
-              {customizerCover ? <img src={customizerCover} alt="" /> : <span>⌑</span>}
+              {customizerCover ? <img src={customizerCover} alt="" /> : <span>📁</span>}
             </div>
             <div className="oanix-folder-customizer__body">
-              <span>PERSONALIZAR CARPETA</span>
+              <span>OPCIONES DE CARPETA</span>
               <strong id="oanix-folder-customizer-title">{customFolder.name}</strong>
-              <p>La portada y el color se guardan cifrados junto con la configuración local de la carpeta.</p>
+              <p>Imagen, color e icono se mantienen cifrados en la configuración local de esta carpeta.</p>
               {customError && <div className="oanix-folder-customizer__error" role="alert">{customError}</div>}
               <div className="oanix-folder-customizer__actions">
                 <button type="button" onClick={() => coverInputRef.current?.click()} disabled={customBusy}>
