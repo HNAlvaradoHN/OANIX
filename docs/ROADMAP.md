@@ -18,6 +18,8 @@ Cuenta opcional, autenticación, backend de sincronización, transporte E2EE, mu
 
 - [x] Resolución de conflictos
 
+El estado compacto de sincronización y resolución reutiliza el registro cifrado `system.sync-state`; no se crea una persistencia paralela para esa coordinación.
+
 La recuperación Email OTP es una frontera de confianza explícita distinta del transporte normal E2EE; ver `SECURITY.md`.
 
 Deudas de validación de campo que siguen siendo reales:
