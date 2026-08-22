@@ -9,10 +9,12 @@ import {
   storeEncryptedAttachment,
 } from './attachmentService'
 import {
+  MAX_LOCAL_ATTACHMENT_BYTES,
   attachmentIcon,
   attachmentKind,
   attachmentTypeLabel,
   formatAttachmentSize,
+  isRemoteLargeAttachment,
   type AttachmentMetadata,
 } from './attachmentTypes'
 import './attachments.css'
@@ -121,6 +123,10 @@ async function cleanupAttachmentsAfterPossibleNoteDeletion(noteId: string): Prom
       return
     }
   }
+}
+
+function attachmentLocationLabel(item: AttachmentMetadata): string {
+  return isRemoteLargeAttachment(item) ? 'Drive · cifrado por fragmentos' : 'Local · cifrado'
 }
 
 export function NoteAttachmentsRuntime() {
@@ -249,21 +255,31 @@ export function NoteAttachmentsRuntime() {
     try {
       const storedItems: AttachmentMetadata[] = []
       for (let index = 0; index < files.length; index += 1) {
-        setStatus(`Cifrando archivo ${index + 1} de ${files.length}…`)
-        storedItems.push(await storeEncryptedAttachment(noteId, files[index]))
+        const file = files[index]
+        setStatus(
+          file.size > MAX_LOCAL_ATTACHMENT_BYTES
+            ? `Cifrando y subiendo archivo ${index + 1} de ${files.length} a Drive…`
+            : `Cifrando archivo ${index + 1} de ${files.length} localmente…`,
+        )
+        storedItems.push(await storeEncryptedAttachment(noteId, file))
       }
       const items = await loadEncryptedAttachments(noteId)
       if (currentNoteId() === noteId) {
         setAttachments(items)
         setNewAttachmentIds(new Set(storedItems.map((item) => item.attachmentId)))
-        setStatus(files.length === 1 ? 'Archivo agregado ↓' : `${files.length} archivos agregados ↓`)
+        const remoteCount = storedItems.filter(isRemoteLargeAttachment).length
+        setStatus(
+          files.length === 1
+            ? remoteCount === 1 ? 'Archivo grande cifrado y guardado en Drive ↓' : 'Archivo cifrado agregado ↓'
+            : `${files.length} archivos agregados · ${remoteCount} en Drive ↓`,
+        )
 
         if (highlightTimerRef.current !== null) window.clearTimeout(highlightTimerRef.current)
         highlightTimerRef.current = window.setTimeout(() => {
           setNewAttachmentIds(new Set())
           setStatus('')
           highlightTimerRef.current = null
-        }, 2400)
+        }, 3200)
       }
     } catch (storeError) {
       setError(storeError instanceof Error ? storeError.message : 'No se pudo guardar el archivo cifrado.')
@@ -274,6 +290,11 @@ export function NoteAttachmentsRuntime() {
 
   async function requireAttachmentFile(item: AttachmentMetadata): Promise<File | null> {
     setError('')
+    if (isRemoteLargeAttachment(item)) {
+      setError('Abrir y exportar archivos grandes de Drive se habilitará cuando la recuperación por rangos esté conectada.')
+      return null
+    }
+
     try {
       const file = await loadEncryptedAttachmentFile(item)
       if (!file) {
@@ -288,7 +309,7 @@ export function NoteAttachmentsRuntime() {
   }
 
   async function handleOpen(item: AttachmentMetadata) {
-    if (busy) return
+    if (busy || isRemoteLargeAttachment(item)) return
     setBusy(true)
     try {
       const file = await requireAttachmentFile(item)
@@ -314,7 +335,7 @@ export function NoteAttachmentsRuntime() {
   }
 
   async function handleExport(item: AttachmentMetadata) {
-    if (busy) return
+    if (busy || isRemoteLargeAttachment(item)) return
     setBusy(true)
     try {
       const file = await requireAttachmentFile(item)
@@ -327,7 +348,11 @@ export function NoteAttachmentsRuntime() {
   async function handleRemove(item: AttachmentMetadata) {
     const noteId = targets.noteId
     if (!noteId || busy) return
-    if (!window.confirm(`¿Quitar “${item.name}” de esta nota?\n\nLa copia cifrada guardada por OANIX se eliminará.`)) return
+    const remote = isRemoteLargeAttachment(item)
+    const confirmation = remote
+      ? `¿Quitar “${item.name}” de esta nota?\n\nEl objeto cifrado también se eliminará de Google Drive.`
+      : `¿Quitar “${item.name}” de esta nota?\n\nLa copia cifrada guardada por OANIX se eliminará.`
+    if (!window.confirm(confirmation)) return
 
     setBusy(true)
     setError('')
@@ -346,6 +371,8 @@ export function NoteAttachmentsRuntime() {
     }
   }
 
+  const remoteCount = attachments.filter(isRemoteLargeAttachment).length
+  const localCount = attachments.length - remoteCount
   const panelVisible = Boolean(targets.noteId && (loading || busy || error || status || attachments.length > 0))
 
   return (
@@ -392,7 +419,10 @@ export function NoteAttachmentsRuntime() {
           <div className="note-attachments__heading">
             <div>
               <strong>Adjuntos</strong>
-              <span>{attachments.length} archivo{attachments.length === 1 ? '' : 's'} · cifrados localmente</span>
+              <span>
+                {attachments.length} archivo{attachments.length === 1 ? '' : 's'}
+                {attachments.length > 0 ? ` · ${localCount} local${localCount === 1 ? '' : 'es'} · ${remoteCount} Drive` : ''}
+              </span>
             </div>
             <button type="button" onClick={beginAttachmentSelection} disabled={busy}>＋</button>
           </div>
@@ -401,20 +431,35 @@ export function NoteAttachmentsRuntime() {
             <div className="note-attachments__list">
               {attachments.map((item) => {
                 const isNew = newAttachmentIds.has(item.attachmentId)
+                const remote = isRemoteLargeAttachment(item)
+                const unavailableTitle = remote
+                  ? 'Pendiente: recuperación cifrada por rangos desde Drive'
+                  : undefined
                 return (
                   <article
                     className="note-attachment-card"
                     data-oanix-new={isNew ? 'true' : 'false'}
+                    data-oanix-storage={remote ? 'remote' : 'local'}
                     key={item.attachmentId}
                   >
                     <div className="note-attachment-card__icon" aria-hidden="true">{attachmentIcon(item)}</div>
                     <div className="note-attachment-card__body">
                       <strong title={item.name}>{item.name}</strong>
-                      <span>{formatAttachmentSize(item.byteLength)} · {attachmentTypeLabel(item)}</span>
+                      <span>{formatAttachmentSize(item.byteLength)} · {attachmentTypeLabel(item)} · {attachmentLocationLabel(item)}</span>
                     </div>
                     <div className="note-attachment-card__actions">
-                      <button type="button" onClick={() => void handleOpen(item)} disabled={busy}>Abrir</button>
-                      <button type="button" onClick={() => void handleExport(item)} disabled={busy}>Exportar</button>
+                      <button
+                        type="button"
+                        onClick={() => void handleOpen(item)}
+                        disabled={busy || remote}
+                        title={unavailableTitle}
+                      >Abrir</button>
+                      <button
+                        type="button"
+                        onClick={() => void handleExport(item)}
+                        disabled={busy || remote}
+                        title={unavailableTitle}
+                      >Exportar</button>
                       <button className="note-attachment-card__remove" type="button" onClick={() => void handleRemove(item)} disabled={busy}>Quitar</button>
                     </div>
                   </article>
@@ -426,7 +471,9 @@ export function NoteAttachmentsRuntime() {
           {loading && <p className="note-attachments__status">Cargando adjuntos cifrados…</p>}
           {status && <p className="note-attachments__status note-attachments__status--added" role="status">{status}</p>}
           {error && <p className="note-attachments__error" role="alert">{error}</p>}
-          <p className="note-attachments__scope">Incluidos en el backup cifrado · sincronización de archivos pendiente.</p>
+          <p className="note-attachments__scope">
+            Locales: incluidos en el backup cifrado. Grandes en Drive: el backup conserva referencia y manifiestos cifrados, no el contenido remoto.
+          </p>
         </section>,
         targets.editorRoot,
       )}
