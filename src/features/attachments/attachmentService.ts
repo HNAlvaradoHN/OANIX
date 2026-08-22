@@ -71,7 +71,7 @@ export async function storeEncryptedAttachment(
   const normalizedNoteId = requireNoteId(noteId)
   const validated = validateAttachmentCandidate(file)
   if (validated.byteLength > MAX_LOCAL_ATTACHMENT_BYTES) {
-    throw new Error('Este archivo necesita almacenamiento por fragmentos. La integración con la tarjeta de adjuntos todavía no está activada.')
+    return storeRemoteLargeAttachment(normalizedNoteId, file)
   }
 
   const attachmentId = createAttachmentId()
