@@ -1,7 +1,8 @@
 import { useEffect } from 'react'
 import './noteReorderGesture.css'
 
-const NOTE_LONG_PRESS_MS = 460
+const NOTE_REORDER_LONG_PRESS_MS = 520
+const NOTE_REORDER_MOVE_TOLERANCE = 12
 
 function findReorderToggle(): HTMLButtonElement | null {
   return document.querySelector<HTMLButtonElement>(
@@ -64,6 +65,7 @@ export function NoteListReorderGestureRuntime() {
   useEffect(() => {
     let timer: number | null = null
     let pressedRow: HTMLElement | null = null
+    let pointerId = -1
     let startX = 0
     let startY = 0
     let suppressClickForId = ''
@@ -72,6 +74,7 @@ export function NoteListReorderGestureRuntime() {
       if (timer !== null) window.clearTimeout(timer)
       timer = null
       pressedRow = null
+      pointerId = -1
     }
 
     const observer = new MutationObserver(() => {
@@ -81,17 +84,19 @@ export function NoteListReorderGestureRuntime() {
     ensureModeChrome()
 
     function handlePointerDown(event: PointerEvent) {
-      if (event.button !== 0 || reorderModeActive()) return
+      if (reorderModeActive()) return
+      if (event.pointerType === 'mouse' && event.button !== 0) return
       const target = event.target
       if (!(target instanceof Element)) return
-      if (target.closest('.note-row__menu-wrap, .oanix-note-reorder-menu-proxy')) return
 
-      const openButton = target.closest<HTMLElement>('.note-row__open')
+      const avatar = target.closest<HTMLElement>('.note-row__avatar')
+      const openButton = avatar?.closest<HTMLElement>('.note-row__open')
       const row = openButton?.closest<HTMLElement>('.note-row[data-reorder-note-id]') ?? null
-      if (!row || !openButton) return
+      if (!avatar || !row || !openButton) return
 
       clearPress()
       pressedRow = row
+      pointerId = event.pointerId
       startX = event.clientX
       startY = event.clientY
       const noteId = noteIdFromRow(row)
@@ -102,15 +107,16 @@ export function NoteListReorderGestureRuntime() {
         findReorderToggle()?.click()
         if ('vibrate' in navigator) navigator.vibrate?.(16)
         window.requestAnimationFrame(ensureModeChrome)
-      }, NOTE_LONG_PRESS_MS)
+      }, NOTE_REORDER_LONG_PRESS_MS)
     }
 
     function handlePointerMove(event: PointerEvent) {
-      if (timer === null) return
-      if (Math.hypot(event.clientX - startX, event.clientY - startY) > 10) clearPress()
+      if (timer === null || event.pointerId !== pointerId) return
+      if (Math.hypot(event.clientX - startX, event.clientY - startY) > NOTE_REORDER_MOVE_TOLERANCE) clearPress()
     }
 
-    function handlePointerEnd() {
+    function handlePointerEnd(event: PointerEvent) {
+      if (pointerId !== -1 && event.pointerId !== pointerId) return
       clearPress()
     }
 
