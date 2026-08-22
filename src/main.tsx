@@ -8,6 +8,7 @@ import { PwaImagePreviewRuntime } from './features/images/PwaImagePreviewRuntime
 import { NoteMenuScrollDismiss } from './features/notes/NoteMenuScrollDismiss'
 import { NoteMenuViewportFit } from './features/notes/NoteMenuViewportFit'
 import { PrivacyStatusHelp } from './features/privacy/PrivacyStatusHelp'
+import { FolderAppearanceRuntime } from './features/folders/FolderAppearanceRuntime'
 import './styles/global.css'
 import './styles/redesign.css'
 import './styles/redesign-polish.css'
@@ -73,5 +74,6 @@ createRoot(document.getElementById('root')!).render(
     <NoteMenuScrollDismiss />
     <NoteMenuViewportFit />
     <PrivacyStatusHelp />
+    <FolderAppearanceRuntime />
   </StrictMode>,
 )
