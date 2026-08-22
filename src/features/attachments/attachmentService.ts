@@ -70,39 +70,17 @@ export async function storeEncryptedAttachment(
 ): Promise<AttachmentMetadata> {
   const normalizedNoteId = requireNoteId(noteId)
   const validated = validateAttachmentCandidate(file)
-  const attachmentId = createAttachmentId()
-  const createdAt = new Date().toISOString()
-
   if (validated.byteLength > MAX_LOCAL_ATTACHMENT_BYTES) {
-    const storage = await uploadLargeAttachmentToDrive(normalizedNoteId, file)
-    const metadata: AttachmentMetadata = {
-      attachmentId,
-      name: validated.name,
-      mimeType: validated.mimeType,
-      byteLength: validated.byteLength,
-      createdAt,
-      storage,
-    }
-    try {
-      const index = await readAttachmentIndex(normalizedNoteId)
-      await writeAttachmentIndex({ ...index, items: [...index.items, metadata] })
-    } catch (error) {
-      try {
-        await deleteLargeAttachmentFromDrive(storage)
-      } catch {
-        // Preserve the indexing error; remote cleanup can be retried manually if the provider failed too.
-      }
-      throw error
-    }
-    return metadata
+    throw new Error('Este archivo necesita almacenamiento por fragmentos. La integración con la tarjeta de adjuntos todavía no está activada.')
   }
 
+  const attachmentId = createAttachmentId()
   const metadata: AttachmentMetadata = {
     attachmentId,
     name: validated.name,
     mimeType: validated.mimeType,
     byteLength: validated.byteLength,
-    createdAt,
+    createdAt: new Date().toISOString(),
   }
 
   const bytes = new Uint8Array(await file.arrayBuffer())
@@ -120,6 +98,41 @@ export async function storeEncryptedAttachment(
       await deleteEncryptedBlob(ATTACHMENT_BLOB_RECORD_TYPE, attachmentId)
     } catch {
       // The original indexing failure remains authoritative; a later hygiene pass can remove an orphan.
+    }
+    throw error
+  }
+
+  return metadata
+}
+
+export async function storeRemoteLargeAttachment(
+  noteId: string,
+  file: File,
+): Promise<AttachmentMetadata> {
+  const normalizedNoteId = requireNoteId(noteId)
+  const validated = validateAttachmentCandidate(file)
+  if (validated.byteLength <= MAX_LOCAL_ATTACHMENT_BYTES) {
+    throw new Error('Este archivo cabe en el almacenamiento local normal de adjuntos.')
+  }
+
+  const storage = await uploadLargeAttachmentToDrive(normalizedNoteId, file)
+  const metadata: AttachmentMetadata = {
+    attachmentId: createAttachmentId(),
+    name: validated.name,
+    mimeType: validated.mimeType,
+    byteLength: validated.byteLength,
+    createdAt: new Date().toISOString(),
+    storage,
+  }
+
+  try {
+    const index = await readAttachmentIndex(normalizedNoteId)
+    await writeAttachmentIndex({ ...index, items: [...index.items, metadata] })
+  } catch (error) {
+    try {
+      await deleteLargeAttachmentFromDrive(storage)
+    } catch {
+      // Preserve the indexing failure; remote cleanup can be retried if the provider failed too.
     }
     throw error
   }
