@@ -1,10 +1,8 @@
 import { requireActiveVaultKey } from '../../security/vault/vaultSession'
 import { createControlledLargeObjectId } from '../largeObjects/controlledLargeObjectIdentity'
-import {
-  createGoogleDriveStorageProviderFromActiveLease,
-  hasUsableGoogleDriveAccessTokenLease,
-} from '../largeObjects/googleDriveAccessTokenLease'
+import { createGoogleDriveStorageProviderFromActiveLease } from '../largeObjects/googleDriveAccessTokenLease'
 import { GOOGLE_DRIVE_PLAINTEXT_CHUNK_BYTES } from '../largeObjects/googleDriveControlledTransfer'
+import { decryptLargeObjectChunk } from '../largeObjects/largeObjectChunkCrypto'
 import { PersistentLargeObjectTransferStateStore } from '../largeObjects/persistentLargeObjectTransferStateStore'
 import { transferLargeObject } from '../largeObjects/largeObjectTransferService'
 import type { LargeObjectRemoteObject } from '../largeObjects/largeObjectTransferContract'
@@ -40,12 +38,6 @@ async function createLargeAttachmentObjectId(noteId: string, file: File): Promis
   }
 }
 
-function requireDriveLease(): void {
-  if (!hasUsableGoogleDriveAccessTokenLease()) {
-    throw new Error('Conectá Google Drive para guardar este archivo grande.')
-  }
-}
-
 export function assertLargeAttachmentSize(byteLength: number): void {
   if (!Number.isSafeInteger(byteLength) || byteLength <= MAX_LOCAL_ATTACHMENT_BYTES) {
     throw new Error('Este archivo no requiere el motor de archivos grandes.')
@@ -60,7 +52,6 @@ export async function uploadLargeAttachmentToDrive(
   file: File,
 ): Promise<RemoteLargeAttachmentStorage> {
   assertLargeAttachmentSize(file.size)
-  requireDriveLease()
 
   const objectId = await createLargeAttachmentObjectId(noteId, file)
   const result = await transferLargeObject({
@@ -87,8 +78,83 @@ export async function uploadLargeAttachmentToDrive(
   }
 }
 
+export interface RecoverLargeAttachmentProgress {
+  recoveredPlaintextBytes: number
+  totalPlaintextBytes: number
+  percent: number
+}
+
+export async function recoverLargeAttachmentFromDrive(
+  storage: RemoteLargeAttachmentStorage,
+  expectedPlaintextBytes: number,
+  consumePlaintextChunk: (bytes: Uint8Array, index: number) => Promise<void>,
+  onProgress?: (progress: RecoverLargeAttachmentProgress) => void,
+): Promise<void> {
+  assertLargeAttachmentSize(expectedPlaintextBytes)
+  if (storage.chunks.length === 0) throw new Error('El adjunto remoto no contiene manifiestos cifrados.')
+
+  const provider = createGoogleDriveStorageProviderFromActiveLease()
+  if (storage.providerId !== provider.providerId) {
+    throw new Error('El proveedor conectado no coincide con el adjunto remoto.')
+  }
+
+  const remoteObject: LargeObjectRemoteObject = {
+    providerId: storage.providerId,
+    objectRef: storage.objectRef,
+    ciphertextByteLength: storage.ciphertextByteLength,
+  }
+  const vaultKey = requireActiveVaultKey()
+  let expectedPlaintextOffset = 0
+  let ciphertextOffset = 0
+
+  onProgress?.({ recoveredPlaintextBytes: 0, totalPlaintextBytes: expectedPlaintextBytes, percent: 0 })
+
+  for (let index = 0; index < storage.chunks.length; index += 1) {
+    const manifest = storage.chunks[index]
+    if (
+      manifest.index !== index ||
+      manifest.plaintextOffset !== expectedPlaintextOffset ||
+      manifest.plaintextLength <= 0 ||
+      manifest.ciphertextByteLength <= manifest.plaintextLength ||
+      expectedPlaintextOffset + manifest.plaintextLength > expectedPlaintextBytes ||
+      ciphertextOffset + manifest.ciphertextByteLength > storage.ciphertextByteLength
+    ) {
+      throw new Error('Los manifiestos del adjunto remoto no son contiguos o están dañados.')
+    }
+
+    let ciphertext: Uint8Array | null = null
+    let plaintext: Uint8Array | null = null
+    try {
+      ciphertext = await provider.downloadCiphertextRange({
+        remoteObject,
+        ciphertextOffset,
+        ciphertextByteLength: manifest.ciphertextByteLength,
+      })
+      plaintext = await decryptLargeObjectChunk(vaultKey, storage.objectId, manifest, ciphertext)
+      await consumePlaintextChunk(plaintext, index)
+    } finally {
+      ciphertext?.fill(0)
+      plaintext?.fill(0)
+    }
+
+    expectedPlaintextOffset += manifest.plaintextLength
+    ciphertextOffset += manifest.ciphertextByteLength
+    onProgress?.({
+      recoveredPlaintextBytes: expectedPlaintextOffset,
+      totalPlaintextBytes: expectedPlaintextBytes,
+      percent: Math.min(100, Math.round((expectedPlaintextOffset / expectedPlaintextBytes) * 100)),
+    })
+  }
+
+  if (expectedPlaintextOffset !== expectedPlaintextBytes) {
+    throw new Error('La recuperación no reconstruyó todos los bytes del archivo original.')
+  }
+  if (ciphertextOffset !== storage.ciphertextByteLength) {
+    throw new Error('La recuperación no consumió todo el objeto cifrado remoto.')
+  }
+}
+
 export async function deleteLargeAttachmentFromDrive(storage: RemoteLargeAttachmentStorage): Promise<void> {
-  requireDriveLease()
   const provider = createGoogleDriveStorageProviderFromActiveLease()
   if (storage.providerId !== provider.providerId) {
     throw new Error('El proveedor conectado no coincide con el adjunto remoto.')

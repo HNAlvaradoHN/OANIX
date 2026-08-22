@@ -1,14 +1,19 @@
 import { isAndroidNativeAccountAuth } from '../../platform/android/nativeAccountAuth.ts'
 import type { LargeObjectStorageCapacity } from './largeObjectTransferContract.ts'
-import { authorizeGoogleDriveOnAndroid } from './googleDriveAndroidAuthorization.ts'
+import {
+  authorizeGoogleDriveOnAndroid,
+  refreshGoogleDriveOnAndroidSilently,
+} from './googleDriveAndroidAuthorization.ts'
 import {
   authorizeGoogleDriveOnWeb,
   isGoogleDriveWebAuthorizationConfigured,
+  refreshGoogleDriveOnWebSilently,
 } from './googleDriveWebAuthorization.ts'
 import {
   clearGoogleDriveAccessTokenLease,
   createGoogleDriveStorageProviderFromActiveLease,
   hasUsableGoogleDriveAccessTokenLease,
+  setGoogleDriveAccessTokenRefresher,
 } from './googleDriveAccessTokenLease.ts'
 
 export type GoogleDriveConnectionAvailability =
@@ -27,6 +32,15 @@ export function getGoogleDriveConnectionAvailability(): GoogleDriveConnectionAva
   return isGoogleDriveWebAuthorizationConfigured() ? 'web-ready' : 'web-unconfigured'
 }
 
+export async function refreshGoogleDriveAccessSilently(): Promise<boolean> {
+  const availability = getGoogleDriveConnectionAvailability()
+  if (availability === 'android-ready') return refreshGoogleDriveOnAndroidSilently()
+  if (availability === 'web-ready') return refreshGoogleDriveOnWebSilently()
+  return false
+}
+
+setGoogleDriveAccessTokenRefresher(refreshGoogleDriveAccessSilently)
+
 export function hasActiveGoogleDriveConnection(): boolean {
   return hasUsableGoogleDriveAccessTokenLease()
 }
@@ -38,12 +52,8 @@ export function disconnectGoogleDriveSession(): void {
 }
 
 export async function inspectActiveGoogleDriveConnection(): Promise<LargeObjectStorageCapacity> {
-  if (!hasUsableGoogleDriveAccessTokenLease()) {
-    throw new Error('Google Drive necesita autorización antes de consultar el almacenamiento.')
-  }
   const provider = createGoogleDriveStorageProviderFromActiveLease()
-  const capacity = await provider.getStorageCapacity()
-  return capacity
+  return provider.getStorageCapacity()
 }
 
 export async function connectGoogleDriveAndInspect(): Promise<GoogleDriveConnectionSnapshot> {

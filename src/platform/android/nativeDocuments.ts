@@ -3,6 +3,7 @@ import { withAndroidSystemInteraction } from './systemInteractionGuard'
 
 export const OANIX_BACKUP_MIME_TYPE = 'application/vnd.oanix.encrypted-backup+json'
 const STRING_CHUNK_CHARACTERS = 128 * 1024
+const BINARY_BRIDGE_CHUNK_BYTES = 384 * 1024
 
 interface NativeDocumentSelection {
   cancelled: boolean
@@ -17,12 +18,23 @@ interface NativeSaveSession {
   sessionId?: string
 }
 
+interface NativeSaveResult {
+  saved: boolean
+  byteLength: number
+  uri?: string
+}
+
 interface OanixDocumentsPlugin {
   openBackup(): Promise<NativeDocumentSelection>
   beginSaveBackup(options: { fileName: string }): Promise<NativeSaveSession>
   writeBackupChunk(options: { sessionId: string; chunk: string }): Promise<{ bytesWritten: number }>
-  finishSaveBackup(options: { sessionId: string }): Promise<{ saved: boolean; byteLength: number }>
+  finishSaveBackup(options: { sessionId: string }): Promise<NativeSaveResult>
   abortSaveBackup(options: { sessionId: string }): Promise<{ aborted: boolean }>
+  beginSaveFile(options: { fileName: string; mimeType: string }): Promise<NativeSaveSession>
+  writeFileChunk(options: { sessionId: string; chunkBase64: string }): Promise<{ bytesWritten: number }>
+  finishSaveFile(options: { sessionId: string }): Promise<NativeSaveResult>
+  abortSaveFile(options: { sessionId: string }): Promise<{ aborted: boolean }>
+  openSavedFile(options: { uri: string; mimeType: string }): Promise<{ opened: boolean }>
 }
 
 const nativeDocuments = registerPlugin<OanixDocumentsPlugin>('OanixDocuments')
@@ -44,6 +56,15 @@ function safeChunkEnd(value: string, start: number): number {
     if (previous >= 0xd800 && previous <= 0xdbff) end -= 1
   }
   return end
+}
+
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = ''
+  const step = 0x8000
+  for (let offset = 0; offset < bytes.byteLength; offset += step) {
+    binary += String.fromCharCode(...bytes.subarray(offset, offset + step))
+  }
+  return btoa(binary)
 }
 
 export async function saveEncryptedBackupWithAndroidDocuments(
@@ -84,6 +105,61 @@ export async function saveEncryptedBackupWithAndroidDocuments(
       }
     }
   }
+}
+
+export interface AndroidBinarySaveSession {
+  sessionId: string
+}
+
+export async function beginAndroidBinaryFileSave(
+  fileName: string,
+  mimeType: string,
+): Promise<AndroidBinarySaveSession | null> {
+  requireAndroidRuntime()
+  const result = await withAndroidSystemInteraction(() => nativeDocuments.beginSaveFile({ fileName, mimeType }))
+  if (result.cancelled) return null
+  if (!result.sessionId) throw new Error('Android no pudo crear una sesión para guardar el archivo.')
+  return { sessionId: result.sessionId }
+}
+
+export async function writeAndroidBinaryFileChunk(
+  session: AndroidBinarySaveSession,
+  bytes: Uint8Array,
+): Promise<void> {
+  requireAndroidRuntime()
+  if (bytes.byteLength <= 0) return
+  for (let offset = 0; offset < bytes.byteLength; offset += BINARY_BRIDGE_CHUNK_BYTES) {
+    const chunk = bytes.subarray(offset, Math.min(bytes.byteLength, offset + BINARY_BRIDGE_CHUNK_BYTES))
+    await nativeDocuments.writeFileChunk({
+      sessionId: session.sessionId,
+      chunkBase64: bytesToBase64(chunk),
+    })
+  }
+}
+
+export async function finishAndroidBinaryFileSave(
+  session: AndroidBinarySaveSession,
+  expectedByteLength: number,
+): Promise<string> {
+  requireAndroidRuntime()
+  const result = await nativeDocuments.finishSaveFile({ sessionId: session.sessionId })
+  if (!result.saved || result.byteLength !== expectedByteLength || !result.uri?.startsWith('content://')) {
+    throw new Error('Android no confirmó un archivo recuperado completo.')
+  }
+  return result.uri
+}
+
+export async function abortAndroidBinaryFileSave(session: AndroidBinarySaveSession): Promise<void> {
+  requireAndroidRuntime()
+  await nativeDocuments.abortSaveFile({ sessionId: session.sessionId })
+}
+
+export async function openAndroidSavedFile(uri: string, mimeType: string): Promise<void> {
+  requireAndroidRuntime()
+  await withAndroidSystemInteraction(async () => {
+    const result = await nativeDocuments.openSavedFile({ uri, mimeType })
+    if (!result.opened) throw new Error('Android no pudo abrir el archivo recuperado.')
+  })
 }
 
 export async function openEncryptedBackupWithAndroidDocuments(): Promise<File | null> {

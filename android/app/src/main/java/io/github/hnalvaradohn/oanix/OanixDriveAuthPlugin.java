@@ -88,6 +88,43 @@ public class OanixDriveAuthPlugin extends Plugin {
             });
     }
 
+    @PluginMethod
+    public void refresh(PluginCall call) {
+        if (authorizationActive) {
+            call.reject("Ya hay una autorización de Google Drive en curso.");
+            return;
+        }
+
+        Activity activity = getActivity();
+        if (activity == null) {
+            call.reject("Android no tiene una Activity disponible para renovar Google Drive.");
+            return;
+        }
+
+        authorizationActive = true;
+        AuthorizationRequest request = AuthorizationRequest.builder()
+            .setRequestedScopes(Collections.singletonList(new Scope(DRIVE_APPDATA_SCOPE)))
+            .setOptOutIncludingGrantedScopes(true)
+            .build();
+
+        Identity.getAuthorizationClient(activity).authorize(request)
+            .addOnSuccessListener(result -> {
+                authorizationActive = false;
+                if (result == null || result.hasResolution()) {
+                    JSObject response = new JSObject();
+                    response.put("cancelled", true);
+                    response.put("interactionRequired", true);
+                    call.resolve(response);
+                    return;
+                }
+                resolveAuthorization(call, result);
+            })
+            .addOnFailureListener(error -> {
+                authorizationActive = false;
+                call.reject("Google Drive no pudo renovar la autorización silenciosamente.", error);
+            });
+    }
+
     @Override
     @SuppressWarnings("deprecation")
     protected void handleOnActivityResult(int requestCode, int resultCode, Intent data) {
@@ -139,6 +176,7 @@ public class OanixDriveAuthPlugin extends Plugin {
 
         JSObject response = new JSObject();
         response.put("cancelled", false);
+        response.put("interactionRequired", false);
         response.put("accessToken", token.trim());
         response.put("expiresInSeconds", tokenLifetimeSeconds(result));
         response.put("scope", DRIVE_APPDATA_SCOPE);

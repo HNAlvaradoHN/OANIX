@@ -21,7 +21,13 @@ test('web Drive authorization requests only appData scope and verifies the grant
   assert.match(text, /scope: GOOGLE_DRIVE_APPDATA_SCOPE/u)
   assert.match(text, /include_granted_scopes: false/u)
   assert.match(text, /scopeWasGranted\(response\.scope\)/u)
-  assert.match(text, /prompt: 'select_account'/u)
+  assert.match(text, /requestGoogleDriveAccessToken\('select_account'\)/u)
+})
+
+test('web Drive can renew an already granted short-lived lease without selecting the account again', async () => {
+  const text = await source()
+  assert.match(text, /refreshGoogleDriveOnWebSilently/u)
+  assert.match(text, /requestGoogleDriveAccessToken\(''\)/u)
 })
 
 test('web Drive access token is handed only to the in-memory lease', async () => {

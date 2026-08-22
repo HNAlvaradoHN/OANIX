@@ -37,7 +37,20 @@ test('encrypted backup export is streamed through bounded UTF-8 bridge chunks', 
   assert.match(documentBridgeSource, /safeChunkEnd/)
   assert.match(documentBridgeSource, /writeBackupChunk/)
   assert.match(documentBridgeSource, /abortSaveBackup/)
-  assert.doesNotMatch(documentBridgeSource, /btoa\(/)
+
+  const backupFunction = documentBridgeSource.slice(
+    documentBridgeSource.indexOf('export async function saveEncryptedBackupWithAndroidDocuments'),
+    documentBridgeSource.indexOf('export interface AndroidBinarySaveSession'),
+  )
+  assert.doesNotMatch(backupFunction, /btoa\(|chunkBase64/u)
+})
+
+test('large recovered files use a separate bounded binary bridge into the same SAF output stream', () => {
+  assert.match(documentBridgeSource, /BINARY_BRIDGE_CHUNK_BYTES = 384 \* 1024/)
+  assert.match(documentBridgeSource, /writeAndroidBinaryFileChunk/)
+  assert.match(documentBridgeSource, /chunkBase64: bytesToBase64\(chunk\)/)
+  assert.match(pluginSource, /Base64\.decode\(chunkBase64, Base64\.NO_WRAP\)/)
+  assert.match(pluginSource, /bytes\.length > MAX_CHUNK_BYTES/)
 })
 
 test('existing backup service uses native Android save while keeping browser download elsewhere', () => {
