@@ -44,14 +44,16 @@ test('el nuevo inicio usa una sola galería vertical con snap y desvanecido de b
   assert.match(css, /\.oanix-folder-grid__cards[\s\S]*display: flex;[\s\S]*flex-direction: column;/)
   assert.match(css, /scroll-snap-type: y mandatory/)
   assert.match(css, /scroll-snap-align: center/)
-  assert.match(css, /mask-image: linear-gradient\(to bottom, transparent 0, #000 7%, #000 91%, transparent 100%\)/)
+  assert.match(css, /scroll-snap-stop: always/)
+  assert.match(css, /mask-image: linear-gradient\(to bottom, transparent 0, #000 \d+%, #000 \d+%, transparent 100%\)/)
   assert.doesNotMatch(css, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/)
   assert.doesNotMatch(interactiveCss, /oanix-folder-premium-jiggle/)
   assert.match(interactiveCss, /\.oanix-folder-drag-ghost/)
 })
 
-test('la tarjeta visual conserva portada, nombre en una línea, contador y menú de esquina', () => {
-  assert.match(css, /height: clamp\(5\.8rem, 15\.2dvh, 6\.9rem\)/)
+test('la tarjeta visual conserva tamaño completo, portada, nombre en una línea, contador y menú de esquina', () => {
+  assert.match(css, /height: clamp\(9\.2rem, 22dvh, 10\.8rem\)/)
+  assert.match(css, /@media \(max-height: 700px\)[\s\S]*height: 8\.8rem;[\s\S]*min-height: 8\.8rem;/)
   assert.match(css, /\.oanix-folder-card__visual[\s\S]*grid-column: 1;/)
   assert.match(css, /text-overflow: ellipsis/)
   assert.match(css, /white-space: nowrap/)
