@@ -16,6 +16,7 @@ import {
   saveFolderIcon,
 } from './folderAppearanceService'
 import './folderReferencePolish.css'
+import './folderFullWorkspace.css'
 
 function folderElements(folderId: string): HTMLElement[] {
   return Array.from(document.querySelectorAll<HTMLElement>(
@@ -34,11 +35,19 @@ function applyIcon(folderId: string, icon: string) {
     element
       .querySelectorAll<HTMLElement>('.oanix-folder-rail__shape')
       .forEach((shape) => { shape.dataset.oanixFolderIcon = icon })
+
+    element
+      .querySelectorAll<HTMLElement>('.oanix-folder-customizer__preview > span')
+      .forEach((preview) => { preview.textContent = icon })
   })
 }
 
 function defaultIconForIndex(index: number): FolderIcon | string {
   return FOLDER_DEFAULT_ICONS[index % FOLDER_DEFAULT_ICONS.length] ?? DEFAULT_FOLDER_ICON
+}
+
+function directActionButtons(actions: HTMLElement): HTMLButtonElement[] {
+  return Array.from(actions.children).filter((child): child is HTMLButtonElement => child instanceof HTMLButtonElement)
 }
 
 export function FolderAppearanceRuntime() {
@@ -65,17 +74,30 @@ export function FolderAppearanceRuntime() {
         if (!folderId) return
         applyColor(folderId, colors.get(folderId) ?? DEFAULT_FOLDER_COLOR)
       })
+
+      const customizer = document.querySelector<HTMLElement>('.oanix-folder-customizer[data-oanix-folder-id]')
+      const customizerId = customizer?.dataset.oanixFolderId
+      if (customizer && customizerId) {
+        applyColor(customizerId, colors.get(customizerId) ?? DEFAULT_FOLDER_COLOR)
+        const railIndex = Math.max(0, railItems.findIndex((item) => item.dataset.oanixFolderId === customizerId))
+        applyIcon(customizerId, icons.get(customizerId) ?? defaultIconForIndex(railIndex))
+      }
     }
 
     const decorateCustomizer = () => {
       const modal = document.querySelector<HTMLElement>('.oanix-folder-customizer')
-      if (!modal || modal.querySelector('.oanix-folder-appearance-picker') || !lastFolderId) return
+      if (!modal || modal.querySelector('.oanix-folder-appearance-picker')) return
+
+      const modalFolderId = modal.dataset.oanixFolderId
+      if (modalFolderId) lastFolderId = modalFolderId
+      if (!lastFolderId) return
 
       const actions = modal.querySelector<HTMLElement>('.oanix-folder-customizer__actions')
       if (!actions) return
 
       const appearance = document.createElement('div')
       appearance.className = 'oanix-folder-appearance-picker'
+      appearance.hidden = true
 
       const colorSection = document.createElement('section')
       colorSection.className = 'oanix-folder-appearance-section'
@@ -86,20 +108,32 @@ export function FolderAppearanceRuntime() {
 
       const colorRow = document.createElement('div')
       colorRow.className = 'oanix-folder-appearance-picker__row'
+      const colorButtons: Array<{ button: HTMLButtonElement; color: string }> = []
+
+      const syncColorSelection = (selectedColor: string | undefined) => {
+        colorButtons.forEach(({ button, color }) => {
+          if (selectedColor?.toLowerCase() === color.toLowerCase()) button.dataset.selected = 'true'
+          else delete button.dataset.selected
+        })
+      }
 
       FOLDER_COLOR_PRESETS.forEach((color) => {
         const button = document.createElement('button')
         button.type = 'button'
         button.className = 'oanix-folder-appearance-picker__swatch'
         button.style.setProperty('--oanix-folder-swatch', color)
+        button.style.backgroundColor = color
         button.setAttribute('aria-label', `Usar color ${color}`)
         button.title = color
         button.addEventListener('click', () => {
           void saveFolderColor(lastFolderId, color).then(() => {
             colors.set(lastFolderId, color)
             applyColor(lastFolderId, color)
+            customColor.value = color
+            syncColorSelection(color)
           })
         })
+        colorButtons.push({ button, color })
         colorRow.appendChild(button)
       })
 
@@ -108,15 +142,20 @@ export function FolderAppearanceRuntime() {
       customColor.className = 'oanix-folder-appearance-picker__custom'
       customColor.value = colors.get(lastFolderId) ?? DEFAULT_FOLDER_COLOR
       customColor.setAttribute('aria-label', 'Elegir color personalizado')
-      customColor.addEventListener('input', () => applyColor(lastFolderId, customColor.value))
+      customColor.addEventListener('input', () => {
+        applyColor(lastFolderId, customColor.value)
+        syncColorSelection(customColor.value)
+      })
       customColor.addEventListener('change', () => {
         const value = customColor.value.toLowerCase()
         void saveFolderColor(lastFolderId, value).then(() => {
           colors.set(lastFolderId, value)
           applyColor(lastFolderId, value)
+          syncColorSelection(value)
         })
       })
       colorRow.appendChild(customColor)
+      syncColorSelection(colors.get(lastFolderId) ?? DEFAULT_FOLDER_COLOR)
 
       const resetColor = document.createElement('button')
       resetColor.type = 'button'
@@ -127,6 +166,7 @@ export function FolderAppearanceRuntime() {
           colors.delete(lastFolderId)
           applyColor(lastFolderId, DEFAULT_FOLDER_COLOR)
           customColor.value = DEFAULT_FOLDER_COLOR
+          syncColorSelection(DEFAULT_FOLDER_COLOR)
         })
       })
 
@@ -184,6 +224,56 @@ export function FolderAppearanceRuntime() {
       iconSection.append(iconHeading, iconGrid, resetIcon)
       appearance.append(colorSection, iconSection)
       actions.before(appearance)
+
+      const existingActions = directActionButtons(actions)
+      const imageButton = existingActions[0]
+      const removeImageButton = existingActions.find((button) => button.classList.contains('oanix-folder-customizer__remove'))
+      const managerButton = existingActions.find((button) => button.textContent?.includes('Administrar nombre'))
+      const cancelButton = existingActions[existingActions.length - 1]
+
+      if (imageButton) {
+        imageButton.textContent = imageButton.textContent?.includes('Poner')
+          ? '🖼️ Poner imagen desde mi dispositivo'
+          : '🖼️ Cambiar imagen de mi dispositivo'
+        imageButton.classList.add('oanix-folder-customizer__image-action')
+      }
+      if (removeImageButton) removeImageButton.textContent = '🧹 Quitar imagen'
+      if (managerButton) managerButton.textContent = '✏️ Administrar nombre / eliminar'
+      if (cancelButton) {
+        cancelButton.textContent = 'Cancelar'
+        cancelButton.classList.add('oanix-folder-customizer__cancel-action')
+      }
+
+      const openButton = document.createElement('button')
+      openButton.type = 'button'
+      openButton.className = 'oanix-folder-customizer__open-action'
+      openButton.textContent = '📂 Abrir carpeta'
+      openButton.addEventListener('click', () => {
+        const folderId = lastFolderId
+        cancelButton?.click()
+        window.requestAnimationFrame(() => {
+          document
+            .querySelector<HTMLElement>(`.oanix-folder-focus[data-oanix-folder-id="${CSS.escape(folderId)}"]`)
+            ?.querySelector<HTMLButtonElement>('.oanix-folder-focus__open')
+            ?.click()
+        })
+      })
+
+      const appearanceButton = document.createElement('button')
+      appearanceButton.type = 'button'
+      appearanceButton.className = 'oanix-folder-customizer__appearance-toggle'
+      appearanceButton.textContent = '🎨 Cambiar color / Icono'
+      appearanceButton.setAttribute('aria-expanded', 'false')
+      appearanceButton.addEventListener('click', () => {
+        appearance.hidden = !appearance.hidden
+        appearanceButton.setAttribute('aria-expanded', appearance.hidden ? 'false' : 'true')
+        appearanceButton.textContent = appearance.hidden ? '🎨 Cambiar color / Icono' : '✓ Cerrar color / Icono'
+        if (!appearance.hidden) appearance.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+      })
+
+      actions.prepend(appearanceButton)
+      actions.prepend(openButton)
+      paintFolders()
     }
 
     const captureCustomizeTarget = (event: Event) => {
