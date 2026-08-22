@@ -9,7 +9,6 @@ import { NoteMenuScrollDismiss } from './features/notes/NoteMenuScrollDismiss'
 import { NoteMenuViewportFit } from './features/notes/NoteMenuViewportFit'
 import { PrivacyStatusHelp } from './features/privacy/PrivacyStatusHelp'
 import { FolderAppearanceRuntime } from './features/folders/FolderAppearanceRuntime'
-import { FolderKineticSlideRuntime } from './features/folders/FolderKineticSlideRuntime'
 import './styles/global.css'
 import './styles/redesign.css'
 import './styles/redesign-polish.css'
@@ -76,6 +75,5 @@ createRoot(document.getElementById('root')!).render(
     <NoteMenuViewportFit />
     <PrivacyStatusHelp />
     <FolderAppearanceRuntime />
-    <FolderKineticSlideRuntime />
   </StrictMode>,
 )

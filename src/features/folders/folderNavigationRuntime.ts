@@ -1,5 +1,4 @@
 import { useEffect } from 'react'
-import './folderMotion.css'
 
 type FolderHistoryView = 'home' | 'list'
 
@@ -23,29 +22,6 @@ function folderCardFromTarget(target: EventTarget | null): HTMLButtonElement | n
   const card = target.closest<HTMLButtonElement>('.oanix-folder-card')
   if (!card || !card.closest('.oanix-folder-grid')) return null
   return card
-}
-
-function updateCardPointer(card: HTMLButtonElement, clientX: number, clientY: number) {
-  const rect = card.getBoundingClientRect()
-  if (rect.width <= 0 || rect.height <= 0) return
-
-  const x = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width))
-  const y = Math.max(0, Math.min(1, (clientY - rect.top) / rect.height))
-  const rotateY = (x - 0.5) * 7
-  const rotateX = (0.5 - y) * 7
-
-  card.style.setProperty('--oanix-folder-pointer-x', `${Math.round(x * 100)}%`)
-  card.style.setProperty('--oanix-folder-pointer-y', `${Math.round(y * 100)}%`)
-  card.style.setProperty('--oanix-folder-rotate-x', `${rotateX.toFixed(2)}deg`)
-  card.style.setProperty('--oanix-folder-rotate-y', `${rotateY.toFixed(2)}deg`)
-}
-
-function resetCard(card: HTMLButtonElement) {
-  delete card.dataset.oanixFolderEngaged
-  card.style.setProperty('--oanix-folder-pointer-x', '50%')
-  card.style.setProperty('--oanix-folder-pointer-y', '45%')
-  card.style.setProperty('--oanix-folder-rotate-x', '0deg')
-  card.style.setProperty('--oanix-folder-rotate-y', '0deg')
 }
 
 export function useFolderNavigationRuntime() {
@@ -98,42 +74,12 @@ export function useFolderNavigationRuntime() {
       replayingHistory = false
     }
 
-    function handlePointerDown(event: PointerEvent) {
-      const card = folderCardFromTarget(event.target)
-      if (!card) return
-      card.dataset.oanixFolderEngaged = 'true'
-      updateCardPointer(card, event.clientX, event.clientY)
-    }
-
-    function handlePointerMove(event: PointerEvent) {
-      const card = folderCardFromTarget(event.target)
-      if (!card) return
-      if (event.pointerType === 'touch' && card.dataset.oanixFolderEngaged !== 'true') return
-      updateCardPointer(card, event.clientX, event.clientY)
-    }
-
-    function handlePointerEnd(event: PointerEvent) {
-      const card = folderCardFromTarget(event.target)
-      if (!card) return
-      resetCard(card)
-    }
-
     document.addEventListener('click', handleClickCapture, true)
     window.addEventListener('popstate', handlePopState)
-    document.addEventListener('pointerdown', handlePointerDown, true)
-    document.addEventListener('pointermove', handlePointerMove, true)
-    document.addEventListener('pointerup', handlePointerEnd, true)
-    document.addEventListener('pointercancel', handlePointerEnd, true)
-    document.addEventListener('pointerout', handlePointerEnd, true)
 
     return () => {
       document.removeEventListener('click', handleClickCapture, true)
       window.removeEventListener('popstate', handlePopState)
-      document.removeEventListener('pointerdown', handlePointerDown, true)
-      document.removeEventListener('pointermove', handlePointerMove, true)
-      document.removeEventListener('pointerup', handlePointerEnd, true)
-      document.removeEventListener('pointercancel', handlePointerEnd, true)
-      document.removeEventListener('pointerout', handlePointerEnd, true)
     }
   }, [])
 }

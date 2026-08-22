@@ -29,20 +29,22 @@ test('las tarjetas abren los filtros ya existentes y el más reutiliza el admini
   assert.match(runtime, /button\?\.click\(\)/)
 })
 
-test('el inicio oculta la lista a primera vista y deja una vuelta clara a carpetas', () => {
+test('el inicio oculta la lista a primera vista y conserva una vuelta funcional a carpetas', () => {
   assert.match(runtime, /useState\(true\)/)
   assert.match(runtime, /Todas las notas/)
   assert.match(runtime, /Nueva carpeta/)
   assert.match(runtime, /Volver a carpetas/)
   assert.match(runtime, /oanixFolderCompact/)
   assert.match(css, /notes-tabs-shell\[data-oanix-folder-compact='true'\]/)
+  assert.match(css, /> :not\(\.oanix-folder-breadcrumb\)/)
 })
 
-test('la cuadrícula premium prioriza dos tarjetas en móvil y conserva movimiento reducible', () => {
-  assert.match(interactiveCss, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/)
-  assert.match(interactiveCss, /@media \(min-width: 880px\)[\s\S]*grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/)
-  assert.match(interactiveCss, /@keyframes oanix-folder-premium-jiggle/)
-  assert.match(interactiveCss, /prefers-reduced-motion: reduce/)
+test('la base visual queda neutra y no obliga al próximo inicio a heredar la cuadrícula premium anterior', () => {
+  assert.match(css, /Intentionally contains no card design language/)
+  assert.match(css, /\.oanix-folder-grid__cards[\s\S]*display: flex;[\s\S]*flex-direction: column;/)
+  assert.doesNotMatch(css, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/)
+  assert.doesNotMatch(interactiveCss, /oanix-folder-premium-jiggle/)
+  assert.doesNotMatch(interactiveCss, /@keyframes oanix-folder/)
   assert.match(interactiveCss, /\.oanix-folder-drag-ghost/)
 })
 
