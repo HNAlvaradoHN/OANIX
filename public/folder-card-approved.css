@@ -1,0 +1,148 @@
+/* OANIX · tarjetas de carpeta aprobadas · 2026-08 */
+
+.oanix-folder-grid__cards {
+  gap: .82rem;
+  padding: 1rem .18rem 6.2rem;
+  scroll-padding-block: 1rem;
+}
+
+.oanix-folder-card--custom {
+  --oanix-folder-color: #111b31;
+  min-height: clamp(13.25rem, 34svh, 17.5rem);
+  border: 2px solid color-mix(in srgb, var(--oanix-folder-color) 56%, rgba(225,235,255,.66));
+  border-radius: 1.35rem;
+  background:
+    linear-gradient(155deg,
+      color-mix(in srgb, var(--oanix-folder-color) 88%, #0a0d14),
+      color-mix(in srgb, var(--oanix-folder-color) 62%, #05070c));
+  box-shadow:
+    0 .85rem 2.1rem rgba(0,0,0,.28),
+    inset 0 1px rgba(255,255,255,.08);
+}
+
+.oanix-folder-card--custom::before {
+  top: 64%;
+  height: 1px;
+  background: color-mix(in srgb, var(--oanix-folder-color) 52%, rgba(255,255,255,.42));
+  opacity: .72;
+}
+
+.oanix-folder-card--custom::after {
+  inset: 64% 0 0;
+  background:
+    linear-gradient(145deg,
+      color-mix(in srgb, var(--oanix-folder-color) 93%, #0b0f18),
+      color-mix(in srgb, var(--oanix-folder-color) 72%, #05070c));
+}
+
+.oanix-folder-card--custom .oanix-folder-card__visual {
+  top: .48rem;
+  left: .48rem;
+  right: .48rem;
+  width: auto;
+  height: calc(64% - .48rem);
+  border-radius: 1rem 1rem .7rem .7rem;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 24% 22%, color-mix(in srgb, var(--oanix-folder-color) 58%, #4f70db), transparent 34%),
+    linear-gradient(145deg, color-mix(in srgb, var(--oanix-folder-color) 86%, #17213b), #070b14 76%);
+  box-shadow:
+    inset 0 0 1.05rem .32rem color-mix(in srgb, var(--oanix-folder-color) 72%, transparent),
+    inset 0 -.65rem .95rem -.25rem color-mix(in srgb, var(--oanix-folder-color) 88%, transparent);
+}
+
+.oanix-folder-card--custom .oanix-folder-card__visual::after {
+  inset: 0;
+  background:
+    linear-gradient(to right,
+      color-mix(in srgb, var(--oanix-folder-color) 78%, transparent) 0%,
+      transparent 7%,
+      transparent 93%,
+      color-mix(in srgb, var(--oanix-folder-color) 78%, transparent) 100%),
+    linear-gradient(to bottom,
+      color-mix(in srgb, var(--oanix-folder-color) 42%, transparent) 0%,
+      transparent 9%,
+      transparent 83%,
+      color-mix(in srgb, var(--oanix-folder-color) 88%, transparent) 100%);
+}
+
+.oanix-folder-card--custom .oanix-folder-card__visual img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: none;
+}
+
+.oanix-folder-card--custom:hover .oanix-folder-card__visual,
+.oanix-folder-card--custom:focus-within .oanix-folder-card__visual {
+  transform: translate3d(0,-1px,0) scale(1.008);
+}
+
+.oanix-folder-card--custom strong,
+.oanix-folder-card--custom small {
+  left: 1rem;
+  right: 3.7rem;
+}
+
+.oanix-folder-card--custom strong {
+  top: auto;
+  bottom: 2.58rem;
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: #f7f9ff;
+  font-size: clamp(1.02rem, 4.5vw, 1.28rem);
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: -.025em;
+}
+
+.oanix-folder-card--custom small {
+  bottom: .94rem;
+  color: rgba(232,239,250,.78);
+  font-size: .76rem;
+  font-weight: 760;
+}
+
+.oanix-folder-card__menu {
+  top: auto;
+  right: .68rem;
+  bottom: .66rem;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 1px solid color-mix(in srgb, var(--oanix-folder-color) 44%, rgba(255,255,255,.42));
+  border-radius: .72rem;
+  background: color-mix(in srgb, var(--oanix-folder-color) 70%, rgba(4,8,17,.92));
+  color: rgba(246,249,255,.94);
+  box-shadow: inset 0 1px rgba(255,255,255,.08);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  font-size: 1.14rem;
+}
+
+.oanix-folder-card__menu:active {
+  transform: scale(.91);
+}
+
+.oanix-folder-card--custom:hover,
+.oanix-folder-card--custom:focus-within {
+  border-color: color-mix(in srgb, var(--oanix-folder-color) 46%, rgba(236,244,255,.82));
+}
+
+@media (max-width: 520px) {
+  .oanix-folder-card--custom {
+    min-height: clamp(12.75rem, 31svh, 15.5rem);
+    border-radius: 1.22rem;
+  }
+
+  .oanix-folder-card--custom .oanix-folder-card__visual {
+    border-radius: .9rem .9rem .62rem .62rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .oanix-folder-card--custom .oanix-folder-card__visual {
+    transform: none !important;
+  }
+}
