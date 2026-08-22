@@ -10,7 +10,7 @@ Checkpoint operativo corto. Antes de trabajar, verificar siempre el `main` real 
 - OANIX sigue siendo offline-first y debe funcionar sin nube.
 - No dividir por ahora OANIX en Free/Pro ni bloquear funciones artificialmente. La monetización queda para una decisión posterior.
 - PWA y Android comparten la misma base React + TypeScript + Vite/Capacitor.
-- `main` al actualizar este documento: `b0e23a7df2f125c010a42b87bfba0450babe2980` (PR #219). Verificarlo, no asumir que sigue vigente.
+- `main` al actualizar este documento: `e00b8c5a8d29152a3b3accd71ff9ba66934488a6`. Verificarlo, no asumir que sigue vigente.
 
 ## Reglas de trabajo
 
@@ -78,22 +78,28 @@ Google Drive es el primer proveedor, no la nube obligatoria de OANIX.
 
 Fases del motor/UI: Preparando → Cifrando → Subiendo → Verificando → Guardado ✓, además de pausado/error/reanudación. `100% transferido` no equivale a `Guardado` hasta terminar la verificación.
 
-Validado en PWA con archivo de video real de ~120 MiB:
-- subida cifrada completa a Google Drive;
-- recuperación remota por rangos;
-- SHA-256 de fragmentos;
-- descifrado y comparación contra el archivo original;
-- 15 fragmentos íntegros y descifrados;
-- corte de Wi-Fi alrededor del 30%, cierre completo de la PWA, reapertura, reconexión de Drive, selección del mismo archivo y continuación desde el progreso remoto ya confirmado.
+Validado en PWA:
+- archivo real de ~120 MiB: subida cifrada completa, recuperación remota por rangos, SHA-256, descifrado y comparación íntegra;
+- corte de Wi-Fi alrededor del 30%, cierre completo de la PWA, reapertura, reconexión de Drive y continuación desde el progreso remoto confirmado;
+- archivo real de **818 MB**: subida completa, `Guardado ✓`, **103 fragmentos íntegros y descifrados** en la recuperación/verificación final.
 
 PR #219 amplió la prueba controlada a **100 MiB–1 GiB**. Todavía no saltar directamente a 5 GB.
 
+## Segundo plano
+
+Decisión de producto:
+- **Android/APK:** las transferencias grandes deberán poder continuar en segundo plano cuando el usuario cambie de aplicación o apague la pantalla, dentro de las restricciones reales de Android.
+- **PWA:** no prometer ejecución continua en segundo plano porque el navegador puede suspender la página; la garantía será checkpoint seguro y reanudación desde el progreso confirmado al volver.
+
+No implementar todavía este bloque mientras se valida estabilidad del motor base.
+
 ## Próximo paso exacto
 
-1. Probar un archivo cercano a **1 GiB** sin interrupciones y confirmar subida + recuperación/verificación completas.
-2. Repetir con interrupción de red aproximadamente al 30–50%, cerrar/reabrir OANIX y confirmar reanudación sin empezar desde cero.
-3. Solo después aumentar gradualmente el tamaño; 5 GB es una meta posterior, no la siguiente prueba inmediata.
-4. Más adelante: reproducción de video por rangos/seek, caché bajo demanda, Guardar sin conexión y Liberar del dispositivo (distinto de Eliminar de OANIX).
+1. Repetir la prueba de ~818 MB con interrupción de red aproximadamente al 30–50%, cerrar/reabrir OANIX y confirmar reanudación sin empezar desde cero.
+2. Solo después aumentar gradualmente el tamaño; 5 GB es una meta posterior, no la siguiente prueba inmediata.
+3. Después de estabilizar transferencias: integrar archivos grandes al flujo normal de notas.
+4. Antes de considerar terminado el sistema de archivos grandes en Android, implementar y validar transferencia en segundo plano.
+5. Más adelante: reproducción de video por rangos/seek, caché bajo demanda, Guardar sin conexión y Liberar del dispositivo (distinto de Eliminar de OANIX).
 
 ## Checkpoints históricos útiles
 
