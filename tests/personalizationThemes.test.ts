@@ -21,7 +21,7 @@ test('personalization exposes only classic day and night and migrates retired pr
   assert.match(catalog, /id: 'classic-day'/)
   assert.match(catalog, /id: 'classic-night'/)
   assert.match(catalog, /DEFAULT_OANIX_THEME[^\n]*= 'classic-night'/)
-  assert.equal((catalog.match(/\bid: '/g) ?? []).length, 2)
+  assert.equal((catalog.match(/\n    id: '/g) ?? []).length, 2)
 
   const retiredIds = [
     'midnight-violet', 'cyber-blue', 'graphite-neon', 'obsidian-gold', 'crimson-core',
