@@ -77,6 +77,10 @@
   background: var(--oanix-panel, #fff);
 }
 
+.note-attachment-card[data-oanix-storage='remote'] {
+  border-style: dashed;
+}
+
 .note-attachment-card[data-oanix-new='true'] {
   border-color: color-mix(in srgb, var(--theme-primary, #4f70db) 62%, var(--oanix-border, #d8e0ea));
   outline: 2px solid color-mix(in srgb, var(--theme-primary, #4f70db) 24%, transparent);
@@ -92,6 +96,13 @@
   border-radius: 10px;
   background: var(--oanix-panel-3, #e9eef5);
   font-size: 1.25rem;
+}
+
+.note-attachment-card[data-oanix-storage='remote'] .note-attachment-card__icon::after {
+  content: '☁';
+  position: absolute;
+  margin: 1.75rem 0 0 1.75rem;
+  font-size: .72rem;
 }
 
 .note-attachment-card__body {
@@ -169,6 +180,7 @@
 
 .note-attachments__scope {
   padding-top: .1rem;
+  line-height: 1.45;
 }
 
 @keyframes oanix-attachment-added {
