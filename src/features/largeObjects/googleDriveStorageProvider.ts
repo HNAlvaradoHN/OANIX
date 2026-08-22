@@ -320,6 +320,7 @@ export class GoogleDriveStorageProvider implements OanixStorageProvider {
       headers: authorizedHeaders(token, {
         Range: `bytes=${offset}-${offset + length - 1}`,
       }),
+      signal: request.signal,
     })
     if (response.status !== 206 && response.status !== 200) {
       throw new Error(await responseMessage(response, 'Google Drive no pudo descargar el rango cifrado'))
