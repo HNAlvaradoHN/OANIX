@@ -40,7 +40,7 @@ test('el inicio oculta la lista a primera vista y conserva una vuelta funcional 
 })
 
 test('el nuevo inicio usa una sola galería vertical con snap y desvanecido de bordes', () => {
-  assert.match(css, /vertical gallery v1/)
+  assert.match(css, /vertical gallery v2/)
   assert.match(css, /\.oanix-folder-grid__cards[\s\S]*display: flex;[\s\S]*flex-direction: column;/)
   assert.match(css, /scroll-snap-type: y mandatory/)
   assert.match(css, /scroll-snap-align: center/)
@@ -51,13 +51,15 @@ test('el nuevo inicio usa una sola galería vertical con snap y desvanecido de b
   assert.match(interactiveCss, /\.oanix-folder-drag-ghost/)
 })
 
-test('la tarjeta visual conserva tamaño completo, portada, nombre en una línea, contador y menú de esquina', () => {
-  assert.match(css, /height: clamp\(9\.2rem, 22dvh, 10\.8rem\)/)
-  assert.match(css, /@media \(max-height: 700px\)[\s\S]*height: 8\.8rem;[\s\S]*min-height: 8\.8rem;/)
+test('la tarjeta visual es sólida, compacta y conserva portada, título, contador y menú', () => {
+  assert.match(css, /height: clamp\(7\.2rem, 15\.5dvh, 7\.8rem\)/)
+  assert.match(css, /@media \(max-height: 700px\)[\s\S]*height: 7rem;[\s\S]*min-height: 7rem;/)
+  assert.match(css, /background: var\(--oanix-folder-color\)/)
+  assert.match(css, /border: 2px solid color-mix/)
   assert.match(css, /\.oanix-folder-card__visual[\s\S]*grid-column: 1;/)
   assert.match(css, /text-overflow: ellipsis/)
   assert.match(css, /white-space: nowrap/)
-  assert.match(css, /\.oanix-folder-card__menu[\s\S]*right: \.58rem;[\s\S]*bottom: \.56rem;/)
+  assert.match(css, /\.oanix-folder-card__menu[\s\S]*right: \.48rem;[\s\S]*bottom: \.46rem;/)
   assert.match(css, /var\(--oanix-folder-color\)/)
 })
 
