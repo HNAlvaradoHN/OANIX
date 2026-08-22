@@ -1,4 +1,5 @@
 import { deleteNoteRecord, listNotes, readNote, saveNote } from '../../storage/repositories/noteRepository'
+import { assertAttachmentsAllowNoteDeletion } from '../attachments/attachmentService'
 import {
   captureNoteVersion,
   deleteNoteVersionHistory,
@@ -95,7 +96,8 @@ async function createNewNoteRecord(
     Number.isSafeInteger(note.manualOrder) && (note.manualOrder ?? -1) >= 0,
   )
   const highestManualOrder = canContinueManualOrder
-    ? existingNotes.reduce((highest, note) => Math.max(highest, note.manualOrder ?? 0), 0)
+    ? existingNotes.reduce((highest, note) => Math.max(highest, note.manualOrder ?? 0), 0
+    )
     : 0
   const nextManualOrder = canContinueManualOrder && highestManualOrder < Number.MAX_SAFE_INTEGER
     ? highestManualOrder + 1
@@ -156,6 +158,7 @@ export function deleteNote(noteId: string): Promise<NoteRecord> {
         throw new Error('La nota ya no existe.')
       }
 
+      await assertAttachmentsAllowNoteDeletion(noteId)
       await deleteNoteRecord(noteId)
       try {
         await deleteNoteVersionHistory(noteId)
