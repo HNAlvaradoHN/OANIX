@@ -165,8 +165,39 @@
   margin: 0;
 }
 
+.note-attachments__status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .65rem;
+  min-width: 0;
+}
+
+.note-attachments__status-row .note-attachments__status {
+  min-width: 0;
+  line-height: 1.35;
+}
+
 .note-attachments__status--added {
   font-weight: 800;
+}
+
+.note-attachments__cancel {
+  flex: 0 0 auto;
+  min-height: 1.9rem;
+  padding: 0 .68rem;
+  border: 1px solid color-mix(in srgb, var(--theme-danger, #b42318) 42%, transparent);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--theme-danger, #b42318);
+  font: inherit;
+  font-size: .72rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.note-attachments__cancel:hover {
+  background: color-mix(in srgb, var(--theme-danger, #b42318) 9%, transparent);
 }
 
 .note-attachments__error {
@@ -235,5 +266,9 @@
 
   .note-attachment-card__actions button {
     flex: 1 1 auto;
+  }
+
+  .note-attachments__status-row {
+    align-items: flex-start;
   }
 }
