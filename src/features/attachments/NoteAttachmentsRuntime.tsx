@@ -8,6 +8,7 @@ import {
   removeEncryptedAttachment,
   storeEncryptedAttachment,
 } from './attachmentService'
+import { exportRemoteLargeAttachment } from './largeAttachmentExportService'
 import {
   MAX_LOCAL_ATTACHMENT_BYTES,
   attachmentIcon,
@@ -288,13 +289,8 @@ export function NoteAttachmentsRuntime() {
     }
   }
 
-  async function requireAttachmentFile(item: AttachmentMetadata): Promise<File | null> {
+  async function requireLocalAttachmentFile(item: AttachmentMetadata): Promise<File | null> {
     setError('')
-    if (isRemoteLargeAttachment(item)) {
-      setError('Abrir y exportar archivos grandes de Drive se habilitará cuando la recuperación por rangos esté conectada.')
-      return null
-    }
-
     try {
       const file = await loadEncryptedAttachmentFile(item)
       if (!file) {
@@ -308,11 +304,28 @@ export function NoteAttachmentsRuntime() {
     }
   }
 
+  async function recoverRemoteAttachment(item: AttachmentMetadata, openAfterSave: boolean): Promise<void> {
+    setError('')
+    setStatus(openAfterSave ? 'Preparando archivo grande para abrir…' : 'Preparando descarga del archivo grande…')
+    const result = await exportRemoteLargeAttachment(item, {
+      openAfterSave,
+      onProgress: ({ percent }) => {
+        setStatus(`${openAfterSave ? 'Recuperando' : 'Exportando'} desde Drive… ${percent}%`)
+      },
+    })
+    setStatus(result === 'saved' ? (openAfterSave ? 'Archivo recuperado y abierto.' : 'Archivo recuperado y guardado.') : '')
+  }
+
   async function handleOpen(item: AttachmentMetadata) {
-    if (busy || isRemoteLargeAttachment(item)) return
+    if (busy) return
     setBusy(true)
     try {
-      const file = await requireAttachmentFile(item)
+      if (isRemoteLargeAttachment(item)) {
+        await recoverRemoteAttachment(item, true)
+        return
+      }
+
+      const file = await requireLocalAttachmentFile(item)
       if (!file) return
 
       if (!isPreviewable(item)) {
@@ -329,17 +342,28 @@ export function NoteAttachmentsRuntime() {
       anchor.click()
       anchor.remove()
       window.setTimeout(() => URL.revokeObjectURL(url), 60_000)
+    } catch (openError) {
+      setStatus('')
+      setError(openError instanceof Error ? openError.message : 'No se pudo recuperar el archivo desde Drive.')
     } finally {
       setBusy(false)
     }
   }
 
   async function handleExport(item: AttachmentMetadata) {
-    if (busy || isRemoteLargeAttachment(item)) return
+    if (busy) return
     setBusy(true)
     try {
-      const file = await requireAttachmentFile(item)
+      if (isRemoteLargeAttachment(item)) {
+        await recoverRemoteAttachment(item, false)
+        return
+      }
+
+      const file = await requireLocalAttachmentFile(item)
       if (file) await shareOrDownloadFile(file)
+    } catch (exportError) {
+      setStatus('')
+      setError(exportError instanceof Error ? exportError.message : 'No se pudo exportar el archivo desde Drive.')
     } finally {
       setBusy(false)
     }
@@ -432,9 +456,6 @@ export function NoteAttachmentsRuntime() {
               {attachments.map((item) => {
                 const isNew = newAttachmentIds.has(item.attachmentId)
                 const remote = isRemoteLargeAttachment(item)
-                const unavailableTitle = remote
-                  ? 'Pendiente: recuperación cifrada por rangos desde Drive'
-                  : undefined
                 return (
                   <article
                     className="note-attachment-card"
@@ -451,14 +472,14 @@ export function NoteAttachmentsRuntime() {
                       <button
                         type="button"
                         onClick={() => void handleOpen(item)}
-                        disabled={busy || remote}
-                        title={unavailableTitle}
+                        disabled={busy}
+                        title={remote ? 'Recuperar, descifrar y abrir desde Drive' : undefined}
                       >Abrir</button>
                       <button
                         type="button"
                         onClick={() => void handleExport(item)}
-                        disabled={busy || remote}
-                        title={unavailableTitle}
+                        disabled={busy}
+                        title={remote ? 'Recuperar y guardar desde Drive' : undefined}
                       >Exportar</button>
                       <button className="note-attachment-card__remove" type="button" onClick={() => void handleRemove(item)} disabled={busy}>Quitar</button>
                     </div>
