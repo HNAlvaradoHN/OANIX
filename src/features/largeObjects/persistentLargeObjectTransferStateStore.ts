@@ -12,9 +12,16 @@ export class PersistentLargeObjectTransferStateStore implements LargeObjectTrans
   async load(objectId: string): Promise<LargeObjectTransferSnapshot | null> {
     const loaded = await loadLargeObjectTransferCache()
     if (!loaded) return null
+
     if (loaded.checkpoint.objectId !== objectId) {
-      throw new Error('Ya existe otra transferencia grande pendiente; debe finalizarse o descartarse primero.')
+      // Only one transfer slot exists. A different newly-selected file cannot safely
+      // resume the previous upload because the original File bytes are no longer
+      // guaranteed to be available. Discard the obsolete encrypted checkpoint and
+      // let the new file start a fresh resumable Drive session automatically.
+      await clearLargeObjectTransferCache()
+      return null
     }
+
     return {
       checkpoint: loaded.checkpoint,
       retainedChunk: loaded.retainedChunk,
