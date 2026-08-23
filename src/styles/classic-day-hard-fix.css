@@ -1,6 +1,9 @@
-/* Classic Day is intentionally hard-pinned to a true light palette.
- * The organic workspace stays translucent so folder covers remain visible, matching
- * the v38.3 visual reference, while explicit light colors stop legacy/mobile darkening.
+/* Classic Day hardening for legacy/non-workspace surfaces.
+ *
+ * The v38 organic notes workspace is intentionally NOT styled here. Its background,
+ * translucent header, note cards and folder dock live in organicWorkspace.css so the
+ * supplied visual reference has one CSS authority on desktop, responsive emulation
+ * and the installed PWA alike.
  */
 
 html.oanix-classic-day,
@@ -11,27 +14,6 @@ html.oanix-classic-day .note-view,
 html.oanix-classic-day .vault-shell {
   background-color: #ffffff !important;
   color: #101828 !important;
-}
-
-/* The cover lives behind the real notes workspace; do not paint an opaque white sheet over it. */
-html.oanix-classic-day .notes-shell,
-html.oanix-classic-day .notes-sidebar {
-  background: transparent !important;
-  color: #101828 !important;
-}
-
-html.oanix-classic-day .notes-sidebar {
-  border-color: rgba(52,64,84,.14) !important;
-}
-
-/* Header glass follows the compact v38.3 reference instead of becoming a solid white bar. */
-html.oanix-classic-day .notes-header {
-  background: rgba(241,245,249,.70) !important;
-  color: #101828 !important;
-  border-color: rgba(255,255,255,.46) !important;
-  box-shadow: 0 10px 30px rgba(15,23,42,.07) !important;
-  backdrop-filter: blur(15px) !important;
-  -webkit-backdrop-filter: blur(15px) !important;
 }
 
 html.oanix-classic-day .note-view__header,
@@ -53,22 +35,6 @@ html.oanix-classic-day .mobile-editor-dock {
   border-color: rgba(52,64,84,.15) !important;
 }
 
-/* Infographic cards keep the frosted translucency from the supplied v38.3 mockup. */
-html.oanix-classic-day .note-row {
-  background: rgba(241,245,249,.86) !important;
-  background: linear-gradient(
-    105deg,
-    color-mix(in srgb, var(--oanix-note-card-color, #2563eb) 7%, rgba(241,245,249,.88)) 0%,
-    rgba(241,245,249,.84) 48%,
-    rgba(226,232,240,.82) 100%
-  ) !important;
-  color: #101828 !important;
-  border-color: rgba(255,255,255,.58) !important;
-  box-shadow: 0 8px 25px rgba(15,23,42,.09), inset 0 1px 2px rgba(255,255,255,.38) !important;
-  backdrop-filter: blur(15px) !important;
-  -webkit-backdrop-filter: blur(15px) !important;
-}
-
 html.oanix-classic-day .editor-frame,
 html.oanix-classic-day .oanix-theme-option,
 html.oanix-classic-day .vault-card,
@@ -81,22 +47,12 @@ html.oanix-classic-day .vault-access__lock {
   box-shadow: 0 10px 28px rgba(15,23,42,.055) !important;
 }
 
-html.oanix-classic-day .note-row--selected,
-html.oanix-classic-day .note-row--menu-open {
-  background: rgba(255,255,255,.92) !important;
-  background: linear-gradient(145deg, rgba(237,244,255,.92), rgba(255,255,255,.90)) !important;
-  border-color: #2563eb !important;
-  box-shadow: 0 10px 28px rgba(37,99,235,.10) !important;
-}
-
 html.oanix-classic-day .oanix-theme-option--selected {
   background: linear-gradient(145deg, #edf4ff, #ffffff) !important;
   border-color: #2563eb !important;
   box-shadow: 0 10px 28px rgba(37,99,235,.10) !important;
 }
 
-html.oanix-classic-day .notes-brand strong,
-html.oanix-classic-day .note-row__topline strong,
 html.oanix-classic-day .note-view__identity strong,
 html.oanix-classic-day .note-title-field input,
 html.oanix-classic-day .editor-surface,
@@ -106,8 +62,6 @@ html.oanix-classic-day .oanix-theme-option__copy strong {
   color: #101828 !important;
 }
 
-html.oanix-classic-day .notes-brand span,
-html.oanix-classic-day .note-row__preview,
 html.oanix-classic-day .note-view__identity span,
 html.oanix-classic-day .oanix-theme-menu__header p,
 html.oanix-classic-day .oanix-theme-section__heading span,
@@ -146,39 +100,6 @@ html.oanix-classic-day .note-view {
     radial-gradient(circle at 86% 8%, rgba(37,99,235,.065), transparent 26rem),
     #ffffff !important;
   background-size: 46px 46px, 46px 46px, auto, auto !important;
-}
-
-/* Keep the OANIX nucleus legible on white surfaces. The Day palette stays light,
- * while the brand mark keeps the same dark visual weight as Night. */
-html.oanix-classic-day .notes-brand__mark,
-html.oanix-classic-day .vault-logo,
-html.oanix-classic-day .note-view__empty-mark {
-  background:
-    radial-gradient(circle at 34% 26%, rgba(255,255,255,.24), transparent 18%),
-    radial-gradient(circle, #1f4f91 0 34%, #0f2a4f 58%, #08162b 100%) !important;
-  color: #ffffff !important;
-  border-color: rgba(37,99,235,.72) !important;
-  text-shadow: 0 1px 2px rgba(0,0,0,.34), 0 0 10px rgba(255,255,255,.20) !important;
-  box-shadow:
-    0 0 0 5px rgba(37,99,235,.07),
-    0 8px 24px rgba(15,42,79,.18),
-    0 0 24px rgba(14,165,233,.16),
-    inset 0 0 18px rgba(96,165,250,.20) !important;
-}
-
-html.oanix-classic-day .notes-brand__mark::before,
-html.oanix-classic-day .vault-logo::before,
-html.oanix-classic-day .note-view__empty-mark::before {
-  border-color: rgba(37,99,235,.30) !important;
-  border-top-color: rgba(14,165,233,.92) !important;
-  border-left-color: rgba(37,99,235,.48) !important;
-}
-
-html.oanix-classic-day .notes-brand__mark::after,
-html.oanix-classic-day .vault-logo::after,
-html.oanix-classic-day .note-view__empty-mark::after {
-  background: #0ea5e9 !important;
-  box-shadow: 0 0 8px #0ea5e9, 0 0 14px rgba(37,99,235,.42) !important;
 }
 
 /* Match the WebView canvas to Android's transparent gesture-navigation area. */
