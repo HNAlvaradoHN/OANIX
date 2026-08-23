@@ -1,0 +1,86 @@
+import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import test from 'node:test'
+
+const noteTypes = readFileSync('src/features/notes/noteTypes.ts', 'utf8')
+const noteService = readFileSync('src/features/notes/noteService.ts', 'utf8')
+const folderAppearance = readFileSync('src/features/folders/folderAppearanceService.ts', 'utf8')
+const runtime = readFileSync('src/features/notes/WorkspacePersonalizationRuntime.tsx', 'utf8')
+const css = readFileSync('src/features/notes/workspacePersonalization.css', 'utf8')
+const main = readFileSync('src/main.tsx', 'utf8')
+
+test('la personalización de lista vive dentro del mismo registro cifrado de la nota', () => {
+  assert.match(noteTypes, /visualDescription\?: string/)
+  assert.match(noteTypes, /visualCategoryTagId\?: string/)
+  assert.match(noteTypes, /visualIcon\?: NoteVisualIcon/)
+  assert.match(noteTypes, /visualColor\?: string/)
+  assert.match(noteTypes, /MAX_NOTE_VISUAL_DESCRIPTION_LENGTH = 140/)
+  assert.match(noteService, /export function setNoteListAppearance/)
+  assert.match(noteService, /return enqueueNoteMutation\(noteId/)
+  assert.doesNotMatch(noteService, /writeEncryptedRecord\(['"]note-appearance/)
+})
+
+test('personalizar una nota conserva etiquetas reales y usa iconos y colores validados', () => {
+  assert.match(noteService, /existingTagIds = existing\.tagIds \?\? \[\]/)
+  assert.match(noteService, /\[categoryTagId, \.\.\.existingTagIds\.filter/)
+  assert.match(noteService, /isNoteVisualIcon\(input\.icon\)/)
+  assert.match(noteService, /isNoteVisualColor\(color\)/)
+  assert.match(runtime, /data\.tags\.map\(\(tag\)/)
+  assert.match(runtime, /ICONO CENTRAL/)
+  assert.match(runtime, /COLOR DE TARJETA/)
+})
+
+test('el menú de tres puntos recibe una sola entrada de personalización', () => {
+  assert.match(runtime, /data-oanix-note-customize/)
+  assert.match(runtime, /🎨<\/span> Personalizar/)
+  assert.match(runtime, /if \(menu && !menu\.querySelector\('\[data-oanix-note-customize\]'\)\)/)
+})
+
+test('fijado y favorito de carpeta reutilizan folder-appearance cifrado sin tocar folder-order', () => {
+  assert.match(folderAppearance, /pinned\?: boolean/)
+  assert.match(folderAppearance, /favorite\?: boolean/)
+  assert.match(folderAppearance, /loadFolderAppearanceFlags/)
+  assert.match(folderAppearance, /saveFolderPinned/)
+  assert.match(folderAppearance, /saveFolderFavorite/)
+  assert.match(folderAppearance, /writeEncryptedRecord\(FOLDER_APPEARANCE_RECORD, folderId, record\)/)
+  assert.doesNotMatch(folderAppearance, /folder-order/)
+})
+
+test('el engranaje consolida las acciones reales de carpeta y el control inferior alterna Día Noche', () => {
+  assert.match(runtime, /oanix-folder-card__gear/)
+  assert.match(runtime, /Abrir carpeta/)
+  assert.match(runtime, /Fijar carpeta/)
+  assert.match(runtime, /Marcar como favorito/)
+  assert.match(runtime, /Renombrar carpeta/)
+  assert.match(runtime, /Cambiar color \/ Icono/)
+  assert.match(runtime, /Cambiar imagen local/)
+  assert.match(runtime, /Eliminar carpeta/)
+  assert.match(runtime, /applyOanixTheme\(current === 'classic-day' \? 'classic-night' : 'classic-day'\)/)
+})
+
+test('las acciones de carpeta reutilizan los handlers existentes en vez de duplicar CRUD', () => {
+  assert.match(runtime, /\.oanix-folder-focus__open/)
+  assert.match(runtime, /\.oanix-folder-focus__menu/)
+  assert.match(runtime, /\.oanix-folder-customizer__appearance-toggle/)
+  assert.match(runtime, /\.oanix-folder-customizer__image-action/)
+  assert.match(runtime, /\.notes-tab--add/)
+  assert.match(runtime, /\.folder-list__delete/)
+})
+
+test('la nueva presentación usa el logo real y mantiene fondo legible con Día Noche y responsive', () => {
+  assert.match(css, /background-image: var\(--oanix-brand-logo-url\)/)
+  assert.match(css, /data-oanix-note-icon/)
+  assert.match(css, /--oanix-note-card-color/)
+  assert.match(css, /oanix-folder-card__gear/)
+  assert.match(css, /oanix-organic-background--covered/)
+  assert.match(css, /html\[data-oanix-theme='classic-day'\]/)
+  assert.match(css, /@media \(max-width: 760px\)/)
+  assert.match(css, /@media \(max-width: 480px\)/)
+  assert.match(css, /env\(safe-area-inset-bottom\)/)
+})
+
+test('el runtime v39 queda montado sobre la misma app compartida', () => {
+  assert.match(main, /WorkspacePersonalizationRuntime/)
+  assert.match(main, /<WorkspacePersonalizationRuntime \/>/)
+  assert.doesNotMatch(runtime + css, /cdn\.tailwindcss|unpkg\.com|unsplash|picsum/)
+})
