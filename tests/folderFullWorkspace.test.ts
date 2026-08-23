@@ -27,7 +27,7 @@ test('las tarjetas de notas conservan datos y acciones reales con la geometría 
   assert.match(organicCss, /\.note-row[\s\S]*min-height: 95px !important/)
   assert.match(organicCss, /margin: -15px 0 0 !important/)
   assert.match(organicCss, /clip-path: polygon\(15% 0%,85% 0%,100% 100%,0% 100%\)/)
-  assert.match(organicRuntime, /data\.oanixNoteCategory = category/)
+  assert.match(organicRuntime, /row\.dataset\.oanixNoteCategory = category/)
 })
 
 test('el dock inferior usa nombres contadores portadas colores y acciones existentes', () => {
