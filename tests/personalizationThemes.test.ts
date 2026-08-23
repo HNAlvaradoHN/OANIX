@@ -8,6 +8,7 @@ const systemBridge = readFileSync('src/features/personalization/systemThemeBridg
 const menu = readFileSync('src/features/personalization/ThemeMenu.tsx', 'utf8')
 const workspace = readFileSync('src/features/notes/NotesWorkspace.tsx', 'utf8')
 const workspacePersonalization = readFileSync('src/features/notes/WorkspacePersonalizationRuntime.tsx', 'utf8')
+const organicWorkspaceCss = readFileSync('src/features/notes/organicWorkspace.css', 'utf8')
 const menuCss = readFileSync('src/features/personalization/personalization.css', 'utf8')
 const workspaceMenuCss = readFileSync('src/features/personalization/personalization-workspace.css', 'utf8')
 const themesCss = readFileSync('src/styles/themes.css', 'utf8')
@@ -105,11 +106,24 @@ test('classic day explicitly opts out of mobile forced dark and hardens the shar
   assert.match(finalPolishCss, /data-oanix-theme='classic-day'[\s\S]*--theme-bg: #f4f7fb/)
 })
 
-test('classic day keeps the v38 glass workspace instead of covering folder images with opaque white', () => {
-  assert.match(classicDayHardFixCss, /\.notes-shell,[\s\S]*\.notes-sidebar[\s\S]*background: transparent !important/)
-  assert.match(classicDayHardFixCss, /\.notes-header[\s\S]*rgba\(241,245,249,\.70\)/)
-  assert.match(classicDayHardFixCss, /\.note-row[\s\S]*rgba\(241,245,249,\.86\)/)
-  assert.match(classicDayHardFixCss, /backdrop-filter: blur\(15px\) !important/)
+test('v38 organic CSS owns workspace surfaces instead of competing Day overrides', () => {
+  assert.doesNotMatch(baseThemesCss, /data-oanix-theme='classic-day'[^\n]*\][\s\S]*\.notes-shell/)
+  assert.doesNotMatch(baseThemesCss, /data-oanix-theme='classic-day'[^\n]*\][\s\S]*\.notes-sidebar/)
+  assert.doesNotMatch(baseThemesCss, /data-oanix-theme='classic-day'[^\n]*\][\s\S]*\.notes-header/)
+  assert.doesNotMatch(baseThemesCss, /data-oanix-theme='classic-day'[^\n]*\][\s\S]*\.note-row\s*\{/)
+  assert.doesNotMatch(classicDayHardFixCss, /html\.oanix-classic-day \.notes-shell/)
+  assert.doesNotMatch(classicDayHardFixCss, /html\.oanix-classic-day \.notes-header/)
+  assert.doesNotMatch(classicDayHardFixCss, /html\.oanix-classic-day \.note-row\s*\{/)
+
+  assert.match(organicWorkspaceCss, /\.notes-shell[\s\S]*background: transparent !important/)
+  assert.match(organicWorkspaceCss, /\.notes-sidebar[\s\S]*background: transparent !important/)
+  assert.match(organicWorkspaceCss, /\.notes-header[\s\S]*background: var\(--oanix-organic-header\) !important/)
+  assert.match(organicWorkspaceCss, /\.note-row[\s\S]*background: var\(--oanix-organic-card\) !important/)
+  assert.match(organicWorkspaceCss, /backdrop-filter: blur\(15px\)/)
+
+  const dayIndex = main.indexOf("./styles/classic-day-hard-fix.css")
+  const organicRuntimeIndex = main.indexOf("./features/notes/OrganicWorkspaceRuntime")
+  assert.ok(dayIndex >= 0 && organicRuntimeIndex > dayIndex)
 })
 
 test('selected theme also controls browser and Android system chrome', () => {
