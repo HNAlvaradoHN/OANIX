@@ -23,7 +23,7 @@ test('PWA keeps the executable app shell available offline', () => {
   assert.match(viteConfig, /navigateFallback:\s*'index\.html'/)
   assert.match(viteConfig, /cleanupOutdatedCaches:\s*true/)
   assert.match(viteConfig, /includeAssets:\s*\[[^\]]*'oanix-icon\.svg'[^\]]*\]/)
-  assert.match(viteConfig, /includeAssets:\s*\[[^\]]*'oanix-logo\.svg'[^\]]*\]/)
+  assert.match(viteConfig, /includeAssets:\s*\[[^\]]*'oanix-logo\.webp'[^\]]*\]/)
   assert.match(viteConfig, /start_url:\s*'\/OANIX\/'/)
   assert.match(viteConfig, /scope:\s*'\/OANIX\/'/)
 })
