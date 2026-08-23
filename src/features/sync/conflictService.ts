@@ -214,11 +214,22 @@ async function scanInternal(): Promise<InternalConflict[]> {
 
     const remote = rowByKey.get(baseline.remoteKey)
     if (!remote) {
+      if (active) {
+        conflicts.push(await makeConflict(localKey, active.row, local?.payload ?? null, active.envelope.payload, !local, false))
+        continue
+      }
       const synthetic: RemoteRow = { record_key: baseline.remoteKey, ciphertext: null, version: baseline.version, deleted: true }
       conflicts.push(await makeConflict(localKey, synthetic, local?.payload ?? null, null, !local, true, false, 'La fila remota asociada ya no existe. OANIX no adivinará qué ocurrió.'))
       continue
     }
     if (active && active.row.record_key !== baseline.remoteKey) {
+      if (remote.deleted) {
+        // Another device can recreate the same local record under a new opaque remote key
+        // after the baseline key became a tombstone. Preserve both meanings and let the
+        // user choose between the active remote value and this device's current state.
+        conflicts.push(await makeConflict(localKey, active.row, local?.payload ?? null, active.envelope.payload, !local, false))
+        continue
+      }
       conflicts.push(await makeConflict(localKey, remote, local?.payload ?? null, null, !local, remote.deleted, false, 'Existen dos identidades remotas incompatibles para el mismo registro.'))
       continue
     }

@@ -23,6 +23,14 @@ test('conflict choices are explicit and remote writes remain optimistic', () => 
   assert.match(center, /OANIX conservó ambas versiones y no sobrescribió nada/)
 })
 
+test('a tombstoned remote identity with one active successor remains resolvable', () => {
+  const service = readFileSync('src/features/sync/conflictService.ts', 'utf8')
+
+  assert.match(service, /if \(!remote\) \{[\s\S]*?if \(active\) \{[\s\S]*?active\.envelope\.payload[\s\S]*?!local, false/)
+  assert.match(service, /if \(active && active\.row\.record_key !== baseline\.remoteKey\) \{[\s\S]*?if \(remote\.deleted\) \{[\s\S]*?active\.row[\s\S]*?active\.envelope\.payload[\s\S]*?!local, false/)
+  assert.match(service, /Existen dos identidades remotas incompatibles para el mismo registro/)
+})
+
 test('combining notes keeps the remotely accepted version first and preserves block types', () => {
   const service = readFileSync('src/features/sync/conflictService.ts', 'utf8')
   const memory = readFileSync('docs/PROJECT_MEMORY.md', 'utf8')

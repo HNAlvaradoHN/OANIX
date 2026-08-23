@@ -4,7 +4,7 @@ Este documento conserva **decisiones duraderas y restricciones de producto/arqui
 
 Antes de trabajar: leer `AGENTS.md` y `docs/CURRENT_STATE.md`, verificar `main` y PR recientes. GitHub es la fuente de verdad del código actual.
 
-**Última actualización:** 2026-08-22
+**Última actualización:** 2026-08-23
 
 ## 1. Principios permanentes
 
@@ -13,6 +13,7 @@ Antes de trabajar: leer `AGENTS.md` y `docs/CURRENT_STATE.md`, verificar `main` 
 - Reutilizar módulos/stores existentes antes de crear persistencias paralelas.
 - Conservar datos tiene prioridad ante incertidumbre; no sobrescribir silenciosamente.
 - En conflictos multidispositivo: detectar → conservar ambos lados → mostrar → usuario decide. Si se combinan notas compatibles, va primero el cambio aceptado primero por la sincronización remota y después el otro; #69 validó este flujo. Etiqueta histórica de validación: `VALIDATION_DEBT`; verificar el issue antes de asumir que sigue pendiente.
+- Si el `remoteKey` conocido de un registro quedó eliminado o desapareció y existe una única fila remota activa que descifra al mismo `localKey`, OANIX presenta la situación como eliminación/estado local frente a esa versión remota activa y permite elegir. No debe bloquearla como dos identidades incompatibles ni decidir silenciosamente cuál conservar.
 - Cambios pequeños y aislados. No refactorizar ampliamente para arreglar un problema local.
 - Una función importante usa rama + PR. OANIX CI y OANIX Android deben pasar antes de fusionar.
 - Seguridad, cifrado, bóveda, notas y sync no se modifican por comodidad.
