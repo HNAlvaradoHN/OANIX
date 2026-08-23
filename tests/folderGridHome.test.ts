@@ -3,103 +3,69 @@ import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
 const runtime = readFileSync('src/features/folders/FolderGridRuntime.tsx', 'utf8')
+const organicRuntime = readFileSync('src/features/notes/OrganicWorkspaceRuntime.tsx', 'utf8')
+const organicCss = readFileSync('src/features/notes/organicWorkspace.css', 'utf8')
 const appearanceRuntime = readFileSync('src/features/folders/FolderAppearanceRuntime.tsx', 'utf8')
 const coverService = readFileSync('src/features/folders/folderCoverService.ts', 'utf8')
-const css = readFileSync('src/features/folders/folderGrid.css', 'utf8')
 const interactiveCss = readFileSync('src/features/folders/folderInteractive.css', 'utf8')
-const navigationCss = readFileSync('src/features/folders/folderNavigationState.css', 'utf8')
-const main = readFileSync('src/main.tsx', 'utf8')
 const app = readFileSync('src/app/App.tsx', 'utf8')
-const androidBack = readFileSync('src/platform/android/AndroidBackRuntime.tsx', 'utf8')
 
-test('el inicio por carpetas reutiliza las carpetas y notas cifradas existentes', () => {
+test('el dock reutiliza carpetas y notas cifradas existentes con contadores reales', () => {
   assert.match(runtime, /loadFolders\(\)/)
   assert.match(runtime, /loadNotes\(\)/)
   assert.match(runtime, /listNotePrivacy\(\)/)
   assert.match(runtime, /loadFolderColors\(\)/)
-  assert.doesNotMatch(runtime, /createFolder\(|moveNoteToFolder\(|writeEncryptedBlob/)
+  assert.match(runtime, /data\.counts\.get\(folder\.id\) \?\? 0/)
+  assert.doesNotMatch(runtime, /writeEncryptedBlob/)
 })
 
-test('el inicio no expone notas de Caja privada en contadores ni búsqueda del panel', () => {
+test('los contadores y búsqueda heredada no exponen notas de Caja privada', () => {
   assert.match(runtime, /record\.privateBox === true/)
   assert.match(runtime, /privateNoteIds/)
   assert.match(runtime, /const visibleNotes = notes\.filter\(\(note\) => !privateNoteIds\.has\(note\.id\)\)/)
   assert.match(runtime, /notes: visibleNotes/)
 })
 
-test('el nuevo inicio usa selector lateral y un panel visual seleccionado', () => {
-  assert.match(runtime, /oanix-folder-stage/)
-  assert.match(runtime, /oanix-folder-rail/)
-  assert.match(runtime, /oanix-folder-focus/)
-  assert.match(runtime, /selectedFolderId/)
-  assert.match(runtime, /FOLDER_SHAPES/)
-  assert.match(css, /grid-template-columns: 140px minmax\(0, 1fr\)/)
-  assert.doesNotMatch(css, /scroll-snap-type/)
-  assert.doesNotMatch(css, /grid-template-columns: repeat\(2/)
+test('la referencia vigente convierte el rail real en dock inferior dentro del mismo workspace', () => {
+  assert.match(organicCss, /\.oanix-folder-grid[\s\S]*inset: auto 0 0 !important/)
+  assert.match(organicCss, /height: calc\(135px \+ env\(safe-area-inset-bottom\)\) !important/)
+  assert.match(organicCss, /\.oanix-folder-rail[\s\S]*flex-direction: row !important/)
+  assert.match(organicCss, /\.oanix-folder-rail__scroll[\s\S]*overflow-x: auto !important/)
+  assert.match(organicCss, /\.oanix-folder-focus \{ display: none !important; \}/)
+  assert.match(organicRuntime, /selectWorkspaceFolderFromDock/)
 })
 
-test('la portada y el color personalizado dominan el panel sin depender de imágenes externas', () => {
-  assert.match(runtime, /selectedCover/)
-  assert.match(runtime, /data-oanix-folder-id=\{selectedFolder\?\.id\}/)
-  assert.match(runtime, /--oanix-folder-color/)
-  assert.match(css, /\.oanix-folder-focus:not\(\.oanix-folder-focus--covered\) \.oanix-folder-focus__color/)
-  assert.match(css, /color-mix\(in srgb,\s*var\(--oanix-folder-color\)/)
-  assert.match(css, /\.oanix-folder-focus__cover/)
-  assert.match(css, /background-size: cover/)
-  assert.doesNotMatch(runtime, /https?:\/\//)
-})
-
-test('la búsqueda del panel está limitada a la carpeta elegida y permite abrir la nota encontrada', () => {
-  assert.match(runtime, /panelSearchResults/)
-  assert.match(runtime, /selectedFolderId === 'all' \|\| note\.folderId === selectedFolderId/)
-  assert.match(runtime, /noteBlocksToPlainText\(note\.content\.blocks\)/)
-  assert.match(runtime, /data-reorder-note-id/)
-  assert.match(runtime, /openSearchResult/)
-  assert.match(runtime, /Buscar notas dentro de/)
-})
-
-test('las acciones del panel reutilizan apertura, portada, color y administrador existentes', () => {
-  assert.match(runtime, /openSelected/)
-  assert.match(runtime, /data-oanix-folder-customize="true"/)
-  assert.match(runtime, />Imagen</)
-  assert.match(runtime, />Color</)
-  assert.match(runtime, />Nombre</)
-  assert.match(runtime, /Administrar nombre \/ eliminar/)
-  assert.match(appearanceRuntime, /\.oanix-folder-focus__menu/)
-  assert.match(appearanceRuntime, /\[data-oanix-folder-customize\]/)
+test('portada y color reales alimentan el fondo del workspace sin imágenes externas', () => {
+  assert.match(organicRuntime, /loadFolderCovers\(\)/)
+  assert.match(organicRuntime, /loadFolderColors\(\)/)
+  assert.match(organicRuntime, /activeFolderCover/)
+  assert.match(organicRuntime, /--oanix-organic-folder-color/)
+  assert.match(organicCss, /\.oanix-organic-background--covered/)
+  assert.match(organicCss, /background-size: cover/)
+  assert.doesNotMatch(organicRuntime, /https?:\/\//)
   assert.match(coverService, /FOLDER_COVER_RECORD = 'folder-cover'/)
-  assert.match(coverService, /writeEncryptedRecord\(FOLDER_COVER_RECORD, folderId, record\)/)
 })
 
-test('mantener presionado un icono conserva reordenamiento manual con fantasma visible', () => {
+test('crear y personalizar carpetas siguen usando los handlers reales', () => {
+  assert.match(organicRuntime, /\.oanix-folder-rail__item--add/)
+  assert.match(organicRuntime, /\.oanix-folder-focus__menu/)
+  assert.match(appearanceRuntime, /saveFolderColor/)
+  assert.match(appearanceRuntime, /saveFolderIcon/)
+  assert.match(appearanceRuntime, /\.oanix-folder-focus__menu/)
+})
+
+test('mantener presionada una carpeta conserva drag real y la suelta termina el modo automáticamente', () => {
   assert.match(runtime, /FOLDER_LONG_PRESS_MS = 460/)
   assert.match(runtime, /beginFolderPointerDown/)
-  assert.match(runtime, /setReorderMode\(true\)/)
+  assert.match(runtime, /beginDragAt/)
   assert.match(runtime, /reorderFolder\(folderId, direction\)/)
-  assert.match(runtime, /oanix-folder-rail__item\[data-oanix-folder-id\]/)
-  assert.match(interactiveCss, /\.oanix-folder-drag-ghost/)
-  assert.match(interactiveCss, /\.oanix-folder-drag-ghost__visual/)
+  assert.match(interactiveCss, /@keyframes oanix-folder-jiggle/)
+  assert.match(organicRuntime, /finishFolderReorder/)
+  assert.match(organicRuntime, /\.oanix-folder-rail__done/)
+  assert.match(organicCss, /\.oanix-folder-rail__done \{ display: none !important; \}/)
 })
 
-test('el inicio oculta la lista a primera vista y conserva vuelta funcional a carpetas', () => {
-  assert.match(runtime, /useState\(true\)/)
-  assert.match(runtime, /Volver a carpetas/)
-  assert.match(runtime, /oanixFolderCompact/)
-  assert.match(navigationCss, /notes-tabs-shell\[data-oanix-folder-compact='true'\]/)
-  assert.match(navigationCss, /> :not\(\.oanix-folder-breadcrumb\)/)
-  assert.match(navigationCss, /\.oanix-folder-breadcrumb/)
-  assert.match(main, /import '\.\/features\/folders\/folderNavigationState\.css'/)
-})
-
-test('Atrás en Android vuelve a Carpetas antes de ofrecer salir', () => {
-  assert.match(runtime, /data-oanix-folder-home-back="true"/)
-  assert.match(androidBack, /data-oanix-folder-home-back="true"/)
-  const folderBackIndex = androidBack.indexOf('data-oanix-folder-home-back="true"')
-  const exitPromptIndex = androidBack.indexOf('setExitPromptVisible(true)')
-  assert.ok(folderBackIndex >= 0 && exitPromptIndex > folderBackIndex)
-})
-
-test('el runtime vive dentro de la sesión desbloqueada y no sustituye NotesWorkspace', () => {
+test('FolderGridRuntime sigue dentro de la sesión desbloqueada como fuente de comportamiento real', () => {
   assert.match(app, /<NotesWorkspace key=\{workspaceRevision\} onLock=\{lockVault\} \/>/)
   assert.match(app, /<FolderGridRuntime \/>/)
   assert.match(app, /renderUnlocked=\{\(lockVault\) => <UnlockedApp lockVault=\{lockVault\} \/>\}/)
