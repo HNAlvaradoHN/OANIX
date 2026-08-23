@@ -25,7 +25,14 @@ interface FolderAppearanceRecordV2 {
   folderId: string
   color?: string
   icon?: FolderIcon
+  pinned?: boolean
+  favorite?: boolean
   updatedAt: string
+}
+
+export interface FolderAppearanceFlags {
+  pinned: boolean
+  favorite: boolean
 }
 
 export type FolderAppearanceRecord = FolderAppearanceRecordV1 | FolderAppearanceRecordV2
@@ -49,6 +56,8 @@ function validRecord(recordId: string, value: FolderAppearanceRecord | null): Fo
   if (value.version !== 2) return null
   if (value.color !== undefined && !HEX_COLOR.test(value.color)) return null
   if (value.icon !== undefined && !isFolderIcon(value.icon)) return null
+  if (value.pinned !== undefined && typeof value.pinned !== 'boolean') return null
+  if (value.favorite !== undefined && typeof value.favorite !== 'boolean') return null
   return value
 }
 
@@ -57,11 +66,22 @@ async function readAppearance(folderId: string): Promise<FolderAppearanceRecord 
   return validRecord(folderId, value)
 }
 
+function appearanceParts(existing: FolderAppearanceRecord | null) {
+  return {
+    color: existing?.version === 1 ? existing.color : existing?.color,
+    icon: existing?.version === 2 ? existing.icon : undefined,
+    pinned: existing?.version === 2 ? existing.pinned === true : false,
+    favorite: existing?.version === 2 ? existing.favorite === true : false,
+  }
+}
+
 async function writeAppearance(
   folderId: string,
-  appearance: { color?: string; icon?: FolderIcon },
+  appearance: { color?: string; icon?: FolderIcon; pinned?: boolean; favorite?: boolean },
 ): Promise<void> {
-  if (!appearance.color && !appearance.icon) {
+  const pinned = appearance.pinned === true
+  const favorite = appearance.favorite === true
+  if (!appearance.color && !appearance.icon && !pinned && !favorite) {
     await deleteEncryptedRecord(FOLDER_APPEARANCE_RECORD, folderId)
     return
   }
@@ -71,6 +91,8 @@ async function writeAppearance(
     folderId,
     ...(appearance.color ? { color: normalizeColor(appearance.color) } : {}),
     ...(appearance.icon ? { icon: normalizeIcon(appearance.icon) } : {}),
+    ...(pinned ? { pinned: true } : {}),
+    ...(favorite ? { favorite: true } : {}),
     updatedAt: new Date().toISOString(),
   }
   await writeEncryptedRecord(FOLDER_APPEARANCE_RECORD, folderId, record)
@@ -104,28 +126,65 @@ export async function loadFolderIcons(): Promise<Map<string, FolderIcon>> {
   return icons
 }
 
+export async function loadFolderAppearanceFlags(): Promise<Map<string, FolderAppearanceFlags>> {
+  const records = await listEncryptedRecords<FolderAppearanceRecord>(FOLDER_APPEARANCE_RECORD)
+  const flags = new Map<string, FolderAppearanceFlags>()
+
+  for (const record of records) {
+    const value = validRecord(record.recordId, record.value)
+    if (value?.version !== 2) continue
+    if (value.pinned === true || value.favorite === true) {
+      flags.set(record.recordId, {
+        pinned: value.pinned === true,
+        favorite: value.favorite === true,
+      })
+    }
+  }
+
+  return flags
+}
+
 export async function saveFolderColor(folderId: string, color: string): Promise<void> {
   const existing = await readAppearance(folderId)
-  const icon = existing?.version === 2 ? existing.icon : undefined
-  await writeAppearance(folderId, { color: normalizeColor(color), icon })
+  const parts = appearanceParts(existing)
+  await writeAppearance(folderId, { ...parts, color: normalizeColor(color) })
 }
 
 export async function removeFolderColor(folderId: string): Promise<void> {
   const existing = await readAppearance(folderId)
-  const icon = existing?.version === 2 ? existing.icon : undefined
-  await writeAppearance(folderId, { icon })
+  const parts = appearanceParts(existing)
+  await writeAppearance(folderId, { icon: parts.icon, pinned: parts.pinned, favorite: parts.favorite })
 }
 
 export async function saveFolderIcon(folderId: string, icon: string): Promise<void> {
   const existing = await readAppearance(folderId)
   const color = existing?.version === 1 ? existing.color : existing?.color
-  await writeAppearance(folderId, { color, icon: normalizeIcon(icon) })
+  const parts = appearanceParts(existing)
+  await writeAppearance(folderId, {
+    color,
+    icon: normalizeIcon(icon),
+    pinned: parts.pinned,
+    favorite: parts.favorite,
+  })
 }
 
 export async function removeFolderIcon(folderId: string): Promise<void> {
   const existing = await readAppearance(folderId)
   const color = existing?.version === 1 ? existing.color : existing?.color
-  await writeAppearance(folderId, { color })
+  const parts = appearanceParts(existing)
+  await writeAppearance(folderId, { color, pinned: parts.pinned, favorite: parts.favorite })
+}
+
+export async function saveFolderPinned(folderId: string, pinned: boolean): Promise<void> {
+  const existing = await readAppearance(folderId)
+  const parts = appearanceParts(existing)
+  await writeAppearance(folderId, { ...parts, pinned })
+}
+
+export async function saveFolderFavorite(folderId: string, favorite: boolean): Promise<void> {
+  const existing = await readAppearance(folderId)
+  const parts = appearanceParts(existing)
+  await writeAppearance(folderId, { ...parts, favorite })
 }
 
 export function defaultFolderColor(): string {

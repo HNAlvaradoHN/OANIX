@@ -8,11 +8,28 @@ import {
 import type { NoteHistoryReason, NoteHistorySnapshot } from '../versionHistory/versionHistoryTypes'
 import { createDailyEntryBlocks } from './dailyEntries'
 import { deleteNoteAvatar } from './noteAvatarService'
-import { compareNotesForList, type NoteRecord, type StoredNoteBlock } from './noteTypes'
+import {
+  compareNotesForList,
+  isNoteVisualColor,
+  isNoteVisualIcon,
+  MAX_NOTE_VISUAL_DESCRIPTION_LENGTH,
+  type NoteRecord,
+  type NoteVisualIcon,
+  type StoredNoteBlock,
+} from './noteTypes'
 
 const DEFAULT_NOTE_TITLE = 'Nueva nota'
 const UNTITLED_NOTE_TITLE = 'Sin título'
+const MAX_NOTE_TITLE_LENGTH = 160
 const mutationQueues = new Map<string, Promise<unknown>>()
+
+export interface NoteListAppearanceInput {
+  title: string
+  description: string
+  categoryTagId: string | null
+  icon: NoteVisualIcon
+  color: string
+}
 
 function createNoteId(): string {
   if (globalThis.crypto?.randomUUID) {
@@ -219,6 +236,40 @@ export function setNoteTags(noteId: string, tagIds: string[]): Promise<NoteRecor
     tagIds: normalizedTagIds,
     updatedAt: new Date().toISOString(),
   }))
+}
+
+export function setNoteListAppearance(noteId: string, input: NoteListAppearanceInput): Promise<NoteRecord> {
+  const title = input.title.trim() || UNTITLED_NOTE_TITLE
+  const description = input.description.trim().replace(/\s+/g, ' ')
+  const categoryTagId = input.categoryTagId?.trim() || undefined
+  const color = input.color.trim().toLowerCase()
+
+  if (title.length > MAX_NOTE_TITLE_LENGTH) {
+    throw new Error(`El título no puede superar ${MAX_NOTE_TITLE_LENGTH} caracteres.`)
+  }
+  if (description.length > MAX_NOTE_VISUAL_DESCRIPTION_LENGTH) {
+    throw new Error(`La descripción no puede superar ${MAX_NOTE_VISUAL_DESCRIPTION_LENGTH} caracteres.`)
+  }
+  if (!isNoteVisualIcon(input.icon)) throw new Error('Selecciona un icono válido.')
+  if (!isNoteVisualColor(color)) throw new Error('Selecciona un color válido.')
+
+  return enqueueNoteMutation(noteId, (existing) => {
+    const existingTagIds = existing.tagIds ?? []
+    const tagIds = categoryTagId
+      ? [categoryTagId, ...existingTagIds.filter((tagId) => tagId !== categoryTagId)]
+      : existingTagIds
+
+    return {
+      ...existing,
+      title,
+      tagIds,
+      visualDescription: description || undefined,
+      visualCategoryTagId: categoryTagId,
+      visualIcon: input.icon,
+      visualColor: color,
+      updatedAt: new Date().toISOString(),
+    }
+  })
 }
 
 export function setNotePinned(noteId: string, pinned: boolean): Promise<NoteRecord> {

@@ -49,6 +49,37 @@ export function normalizeImageAlignment(value: unknown): ImageAlignment | null {
     : null
 }
 
+export const NOTE_VISUAL_ICONS = [
+  '📝', '💡', '📊', '🎨', '📈', '🚀', '⚡', '🔥', '💎', '🎵',
+  '🎮', '📁', '💻', '🏃', '🔄', '💬', '⚙️', '⭐', '📌', '🎯',
+  '🧠', '✅', '📚', '🧪',
+] as const
+export type NoteVisualIcon = (typeof NOTE_VISUAL_ICONS)[number]
+
+export const NOTE_VISUAL_COLORS = [
+  '#2563eb',
+  '#ec4899',
+  '#10b981',
+  '#f59e0b',
+  '#8b5cf6',
+  '#06b6d4',
+  '#ef4444',
+  '#64748b',
+] as const
+
+export const DEFAULT_NOTE_VISUAL_ICON: NoteVisualIcon = '📝'
+export const DEFAULT_NOTE_VISUAL_COLOR = '#2563eb'
+export const MAX_NOTE_VISUAL_DESCRIPTION_LENGTH = 140
+const NOTE_VISUAL_COLOR = /^#[0-9a-f]{6}$/i
+
+export function isNoteVisualIcon(value: unknown): value is NoteVisualIcon {
+  return typeof value === 'string' && (NOTE_VISUAL_ICONS as readonly string[]).includes(value)
+}
+
+export function isNoteVisualColor(value: unknown): value is string {
+  return typeof value === 'string' && NOTE_VISUAL_COLOR.test(value)
+}
+
 export interface ParagraphBlock {
   id: string
   type: 'paragraph'
@@ -158,6 +189,10 @@ export interface NoteRecord {
   tagIds?: string[]
   pinned?: boolean
   manualOrder?: number
+  visualDescription?: string
+  visualCategoryTagId?: string
+  visualIcon?: NoteVisualIcon
+  visualColor?: string
   content: {
     format: 'blocks-v1'
     blocks: StoredNoteBlock[]
@@ -341,6 +376,12 @@ export function isNoteRecord(value: unknown): value is NoteRecord {
     (note.pinned === undefined || typeof note.pinned === 'boolean') &&
     (note.manualOrder === undefined ||
       (Number.isSafeInteger(note.manualOrder) && (note.manualOrder ?? -1) >= 0)) &&
+    (note.visualDescription === undefined ||
+      (typeof note.visualDescription === 'string' && note.visualDescription.length <= MAX_NOTE_VISUAL_DESCRIPTION_LENGTH)) &&
+    (note.visualCategoryTagId === undefined ||
+      (typeof note.visualCategoryTagId === 'string' && note.visualCategoryTagId.length > 0)) &&
+    (note.visualIcon === undefined || isNoteVisualIcon(note.visualIcon)) &&
+    (note.visualColor === undefined || isNoteVisualColor(note.visualColor)) &&
     !!note.content &&
     note.content.format === 'blocks-v1' &&
     Array.isArray(note.content.blocks) &&
