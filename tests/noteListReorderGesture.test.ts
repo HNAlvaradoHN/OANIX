@@ -7,10 +7,12 @@ const css = readFileSync('src/features/notes/noteReorderGesture.css', 'utf8')
 const privacyRuntime = readFileSync('src/features/privacy/NoteBulkPrivacyRuntime.tsx', 'utf8')
 const app = readFileSync('src/app/App.tsx', 'utf8')
 
-test('el gesto de ordenar se limita al avatar y no reemplaza la pulsación larga de privacidad en el cuerpo', () => {
-  assert.match(runtime, /target\.closest<HTMLElement>\('\.note-row__avatar'\)/)
-  assert.match(runtime, /event\.stopImmediatePropagation\(\)/)
-  assert.match(privacyRuntime, /target\.closest<HTMLButtonElement>\('\.note-row__open'\)/)
+test('la pulsación larga de orden usa la fila completa y el movimiento previo permite seguir desplazando', () => {
+  assert.match(runtime, /target\.closest<HTMLElement>\('\.note-row__open'\)/)
+  assert.match(runtime, /const NOTE_REORDER_LONG_PRESS_MS = 520/)
+  assert.match(runtime, /const NOTE_REORDER_MOVE_TOLERANCE = 12/)
+  assert.match(runtime, /Math\.hypot\(event\.clientX - startX, event\.clientY - startY\)/)
+  assert.match(runtime, /resetPress\(\)/)
   assert.match(privacyRuntime, /const LONG_PRESS_MS = 520/)
 })
 
@@ -21,12 +23,16 @@ test('el botón superior de ordenar desaparece pero se reutiliza el motor manual
   assert.match(css, /display: none !important/)
 })
 
-test('el modo de orden mueve la fila completa, vibra suavemente y conserva tres puntos', () => {
+test('el gesto inicia el drag real, vibra y termina el modo automáticamente al soltar', () => {
   assert.match(css, /oanix-note-jiggle/)
   assert.match(css, /aria-label\^="Orden manual de /)
-  assert.match(runtime, /oanix-note-reorder-menu-proxy/)
-  assert.match(runtime, /menu\.textContent = '⋮'/)
-  assert.match(runtime, /navigator\.vibrate\?\.\(16\)/)
+  assert.match(runtime, /dispatchDragStart/)
+  assert.match(runtime, /new PointerEvent\('pointerdown'/)
+  assert.match(runtime, /navigator\.vibrate\?\.\(18\)/)
+  assert.match(runtime, /finishAutomaticMode/)
+  assert.match(runtime, /document\.addEventListener\('pointercancel', handlePointerEnd\)/)
+  assert.doesNotMatch(runtime, /oanix-note-reorder-menu-proxy/)
+  assert.doesNotMatch(runtime, /oanix-note-reorder-done/)
   assert.match(css, /prefers-reduced-motion: reduce/)
 })
 
