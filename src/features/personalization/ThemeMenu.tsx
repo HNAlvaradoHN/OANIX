@@ -6,27 +6,18 @@ import {
   saveAutoLockMinutes,
   type AutoLockMinutes,
 } from '../../security/session/autoLockPolicy'
-import {
-  applyOanixTheme,
-  getOanixTheme,
-  OANIX_BASE_THEMES,
-  readSavedOanixTheme,
-  type OanixThemePreset,
-} from './themeCatalog'
 import './personalization.css'
 import './personalization-workspace.css'
 import './session-auto-lock.css'
 
 export function ThemeMenu() {
   const [open, setOpen] = useState(false)
-  const [themeId, setThemeId] = useState(() => readSavedOanixTheme())
   const [autoLockMinutes, setAutoLockMinutes] = useState<AutoLockMinutes>(() => readSavedAutoLockMinutes())
   const [workspaceMenu, setWorkspaceMenu] = useState<HTMLElement | null>(null)
   const entryRef = useRef<HTMLDivElement | null>(null)
   const panelRef = useRef<HTMLElement | null>(null)
-  const currentTheme = getOanixTheme(themeId)
 
-  function closeThemeAndWorkspaceMenu() {
+  function closeSecurityAndWorkspaceMenu() {
     setOpen(false)
     window.requestAnimationFrame(() => {
       const opener = document.querySelector<HTMLButtonElement>(
@@ -53,11 +44,6 @@ export function ThemeMenu() {
   }, [workspaceMenu])
 
   useEffect(() => {
-    function handleThemeChange(event: Event) {
-      const nextTheme = (event as CustomEvent<string>).detail
-      if (nextTheme) setThemeId(nextTheme as ReturnType<typeof readSavedOanixTheme>)
-    }
-
     function handlePointerDown(event: PointerEvent) {
       const target = event.target
       if (!(target instanceof Node)) return
@@ -66,52 +52,19 @@ export function ThemeMenu() {
     }
 
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') closeThemeAndWorkspaceMenu()
+      if (event.key === 'Escape') closeSecurityAndWorkspaceMenu()
     }
 
-    window.addEventListener('oanix:theme-change', handleThemeChange)
     window.addEventListener('pointerdown', handlePointerDown)
     window.addEventListener('keydown', handleKeyDown)
     return () => {
-      window.removeEventListener('oanix:theme-change', handleThemeChange)
       window.removeEventListener('pointerdown', handlePointerDown)
       window.removeEventListener('keydown', handleKeyDown)
     }
   }, [])
 
-  function chooseTheme(nextThemeId: string) {
-    setThemeId(applyOanixTheme(nextThemeId))
-    closeThemeAndWorkspaceMenu()
-  }
-
   function chooseAutoLock(nextMinutes: AutoLockMinutes) {
     setAutoLockMinutes(saveAutoLockMinutes(nextMinutes))
-  }
-
-  function renderThemeOption(theme: OanixThemePreset) {
-    const selected = theme.id === themeId
-    return (
-      <button
-        key={theme.id}
-        className={`oanix-theme-option${selected ? ' oanix-theme-option--selected' : ''}`}
-        type="button"
-        onClick={() => chooseTheme(theme.id)}
-        aria-pressed={selected}
-        role="listitem"
-      >
-        <span className="oanix-theme-option__swatches" aria-hidden="true">
-          {theme.swatches.map((color) => (
-            <span key={color} style={{ background: color }} />
-          ))}
-        </span>
-        <span className="oanix-theme-option__copy">
-          <strong>{theme.name}</strong>
-          <small>{theme.description}</small>
-        </span>
-        <span className="oanix-theme-option__mode">{theme.mode === 'dark' ? 'Oscuro' : 'Claro'}</span>
-        {selected && <span className="oanix-theme-option__check" aria-hidden="true">✓</span>}
-      </button>
-    )
   }
 
   const menuEntry = workspaceMenu ? createPortal(
@@ -124,10 +77,10 @@ export function ThemeMenu() {
         aria-expanded={open}
         aria-haspopup="dialog"
       >
-        <span className="oanix-personalization__menuitem-icon" aria-hidden="true">◐</span>
+        <span className="oanix-personalization__menuitem-icon" aria-hidden="true">🔒</span>
         <span className="oanix-personalization__menuitem-copy">
-          <strong>Apariencia</strong>
-          <small>{currentTheme.name}</small>
+          <strong>Seguridad</strong>
+          <small>Bloqueo automático</small>
         </span>
         <span className="oanix-personalization__menuitem-chevron" aria-hidden="true">›</span>
       </button>
@@ -135,50 +88,40 @@ export function ThemeMenu() {
     workspaceMenu,
   ) : null
 
-  const themePanel = open ? createPortal(
+  const securityPanel = open ? createPortal(
     <Fragment>
       <button
         className="oanix-theme-backdrop"
         type="button"
-        aria-label="Cerrar apariencia"
+        aria-label="Cerrar seguridad"
         data-note-menu-root="true"
         onPointerDown={(event) => event.stopPropagation()}
-        onClick={closeThemeAndWorkspaceMenu}
+        onClick={closeSecurityAndWorkspaceMenu}
       />
       <section
         className="oanix-theme-menu oanix-theme-menu--workspace"
-        aria-label="Apariencia de OANIX"
+        aria-label="Seguridad de OANIX"
         data-note-menu-root="true"
         ref={panelRef}
         onPointerDown={(event) => event.stopPropagation()}
       >
         <header className="oanix-theme-menu__header">
           <div>
-            <span className="oanix-theme-menu__eyebrow">APARIENCIA</span>
-            <strong>Día o Noche</strong>
-            <p>OANIX conserva solo los dos modos base. La preferencia se guarda en este dispositivo.</p>
+            <span className="oanix-theme-menu__eyebrow">SEGURIDAD</span>
+            <strong>Bloqueo automático</strong>
+            <p>Elegí cuánto tiempo puede quedar OANIX en segundo plano antes de volver a pedir acceso.</p>
           </div>
           <button
             className="oanix-theme-menu__close"
             type="button"
-            onClick={closeThemeAndWorkspaceMenu}
-            aria-label="Cerrar apariencia"
+            onClick={closeSecurityAndWorkspaceMenu}
+            aria-label="Cerrar seguridad"
           >
             ×
           </button>
         </header>
 
         <div className="oanix-theme-menu__content">
-          <section className="oanix-theme-section" aria-labelledby="oanix-theme-base-title">
-            <div className="oanix-theme-section__heading">
-              <strong id="oanix-theme-base-title">Modo visual</strong>
-              <span>Claro para el día · oscuro para la noche</span>
-            </div>
-            <div className="oanix-theme-menu__grid oanix-theme-menu__grid--base" role="list" aria-label="Modos de apariencia">
-              {OANIX_BASE_THEMES.map(renderThemeOption)}
-            </div>
-          </section>
-
           <section className="oanix-theme-section oanix-security-section" aria-labelledby="oanix-auto-lock-title">
             <div className="oanix-theme-section__heading">
               <strong id="oanix-auto-lock-title">Seguridad</strong>
@@ -213,5 +156,5 @@ export function ThemeMenu() {
     document.body,
   ) : null
 
-  return <>{menuEntry}{themePanel}</>
+  return <>{menuEntry}{securityPanel}</>
 }
