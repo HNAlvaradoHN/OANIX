@@ -1,4 +1,9 @@
-/* Neutral base themes kept alongside the styled presets. */
+/* Neutral base themes kept alongside the styled presets.
+ *
+ * IMPORTANT: this file owns semantic Day/Night tokens and non-workspace light hardening only.
+ * The v38 organic notes workspace owns its own surfaces (background, header, cards and dock)
+ * so folder covers and glass effects cannot be overwritten by a second theme layer.
+ */
 :root[data-oanix-theme='classic-day'] {
   color-scheme: only light !important;
   --theme-bg: #eef2f5;
@@ -43,14 +48,9 @@
   --theme-danger: #ff7d91;
 }
 
-/*
- * The visual redesign started life as a dark-first layer and still contains a few
- * hard-coded dark !important backgrounds. Classic Day must explicitly neutralize
- * those legacy values so mobile/WebView rendering cannot inherit the dark canvas.
- */
+/* Classic Day still hardens legacy/editor surfaces that are not part of the v38 workspace. */
 :root[data-oanix-theme='classic-day'] body,
 :root[data-oanix-theme='classic-day'] #root,
-:root[data-oanix-theme='classic-day'] .notes-shell,
 :root[data-oanix-theme='classic-day'] .note-view {
   background: #eef2f5 !important;
   color: #111827 !important;
@@ -66,47 +66,6 @@
   background-size: 46px 46px, 46px 46px, auto, auto !important;
 }
 
-:root[data-oanix-theme='classic-day'] .notes-sidebar {
-  border-right-color: rgba(71,85,105,.18) !important;
-  background:
-    linear-gradient(rgba(71,85,105,.025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(71,85,105,.025) 1px, transparent 1px),
-    #ffffff !important;
-  background-size: 38px 38px, 38px 38px, auto !important;
-}
-
-:root[data-oanix-theme='classic-day'] .notes-header,
-:root[data-oanix-theme='classic-day'] .note-view__header,
-:root[data-oanix-theme='classic-day'] .notes-tabs-shell,
-:root[data-oanix-theme='classic-day'] .notes-tabs,
-:root[data-oanix-theme='classic-day'] .notes-tabs-scroll-button,
-:root[data-oanix-theme='classic-day'] .notes-tag-filter,
-:root[data-oanix-theme='classic-day'] .notes-search {
-  border-color: rgba(71,85,105,.18) !important;
-  background: rgba(255,255,255,.96) !important;
-  color: #111827 !important;
-}
-
-:root[data-oanix-theme='classic-day'] .note-row {
-  border-color: rgba(71,85,105,.18) !important;
-  background: linear-gradient(150deg, #ffffff, #f8fafc) !important;
-  color: #111827 !important;
-  box-shadow: 0 8px 22px rgba(15,23,42,.05) !important;
-}
-
-:root[data-oanix-theme='classic-day'] .note-row:hover {
-  border-color: rgba(37,99,235,.28) !important;
-  background: linear-gradient(150deg, #ffffff, #f1f5f9) !important;
-  box-shadow: 0 10px 26px rgba(15,23,42,.08), 0 0 18px rgba(37,99,235,.06) !important;
-}
-
-:root[data-oanix-theme='classic-day'] .note-row--selected,
-:root[data-oanix-theme='classic-day'] .note-row--menu-open {
-  border-color: #2563eb !important;
-  background: linear-gradient(145deg, #eef4ff, #ffffff) !important;
-  box-shadow: 0 10px 28px rgba(37,99,235,.1) !important;
-}
-
 :root[data-oanix-theme='classic-day'] .editor-frame {
   border-color: rgba(71,85,105,.22) !important;
   background: linear-gradient(180deg, #ffffff, #f8fafc) !important;
@@ -116,8 +75,6 @@
 
 :root[data-oanix-theme='classic-day'] .editor-surface,
 :root[data-oanix-theme='classic-day'] .note-title-field input,
-:root[data-oanix-theme='classic-day'] .note-row__topline strong,
-:root[data-oanix-theme='classic-day'] .notes-brand strong,
 :root[data-oanix-theme='classic-day'] .note-view__identity strong {
   color: #111827 !important;
 }
