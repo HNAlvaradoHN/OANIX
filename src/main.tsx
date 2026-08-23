@@ -7,6 +7,7 @@ import { applyOanixTheme, readSavedOanixTheme } from './features/personalization
 import { PwaImagePreviewRuntime } from './features/images/PwaImagePreviewRuntime'
 import { NoteMenuScrollDismiss } from './features/notes/NoteMenuScrollDismiss'
 import { NoteMenuViewportFit } from './features/notes/NoteMenuViewportFit'
+import { OrganicWorkspaceRuntime } from './features/notes/OrganicWorkspaceRuntime'
 import { PrivacyStatusHelp } from './features/privacy/PrivacyStatusHelp'
 import { FolderAppearanceRuntime } from './features/folders/FolderAppearanceRuntime'
 import { FolderTiltRuntime } from './features/folders/FolderTiltRuntime'
@@ -75,6 +76,7 @@ createRoot(document.getElementById('root')!).render(
     <PwaImagePreviewRuntime />
     <NoteMenuScrollDismiss />
     <NoteMenuViewportFit />
+    <OrganicWorkspaceRuntime />
     <PrivacyStatusHelp />
     <FolderAppearanceRuntime />
     <FolderTiltRuntime />
