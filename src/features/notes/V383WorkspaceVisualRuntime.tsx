@@ -1,12 +1,11 @@
 import { useEffect } from 'react'
-import './v383WorkspaceVisual.css'
 
 /**
- * Final visual contract for the unlocked notes workspace.
+ * Final visual contract marker for the unlocked notes workspace.
  *
- * The business logic and existing encrypted-data runtimes stay untouched. This
- * runtime only marks the document so one scoped stylesheet can own the visual
- * presentation copied from the approved v38.3 reference.
+ * Business logic and encrypted-data runtimes stay untouched. The stylesheet is
+ * imported explicitly at the end of main.tsx so its cascade position is
+ * deterministic and cannot be silently overtaken by an older polish layer.
  */
 export function V383WorkspaceVisualRuntime() {
   useEffect(() => {
