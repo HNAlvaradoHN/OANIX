@@ -7,6 +7,11 @@ const runtime = readFileSync('src/features/notes/WorkspacePersonalizationRuntime
 const css = readFileSync('src/features/notes/folderOptionsVisual.css', 'utf8')
 
 test('folder options keeps the approved v38.7 action order', () => {
+  const actionsStart = runtime.indexOf('className="oanix-folder-options__actions"')
+  const actionsEnd = runtime.indexOf('</section>', actionsStart)
+  assert.ok(actionsStart >= 0 && actionsEnd > actionsStart, 'folder options action markup must exist')
+  const folderActions = runtime.slice(actionsStart, actionsEnd)
+
   const labels = [
     'Abrir carpeta',
     'Fijar carpeta',
@@ -20,7 +25,7 @@ test('folder options keeps the approved v38.7 action order', () => {
 
   let previous = -1
   for (const label of labels) {
-    const index = runtime.indexOf(label)
+    const index = folderActions.indexOf(label)
     assert.ok(index > previous, `${label} must stay in the approved order`)
     previous = index
   }
