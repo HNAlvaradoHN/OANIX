@@ -7,7 +7,6 @@ import { applyOanixTheme, readSavedOanixTheme } from './features/personalization
 import { PwaImagePreviewRuntime } from './features/images/PwaImagePreviewRuntime'
 import { NoteMenuScrollDismiss } from './features/notes/NoteMenuScrollDismiss'
 import { NoteMenuViewportFit } from './features/notes/NoteMenuViewportFit'
-import { OrganicWorkspaceRuntime } from './features/notes/OrganicWorkspaceRuntime'
 import { WorkspacePersonalizationRuntime } from './features/notes/WorkspacePersonalizationRuntime'
 import { PrivacyStatusHelp } from './features/privacy/PrivacyStatusHelp'
 import { FolderAppearanceRuntime } from './features/folders/FolderAppearanceRuntime'
@@ -26,6 +25,9 @@ import './styles/privacy-status-polish.css'
 import './styles/note-menu-viewport-fit.css'
 import './styles/web-brand-logo.css'
 import './features/images/pwa-image-no-name.css'
+// Keep the v38 runtime import after the legacy/theme CSS imports. Its own organicWorkspace.css
+// is the final authority for the responsive notes workspace on desktop, PWA and Capacitor.
+import { OrganicWorkspaceRuntime } from './features/notes/OrganicWorkspaceRuntime'
 
 type OanixUpdateWindow = Window & {
   __oanixApplyUpdate?: () => Promise<void>
