@@ -30,6 +30,8 @@ import './features/images/pwa-image-no-name.css'
 // Functional adapters keep using the existing encrypted OANIX models/handlers.
 import { OrganicWorkspaceRuntime } from './features/notes/OrganicWorkspaceRuntime'
 import { V383WorkspaceVisualRuntime } from './features/notes/V383WorkspaceVisualRuntime'
+// Folder options follows the approved v38.7 modal geometry while keeping real OANIX handlers.
+import './features/notes/folderOptionsVisual.css'
 // The approved v38.3 contract is intentionally the last workspace stylesheet.
 // Do not append another visual polish/hard-fix after this import.
 import './features/notes/v383WorkspaceVisual.css'
