@@ -1,28 +1,39 @@
 /* Classic Day is intentionally hard-pinned to a true light palette.
- * It loads last so legacy dark-first rules cannot visually win on Android WebView.
+ * The organic workspace stays translucent so folder covers remain visible, matching
+ * the v38.3 visual reference, while explicit light colors stop legacy/mobile darkening.
  */
 
 html.oanix-classic-day,
 body.oanix-classic-day,
 html.oanix-classic-day body,
 html.oanix-classic-day #root,
-html.oanix-classic-day .notes-shell,
 html.oanix-classic-day .note-view,
 html.oanix-classic-day .vault-shell {
   background-color: #ffffff !important;
   color: #101828 !important;
 }
 
+/* The cover lives behind the real notes workspace; do not paint an opaque white sheet over it. */
+html.oanix-classic-day .notes-shell,
 html.oanix-classic-day .notes-sidebar {
-  background:
-    linear-gradient(rgba(71,85,105,.022) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(71,85,105,.022) 1px, transparent 1px),
-    #ffffff !important;
-  background-size: 38px 38px, 38px 38px, auto !important;
+  background: transparent !important;
+  color: #101828 !important;
+}
+
+html.oanix-classic-day .notes-sidebar {
   border-color: rgba(52,64,84,.14) !important;
 }
 
-html.oanix-classic-day .notes-header,
+/* Header glass follows the compact v38.3 reference instead of becoming a solid white bar. */
+html.oanix-classic-day .notes-header {
+  background: rgba(241,245,249,.70) !important;
+  color: #101828 !important;
+  border-color: rgba(255,255,255,.46) !important;
+  box-shadow: 0 10px 30px rgba(15,23,42,.07) !important;
+  backdrop-filter: blur(15px) !important;
+  -webkit-backdrop-filter: blur(15px) !important;
+}
+
 html.oanix-classic-day .note-view__header,
 html.oanix-classic-day .notes-tabs-shell,
 html.oanix-classic-day .notes-tabs,
@@ -37,12 +48,27 @@ html.oanix-classic-day .folder-dialog__panel,
 html.oanix-classic-day .note-info-dialog__panel,
 html.oanix-classic-day .oanix-theme-menu--workspace,
 html.oanix-classic-day .mobile-editor-dock {
-  background: rgba(255,255,255,.985) !important;
+  background: rgba(255,255,255,.965) !important;
   color: #101828 !important;
   border-color: rgba(52,64,84,.15) !important;
 }
 
-html.oanix-classic-day .note-row,
+/* Infographic cards keep the frosted translucency from the supplied v38.3 mockup. */
+html.oanix-classic-day .note-row {
+  background: rgba(241,245,249,.86) !important;
+  background: linear-gradient(
+    105deg,
+    color-mix(in srgb, var(--oanix-note-card-color, #2563eb) 7%, rgba(241,245,249,.88)) 0%,
+    rgba(241,245,249,.84) 48%,
+    rgba(226,232,240,.82) 100%
+  ) !important;
+  color: #101828 !important;
+  border-color: rgba(255,255,255,.58) !important;
+  box-shadow: 0 8px 25px rgba(15,23,42,.09), inset 0 1px 2px rgba(255,255,255,.38) !important;
+  backdrop-filter: blur(15px) !important;
+  -webkit-backdrop-filter: blur(15px) !important;
+}
+
 html.oanix-classic-day .editor-frame,
 html.oanix-classic-day .oanix-theme-option,
 html.oanix-classic-day .vault-card,
@@ -56,7 +82,13 @@ html.oanix-classic-day .vault-access__lock {
 }
 
 html.oanix-classic-day .note-row--selected,
-html.oanix-classic-day .note-row--menu-open,
+html.oanix-classic-day .note-row--menu-open {
+  background: rgba(255,255,255,.92) !important;
+  background: linear-gradient(145deg, rgba(237,244,255,.92), rgba(255,255,255,.90)) !important;
+  border-color: #2563eb !important;
+  box-shadow: 0 10px 28px rgba(37,99,235,.10) !important;
+}
+
 html.oanix-classic-day .oanix-theme-option--selected {
   background: linear-gradient(145deg, #edf4ff, #ffffff) !important;
   border-color: #2563eb !important;
