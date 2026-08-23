@@ -1,0 +1,483 @@
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type PointerEvent as ReactPointerEvent,
+} from 'react'
+import { createPortal } from 'react-dom'
+import { loadFolderColors } from '../folders/folderAppearanceService'
+import { loadFolderCovers } from '../folders/folderCoverService'
+import { loadFolders } from '../folders/folderService'
+import type { FolderRecord } from '../folders/folderTypes'
+import { loadTags, persistTagOrder } from '../tags/tagService'
+import type { TagRecord } from '../tags/tagTypes'
+import { loadNotes } from './noteService'
+import type { NoteRecord } from './noteTypes'
+import './organicWorkspace.css'
+
+const TAG_LONG_PRESS_MS = 460
+const TAG_MOVE_TOLERANCE = 12
+const NOTE_TAB_COLORS = ['#f59e0b', '#3b82f6', '#10b981', '#8b5cf6', '#ec4899', '#06b6d4']
+
+interface FolderVisualState {
+  covers: Map<string, string>
+  colors: Map<string, string>
+}
+
+const EMPTY_FOLDER_VISUALS: FolderVisualState = {
+  covers: new Map(),
+  colors: new Map(),
+}
+
+function moveTagAroundTarget(
+  tags: TagRecord[],
+  draggedId: string,
+  targetId: string,
+  placeAfter: boolean,
+): TagRecord[] {
+  if (draggedId === targetId) return tags
+  const fromIndex = tags.findIndex((tag) => tag.id === draggedId)
+  if (fromIndex < 0) return tags
+  const next = [...tags]
+  const [dragged] = next.splice(fromIndex, 1)
+  const targetIndex = next.findIndex((tag) => tag.id === targetId)
+  if (!dragged || targetIndex < 0) return tags
+  next.splice(targetIndex + (placeAfter ? 1 : 0), 0, dragged)
+  return next
+}
+
+function captureTagRects(host: HTMLElement | null): Map<string, DOMRect> {
+  const rects = new Map<string, DOMRect>()
+  host?.querySelectorAll<HTMLElement>('[data-oanix-organic-tag-id]').forEach((element) => {
+    const tagId = element.dataset.oanixOrganicTagId
+    if (tagId) rects.set(tagId, element.getBoundingClientRect())
+  })
+  return rects
+}
+
+function animateTagReflow(host: HTMLElement | null, before: Map<string, DOMRect>, draggingId: string) {
+  window.requestAnimationFrame(() => {
+    window.requestAnimationFrame(() => {
+      host?.querySelectorAll<HTMLElement>('[data-oanix-organic-tag-id]').forEach((element) => {
+        const tagId = element.dataset.oanixOrganicTagId
+        if (!tagId || tagId === draggingId) return
+        const previous = before.get(tagId)
+        if (!previous) return
+        const next = element.getBoundingClientRect()
+        const deltaX = previous.left - next.left
+        if (Math.abs(deltaX) < 1) return
+        element.animate(
+          [{ transform: `translateX(${deltaX}px)` }, { transform: 'translateX(0)' }],
+          { duration: 170, easing: 'cubic-bezier(.2,.75,.25,1)' },
+        )
+      })
+    })
+  })
+}
+
+function activeTagNameFromWorkspace(): string | null {
+  const label = document.querySelector<HTMLElement>('.tag-filter-button span:nth-child(2)')?.textContent?.trim() ?? ''
+  return !label || label === 'Todas las etiquetas' ? null : label
+}
+
+function activeFolderIdFromDock(): string | null {
+  return document.querySelector<HTMLElement>(
+    '.oanix-folder-rail__item.is-selected[data-oanix-folder-id]',
+  )?.dataset.oanixFolderId ?? null
+}
+
+function openWorkspaceTag(tagName: string | null) {
+  const filterButton = document.querySelector<HTMLButtonElement>('.tag-filter-button')
+  if (!filterButton) return
+  filterButton.click()
+
+  window.requestAnimationFrame(() => {
+    window.requestAnimationFrame(() => {
+      const panel = document.querySelector<HTMLElement>('.folder-dialog__panel[aria-label="Filtrar por etiqueta"]')
+      const options = Array.from(panel?.querySelectorAll<HTMLButtonElement>('.folder-move-option') ?? [])
+      const target = tagName === null
+        ? options[0]
+        : options.find((button) => button.querySelector('strong')?.textContent?.trim() === tagName)
+      target?.click()
+    })
+  })
+}
+
+function selectWorkspaceFolderFromDock(item: HTMLElement) {
+  window.setTimeout(() => {
+    const folderTabs = Array.from(document.querySelectorAll<HTMLButtonElement>('.notes-tab:not(.notes-tab--add)'))
+    const target = item.classList.contains('oanix-folder-rail__item--all')
+      ? folderTabs[0]
+      : folderTabs.find((button) => button.textContent?.trim() === item.title.trim())
+    if (target && target.getAttribute('aria-current') !== 'page') target.click()
+  }, 0)
+}
+
+export function OrganicWorkspaceRuntime() {
+  const [tagHost, setTagHost] = useState<HTMLElement | null>(null)
+  const [workspaceReady, setWorkspaceReady] = useState(false)
+  const [tags, setTags] = useState<TagRecord[]>([])
+  const [activeTagName, setActiveTagName] = useState<string | null>(null)
+  const [activeFolderId, setActiveFolderId] = useState<string | null>(null)
+  const [folderVisuals, setFolderVisuals] = useState<FolderVisualState>(EMPTY_FOLDER_VISUALS)
+  const [tagReorderMode, setTagReorderMode] = useState(false)
+  const [draggingTagId, setDraggingTagId] = useState<string | null>(null)
+  const [tagOrderingBusy, setTagOrderingBusy] = useState(false)
+  const [tagOrderError, setTagOrderError] = useState('')
+  const tagsRef = useRef<TagRecord[]>([])
+  const foldersRef = useRef<FolderRecord[]>([])
+  const notesRef = useRef<NoteRecord[]>([])
+  const pressTimerRef = useRef<number | null>(null)
+  const pressPointerRef = useRef({ pointerId: -1, startX: 0, startY: 0, tagId: '', button: null as HTMLButtonElement | null })
+  const dragStartOrderRef = useRef<string[]>([])
+  const suppressTagClickRef = useRef<string | null>(null)
+  const reloadTimerRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    tagsRef.current = tags
+  }, [tags])
+
+  function decorateWorkspace() {
+    document.querySelectorAll<HTMLElement>('.oanix-folder-rail__item').forEach((item) => {
+      if (item.classList.contains('oanix-folder-rail__item--all')) {
+        item.dataset.oanixOrganicFolderName = 'Todas'
+      } else if (item.dataset.oanixFolderId) {
+        item.dataset.oanixOrganicFolderName = item.title.trim()
+      }
+    })
+
+    const folderNames = new Map(foldersRef.current.map((folder) => [folder.id, folder.name]))
+    const tagNames = new Map(tagsRef.current.map((tag) => [tag.id, tag.name]))
+    const noteById = new Map(notesRef.current.map((note) => [note.id, note]))
+
+    document.querySelectorAll<HTMLElement>('.note-row[data-reorder-note-id]').forEach((row, index) => {
+      const noteId = row.dataset.reorderNoteId
+      if (!noteId) return
+      const note = noteById.get(noteId)
+      if (!note) return
+      const firstTag = (note.tagIds ?? []).map((id) => tagNames.get(id)).find(Boolean)
+      const category = firstTag ? `#${firstTag}` : (note.folderId ? folderNames.get(note.folderId) ?? 'NOTA' : 'NOTA')
+      row.dataset.oanixNoteCategory = category
+      row.style.setProperty('--oanix-note-tab-color', NOTE_TAB_COLORS[index % NOTE_TAB_COLORS.length])
+    })
+
+    setActiveTagName((current) => {
+      const next = activeTagNameFromWorkspace()
+      return current === next ? current : next
+    })
+    setActiveFolderId((current) => {
+      const next = activeFolderIdFromDock()
+      return current === next ? current : next
+    })
+  }
+
+  async function reloadPrivateUiData() {
+    if (!document.querySelector('.notes-sidebar')) return
+    try {
+      const [nextTags, folders, notes, covers, colors] = await Promise.all([
+        loadTags(),
+        loadFolders(),
+        loadNotes(),
+        loadFolderCovers(),
+        loadFolderColors(),
+      ])
+      tagsRef.current = nextTags
+      foldersRef.current = folders
+      notesRef.current = notes
+      setTags(nextTags)
+      setFolderVisuals({ covers, colors })
+      setTagOrderError('')
+      window.requestAnimationFrame(decorateWorkspace)
+    } catch {
+      // The runtime also exists while the vault is locked; it should stay silent there.
+    }
+  }
+
+  useEffect(() => {
+    const ensureHost = () => {
+      const sidebar = document.querySelector<HTMLElement>('.notes-sidebar')
+      const list = sidebar?.querySelector<HTMLElement>('.notes-list') ?? null
+      if (!sidebar || !list) {
+        setWorkspaceReady(false)
+        setTagHost(null)
+        return
+      }
+
+      setWorkspaceReady(true)
+      let host = sidebar.querySelector<HTMLElement>('.oanix-organic-tags-host') ?? null
+      if (!host) {
+        host = document.createElement('div')
+        host.className = 'oanix-organic-tags-host'
+        sidebar.insertBefore(host, list)
+      }
+      setTagHost((current) => current === host ? current : host)
+    }
+
+    const scheduleReload = () => {
+      if (reloadTimerRef.current !== null) window.clearTimeout(reloadTimerRef.current)
+      reloadTimerRef.current = window.setTimeout(() => {
+        reloadTimerRef.current = null
+        void reloadPrivateUiData()
+      }, 120)
+    }
+
+    ensureHost()
+    scheduleReload()
+
+    const observer = new MutationObserver(() => {
+      ensureHost()
+      window.requestAnimationFrame(decorateWorkspace)
+    })
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['class', 'aria-current'],
+    })
+
+    const handleLocalChange = () => scheduleReload()
+    window.addEventListener('oanix:local-data-changed', handleLocalChange)
+    window.addEventListener('oanix:conflict-resolved', handleLocalChange)
+
+    function handleDockClick(event: MouseEvent) {
+      const target = event.target
+      if (!(target instanceof Element)) return
+      const item = target.closest<HTMLElement>('.oanix-folder-rail__item')
+      if (!item || item.classList.contains('oanix-folder-rail__item--add')) return
+      selectWorkspaceFolderFromDock(item)
+    }
+
+    function finishFolderReorder() {
+      if (!document.querySelector('.oanix-folder-grid--reordering')) return
+      document.body.setAttribute('data-oanix-folder-drop-finishing', 'true')
+      let attempts = 0
+      const finish = () => {
+        attempts += 1
+        const done = document.querySelector<HTMLButtonElement>('.oanix-folder-rail__done')
+        if (done && !done.disabled) {
+          done.click()
+          document.body.removeAttribute('data-oanix-folder-drop-finishing')
+          return
+        }
+        if (attempts < 100) window.setTimeout(finish, 40)
+        else document.body.removeAttribute('data-oanix-folder-drop-finishing')
+      }
+      window.setTimeout(finish, 0)
+    }
+
+    document.addEventListener('click', handleDockClick)
+    document.addEventListener('pointerup', finishFolderReorder)
+    document.addEventListener('pointercancel', finishFolderReorder)
+
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('oanix:local-data-changed', handleLocalChange)
+      window.removeEventListener('oanix:conflict-resolved', handleLocalChange)
+      document.removeEventListener('click', handleDockClick)
+      document.removeEventListener('pointerup', finishFolderReorder)
+      document.removeEventListener('pointercancel', finishFolderReorder)
+      if (reloadTimerRef.current !== null) window.clearTimeout(reloadTimerRef.current)
+      if (pressTimerRef.current !== null) window.clearTimeout(pressTimerRef.current)
+      document.body.removeAttribute('data-oanix-folder-drop-finishing')
+      document.querySelector('.oanix-organic-tags-host')?.remove()
+    }
+  }, [])
+
+  const activeFolderCover = activeFolderId ? folderVisuals.covers.get(activeFolderId) ?? '' : ''
+  const activeFolderColor = activeFolderId ? folderVisuals.colors.get(activeFolderId) ?? '#1e293b' : '#e2e8f0'
+  const activeFolderName = useMemo(
+    () => activeFolderId ? foldersRef.current.find((folder) => folder.id === activeFolderId)?.name ?? '' : '',
+    [activeFolderId, folderVisuals],
+  )
+
+  function clearTagPress() {
+    if (pressTimerRef.current !== null) window.clearTimeout(pressTimerRef.current)
+    pressTimerRef.current = null
+    pressPointerRef.current = { pointerId: -1, startX: 0, startY: 0, tagId: '', button: null }
+  }
+
+  function beginTagPointerDown(tag: TagRecord, event: ReactPointerEvent<HTMLButtonElement>) {
+    if (event.button !== 0 || tagOrderingBusy) return
+    clearTagPress()
+    const button = event.currentTarget
+    pressPointerRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      tagId: tag.id,
+      button,
+    }
+    pressTimerRef.current = window.setTimeout(() => {
+      pressTimerRef.current = null
+      suppressTagClickRef.current = tag.id
+      dragStartOrderRef.current = tagsRef.current.map((item) => item.id)
+      setTagReorderMode(true)
+      setDraggingTagId(tag.id)
+      try { button.setPointerCapture(event.pointerId) } catch { /* best effort */ }
+      if ('vibrate' in navigator) navigator.vibrate?.(18)
+    }, TAG_LONG_PRESS_MS)
+  }
+
+  function handleTagPointerMove(tag: TagRecord, event: ReactPointerEvent<HTMLButtonElement>) {
+    const press = pressPointerRef.current
+    if (pressTimerRef.current !== null && press.pointerId === event.pointerId) {
+      if (Math.hypot(event.clientX - press.startX, event.clientY - press.startY) > TAG_MOVE_TOLERANCE) clearTagPress()
+      return
+    }
+    if (draggingTagId !== tag.id) return
+    event.preventDefault()
+
+    const target = document.elementFromPoint(event.clientX, event.clientY)
+      ?.closest<HTMLElement>('[data-oanix-organic-tag-id]')
+    const targetId = target?.dataset.oanixOrganicTagId
+    if (!target || !targetId || targetId === tag.id) return
+    const rect = target.getBoundingClientRect()
+    const placeAfter = event.clientX > rect.left + rect.width / 2
+    const before = captureTagRects(tagHost)
+    setTags((current) => {
+      const next = moveTagAroundTarget(current, tag.id, targetId, placeAfter)
+      tagsRef.current = next
+      animateTagReflow(tagHost, before, tag.id)
+      return next
+    })
+  }
+
+  async function finishTagDrag(tag: TagRecord, event: ReactPointerEvent<HTMLButtonElement>) {
+    clearTagPress()
+    if (draggingTagId !== tag.id) return
+    try {
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId)
+    } catch { /* best effort */ }
+
+    setDraggingTagId(null)
+    setTagReorderMode(false)
+    const before = dragStartOrderRef.current
+    const nextIds = tagsRef.current.map((item) => item.id)
+    if (before.length === nextIds.length && before.every((id, index) => id === nextIds[index])) return
+
+    setTagOrderingBusy(true)
+    setTagOrderError('')
+    try {
+      const persisted = await persistTagOrder(nextIds)
+      tagsRef.current = persisted
+      setTags(persisted)
+    } catch {
+      setTagOrderError('No se pudo guardar el nuevo orden de etiquetas.')
+      void reloadPrivateUiData()
+    } finally {
+      setTagOrderingBusy(false)
+    }
+  }
+
+  function cancelTagDrag(tag: TagRecord, event: ReactPointerEvent<HTMLButtonElement>) {
+    clearTagPress()
+    if (draggingTagId !== tag.id) return
+    try {
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId)
+    } catch { /* best effort */ }
+    const rank = new Map(dragStartOrderRef.current.map((id, index) => [id, index]))
+    const restored = [...tagsRef.current].sort((left, right) => (rank.get(left.id) ?? 9999) - (rank.get(right.id) ?? 9999))
+    tagsRef.current = restored
+    setTags(restored)
+    setDraggingTagId(null)
+    setTagReorderMode(false)
+  }
+
+  function handleTagClick(tag: TagRecord) {
+    if (suppressTagClickRef.current === tag.id) {
+      suppressTagClickRef.current = null
+      return
+    }
+    if (!tagReorderMode) openWorkspaceTag(tag.name)
+  }
+
+  const backgroundStyle = {
+    '--oanix-organic-folder-color': activeFolderColor,
+    ...(activeFolderCover ? { backgroundImage: `url("${activeFolderCover.replace(/"/g, '\\"')}")` } : {}),
+  } as CSSProperties
+
+  return (
+    <>
+      {workspaceReady && createPortal(
+        <div
+          className={`oanix-organic-background${activeFolderCover ? ' oanix-organic-background--covered' : ''}`}
+          style={backgroundStyle}
+          aria-hidden="true"
+        />,
+        document.body,
+      )}
+
+      {workspaceReady && createPortal(
+        <div className="oanix-organic-folder-controls" aria-label="Acciones de carpetas">
+          <button
+            className="oanix-organic-folder-control oanix-organic-folder-control--add"
+            type="button"
+            onClick={() => document.querySelector<HTMLButtonElement>('.oanix-folder-rail__item--add')?.click()}
+            aria-label="Crear o administrar carpetas"
+            title="Carpetas"
+          >
+            ＋
+          </button>
+          <button
+            className="oanix-organic-folder-control"
+            type="button"
+            disabled={!activeFolderId}
+            onClick={() => document.querySelector<HTMLButtonElement>('.oanix-folder-focus__menu')?.click()}
+            aria-label={activeFolderName ? `Opciones de ${activeFolderName}` : 'Opciones de carpeta'}
+            title="Opciones de carpeta"
+          >
+            ⋮
+          </button>
+        </div>,
+        document.body,
+      )}
+
+      {tagHost && createPortal(
+        <div className={`oanix-organic-tags${tagReorderMode ? ' is-reordering' : ''}`}>
+          <div className="oanix-organic-tags__scroll">
+            <button
+              className={`oanix-organic-tag-chip${activeTagName === null ? ' is-active' : ''}`}
+              type="button"
+              onClick={() => openWorkspaceTag(null)}
+              disabled={tagReorderMode}
+            >
+              Todas
+            </button>
+            {tags.map((tag) => (
+              <button
+                className={`oanix-organic-tag-chip${activeTagName === tag.name ? ' is-active' : ''}${draggingTagId === tag.id ? ' is-dragging' : ''}`}
+                type="button"
+                key={tag.id}
+                data-oanix-organic-tag-id={tag.id}
+                onClick={() => handleTagClick(tag)}
+                onPointerDown={(event) => beginTagPointerDown(tag, event)}
+                onPointerMove={(event) => handleTagPointerMove(tag, event)}
+                onPointerUp={(event) => void finishTagDrag(tag, event)}
+                onPointerCancel={(event) => cancelTagDrag(tag, event)}
+                onContextMenu={(event) => event.preventDefault()}
+                aria-label={tagReorderMode ? `Mover etiqueta ${tag.name}` : `Filtrar por ${tag.name}`}
+              >
+                #{tag.name}
+              </button>
+            ))}
+          </div>
+          <div className="oanix-organic-tags__controls">
+            <span className="oanix-organic-tags__arrows" aria-hidden="true">‹‹</span>
+            <button
+              type="button"
+              onClick={() => document.querySelector<HTMLButtonElement>('.notes-tag-filter button[aria-label="Administrar etiquetas"]')?.click()}
+              aria-label="Administrar etiquetas"
+              title="Etiquetas"
+            >
+              ＋
+            </button>
+          </div>
+          {tagOrderError && <span className="oanix-organic-tags__error" role="alert">{tagOrderError}</span>}
+        </div>,
+        tagHost,
+      )}
+    </>
+  )
+}
