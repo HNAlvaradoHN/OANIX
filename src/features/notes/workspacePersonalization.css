@@ -159,7 +159,7 @@ html[data-oanix-theme='classic-day'] .note-row {
 
 .oanix-folder-rail {
   padding: 8px 12px env(safe-area-inset-bottom) !important;
-  background: color-mix(in srgb, var(--oanix-organic-dock) 92%, transparent) !important;
+  background: var(--oanix-organic-dock) !important;
 }
 
 .oanix-folder-rail__scroll {
@@ -241,9 +241,9 @@ html[data-oanix-theme='classic-day'] .oanix-folder-rail__item {
 }
 
 .oanix-folder-rail__item > small {
-  top: 4px !important;
-  right: 6px !important;
-  z-index: 8 !important;
+  top: 54px !important;
+  right: 11px !important;
+  z-index: 10 !important;
 }
 
 .oanix-folder-card__gear {
