@@ -1,6 +1,6 @@
 /* Neutral base themes kept alongside the styled presets. */
 :root[data-oanix-theme='classic-day'] {
-  color-scheme: light !important;
+  color-scheme: only light !important;
   --theme-bg: #eef2f5;
   --theme-bg-deep: #e7edf3;
   --theme-surface: #ffffff;
