@@ -32,9 +32,9 @@ type OanixUpdateWindow = Window & {
 const oanixWindow = window as OanixUpdateWindow
 const isCapacitorBuild = import.meta.env.MODE === 'capacitor'
 
-// PWA preview: notebook + orange rulings + lock, without the C.
-// Capacitor keeps the currently approved native identity until this preview is accepted.
-const brandMarkAsset = isCapacitorBuild ? 'oanix-icon.svg' : 'oanix-mark-pwa.svg'
+// PWA uses the selected OANIX brand image.
+// Capacitor keeps the approved native identity until Android launcher assets are regenerated separately.
+const brandMarkAsset = isCapacitorBuild ? 'oanix-icon.svg' : 'oanix-logo.svg'
 document.documentElement.classList.add('oanix-brand-final')
 if (!isCapacitorBuild) document.documentElement.classList.add('oanix-brand-pwa-preview')
 document.documentElement.style.setProperty(
