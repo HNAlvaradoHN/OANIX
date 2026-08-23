@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
 const icon = readFileSync('public/oanix-icon.svg', 'utf8')
-const pwaLogo = readFileSync('public/oanix-logo.svg', 'utf8')
+const pwaLogo = readFileSync('public/oanix-logo.webp')
 const main = readFileSync('src/main.tsx', 'utf8')
 const brandCss = readFileSync('src/styles/web-brand-logo.css', 'utf8')
 const viteConfig = readFileSync('vite.config.ts', 'utf8')
@@ -20,15 +20,15 @@ test('current Android identity remains untouched while PWA branding changes', ()
   assert.match(icon, />X</)
 })
 
-test('PWA selected logo is a self-contained OANIX image asset', () => {
-  assert.match(pwaLogo, /viewBox="0 0 512 512"/)
-  assert.match(pwaLogo, /<title[^>]*>OANIX<\/title>/)
-  assert.match(pwaLogo, /data:image\/webp;base64,/)
+test('PWA selected logo is stored as a real WebP raster asset', () => {
+  assert.equal(pwaLogo.subarray(0, 4).toString('ascii'), 'RIFF')
+  assert.equal(pwaLogo.subarray(8, 12).toString('ascii'), 'WEBP')
+  assert.ok(pwaLogo.length > 8_000)
 })
 
 test('PWA uses the selected logo while Capacitor keeps the current icon', () => {
   assert.match(main, /const isCapacitorBuild = import\.meta\.env\.MODE === 'capacitor'/)
-  assert.match(main, /isCapacitorBuild \? 'oanix-icon\.svg' : 'oanix-logo\.svg'/)
+  assert.match(main, /isCapacitorBuild \? 'oanix-icon\.svg' : 'oanix-logo\.webp'/)
   assert.match(main, /classList\.add\('oanix-brand-pwa-preview'\)/)
   assert.match(main, /import\.meta\.env\.BASE_URL/)
   assert.match(brandCss, /html\.oanix-brand-pwa-preview \.notes-brand__mark/)
@@ -37,8 +37,10 @@ test('PWA uses the selected logo while Capacitor keeps the current icon', () => 
 })
 
 test('PWA manifest uses the selected logo without changing Android resources', () => {
-  assert.match(viteConfig, /includeAssets: \['oanix-icon\.svg', 'oanix-logo\.svg'\]/)
-  assert.match(viteConfig, /src: '\/OANIX\/oanix-logo\.svg'/)
+  assert.match(viteConfig, /includeAssets: \['oanix-icon\.svg', 'oanix-logo\.webp'\]/)
+  assert.match(viteConfig, /src: '\/OANIX\/oanix-logo\.webp'/)
+  assert.match(viteConfig, /sizes: '512x512'/)
+  assert.match(viteConfig, /type: 'image\/webp'/)
   assert.match(viteConfig, /purpose: 'any'/)
   assert.doesNotMatch(viteConfig, /purpose: 'any maskable'/)
 })

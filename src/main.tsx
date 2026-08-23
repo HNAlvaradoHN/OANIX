@@ -34,7 +34,7 @@ const isCapacitorBuild = import.meta.env.MODE === 'capacitor'
 
 // PWA uses the selected OANIX brand image.
 // Capacitor keeps the approved native identity until Android launcher assets are regenerated separately.
-const brandMarkAsset = isCapacitorBuild ? 'oanix-icon.svg' : 'oanix-logo.svg'
+const brandMarkAsset = isCapacitorBuild ? 'oanix-icon.svg' : 'oanix-logo.webp'
 document.documentElement.classList.add('oanix-brand-final')
 if (!isCapacitorBuild) document.documentElement.classList.add('oanix-brand-pwa-preview')
 document.documentElement.style.setProperty(
