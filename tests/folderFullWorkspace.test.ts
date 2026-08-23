@@ -34,7 +34,7 @@ test('el dock inferior usa nombres contadores portadas colores y acciones existe
   assert.match(folderRuntime, /data\.counts\.get\(folder\.id\) \?\? 0/)
   assert.match(folderRuntime, /folder\.cover/)
   assert.match(folderRuntime, /--oanix-folder-color/)
-  assert.match(organicRuntime, /data\.oanixOrganicFolderName/)
+  assert.match(organicRuntime, /item\.dataset\.oanixOrganicFolderName/)
   assert.match(organicRuntime, /Crear o administrar carpetas/)
   assert.match(organicRuntime, /Opciones de carpeta/)
   assert.match(organicCss, /\.oanix-organic-folder-controls/)
