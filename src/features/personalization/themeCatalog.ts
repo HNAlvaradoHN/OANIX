@@ -39,6 +39,14 @@ const CLASSIC_DAY_TOKENS: Record<string, string> = {
   '--theme-glow': 'rgba(37,99,235,.09)',
   '--theme-grid': 'rgba(71,85,105,.025)',
   '--theme-danger': '#b42318',
+  '--oanix-organic-text': '#1e293b',
+  '--oanix-organic-muted': '#475569',
+  '--oanix-organic-border': 'rgba(255,255,255,.46)',
+  '--oanix-organic-card': 'rgba(241,245,249,.86)',
+  '--oanix-organic-header': 'rgba(241,245,249,.66)',
+  '--oanix-organic-dock': 'linear-gradient(180deg,rgba(241,245,249,.30),rgba(226,232,240,.44))',
+  '--oanix-organic-chip': 'rgba(255,255,255,.24)',
+  '--oanix-organic-shadow': 'rgba(15,23,42,.09)',
 }
 
 export const OANIX_THEMES: readonly OanixThemePreset[] = [
@@ -85,8 +93,9 @@ export function readSavedOanixTheme(): OanixThemePreset['id'] {
 
 function applyClassicDayHardening(enabled: boolean) {
   const root = document.documentElement
+  const targets = [document.body, document.getElementById('root')]
   root.classList.toggle('oanix-classic-day', enabled)
-  document.body?.classList.toggle('oanix-classic-day', enabled)
+  targets.forEach((target) => target?.classList.toggle('oanix-classic-day', enabled))
 
   for (const [property, value] of Object.entries(CLASSIC_DAY_TOKENS)) {
     if (enabled) root.style.setProperty(property, value)
@@ -96,11 +105,20 @@ function applyClassicDayHardening(enabled: boolean) {
 
 export function applyOanixTheme(themeId: string, persist = true): OanixThemePreset['id'] {
   const theme = getOanixTheme(themeId)
-  document.documentElement.dataset.oanixTheme = theme.id
-  document.documentElement.dataset.oanixThemeMode = theme.mode
-  document.documentElement.style.colorScheme = theme.mode
-  document.body?.setAttribute('data-oanix-theme', theme.id)
-  document.body?.setAttribute('data-oanix-theme-mode', theme.mode)
+  const root = document.documentElement
+  const targets = [document.body, document.getElementById('root')]
+  const colorScheme = theme.mode === 'light' ? 'only light' : 'dark'
+
+  root.dataset.oanixTheme = theme.id
+  root.dataset.oanixThemeMode = theme.mode
+  root.style.setProperty('color-scheme', colorScheme, 'important')
+
+  targets.forEach((target) => {
+    target?.setAttribute('data-oanix-theme', theme.id)
+    target?.setAttribute('data-oanix-theme-mode', theme.mode)
+    target?.style.setProperty('color-scheme', colorScheme, 'important')
+  })
+
   applyClassicDayHardening(theme.id === 'classic-day')
   syncOanixSystemTheme(theme.swatches[0], theme.mode)
 
