@@ -3,8 +3,7 @@ import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
 const icon = readFileSync('public/oanix-icon.svg', 'utf8')
-const pwaIcon = readFileSync('public/oanix-icon-pwa.svg', 'utf8')
-const pwaMark = readFileSync('public/oanix-mark-pwa.svg', 'utf8')
+const pwaLogo = readFileSync('public/oanix-logo.svg', 'utf8')
 const main = readFileSync('src/main.tsx', 'utf8')
 const brandCss = readFileSync('src/styles/web-brand-logo.css', 'utf8')
 const viteConfig = readFileSync('vite.config.ts', 'utf8')
@@ -14,30 +13,22 @@ const androidLegacy = readFileSync('android/app/src/main/res/mipmap-anydpi/ic_la
 const androidForeground = readFileSync('android/app/src/main/res/mipmap-anydpi/ic_launcher_foreground.xml', 'utf8')
 const androidAdaptive = readFileSync('android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml', 'utf8')
 
-test('current Android identity remains untouched while PWA preview is evaluated', () => {
+test('current Android identity remains untouched while PWA branding changes', () => {
   assert.match(icon, /C blanca plateada con destello/)
   assert.match(icon, /Bright orange note rulings/)
   assert.match(icon, />OANI</)
   assert.match(icon, />X</)
 })
 
-test('PWA preview removes the C and makes the secure notebook the primary symbol', () => {
-  assert.match(pwaIcon, /Notebook is now the primary OANIX symbol: no C/)
-  assert.match(pwaIcon, /Four unmistakable orange note rulings/)
-  assert.match(pwaIcon, /Security lock attached to the notebook/)
-  assert.match(pwaIcon, /Digital pixels and small premium glint/)
-  assert.match(pwaIcon, /OANI/)
-  assert.match(pwaIcon, />X</)
-  assert.doesNotMatch(pwaIcon, /C blanca plateada con destello/)
-
-  assert.match(pwaMark, /Marca compacta PWA de OANIX/)
-  assert.match(pwaMark, /#ff9b33/i)
-  assert.match(pwaMark, /candado|lock/i)
+test('PWA selected logo is a self-contained OANIX image asset', () => {
+  assert.match(pwaLogo, /viewBox="0 0 512 512"/)
+  assert.match(pwaLogo, /<title[^>]*>OANIX<\/title>/)
+  assert.match(pwaLogo, /data:image\/webp;base64,/)
 })
 
-test('PWA uses its compact notebook mark while Capacitor keeps the current icon', () => {
+test('PWA uses the selected logo while Capacitor keeps the current icon', () => {
   assert.match(main, /const isCapacitorBuild = import\.meta\.env\.MODE === 'capacitor'/)
-  assert.match(main, /isCapacitorBuild \? 'oanix-icon\.svg' : 'oanix-mark-pwa\.svg'/)
+  assert.match(main, /isCapacitorBuild \? 'oanix-icon\.svg' : 'oanix-logo\.svg'/)
   assert.match(main, /classList\.add\('oanix-brand-pwa-preview'\)/)
   assert.match(main, /import\.meta\.env\.BASE_URL/)
   assert.match(brandCss, /html\.oanix-brand-pwa-preview \.notes-brand__mark/)
@@ -45,9 +36,9 @@ test('PWA uses its compact notebook mark while Capacitor keeps the current icon'
   assert.match(brandCss, /background-image: var\(--oanix-brand-logo-url\) !important/)
 })
 
-test('PWA manifest previews the notebook-only icon without changing Android resources', () => {
-  assert.match(viteConfig, /includeAssets: \['oanix-icon\.svg', 'oanix-icon-pwa\.svg', 'oanix-mark-pwa\.svg'\]/)
-  assert.match(viteConfig, /src: '\/OANIX\/oanix-icon-pwa\.svg'/)
+test('PWA manifest uses the selected logo without changing Android resources', () => {
+  assert.match(viteConfig, /includeAssets: \['oanix-icon\.svg', 'oanix-logo\.svg'\]/)
+  assert.match(viteConfig, /src: '\/OANIX\/oanix-logo\.svg'/)
   assert.match(viteConfig, /purpose: 'any'/)
   assert.doesNotMatch(viteConfig, /purpose: 'any maskable'/)
 })

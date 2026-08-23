@@ -11,7 +11,7 @@ export default defineConfig(({ mode }) => {
       react(),
       VitePWA({
         registerType: 'prompt',
-        includeAssets: ['oanix-icon.svg', 'oanix-icon-pwa.svg', 'oanix-mark-pwa.svg'],
+        includeAssets: ['oanix-icon.svg', 'oanix-logo.svg'],
         workbox: {
           // Keep the complete executable app shell local after the first successful load.
           // `wasm` is included explicitly so cryptographic/runtime dependencies remain offline-safe
@@ -31,8 +31,8 @@ export default defineConfig(({ mode }) => {
           scope: '/OANIX/',
           icons: [
             {
-              // PWA-only preview: notebook + orange rulings + lock, without the C.
-              src: '/OANIX/oanix-icon-pwa.svg',
+              // User-selected OANIX PWA logo.
+              src: '/OANIX/oanix-logo.svg',
               sizes: 'any',
               type: 'image/svg+xml',
               purpose: 'any'
