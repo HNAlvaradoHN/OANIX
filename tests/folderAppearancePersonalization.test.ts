@@ -5,6 +5,8 @@ import test from 'node:test'
 const catalog = readFileSync('src/features/folders/folderAppearanceCatalog.ts', 'utf8')
 const service = readFileSync('src/features/folders/folderAppearanceService.ts', 'utf8')
 const runtime = readFileSync('src/features/folders/FolderAppearanceRuntime.tsx', 'utf8')
+const gridCss = readFileSync('src/features/folders/folderGrid.css', 'utf8')
+const interactiveCss = readFileSync('src/features/folders/folderInteractive.css', 'utf8')
 const polish = readFileSync('src/features/folders/folderReferencePolish.css', 'utf8')
 
 test('la apariencia conserva registros de color v1 y añade iconos cifrados sin borrar preferencias existentes', () => {
@@ -37,12 +39,13 @@ test('el selector de apariencia pinta color e icono sin reemplazar la portada ci
   assert.match(runtime, /folderReferencePolish\.css/)
 })
 
-test('el diseño mantiene adaptación específica para móvil, escritorio y pantallas bajas', () => {
-  assert.match(polish, /@media \(max-width: 480px\)/)
-  assert.match(polish, /@media \(max-width: 360px\)/)
-  assert.match(polish, /@media \(min-width: 760px\)/)
-  assert.match(polish, /@media \(min-width: 1200px\)/)
-  assert.match(polish, /@media \(max-height: 680px\)/)
-  assert.match(polish, /data-oanix-folder-icon/)
-  assert.match(polish, /grid-template-columns: repeat\(6, minmax\(0, 1fr\)\)/)
+test('la presentación activa conserva adaptación móvil y el selector de iconos responsive', () => {
+  assert.match(gridCss, /@media \(max-width: 768px\)/)
+  assert.match(gridCss, /flex-direction: column-reverse/)
+  assert.match(gridCss, /data-oanix-folder-icon/)
+  assert.match(interactiveCss, /@media \(max-width: 480px\)/)
+  assert.match(interactiveCss, /@media \(max-width: 360px\)/)
+  assert.match(interactiveCss, /grid-template-columns: repeat\(6,minmax\(0,1fr\)\)/)
+  assert.match(polish, /Compatibility shell/)
+  assert.doesNotMatch(polish, /@media/)
 })

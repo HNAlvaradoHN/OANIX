@@ -43,13 +43,20 @@ No cambiar el formato persistido de imágenes ni modificar ampliamente `ImageNot
 
 ## 4. Carpetas
 
-- El inicio de carpetas es una superficie de **workspace completo** compartida por PWA y Android: selector vertical compacto de iconos a la izquierda y panel visual de la carpeta seleccionada ocupando el resto del espacio.
-- El inicio no debe quedar encerrado dentro del ancho de la lista normal de notas ni mostrar el FAB `Nueva nota`; la creación de notas pertenece a la vista interna después de abrir una carpeta/lista.
+- El inicio de carpetas es una superficie de **workspace completo** compartida por PWA y Android; nunca debe quedar encerrada dentro del ancho de la lista normal de notas.
+- Dirección visual vigente: trasladar fielmente la referencia HTML entregada por el usuario, pero conectada exclusivamente a datos y handlers reales de OANIX. En PC/tablet ancho: rail lateral de ~140 px con iconos orgánicos, nombre real y contador real; portada real como wallpaper; tarjeta glass de información abajo a la izquierda; búsqueda arriba; `Abrir carpeta` + `Opciones` como acciones principales. En móvil: la misma base se convierte en dock horizontal inferior.
+- No copiar datos demo, imágenes externas, Tailwind CDN ni funciones simuladas del prototipo. La referencia es visual/interactiva, no una segunda aplicación.
+- El `+` del home debe reutilizar el administrador real de carpetas. No mantener un engranaje ficticio sin función.
+- El inicio no muestra el FAB `Nueva nota`; la creación de notas pertenece a la vista interna después de abrir una carpeta/lista.
+- `Abrir carpeta`, búsqueda, volver, Android Back y reordenamiento deben seguir usando los handlers actuales; un rediseño visual no justifica duplicar lógica.
 - El panel mantiene búsqueda de notas limitada a la carpeta seleccionada y no expone notas de Caja privada.
 - Imagen personalizada de carpeta cifrada y almacenada separadamente del registro de carpeta.
 - Color e icono de carpeta se guardan cifrados en `folder-appearance`; conservar compatibilidad con registros de color anteriores y no borrar una preferencia al modificar la otra.
-- La personalización de carpeta debe conservar un menú de acciones compacto/profesional y desplegar la paleta/iconos solo cuando el usuario los solicita.
-- Reordenamiento manual por pulsación larga reutiliza el orden cifrado existente; no crear otra persistencia.
+- En Opciones, **Color / Icono** se presentan detrás de un único botón y al abrirlo se muestran juntos los catálogos reales actuales de OANIX.
+- El menú de carpeta debe ser compacto/profesional; no volver a botones sueltos visualmente inconexos.
+- Reordenamiento manual por pulsación larga reutiliza el orden cifrado existente y puede usar jiggle/arrastre visual; no crear otra persistencia.
+- La composición debe conservar Día/Noche; Noche sigue la referencia oscura y Día usa la paleta clara real de OANIX sin cambiar geometría.
+- `folderGrid.css` es la fuente visual principal del home. Evitar volver a acumular capas de polish/slider/motion contradictorias.
 - Atrás: nota → lista → inicio de carpetas → salir; conservar historial real correcto en PWA y comportamiento equivalente en APK.
 
 ## 5. Archivos grandes
