@@ -1,6 +1,6 @@
 # OANIX — Estado actual para continuidad
 
-**Última actualización:** 2026-08-22
+**Última actualización:** 2026-08-23
 
 Checkpoint operativo corto. Antes de trabajar, verificar siempre el `main` real y PR recientes; GitHub es la fuente de verdad del código.
 
@@ -35,20 +35,38 @@ PR #170–#172 fijaron la experiencia compartida PWA/APK:
 
 No modificar ampliamente `ImageNoteEditor.tsx` ni el formato persistido de imágenes para ajustes menores.
 
-## Carpetas — dirección visual vigente
+## Workspace orgánico v38 — dirección visual vigente
 
-- El inicio de carpetas ocupa **todo el workspace**; no vive dentro del ancho de la lista de notas.
-- En PC/tablet ancho usa la referencia visual entregada por el usuario: rail lateral de aproximadamente 140 px, iconos orgánicos con nombre real y contador real, portada real como wallpaper y tarjeta glass de detalles abajo a la izquierda.
-- El `+` visible reutiliza el administrador real de carpetas. No existe un engranaje ficticio sin función.
-- En móvil, la misma base se convierte en un dock horizontal inferior; no crear una segunda UI/lógica de carpetas.
-- La tarjeta muestra el nombre real y cantidad real de notas. `Abrir carpeta` usa la navegación existente; `Opciones` abre las funciones reales de la carpeta.
-- El inicio no muestra `Nueva nota`; esa acción pertenece a la vista interna después de abrir una carpeta/lista.
-- La búsqueda del panel sigue limitada a la carpeta seleccionada y no expone notas de Caja privada.
-- Imagen personalizada de carpeta: cifrada y separada del registro de carpeta.
-- Color e icono: persistidos cifrados en `folder-appearance`, con compatibilidad hacia registros anteriores. En Opciones se presentan juntos detrás de un único botón `Cambiar color / Icono`.
-- Reordenamiento manual por pulsación larga reutiliza el orden cifrado existente y mantiene efecto visual de jiggle/arrastre.
-- Atrás: nota → lista → inicio de carpetas → salir, incluyendo historial real en PWA y comportamiento equivalente en APK.
-- `folderGrid.css` vuelve a ser la fuente visual principal del home; `folderReferencePolish.css` y `folderFullWorkspace.css` quedan como shells temporales para no volver a acumular capas visuales contradictorias.
+La referencia anterior de **home de carpetas independiente a pantalla completa queda SUPERSEDED** por la referencia `Organic Responsive 3D Folders v38.1` entregada por el usuario el 23 de agosto de 2026.
+
+La superficie principal debe ser una sola experiencia compartida por PWA y APK:
+- cabecera compacta de OANIX;
+- etiquetas reales en chips horizontales debajo de la cabecera;
+- lista real de notas en tarjetas infográficas translúcidas;
+- dock horizontal de carpetas en la parte inferior;
+- portada/color de la carpeta activa como ambiente visual del workspace;
+- nombres de carpetas, contadores y contenido siempre provenientes de datos reales de OANIX;
+- `+` y opciones de carpeta reutilizan los administradores/handlers existentes;
+- no usar Tailwind CDN, Phosphor CDN, imágenes demo ni una segunda lógica de producto.
+
+El diseño debe conservar Día/Noche y adaptarse con `dvh`, safe areas, scroll horizontal y breakpoints estructurales cuando haga falta para evitar desbordes sin perder la composición.
+
+### Reordenamiento — regla común
+
+Carpetas, etiquetas y notas comparten la misma interacción:
+1. mantener presionado el elemento durante un breve intervalo;
+2. todos los elementos del grupo entran en jiggle/vibración;
+3. sin soltar, arrastrar a la posición deseada mientras los demás se recolocan;
+4. al soltar se persiste el orden y el modo termina automáticamente.
+
+No debe existir un botón visible `↕`, `Listo` o `✓` para entrar/salir del modo de ordenamiento. Un toque normal sigue seleccionando/abriendo; scroll normal no debe disparar el long-press accidentalmente.
+
+Persistencia:
+- carpetas reutilizan `folder-order` cifrado;
+- notas reutilizan `manualOrder`/`persistNoteOrder` existente;
+- etiquetas reutilizan la infraestructura cifrada con un registro `tag-order`, sin crear un store paralelo ni cambiar el formato v1 de cada etiqueta.
+
+La personalización existente de carpetas sigue vigente: portada cifrada separada, color/icono en `folder-appearance` y compatibilidad con registros anteriores.
 
 ## Archivos grandes — motor actual
 
@@ -104,12 +122,14 @@ No implementar todavía este bloque mientras se valida estabilidad del motor bas
 
 ## Próximo paso exacto
 
-1. Validar visualmente el nuevo home de carpetas en PWA real con una captura de PC y otra móvil, comprobando nombres, contadores, portada, Abrir y Opciones.
-2. Repetir la prueba de ~818 MB con interrupción de red aproximadamente al 30–50%, cerrar/reabrir OANIX y confirmar reanudación sin empezar desde cero.
-3. Solo después aumentar gradualmente el tamaño; 5 GB es una meta posterior, no la siguiente prueba inmediata.
-4. Después de estabilizar transferencias: integrar archivos grandes al flujo normal de notas.
-5. Antes de considerar terminado el sistema de archivos grandes en Android, implementar y validar transferencia en segundo plano.
-6. Más adelante: reproducción de video por rangos/seek, caché bajo demanda, Guardar sin conexión y Liberar del dispositivo (distinto de Eliminar de OANIX).
+1. Completar CI/Android del workspace orgánico v38 y fusionar si ambos quedan verdes.
+2. Validar visualmente en PWA real con una captura móvil y una de PC: cabecera, chips, tarjetas, dock, portada/color y ausencia de desbordes.
+3. Validar físicamente el gesto continuo de reordenamiento en carpetas, etiquetas y notas: mantener → jiggle → arrastrar sin soltar → soltar → persistir → normalidad.
+4. Repetir la prueba de ~818 MB con interrupción de red aproximadamente al 30–50%, cerrar/reabrir OANIX y confirmar reanudación sin empezar desde cero.
+5. Solo después aumentar gradualmente el tamaño; 5 GB es una meta posterior, no la siguiente prueba inmediata.
+6. Después de estabilizar transferencias: integrar archivos grandes al flujo normal de notas.
+7. Antes de considerar terminado el sistema de archivos grandes en Android, implementar y validar transferencia en segundo plano.
+8. Más adelante: reproducción de video por rangos/seek, caché bajo demanda, Guardar sin conexión y Liberar del dispositivo (distinto de Eliminar de OANIX).
 
 ## Checkpoints históricos útiles
 
