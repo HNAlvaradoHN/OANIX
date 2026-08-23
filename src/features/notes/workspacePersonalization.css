@@ -1,0 +1,760 @@
+/* Workspace personalization v39.
+   Keeps the real OANIX data/handlers and only refines the shared PWA/Capacitor presentation. */
+
+/* ===== TOP BAR ===== */
+.notes-header {
+  min-height: 58px !important;
+  padding: max(10px, env(safe-area-inset-top)) 18px 10px !important;
+  background: color-mix(in srgb, var(--oanix-organic-header) 91%, transparent) !important;
+  border-bottom-color: color-mix(in srgb, var(--oanix-organic-border) 88%, transparent) !important;
+  box-shadow: 0 10px 30px color-mix(in srgb, var(--oanix-organic-shadow) 38%, transparent);
+}
+
+.notes-brand {
+  min-width: 0;
+  align-items: center !important;
+}
+
+.notes-brand__mark {
+  width: 38px !important;
+  height: 38px !important;
+  flex: 0 0 38px !important;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--oanix-organic-border) 75%, transparent) !important;
+  border-radius: 12px !important;
+  background-color: rgba(255,255,255,.12) !important;
+  background-image: var(--oanix-brand-logo-url) !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+  background-size: cover !important;
+  color: transparent !important;
+  font-size: 0 !important;
+  box-shadow: 0 5px 16px rgba(15,23,42,.18) !important;
+}
+
+.notes-brand > div:last-child {
+  min-width: 0;
+}
+
+.notes-brand strong {
+  font-size: 15px !important;
+  letter-spacing: -.25px !important;
+}
+
+.notes-brand > div:last-child > span {
+  color: #f97316 !important;
+  font-size: 10px !important;
+  font-weight: 750 !important;
+}
+
+html[data-oanix-theme='classic-night'] .notes-brand > div:last-child > span {
+  color: #60a5fa !important;
+}
+
+.notes-header__actions {
+  gap: 5px !important;
+}
+
+.notes-header .icon-button,
+.notes-header .account-header-action {
+  width: 34px !important;
+  height: 34px !important;
+  border: 1px solid transparent !important;
+  border-radius: 10px !important;
+}
+
+.notes-header .icon-button:hover,
+.notes-header .icon-button:focus-visible,
+.notes-header .account-header-action:hover,
+.notes-header .account-header-action:focus-visible {
+  border-color: var(--oanix-organic-border) !important;
+}
+
+/* ===== NOTE CARDS ===== */
+.note-row {
+  --oanix-note-card-color: #2563eb;
+  background:
+    linear-gradient(
+      105deg,
+      color-mix(in srgb, var(--oanix-note-card-color) 9%, var(--oanix-organic-card)) 0%,
+      var(--oanix-organic-card) 46%,
+      color-mix(in srgb, var(--oanix-note-card-color) 5%, var(--oanix-organic-card)) 100%
+    ) !important;
+  border-color: color-mix(in srgb, var(--oanix-note-card-color) 18%, var(--oanix-organic-border)) !important;
+}
+
+html[data-oanix-theme='classic-day'] .note-row {
+  background:
+    linear-gradient(
+      105deg,
+      color-mix(in srgb, var(--oanix-note-card-color) 8%, rgba(248,250,252,.94)) 0%,
+      rgba(248,250,252,.92) 50%,
+      rgba(241,245,249,.9) 100%
+    ) !important;
+}
+
+.note-row__avatar[data-oanix-note-icon] {
+  top: -18px !important;
+  width: 56px !important;
+  height: 31px !important;
+  display: grid !important;
+  place-items: center !important;
+  overflow: visible !important;
+  background: transparent !important;
+  border: 0 !important;
+  font-size: 0 !important;
+}
+
+.note-row__avatar[data-oanix-note-icon] > *,
+.note-row__avatar[data-oanix-note-icon] img,
+.note-row__avatar[data-oanix-note-icon] picture {
+  display: none !important;
+}
+
+.note-row__avatar[data-oanix-note-icon]::after {
+  content: attr(data-oanix-note-icon);
+  position: relative;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 26px;
+  color: #fff;
+  font-size: 15px;
+  line-height: 1;
+  filter: drop-shadow(0 2px 3px rgba(15,23,42,.34));
+}
+
+.note-row__preview[data-oanix-note-description] {
+  font-size: 0 !important;
+}
+
+.note-row__preview[data-oanix-note-description]::after {
+  content: attr(data-oanix-note-description);
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--oanix-organic-muted);
+  font-size: 10px;
+  line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.oanix-note-customize-menuitem {
+  font-weight: 760 !important;
+}
+
+/* ===== BOTTOM FOLDER CARDS ===== */
+.oanix-folder-grid {
+  height: calc(154px + env(safe-area-inset-bottom)) !important;
+}
+
+.notes-sidebar {
+  padding-bottom: calc(154px + env(safe-area-inset-bottom)) !important;
+}
+
+.notes-create-fab {
+  bottom: calc(164px + env(safe-area-inset-bottom)) !important;
+}
+
+.oanix-folder-rail {
+  padding: 8px 12px env(safe-area-inset-bottom) !important;
+  background: color-mix(in srgb, var(--oanix-organic-dock) 92%, transparent) !important;
+}
+
+.oanix-folder-rail__scroll {
+  align-items: stretch !important;
+  gap: 12px !important;
+  padding: 4px 10px 4px 72px !important;
+}
+
+.oanix-folder-rail__item {
+  position: relative !important;
+  width: 116px !important;
+  min-width: 116px !important;
+  height: 126px !important;
+  min-height: 126px !important;
+  justify-content: flex-start !important;
+  gap: 5px !important;
+  padding: 10px 8px 26px !important;
+  overflow: visible !important;
+  border: 1px solid color-mix(in srgb, var(--oanix-organic-border) 92%, transparent) !important;
+  border-radius: 19px !important;
+  background: color-mix(in srgb, var(--oanix-organic-chip) 86%, transparent) !important;
+  box-shadow: 0 5px 16px rgba(15,23,42,.09), inset 0 1px 1px rgba(255,255,255,.2) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+}
+
+html[data-oanix-theme='classic-day'] .oanix-folder-rail__item {
+  background: rgba(255,255,255,.34) !important;
+}
+
+.oanix-folder-rail__item:hover {
+  transform: translateY(-2px) !important;
+}
+
+.oanix-folder-rail__item.is-selected {
+  border-color: rgba(59,130,246,.52) !important;
+  background: color-mix(in srgb, var(--oanix-organic-card) 88%, transparent) !important;
+  box-shadow: 0 8px 22px rgba(37,99,235,.17), inset 0 1px 1px rgba(255,255,255,.25) !important;
+  transform: translateY(-1px) !important;
+}
+
+.oanix-folder-rail__item::before {
+  top: 12px !important;
+  left: 50% !important;
+  width: 62px !important;
+  height: 62px !important;
+  transform: translateX(-50%) !important;
+}
+
+.oanix-folder-rail__item::after {
+  content: attr(data-oanix-organic-folder-name) !important;
+  position: absolute !important;
+  left: 8px !important;
+  right: 8px !important;
+  bottom: 8px !important;
+  width: auto !important;
+  overflow: hidden !important;
+  color: var(--oanix-organic-text) !important;
+  font-size: 10px !important;
+  font-weight: 850 !important;
+  line-height: 1.1 !important;
+  text-align: center !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.oanix-folder-rail__shape {
+  width: 62px !important;
+  height: 62px !important;
+  flex: 0 0 62px !important;
+  margin-inline: auto !important;
+}
+
+.oanix-folder-rail__item--diamond .oanix-folder-rail__shape {
+  width: 52px !important;
+  height: 52px !important;
+  flex-basis: 52px !important;
+  margin: 5px auto !important;
+}
+
+.oanix-folder-rail__item > small {
+  top: 4px !important;
+  right: 6px !important;
+  z-index: 8 !important;
+}
+
+.oanix-folder-card__gear {
+  position: absolute;
+  z-index: 12;
+  top: 6px;
+  right: 6px;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--oanix-organic-border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--oanix-organic-card) 83%, transparent);
+  color: var(--oanix-organic-muted);
+  font-size: 13px;
+  line-height: 1;
+  box-shadow: 0 3px 8px rgba(15,23,42,.09);
+  pointer-events: auto;
+}
+
+.oanix-folder-card__gear:hover {
+  color: var(--oanix-organic-text);
+  background: var(--oanix-organic-card);
+}
+
+.oanix-folder-card__pin,
+.oanix-folder-card__favorite {
+  position: absolute;
+  z-index: 11;
+  top: 5px;
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255,255,255,.64);
+  border-radius: 50%;
+  font-size: 10px;
+  line-height: 1;
+  box-shadow: 0 3px 8px rgba(15,23,42,.15);
+  pointer-events: none;
+}
+
+.oanix-folder-card__pin {
+  left: 5px;
+  background: #facc15;
+  color: #1f2937;
+}
+
+.oanix-folder-card__favorite {
+  left: 28px;
+  background: #ec4899;
+  color: #fff;
+}
+
+/* All-notes card has no per-folder gear and keeps its own compact identity. */
+.oanix-folder-rail__item--all {
+  width: 92px !important;
+  min-width: 92px !important;
+}
+
+/* ===== LEFT CAPSULE: ADD + DAY/NIGHT ===== */
+.oanix-organic-folder-controls {
+  bottom: calc(31px + env(safe-area-inset-bottom)) !important;
+  min-height: 96px !important;
+  padding: 7px !important;
+  border-radius: 30px !important;
+}
+
+.oanix-organic-folder-control {
+  width: 39px !important;
+  height: 39px !important;
+  font-size: 18px !important;
+}
+
+.oanix-organic-folder-control[data-oanix-theme-toggle='true'] {
+  background: color-mix(in srgb, var(--oanix-organic-card) 76%, transparent) !important;
+  color: var(--oanix-organic-text) !important;
+}
+
+/* ===== COVER BACKGROUND LEGIBILITY ===== */
+.oanix-organic-background--covered {
+  filter: brightness(.62) saturate(.94) !important;
+}
+
+html[data-oanix-theme='classic-day'] .oanix-organic-background--covered {
+  filter: brightness(.91) saturate(.84) !important;
+}
+
+.oanix-organic-background::after {
+  background:
+    linear-gradient(180deg, rgba(15,23,42,.66) 0%, rgba(15,23,42,.26) 23%, rgba(15,23,42,.16) 67%, rgba(15,23,42,.72) 100%) !important;
+}
+
+html[data-oanix-theme='classic-day'] .oanix-organic-background::after {
+  background:
+    linear-gradient(180deg, rgba(248,250,252,.88) 0%, rgba(248,250,252,.38) 24%, rgba(248,250,252,.25) 66%, rgba(226,232,240,.76) 100%) !important;
+}
+
+/* ===== NOTE CUSTOMIZER ===== */
+.oanix-note-customizer-backdrop,
+.oanix-folder-options-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 5200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(14px, env(safe-area-inset-top)) 14px max(14px, env(safe-area-inset-bottom));
+  background: rgba(2,6,23,.56);
+  backdrop-filter: blur(9px);
+  -webkit-backdrop-filter: blur(9px);
+}
+
+.oanix-note-customizer {
+  width: min(420px, 100%);
+  max-height: min(760px, calc(100dvh - 28px - env(safe-area-inset-top) - env(safe-area-inset-bottom)));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--oanix-organic-border);
+  border-radius: 32px;
+  background: color-mix(in srgb, var(--oanix-organic-card) 97%, transparent);
+  color: var(--oanix-organic-text);
+  box-shadow: 0 30px 80px rgba(2,6,23,.34);
+}
+
+html[data-oanix-theme='classic-day'] .oanix-note-customizer {
+  background: rgba(241,245,249,.98);
+}
+
+.oanix-note-customizer__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 22px 28px 12px;
+}
+
+.oanix-note-customizer__header strong {
+  color: #3b82f6;
+  font-size: 21px;
+  font-weight: 900;
+}
+
+.oanix-note-customizer__header button {
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--oanix-organic-muted);
+  font: inherit;
+  font-size: 24px;
+}
+
+.oanix-note-customizer__body {
+  min-height: 0;
+  overflow-y: auto;
+  display: grid;
+  gap: 18px;
+  padding: 10px 28px 20px;
+}
+
+.oanix-note-customizer label,
+.oanix-note-customizer fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.oanix-note-customizer label > span,
+.oanix-note-customizer legend {
+  display: block;
+  margin: 0 0 7px 4px;
+  color: var(--oanix-organic-muted);
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: .35px;
+}
+
+.oanix-note-customizer input,
+.oanix-note-customizer textarea,
+.oanix-note-customizer select {
+  width: 100%;
+  border: 1px solid var(--oanix-organic-border);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--oanix-organic-card) 78%, transparent);
+  color: var(--oanix-organic-text);
+  font: inherit;
+  font-size: 15px;
+  outline: none;
+}
+
+html[data-oanix-theme='classic-day'] .oanix-note-customizer input,
+html[data-oanix-theme='classic-day'] .oanix-note-customizer textarea,
+html[data-oanix-theme='classic-day'] .oanix-note-customizer select {
+  background: rgba(255,255,255,.86);
+}
+
+.oanix-note-customizer input,
+.oanix-note-customizer select {
+  min-height: 56px;
+  padding: 0 16px;
+}
+
+.oanix-note-customizer textarea {
+  min-height: 74px;
+  resize: vertical;
+  padding: 14px 16px;
+}
+
+.oanix-note-customizer label > small {
+  display: block;
+  margin-top: 4px;
+  color: var(--oanix-organic-muted);
+  font-size: 10px;
+  text-align: right;
+}
+
+.oanix-note-customizer input:focus,
+.oanix-note-customizer textarea:focus,
+.oanix-note-customizer select:focus {
+  border-color: rgba(59,130,246,.7);
+  box-shadow: 0 0 0 3px rgba(59,130,246,.1);
+}
+
+.oanix-note-customizer__icons > div {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.oanix-note-customizer__icons button {
+  aspect-ratio: 1;
+  min-width: 0;
+  border: 1px solid var(--oanix-organic-border);
+  border-radius: 13px;
+  background: color-mix(in srgb, var(--oanix-organic-card) 80%, transparent);
+  font-size: 19px;
+}
+
+.oanix-note-customizer__icons button.is-selected {
+  border-color: #3b82f6;
+  background: rgba(59,130,246,.14);
+  box-shadow: inset 0 0 0 2px rgba(59,130,246,.22);
+}
+
+.oanix-note-customizer__colors > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.oanix-note-customizer__colors button {
+  width: 38px;
+  height: 38px;
+  border: 3px solid transparent;
+  border-radius: 50%;
+  background: var(--oanix-note-picker-color);
+  box-shadow: 0 2px 8px rgba(15,23,42,.16);
+}
+
+.oanix-note-customizer__colors button.is-selected {
+  border-color: #fff;
+  outline: 2px solid #3b82f6;
+}
+
+.oanix-note-customizer__error,
+.oanix-folder-options__error {
+  margin: 0;
+  color: #ef4444;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.oanix-note-customizer__footer {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  padding: 16px 28px 26px;
+}
+
+.oanix-note-customizer__footer button {
+  min-height: 56px;
+  border: 0;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--oanix-organic-muted) 24%, var(--oanix-organic-card));
+  color: var(--oanix-organic-text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.oanix-note-customizer__footer button.is-primary {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: #fff;
+  box-shadow: 0 8px 20px rgba(37,99,235,.28);
+}
+
+/* ===== CONSOLIDATED FOLDER OPTIONS ===== */
+.oanix-folder-options {
+  width: min(420px, 100%);
+  max-height: calc(100dvh - 28px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  overflow-y: auto;
+  padding: 26px 28px;
+  border: 1px solid var(--oanix-organic-border);
+  border-radius: 32px;
+  background: color-mix(in srgb, var(--oanix-organic-card) 98%, transparent);
+  color: var(--oanix-organic-text);
+  box-shadow: 0 30px 80px rgba(2,6,23,.34);
+}
+
+html[data-oanix-theme='classic-day'] .oanix-folder-options {
+  background: rgba(241,245,249,.98);
+}
+
+.oanix-folder-options h3 {
+  margin: 0 4px 18px;
+  color: #3b82f6;
+  font-size: 22px;
+  font-weight: 900;
+  line-height: 1.16;
+}
+
+.oanix-folder-options__actions {
+  display: grid;
+  gap: 10px;
+}
+
+.oanix-folder-options__actions button {
+  min-height: 64px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 18px;
+  border: 1px solid var(--oanix-organic-border);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--oanix-organic-card) 76%, transparent);
+  color: var(--oanix-organic-text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  text-align: left;
+}
+
+html[data-oanix-theme='classic-day'] .oanix-folder-options__actions button {
+  background: rgba(255,255,255,.4);
+}
+
+.oanix-folder-options__actions button > span {
+  width: 24px;
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+}
+
+.oanix-folder-options__actions button:hover,
+.oanix-folder-options__actions button:focus-visible {
+  border-color: rgba(59,130,246,.44);
+  background: rgba(59,130,246,.11);
+}
+
+.oanix-folder-options__actions button.is-danger {
+  color: #ef4444;
+}
+
+.oanix-folder-options__actions button.is-danger:hover,
+.oanix-folder-options__actions button.is-danger:focus-visible {
+  border-color: rgba(239,68,68,.42);
+  background: rgba(239,68,68,.1);
+}
+
+.oanix-folder-options__actions button.is-cancel {
+  justify-content: center;
+  text-align: center;
+}
+
+.oanix-folder-options__error {
+  margin: 12px 4px 0;
+}
+
+@media (max-width: 760px) {
+  .notes-header {
+    padding-inline: 12px !important;
+  }
+
+  .oanix-folder-grid {
+    height: calc(150px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .notes-sidebar {
+    padding-bottom: calc(150px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .notes-create-fab {
+    bottom: calc(160px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .oanix-folder-rail__scroll {
+    padding-left: 67px !important;
+  }
+
+  .oanix-folder-rail__item {
+    width: 108px !important;
+    min-width: 108px !important;
+    height: 122px !important;
+    min-height: 122px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .notes-header {
+    min-height: 56px !important;
+    padding-inline: 10px !important;
+  }
+
+  .notes-brand__mark {
+    width: 36px !important;
+    height: 36px !important;
+    flex-basis: 36px !important;
+  }
+
+  .notes-header__actions {
+    gap: 1px !important;
+  }
+
+  .notes-header .icon-button,
+  .notes-header .account-header-action {
+    width: 30px !important;
+    height: 30px !important;
+  }
+
+  .oanix-folder-rail {
+    padding-inline: 8px !important;
+  }
+
+  .oanix-folder-rail__scroll {
+    gap: 9px !important;
+    padding-left: 60px !important;
+  }
+
+  .oanix-folder-rail__item {
+    width: 104px !important;
+    min-width: 104px !important;
+  }
+
+  .oanix-folder-rail__item--all {
+    width: 84px !important;
+    min-width: 84px !important;
+  }
+
+  .oanix-organic-folder-controls {
+    left: 7px !important;
+    width: 48px !important;
+  }
+
+  .oanix-note-customizer,
+  .oanix-folder-options {
+    border-radius: 27px;
+  }
+
+  .oanix-note-customizer__header {
+    padding: 20px 20px 10px;
+  }
+
+  .oanix-note-customizer__body {
+    gap: 15px;
+    padding: 8px 20px 18px;
+  }
+
+  .oanix-note-customizer__footer {
+    gap: 10px;
+    padding: 14px 20px 20px;
+  }
+
+  .oanix-note-customizer__icons > div {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .oanix-folder-options {
+    padding: 24px 20px;
+  }
+
+  .oanix-folder-options__actions button {
+    min-height: 60px;
+  }
+}
+
+@media (max-width: 360px) {
+  .notes-brand > div:last-child > span {
+    display: block !important;
+  }
+
+  .notes-header .icon-button,
+  .notes-header .account-header-action {
+    width: 28px !important;
+    height: 28px !important;
+  }
+
+  .oanix-note-customizer__icons > div {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .oanix-note-customizer,
+  .oanix-folder-options,
+  .oanix-folder-rail__item {
+    transition: none !important;
+  }
+}
