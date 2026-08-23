@@ -7,6 +7,8 @@ const appearanceRuntime = readFileSync('src/features/folders/FolderAppearanceRun
 const coverService = readFileSync('src/features/folders/folderCoverService.ts', 'utf8')
 const css = readFileSync('src/features/folders/folderGrid.css', 'utf8')
 const interactiveCss = readFileSync('src/features/folders/folderInteractive.css', 'utf8')
+const navigationCss = readFileSync('src/features/folders/folderNavigationState.css', 'utf8')
+const main = readFileSync('src/main.tsx', 'utf8')
 const app = readFileSync('src/app/App.tsx', 'utf8')
 const androidBack = readFileSync('src/platform/android/AndroidBackRuntime.tsx', 'utf8')
 
@@ -82,8 +84,10 @@ test('el inicio oculta la lista a primera vista y conserva vuelta funcional a ca
   assert.match(runtime, /useState\(true\)/)
   assert.match(runtime, /Volver a carpetas/)
   assert.match(runtime, /oanixFolderCompact/)
-  assert.match(css, /notes-tabs-shell\[data-oanix-folder-compact='true'\]/)
-  assert.match(css, /> :not\(\.oanix-folder-breadcrumb\)/)
+  assert.match(navigationCss, /notes-tabs-shell\[data-oanix-folder-compact='true'\]/)
+  assert.match(navigationCss, /> :not\(\.oanix-folder-breadcrumb\)/)
+  assert.match(navigationCss, /\.oanix-folder-breadcrumb/)
+  assert.match(main, /import '\.\/features\/folders\/folderNavigationState\.css'/)
 })
 
 test('Atrás en Android vuelve a Carpetas antes de ofrecer salir', () => {
