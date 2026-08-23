@@ -21,9 +21,9 @@ test('current Android identity remains untouched while PWA branding changes', ()
 })
 
 test('PWA selected logo is a self-contained OANIX image asset', () => {
-  assert.match(pwaLogo, /viewBox="0 0 256 256"/)
+  assert.match(pwaLogo, /viewBox="0 0 512 512"/)
   assert.match(pwaLogo, /<title[^>]*>OANIX<\/title>/)
-  assert.match(pwaLogo, /data:image\/jpeg;base64,/)
+  assert.match(pwaLogo, /data:image\/webp;base64,/)
 })
 
 test('PWA uses the selected logo while Capacitor keeps the current icon', () => {
