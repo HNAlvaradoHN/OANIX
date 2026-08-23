@@ -31,7 +31,7 @@ test('el nuevo inicio usa selector lateral y un panel visual seleccionado', () =
   assert.match(runtime, /oanix-folder-focus/)
   assert.match(runtime, /selectedFolderId/)
   assert.match(runtime, /FOLDER_SHAPES/)
-  assert.match(css, /grid-template-columns: clamp\(4rem, 19vw, 5rem\) minmax\(0, 1fr\)/)
+  assert.match(css, /grid-template-columns: 140px minmax\(0, 1fr\)/)
   assert.doesNotMatch(css, /scroll-snap-type/)
   assert.doesNotMatch(css, /grid-template-columns: repeat\(2/)
 })
