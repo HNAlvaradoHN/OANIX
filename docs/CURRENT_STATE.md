@@ -35,21 +35,40 @@ PR #170–#172 fijaron la experiencia compartida PWA/APK:
 
 No modificar ampliamente `ImageNoteEditor.tsx` ni el formato persistido de imágenes para ajustes menores.
 
-## Workspace orgánico v38 — dirección visual vigente
+## Workspace orgánico v39 — dirección visual vigente
 
-La referencia anterior de **home de carpetas independiente a pantalla completa queda SUPERSEDED** por la referencia `Organic Responsive 3D Folders v38.1` entregada por el usuario el 23 de agosto de 2026.
+El PR #250 integró la base `Organic Responsive 3D Folders v38.1`. La referencia `v38.3` entregada después por el usuario refina esa misma dirección; **no crea una segunda app ni vuelve al home de carpetas independiente**.
 
-La superficie principal debe ser una sola experiencia compartida por PWA y APK:
-- cabecera compacta de OANIX;
+La superficie principal sigue siendo una sola experiencia compartida por PWA y APK:
+- cabecera compacta usando el logo real seleccionado de OANIX;
 - etiquetas reales en chips horizontales debajo de la cabecera;
 - lista real de notas en tarjetas infográficas translúcidas;
 - dock horizontal de carpetas en la parte inferior;
-- portada/color de la carpeta activa como ambiente visual del workspace;
-- nombres de carpetas, contadores y contenido siempre provenientes de datos reales de OANIX;
-- `+` y opciones de carpeta reutilizan los administradores/handlers existentes;
+- portada/color de la carpeta activa como ambiente visual del workspace, siempre con capas de contraste que preserven la legibilidad;
+- nombres de carpetas, contadores, notas, etiquetas y acciones siempre provenientes de datos/handlers reales de OANIX;
 - no usar Tailwind CDN, Phosphor CDN, imágenes demo ni una segunda lógica de producto.
 
-El diseño debe conservar Día/Noche y adaptarse con `dvh`, safe areas, scroll horizontal y breakpoints estructurales cuando haga falta para evitar desbordes sin perder la composición.
+### Personalización de notas
+
+Cada nota expone una sola entrada `Personalizar` dentro de su menú `⋮`. Permite cambiar para la representación de lista:
+- título;
+- descripción breve;
+- categoría principal elegida entre etiquetas reales;
+- icono central;
+- color visual de la tarjeta.
+
+La tarjeta de lista usa icono central, no una foto. Estos datos son campos opcionales del mismo `NoteRecord` cifrado; no se crea un store paralelo ni se cambia `blocks-v1`. La categoría visual no debe borrar las demás etiquetas reales de la nota.
+
+### Carpetas y Día/Noche
+
+- El control inferior izquierdo conserva `+` para carpetas y usa el segundo botón como alternancia directa **Día/Noche**, reutilizando `classic-day` y `classic-night`.
+- Cada tarjeta de carpeta expone un engranaje arriba a la derecha.
+- El engranaje concentra en un solo menú: Abrir, Fijar/Desfijar, Favorito, Renombrar, Color/Icono, Imagen local y Eliminar.
+- Nombre, eliminar, portada y color/icono reutilizan los handlers/servicios existentes.
+- Fijado y favorito se conservan dentro del registro cifrado `folder-appearance` junto con color/icono; no modifican automáticamente `folder-order` ni sustituyen el orden manual del usuario.
+- La portada de la carpeta seleccionada cambia el fondo del workspace sin reducir la legibilidad de cabecera, chips, tarjetas o dock.
+
+El diseño conserva Día/Noche y se adapta con `dvh`, safe areas, scroll horizontal y breakpoints estructurales cuando haga falta para evitar desbordes sin perder la composición.
 
 ### Reordenamiento — regla común
 
@@ -65,8 +84,6 @@ Persistencia:
 - carpetas reutilizan `folder-order` cifrado;
 - notas reutilizan `manualOrder`/`persistNoteOrder` existente;
 - etiquetas reutilizan la infraestructura cifrada con un registro `tag-order`, sin crear un store paralelo ni cambiar el formato v1 de cada etiqueta.
-
-La personalización existente de carpetas sigue vigente: portada cifrada separada, color/icono en `folder-appearance` y compatibilidad con registros anteriores.
 
 ## Archivos grandes — motor actual
 
@@ -122,14 +139,15 @@ No implementar todavía este bloque mientras se valida estabilidad del motor bas
 
 ## Próximo paso exacto
 
-1. Completar CI/Android del workspace orgánico v38 y fusionar si ambos quedan verdes.
-2. Validar visualmente en PWA real con una captura móvil y una de PC: cabecera, chips, tarjetas, dock, portada/color y ausencia de desbordes.
+1. Validar visualmente el workspace v39 en la PWA real con captura móvil y, después, PC: cabecera/logo, chips, iconos/colores de notas, dock, engranajes, modales y fondo por carpeta.
+2. Corregir únicamente diferencias reales detectadas en esa validación PWA y repetir hasta cerrar la dirección visual.
 3. Validar físicamente el gesto continuo de reordenamiento en carpetas, etiquetas y notas: mantener → jiggle → arrastrar sin soltar → soltar → persistir → normalidad.
-4. Repetir la prueba de ~818 MB con interrupción de red aproximadamente al 30–50%, cerrar/reabrir OANIX y confirmar reanudación sin empezar desde cero.
-5. Solo después aumentar gradualmente el tamaño; 5 GB es una meta posterior, no la siguiente prueba inmediata.
-6. Después de estabilizar transferencias: integrar archivos grandes al flujo normal de notas.
-7. Antes de considerar terminado el sistema de archivos grandes en Android, implementar y validar transferencia en segundo plano.
-8. Más adelante: reproducción de video por rangos/seek, caché bajo demanda, Guardar sin conexión y Liberar del dispositivo (distinto de Eliminar de OANIX).
+4. Cuando la experiencia visual quede definida, hacer checkpoint físico en Android/APK sobre esa misma base compartida: safe areas, toque/long-press, teclado, Atrás, selector de imágenes y Día/Noche.
+5. Repetir la prueba de ~818 MB con interrupción de red aproximadamente al 30–50%, cerrar/reabrir OANIX y confirmar reanudación sin empezar desde cero.
+6. Solo después aumentar gradualmente el tamaño; 5 GB es una meta posterior, no la siguiente prueba inmediata.
+7. Después de estabilizar transferencias: integrar archivos grandes al flujo normal de notas.
+8. Antes de considerar terminado el sistema de archivos grandes en Android, implementar y validar transferencia en segundo plano.
+9. Más adelante: reproducción de video por rangos/seek, caché bajo demanda, Guardar sin conexión y Liberar del dispositivo (distinto de Eliminar de OANIX).
 
 ## Checkpoints históricos útiles
 
