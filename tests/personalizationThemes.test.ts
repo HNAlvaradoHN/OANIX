@@ -7,12 +7,14 @@ const catalog = readFileSync('src/features/personalization/themeCatalog.ts', 'ut
 const systemBridge = readFileSync('src/features/personalization/systemThemeBridge.ts', 'utf8')
 const menu = readFileSync('src/features/personalization/ThemeMenu.tsx', 'utf8')
 const workspace = readFileSync('src/features/notes/NotesWorkspace.tsx', 'utf8')
+const workspacePersonalization = readFileSync('src/features/notes/WorkspacePersonalizationRuntime.tsx', 'utf8')
 const menuCss = readFileSync('src/features/personalization/personalization.css', 'utf8')
 const workspaceMenuCss = readFileSync('src/features/personalization/personalization-workspace.css', 'utf8')
 const themesCss = readFileSync('src/styles/themes.css', 'utf8')
 const baseThemesCss = readFileSync('src/styles/base-themes.css', 'utf8')
 const notebookCss = readFileSync('src/styles/notebook-polish.css', 'utf8')
 const finalPolishCss = readFileSync('src/styles/final-visual-polish.css', 'utf8')
+const classicDayHardFixCss = readFileSync('src/styles/classic-day-hard-fix.css', 'utf8')
 const androidStyles = readFileSync('android/app/src/main/res/values/styles.xml', 'utf8')
 const mainActivity = readFileSync('android/app/src/main/java/io/github/hnalvaradohn/oanix/MainActivity.java', 'utf8')
 const systemUiPlugin = readFileSync('android/app/src/main/java/io/github/hnalvaradohn/oanix/OanixSystemUiPlugin.java', 'utf8')
@@ -37,7 +39,7 @@ test('personalization exposes only classic day and night and migrates retired pr
 
 test('theme choice is only a local UI preference and applies before React paints', () => {
   assert.match(catalog, /window\.localStorage\.setItem\(OANIX_THEME_STORAGE_KEY, theme\.id\)/)
-  assert.match(catalog, /document\.documentElement\.dataset\.oanixTheme = theme\.id/)
+  assert.match(catalog, /root\.dataset\.oanixTheme = theme\.id/)
   assert.doesNotMatch(catalog, /supabase|encrypted_records|sync_records/i)
   assert.match(main, /applyOanixTheme\(readSavedOanixTheme\(\), false\)/)
   assert.match(main, /<ThemeMenu \/>/)
@@ -46,20 +48,20 @@ test('theme choice is only a local UI preference and applies before React paints
   assert.match(main, /styles\/final-visual-polish\.css/)
 })
 
-test('appearance lives inside the workspace three-dot menu without retired environments', () => {
+test('the workspace three-dot menu keeps security but no longer duplicates Day Night', () => {
   assert.match(menu, /querySelector<HTMLElement>\('\.workspace-menu\[role="menu"\]'\)/)
   assert.match(menu, /createPortal/)
   assert.match(menu, /role="menuitem"/)
-  assert.match(menu, />Apariencia</)
-  assert.match(menu, /OANIX_BASE_THEMES/)
-  assert.doesNotMatch(menu, /OANIX_STYLE_THEMES/)
-  assert.doesNotMatch(menu, /Ambientes/)
-  assert.doesNotMatch(menu, /oanix-personalization__trigger-label/)
+  assert.match(menu, />Seguridad</)
+  assert.match(menu, /Bloqueo automático/)
+  assert.doesNotMatch(menu, />Apariencia</)
+  assert.doesNotMatch(menu, /Día o Noche/)
+  assert.doesNotMatch(menu, /OANIX_BASE_THEMES|renderThemeOption|chooseTheme/)
   assert.match(workspaceMenuCss, /\.oanix-personalization__workspace-entry/)
   assert.match(workspaceMenuCss, /\.workspace-menu > button:last-of-type/)
 })
 
-test('theme panel is part of the safe menu area so clicks cannot fall through to notes', () => {
+test('security panel is part of the safe menu area so clicks cannot fall through to notes', () => {
   assert.match(workspace, /target\.closest\('\[data-note-menu-root="true"\]'\)/)
   assert.match(menu, /data-note-menu-root="true"/)
   assert.match(menu, /panelRef\.current\?\.contains\(target\)/)
@@ -67,21 +69,20 @@ test('theme panel is part of the safe menu area so clicks cannot fall through to
   assert.match(workspaceMenuCss, /\.oanix-theme-backdrop/)
 })
 
-test('closing appearance also closes the workspace menu left behind it', () => {
-  assert.match(menu, /function closeThemeAndWorkspaceMenu\(\)/)
+test('closing security also closes the workspace menu left behind it', () => {
+  assert.match(menu, /function closeSecurityAndWorkspaceMenu\(\)/)
   assert.match(menu, /aria-label="Menú de OANIX"/)
   assert.match(menu, /getAttribute\('aria-expanded'\) === 'true'/)
   assert.match(menu, /opener\.click\(\)/)
-  assert.match(menu, /function chooseTheme[\s\S]*closeThemeAndWorkspaceMenu\(\)/)
-  assert.match(menu, /onClick=\{closeThemeAndWorkspaceMenu\}/)
+  assert.match(menu, /onClick=\{closeSecurityAndWorkspaceMenu\}/)
 })
 
-test('appearance panel exposes only day and night while keeping security controls', () => {
-  assert.match(menu, /Día o Noche/)
-  assert.match(menu, /theme\.mode === 'dark' \? 'Oscuro' : 'Claro'/)
+test('Day Night has one workspace control in the bottom folder capsule while security keeps auto lock', () => {
+  assert.match(workspacePersonalization, /data-oanix-theme-toggle/)
+  assert.match(workspacePersonalization, /applyOanixTheme\(current === 'classic-day' \? 'classic-night' : 'classic-day'\)/)
   assert.match(menu, /AUTO_LOCK_OPTIONS/)
   assert.match(menuCss, /\.oanix-theme-menu/)
-  assert.match(menuCss, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/)
+  assert.doesNotMatch(menu, /OANIX_BASE_THEMES/)
 })
 
 test('classic day and night define neutral semantic palettes', () => {
@@ -96,13 +97,19 @@ test('classic day and night define neutral semantic palettes', () => {
   assert.match(baseThemesCss, /classic-night'[\s\S]*--theme-accent: #8aaeff/)
 })
 
-test('classic day explicitly neutralizes dark-first legacy surfaces', () => {
-  assert.match(baseThemesCss, /data-oanix-theme='classic-day'[^\n]*\{[\s\S]*color-scheme: light !important/)
+test('classic day explicitly opts out of mobile forced dark and hardens the shared workspace tokens', () => {
+  assert.match(baseThemesCss, /data-oanix-theme='classic-day'[^\n]*\{[\s\S]*color-scheme: only light !important/)
+  assert.match(catalog, /const colorScheme = theme\.mode === 'light' \? 'only light' : 'dark'/)
+  assert.match(catalog, /setProperty\('color-scheme', colorScheme, 'important'\)/)
+  assert.match(catalog, /'--oanix-organic-card': 'rgba\(241,245,249,\.86\)'/)
   assert.match(finalPolishCss, /data-oanix-theme='classic-day'[\s\S]*--theme-bg: #f4f7fb/)
-  assert.match(finalPolishCss, /data-oanix-theme='classic-day'\] \.notes-sidebar[\s\S]*#ffffff !important/)
-  assert.match(finalPolishCss, /data-oanix-theme='classic-day'\] \.note-row[\s\S]*#ffffff/)
-  assert.match(finalPolishCss, /data-oanix-theme='classic-day'\] \.editor-frame[\s\S]*#ffffff/)
-  assert.match(finalPolishCss, /data-oanix-theme='classic-day'\] \.oanix-theme-menu--workspace[\s\S]*rgba\(255,255,255,\.98\) !important/)
+})
+
+test('classic day keeps the v38 glass workspace instead of covering folder images with opaque white', () => {
+  assert.match(classicDayHardFixCss, /\.notes-shell,[\s\S]*\.notes-sidebar[\s\S]*background: transparent !important/)
+  assert.match(classicDayHardFixCss, /\.notes-header[\s\S]*rgba\(241,245,249,\.70\)/)
+  assert.match(classicDayHardFixCss, /\.note-row[\s\S]*rgba\(241,245,249,\.86\)/)
+  assert.match(classicDayHardFixCss, /backdrop-filter: blur\(15px\) !important/)
 })
 
 test('selected theme also controls browser and Android system chrome', () => {

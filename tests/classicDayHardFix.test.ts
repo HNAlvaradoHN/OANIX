@@ -14,13 +14,18 @@ test('classic day pins a true white palette inline so dark legacy variables cann
   assert.match(catalog, /swatches: \['#ffffff', '#f4f7fb', '#2563eb'\]/)
 })
 
-test('classic day hard fix loads last and forces white workspace and personalization surfaces', () => {
+test('classic day hard fix loads last while preserving the v38 glass workspace', () => {
   const iconIndex = main.indexOf("./styles/header-icon-polish.css")
   const dayIndex = main.indexOf("./styles/classic-day-hard-fix.css")
   assert.ok(iconIndex >= 0 && dayIndex > iconIndex)
-  assert.match(hardFix, /html\.oanix-classic-day \.notes-sidebar/)
+
+  assert.match(hardFix, /html\.oanix-classic-day \.notes-shell,[\s\S]*html\.oanix-classic-day \.notes-sidebar[\s\S]*background: transparent !important/)
+  assert.match(hardFix, /html\.oanix-classic-day \.notes-header[\s\S]*background: rgba\(241,245,249,\.70\) !important/)
+  assert.match(hardFix, /html\.oanix-classic-day \.note-row[\s\S]*background: rgba\(241,245,249,\.86\) !important/)
+  assert.match(hardFix, /backdrop-filter: blur\(15px\) !important/)
+
   assert.match(hardFix, /html\.oanix-classic-day \.oanix-theme-menu--workspace/)
-  assert.match(hardFix, /background: rgba\(255,255,255,\.985\) !important/)
+  assert.match(hardFix, /background: rgba\(255,255,255,\.965\) !important/)
   assert.match(hardFix, /html\.oanix-classic-day \.oanix-theme-backdrop/)
 })
 
