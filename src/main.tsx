@@ -17,6 +17,10 @@ import './styles/redesign.css'
 import './styles/redesign-polish.css'
 import './styles/themes.css'
 import './styles/base-themes.css'
+// These two files still contain editor/notebook rules. They remain below the
+// workspace contract so they cannot redefine the approved v38.3 list shell.
+import './styles/notebook-polish.css'
+import './styles/final-visual-polish.css'
 import './styles/classic-day-hard-fix.css'
 import './styles/privacy-status-polish.css'
 import './styles/note-menu-viewport-fit.css'
