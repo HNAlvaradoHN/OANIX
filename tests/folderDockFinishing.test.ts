@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
 const main = readFileSync('src/main.tsx', 'utf8')
+const gate = readFileSync('src/app/WorkspaceRuntimeGate.tsx', 'utf8')
 const runtime = readFileSync('src/features/notes/FolderDockFinishingRuntime.tsx', 'utf8')
 const css = readFileSync('src/features/notes/folderDockFinishing.css', 'utf8')
 const appearance = readFileSync('src/features/folders/FolderAppearanceRuntime.tsx', 'utf8')
@@ -27,9 +28,10 @@ test('folder appearance repaint is idempotent so its MutationObserver cannot sel
   assert.match(appearance, /if \(element\.style\.getPropertyValue\('--oanix-folder-color'\) !== color\)/)
 })
 
-test('folder dock finishing stays mounted before the final v38.3 visual authority', () => {
-  const runtimeIndex = main.indexOf('<FolderDockFinishingRuntime />')
-  const visualRuntimeIndex = main.indexOf('<V383WorkspaceVisualRuntime />')
+test('folder dock finishing stays mounted before the final v38.3 visual runtime after unlock', () => {
+  assert.match(main, /<WorkspaceRuntimeGate \/>/)
+  const runtimeIndex = gate.indexOf('<FolderDockFinishingRuntime />')
+  const visualRuntimeIndex = gate.indexOf('<V383WorkspaceVisualRuntime />')
   const finalCssIndex = main.indexOf("./features/notes/v383WorkspaceVisual.css")
   assert.ok(runtimeIndex >= 0 && visualRuntimeIndex > runtimeIndex)
   assert.ok(finalCssIndex >= 0)
