@@ -6,7 +6,6 @@ import {
 import { hasEncryptedImage } from '../images/imageService'
 import type { NoteRecord } from '../notes/noteTypes'
 import {
-  NOTE_HISTORY_AUTOMATIC_WINDOW_MS,
   NOTE_HISTORY_MAX_SNAPSHOTS_PER_NOTE,
   shouldCaptureAutomaticSnapshot,
 } from './versionHistoryPolicy'
