@@ -291,13 +291,35 @@ export function FolderAppearanceRuntime() {
       if (container && customizeTrigger) lastFolderId = container.dataset.oanixFolderId ?? ''
     }
 
-    const observer = new MutationObserver(() => {
+    let gridObserver: MutationObserver | null = null
+    let observedGrid: HTMLElement | null = null
+
+    const bindGridObserver = () => {
+      const nextGrid = document.querySelector<HTMLElement>('.oanix-folder-grid')
+      if (nextGrid === observedGrid) return
+
+      gridObserver?.disconnect()
+      observedGrid = nextGrid
+      if (!observedGrid) {
+        gridObserver = null
+        return
+      }
+
+      gridObserver = new MutationObserver(paintFolders)
+      gridObserver.observe(observedGrid, { childList: true, subtree: true })
+    }
+
+    const bodyObserver = new MutationObserver(() => {
+      bindGridObserver()
       paintFolders()
       decorateCustomizer()
     })
 
     document.addEventListener('pointerdown', captureCustomizeTarget, true)
-    observer.observe(document.body, { childList: true, subtree: true })
+    bindGridObserver()
+    paintFolders()
+    decorateCustomizer()
+    bodyObserver.observe(document.body, { childList: true })
 
     void Promise.all([loadFolderColors(), loadFolderIcons()]).then(([loadedColors, loadedIcons]) => {
       if (disposed) return
@@ -309,7 +331,8 @@ export function FolderAppearanceRuntime() {
     return () => {
       disposed = true
       document.removeEventListener('pointerdown', captureCustomizeTarget, true)
-      observer.disconnect()
+      bodyObserver.disconnect()
+      gridObserver?.disconnect()
     }
   }, [])
 
