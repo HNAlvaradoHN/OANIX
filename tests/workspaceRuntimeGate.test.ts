@@ -14,9 +14,10 @@ test('workspace data runtimes mount only inside the unlocked app lifecycle', () 
   assert.doesNotMatch(gate, /document\.querySelector/)
 })
 
-test('all workspace-only runtimes hydrate together once the unlocked app mounts the gate', () => {
+test('workspace-only runtimes hydrate together once the unlocked app mounts the gate', () => {
   assert.match(gate, /<OrganicWorkspaceRuntime \/>/)
-  assert.match(gate, /<FolderDockFinishingRuntime \/>/)
+  assert.match(gate, /features\/notes\/folderDockContract\.css/)
+  assert.doesNotMatch(gate, /FolderDockFinishingRuntime/)
   assert.match(gate, /<WorkspacePersonalizationRuntime \/>/)
   assert.match(gate, /<FolderAppearanceRuntime \/>/)
   assert.match(gate, /<FolderMobileDragRuntime \/>/)
