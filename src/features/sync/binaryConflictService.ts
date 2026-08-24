@@ -120,10 +120,6 @@ function parseBinaryKey(key: string): { recordType: typeof IMAGE_TYPE | typeof P
   }
 }
 
-function isPreviewKey(key: string) {
-  return parseBinaryKey(key)?.recordType === PREVIEW_TYPE
-}
-
 function isPayload(value: unknown): value is EncryptedVaultPayload {
   if (!value || typeof value !== 'object') return false
   const candidate = value as Partial<EncryptedVaultPayload>
