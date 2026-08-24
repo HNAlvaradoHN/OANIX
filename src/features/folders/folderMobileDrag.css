@@ -7,9 +7,10 @@
   }
 }
 
-/* The real item stays in the rail and becomes the live drop slot. Moving this
-   node makes neighboring folders reflow before release, like Android/iOS. */
-.oanix-mobile-folder-drag-source {
+/* The real item stays in the rail and becomes the live drop slot. The full
+   selector deliberately outranks the normal v38.3/day folder-card rules so the
+   slot cannot turn back into an opaque white card while dragging. */
+html.oanix-v383-visual body .oanix-folder-rail__item.oanix-mobile-folder-drag-source {
   position: relative !important;
   opacity: 1 !important;
   transform: scale(.97) !important;
@@ -21,11 +22,11 @@
   transition: border-color 120ms ease, background 120ms ease, box-shadow 120ms ease !important;
 }
 
-.oanix-mobile-folder-drag-source > * {
+html.oanix-v383-visual body .oanix-folder-rail__item.oanix-mobile-folder-drag-source > * {
   visibility: hidden !important;
 }
 
-.oanix-mobile-folder-drag-source::after {
+html.oanix-v383-visual body .oanix-folder-rail__item.oanix-mobile-folder-drag-source::after {
   content: '' !important;
   position: absolute !important;
   inset: 12px !important;
@@ -35,8 +36,10 @@
   pointer-events: none !important;
 }
 
-/* Lifted copy follows the exact point where the user grabbed the card. */
-.oanix-mobile-folder-drag-ghost {
+/* Lifted copy follows the exact point where the user grabbed the card. This
+   selector must beat the normal .oanix-folder-rail__item { position: relative }
+   contract; otherwise the clone stays in document flow and disappears on-device. */
+html.oanix-v383-visual body .oanix-folder-rail__item.oanix-mobile-folder-drag-ghost {
   position: fixed !important;
   z-index: 7200 !important;
   margin: 0 !important;
@@ -52,9 +55,9 @@
   will-change: left, top, transform;
 }
 
-.oanix-mobile-folder-drag-ghost .oanix-folder-card__gear,
-.oanix-mobile-folder-drag-ghost .oanix-folder-card__pin,
-.oanix-mobile-folder-drag-ghost .oanix-folder-card__favorite {
+html.oanix-v383-visual body .oanix-folder-rail__item.oanix-mobile-folder-drag-ghost .oanix-folder-card__gear,
+html.oanix-v383-visual body .oanix-folder-rail__item.oanix-mobile-folder-drag-ghost .oanix-folder-card__pin,
+html.oanix-v383-visual body .oanix-folder-rail__item.oanix-mobile-folder-drag-ghost .oanix-folder-card__favorite {
   display: none !important;
 }
 
@@ -73,8 +76,8 @@ html.oanix-mobile-folder-dragging .oanix-folder-rail__scroll {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .oanix-mobile-folder-drag-source,
-  .oanix-mobile-folder-drag-ghost {
+  html.oanix-v383-visual body .oanix-folder-rail__item.oanix-mobile-folder-drag-source,
+  html.oanix-v383-visual body .oanix-folder-rail__item.oanix-mobile-folder-drag-ghost {
     transition: none !important;
   }
 }
