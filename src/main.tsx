@@ -11,10 +11,10 @@ import './features/folders/folderNavigationState.css'
 import './styles/global.css'
 import './styles/midnight-violet.css'
 import './styles/themes.css'
-import './styles/base-themes.css'
+import './styles/classic-theme-contract.css'
 // Notebook rules remain below the shared theme tokens. Classic theme surfaces are
 // consolidated in one authority before the v38.3 workspace contract takes over.
-import './styles/notebook-polish.css'
+import './styles/notebook-contract.css'
 import './styles/classic-theme-surfaces.css'
 import './styles/privacy-status-polish.css'
 import './styles/note-menu-viewport-fit.css'
