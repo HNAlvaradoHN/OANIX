@@ -10,7 +10,7 @@ import { NoteMenuViewportFit } from './features/notes/NoteMenuViewportFit'
 import './features/folders/folderNavigationState.css'
 import './styles/global.css'
 import './styles/midnight-violet.css'
-import './styles/themes.css'
+import './styles/theme-surfaces.css'
 import './styles/classic-theme-contract.css'
 // Notebook rules remain below the shared theme tokens. Classic theme surfaces are
 // consolidated in one authority before the v38.3 workspace contract takes over.
