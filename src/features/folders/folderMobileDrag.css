@@ -7,22 +7,49 @@
   }
 }
 
+/* The real item stays in the rail and becomes the live drop slot. Moving this
+   node makes neighboring folders reflow before release, like Android/iOS. */
 .oanix-mobile-folder-drag-source {
-  opacity: .28 !important;
-  transform: scale(.96) !important;
-  transition: opacity 90ms ease, transform 90ms ease !important;
+  position: relative !important;
+  opacity: 1 !important;
+  transform: scale(.97) !important;
+  border: 2px dashed rgba(96,165,250,.88) !important;
+  background: rgba(59,130,246,.10) !important;
+  box-shadow:
+    0 0 0 3px rgba(59,130,246,.12),
+    inset 0 0 0 1px rgba(255,255,255,.14) !important;
+  transition: border-color 120ms ease, background 120ms ease, box-shadow 120ms ease !important;
 }
 
+.oanix-mobile-folder-drag-source > * {
+  visibility: hidden !important;
+}
+
+.oanix-mobile-folder-drag-source::after {
+  content: '' !important;
+  position: absolute !important;
+  inset: 12px !important;
+  display: block !important;
+  border-radius: 16px !important;
+  background: radial-gradient(circle at 50% 45%,rgba(96,165,250,.22),transparent 64%) !important;
+  pointer-events: none !important;
+}
+
+/* Lifted copy follows the exact point where the user grabbed the card. */
 .oanix-mobile-folder-drag-ghost {
   position: fixed !important;
   z-index: 7200 !important;
   margin: 0 !important;
   pointer-events: none !important;
-  opacity: .95 !important;
-  transform: scale(1.04) rotate(-1deg) !important;
-  box-shadow: 0 18px 44px rgba(2, 6, 23, .42) !important;
-  transition: none !important;
-  will-change: left, top;
+  opacity: .98 !important;
+  transform: scale(1.075) rotate(-1.2deg) !important;
+  border-color: rgba(147,197,253,.72) !important;
+  box-shadow:
+    0 24px 54px rgba(2,6,23,.48),
+    0 0 0 2px rgba(96,165,250,.22),
+    inset 0 1px 1px rgba(255,255,255,.18) !important;
+  transition: transform 110ms ease, box-shadow 110ms ease !important;
+  will-change: left, top, transform;
 }
 
 .oanix-mobile-folder-drag-ghost .oanix-folder-card__gear,
@@ -39,6 +66,10 @@ body.oanix-mobile-folder-dragging {
 html.oanix-mobile-folder-dragging .oanix-folder-rail,
 body.oanix-mobile-folder-dragging .oanix-folder-rail {
   cursor: grabbing;
+}
+
+html.oanix-mobile-folder-dragging .oanix-folder-rail__scroll {
+  scroll-behavior: auto !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
