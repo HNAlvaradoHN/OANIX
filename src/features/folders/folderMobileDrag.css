@@ -1,0 +1,49 @@
+@media (pointer: coarse) {
+  .oanix-folder-rail__item[data-oanix-folder-id] {
+    touch-action: none !important;
+    -webkit-user-select: none !important;
+    user-select: none !important;
+    -webkit-touch-callout: none !important;
+  }
+}
+
+.oanix-mobile-folder-drag-source {
+  opacity: .28 !important;
+  transform: scale(.96) !important;
+  transition: opacity 90ms ease, transform 90ms ease !important;
+}
+
+.oanix-mobile-folder-drag-ghost {
+  position: fixed !important;
+  z-index: 7200 !important;
+  margin: 0 !important;
+  pointer-events: none !important;
+  opacity: .95 !important;
+  transform: scale(1.04) rotate(-1deg) !important;
+  box-shadow: 0 18px 44px rgba(2, 6, 23, .42) !important;
+  transition: none !important;
+  will-change: left, top;
+}
+
+.oanix-mobile-folder-drag-ghost .oanix-folder-card__gear,
+.oanix-mobile-folder-drag-ghost .oanix-folder-card__pin,
+.oanix-mobile-folder-drag-ghost .oanix-folder-card__favorite {
+  display: none !important;
+}
+
+html.oanix-mobile-folder-dragging,
+body.oanix-mobile-folder-dragging {
+  overscroll-behavior: none;
+}
+
+html.oanix-mobile-folder-dragging .oanix-folder-rail,
+body.oanix-mobile-folder-dragging .oanix-folder-rail {
+  cursor: grabbing;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .oanix-mobile-folder-drag-source,
+  .oanix-mobile-folder-drag-ghost {
+    transition: none !important;
+  }
+}
