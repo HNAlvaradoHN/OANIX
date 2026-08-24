@@ -1,0 +1,117 @@
+/* Classic Day/Night theme contract.
+ * Owns semantic Day/Night tokens and non-workspace light hardening only.
+ * The v38 organic notes workspace owns its own surfaces (background, header, cards and dock)
+ * so folder covers and glass effects cannot be overwritten by a second theme layer.
+ */
+:root[data-oanix-theme='classic-day'] {
+  color-scheme: only light !important;
+  --theme-bg: #eef2f5;
+  --theme-bg-deep: #e7edf3;
+  --theme-surface: #ffffff;
+  --theme-surface-2: #f8fafc;
+  --theme-surface-3: #eef2f7;
+  --theme-surface-hover: #f1f5f9;
+  --theme-text: #111827;
+  --theme-text-soft: #334155;
+  --theme-muted: #6f7c8c;
+  --theme-muted-2: #94a3b8;
+  --theme-accent: #2563eb;
+  --theme-accent-2: #60a5fa;
+  --theme-accent-soft: #3b82f6;
+  --theme-border: rgba(71,85,105,.18);
+  --theme-border-strong: rgba(37,99,235,.34);
+  --theme-glow: rgba(37,99,235,.09);
+  --theme-grid: rgba(71,85,105,.035);
+  --theme-danger: #b42318;
+}
+
+:root[data-oanix-theme='classic-night'] {
+  color-scheme: dark !important;
+  --theme-bg: #05070b;
+  --theme-bg-deep: #020306;
+  --theme-surface: #0d1118;
+  --theme-surface-2: #121821;
+  --theme-surface-3: #18202b;
+  --theme-surface-hover: #1c2531;
+  --theme-text: #f7f9fc;
+  --theme-text-soft: #d6dde8;
+  --theme-muted: #8e9aab;
+  --theme-muted-2: #667282;
+  --theme-accent: #8aaeff;
+  --theme-accent-2: #d5dfef;
+  --theme-accent-soft: #b8ccff;
+  --theme-border: rgba(151,164,184,.2);
+  --theme-border-strong: rgba(180,194,214,.34);
+  --theme-glow: rgba(138,174,255,.08);
+  --theme-grid: rgba(180,194,214,.025);
+  --theme-danger: #ff7d91;
+}
+
+/* Classic Day still hardens legacy/editor surfaces that are not part of the v38 workspace. */
+:root[data-oanix-theme='classic-day'] body,
+:root[data-oanix-theme='classic-day'] #root,
+:root[data-oanix-theme='classic-day'] .note-view {
+  background: #eef2f5 !important;
+  color: #111827 !important;
+}
+
+:root[data-oanix-theme='classic-day'] .vault-shell,
+:root[data-oanix-theme='classic-day'] .note-view {
+  background:
+    linear-gradient(rgba(71,85,105,.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(71,85,105,.035) 1px, transparent 1px),
+    radial-gradient(circle at 84% 12%, rgba(37,99,235,.07), transparent 28rem),
+    #eef2f5 !important;
+  background-size: 46px 46px, 46px 46px, auto, auto !important;
+}
+
+:root[data-oanix-theme='classic-day'] .editor-frame {
+  border-color: rgba(71,85,105,.22) !important;
+  background: linear-gradient(180deg, #ffffff, #f8fafc) !important;
+  color: #111827 !important;
+  box-shadow: 0 18px 44px rgba(15,23,42,.08), inset 0 1px rgba(255,255,255,.9) !important;
+}
+
+:root[data-oanix-theme='classic-day'] .editor-surface,
+:root[data-oanix-theme='classic-day'] .note-title-field input,
+:root[data-oanix-theme='classic-day'] .note-view__identity strong {
+  color: #111827 !important;
+}
+
+:root[data-oanix-theme='classic-day'] .workspace-menu,
+:root[data-oanix-theme='classic-day'] .note-view__menu,
+:root[data-oanix-theme='classic-day'] .note-row__menu,
+:root[data-oanix-theme='classic-day'] .account-panel,
+:root[data-oanix-theme='classic-day'] .editor-link-popover,
+:root[data-oanix-theme='classic-day'] .folder-dialog__panel,
+:root[data-oanix-theme='classic-day'] .note-info-dialog__panel,
+:root[data-oanix-theme='classic-day'] .oanix-theme-menu--workspace,
+:root[data-oanix-theme='classic-day'] .mobile-editor-dock {
+  border-color: rgba(71,85,105,.22) !important;
+  background: rgba(255,255,255,.98) !important;
+  color: #111827 !important;
+  box-shadow: 0 18px 44px rgba(15,23,42,.12) !important;
+}
+
+:root[data-oanix-theme='classic-day'] .tag-filter-button,
+:root[data-oanix-theme='classic-day'] .tag-manage-button,
+:root[data-oanix-theme='classic-day'] .notes-search__field,
+:root[data-oanix-theme='classic-day'] .field input,
+:root[data-oanix-theme='classic-day'] .account-form input,
+:root[data-oanix-theme='classic-day'] .folder-create-row input,
+:root[data-oanix-theme='classic-day'] .folder-list__rename {
+  border-color: rgba(71,85,105,.18) !important;
+  background: #ffffff !important;
+  color: #111827 !important;
+}
+
+:root[data-oanix-theme='classic-day'] .vault-card,
+:root[data-oanix-theme='classic-day'] .vault-assurances > div,
+:root[data-oanix-theme='classic-day'] .vault-state,
+:root[data-oanix-theme='classic-day'] .vault-access__lock,
+:root[data-oanix-theme='classic-day'] .vault-restore__button {
+  border-color: rgba(71,85,105,.2) !important;
+  background: linear-gradient(155deg, #ffffff, #f8fafc) !important;
+  color: #111827 !important;
+  box-shadow: 0 18px 44px rgba(15,23,42,.08) !important;
+}
