@@ -28,14 +28,18 @@ export function ThemeMenu() {
   }
 
   useEffect(() => {
+    const workspace = document.querySelector<HTMLElement>('.notes-shell')
+
     function syncWorkspaceMenu() {
-      const next = document.querySelector<HTMLElement>('.workspace-menu[role="menu"]')
+      const next = workspace?.querySelector<HTMLElement>('.workspace-menu[role="menu"]') ?? null
       setWorkspaceMenu((current) => current === next ? current : next)
     }
 
     syncWorkspaceMenu()
+    if (!workspace) return
+
     const observer = new MutationObserver(syncWorkspaceMenu)
-    observer.observe(document.body, { childList: true, subtree: true })
+    observer.observe(workspace, { childList: true, subtree: true })
     return () => observer.disconnect()
   }, [])
 
