@@ -144,7 +144,6 @@ export function FolderCreationRuntime() {
         saveFolderColor(created.id, color),
         saveFolderIcon(created.id, icon),
       ])
-      window.dispatchEvent(new Event('oanix:local-data-changed'))
       resetDraft()
       close()
     } catch (createError) {

@@ -144,6 +144,10 @@ export async function loadNotes(): Promise<NoteRecord[]> {
   return notes.sort(compareNotesForList)
 }
 
+export function loadNote(noteId: string): Promise<NoteRecord | null> {
+  return readNote(noteId)
+}
+
 export function createEmptyNote(folderId: string | null = null, tagIds: string[] = []): Promise<NoteRecord> {
   const nowDate = new Date()
   return createNewNoteRecord(

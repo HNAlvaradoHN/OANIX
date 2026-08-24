@@ -1,7 +1,7 @@
 /* The old folder manager remains mounted only as the existing React state/CRUD bridge.
-   It is never shown once the focused creation experience is active. */
-html.oanix-folder-create-v2 .folder-dialog,
-body.oanix-folder-create-v2 .folder-dialog {
+   Hide only that manager: note tag/folder dialogs reuse the same base class and must stay visible. */
+html.oanix-folder-create-v2 .folder-dialog:has(.folder-dialog__panel[aria-label="Administrar carpetas"]),
+body.oanix-folder-create-v2 .folder-dialog:has(.folder-dialog__panel[aria-label="Administrar carpetas"]) {
   display: none !important;
 }
 
@@ -187,6 +187,228 @@ html[data-oanix-theme='classic-day'] .oanix-folder-create__icons button {
 
 .oanix-folder-create footer button:disabled {
   opacity: .62;
+}
+
+/* Note organizer sheets: these are the existing encrypted tag/folder flows,
+   presented as a first-class part of the v38.3 workspace instead of the legacy dialog. */
+html.oanix-folder-create-v2 .folder-dialog:has(.folder-dialog__panel[aria-label="Etiquetas de la nota"]),
+html.oanix-folder-create-v2 .folder-dialog:has(.folder-dialog__panel[aria-label="Mover nota a carpeta"]),
+body.oanix-folder-create-v2 .folder-dialog:has(.folder-dialog__panel[aria-label="Etiquetas de la nota"]),
+body.oanix-folder-create-v2 .folder-dialog:has(.folder-dialog__panel[aria-label="Mover nota a carpeta"]) {
+  z-index: 6200 !important;
+  display: grid !important;
+  place-items: center !important;
+  padding: max(14px, env(safe-area-inset-top)) 10px max(14px, env(safe-area-inset-bottom)) !important;
+  background: rgba(2, 6, 23, .68) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+}
+
+html.oanix-folder-create-v2 .folder-dialog__panel[aria-label="Etiquetas de la nota"],
+html.oanix-folder-create-v2 .folder-dialog__panel[aria-label="Mover nota a carpeta"],
+body.oanix-folder-create-v2 .folder-dialog__panel[aria-label="Etiquetas de la nota"],
+body.oanix-folder-create-v2 .folder-dialog__panel[aria-label="Mover nota a carpeta"] {
+  width: min(420px, calc(100vw - 20px)) !important;
+  max-height: min(76dvh, 620px) !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(148, 163, 184, .16) !important;
+  border-radius: 26px !important;
+  background: rgba(23, 32, 51, .98) !important;
+  color: #f8fafc !important;
+  box-shadow: 0 28px 80px rgba(0, 0, 0, .48) !important;
+}
+
+html[data-oanix-theme='classic-day'].oanix-folder-create-v2 .folder-dialog__panel[aria-label="Etiquetas de la nota"],
+html[data-oanix-theme='classic-day'].oanix-folder-create-v2 .folder-dialog__panel[aria-label="Mover nota a carpeta"] {
+  border-color: rgba(100, 116, 139, .20) !important;
+  background: rgba(244, 247, 251, .98) !important;
+  color: #0f172a !important;
+  box-shadow: 0 28px 80px rgba(15, 23, 42, .24) !important;
+}
+
+html.oanix-folder-create-v2 .folder-dialog__panel[aria-label="Etiquetas de la nota"] .folder-dialog__header,
+html.oanix-folder-create-v2 .folder-dialog__panel[aria-label="Mover nota a carpeta"] .folder-dialog__header {
+  min-height: 72px !important;
+  padding: 16px 18px !important;
+  border-bottom: 1px solid rgba(148, 163, 184, .14) !important;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .04), transparent) !important;
+}
+
+html.oanix-folder-create-v2 .folder-dialog__panel[aria-label="Etiquetas de la nota"] .folder-dialog__header strong,
+html.oanix-folder-create-v2 .folder-dialog__panel[aria-label="Mover nota a carpeta"] .folder-dialog__header strong {
+  color: #60a5fa !important;
+  font-size: 17px !important;
+  font-weight: 900 !important;
+  letter-spacing: -.2px !important;
+}
+
+html.oanix-folder-create-v2 .folder-dialog__panel[aria-label="Etiquetas de la nota"] .folder-dialog__header span,
+html.oanix-folder-create-v2 .folder-dialog__panel[aria-label="Mover nota a carpeta"] .folder-dialog__header span {
+  margin-top: 3px !important;
+  color: #94a3b8 !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+}
+
+html[data-oanix-theme='classic-day'].oanix-folder-create-v2 .folder-dialog__panel[aria-label="Etiquetas de la nota"] .folder-dialog__header span,
+html[data-oanix-theme='classic-day'].oanix-folder-create-v2 .folder-dialog__panel[aria-label="Mover nota a carpeta"] .folder-dialog__header span {
+  color: #64748b !important;
+}
+
+html.oanix-folder-create-v2 .folder-dialog__panel[aria-label="Etiquetas de la nota"] .folder-dialog__header > button,
+html.oanix-folder-create-v2 .folder-dialog__panel[aria-label="Mover nota a carpeta"] .folder-dialog__header > button {
+  width: 36px !important;
+  height: 36px !important;
+  border: 1px solid rgba(148, 163, 184, .12) !important;
+  border-radius: 12px !important;
+  background: rgba(15, 23, 42, .72) !important;
+  color: #cbd5e1 !important;
+  font-size: 22px !important;
+}
+
+html[data-oanix-theme='classic-day'].oanix-folder-create-v2 .folder-dialog__panel[aria-label="Etiquetas de la nota"] .folder-dialog__header > button,
+html[data-oanix-theme='classic-day'].oanix-folder-create-v2 .folder-dialog__panel[aria-label="Mover nota a carpeta"] .folder-dialog__header > button {
+  background: #e2e8f0 !important;
+  color: #334155 !important;
+}
+
+html.oanix-folder-create-v2 .folder-dialog__panel[aria-label="Mover nota a carpeta"] .folder-move-list,
+html.oanix-folder-create-v2 .folder-dialog__panel[aria-label="Etiquetas de la nota"] .tag-assign-list {
+  display: grid !important;
+  gap: 9px !important;
+  max-height: min(52dvh, 430px) !important;
+  overflow-y: auto !important;
+  padding: 14px !important;
+  overscroll-behavior: contain !important;
+  scrollbar-width: thin !important;
+}
+
+html.oanix-folder-create-v2 .folder-dialog__panel[aria-label="Mover nota a carpeta"] .folder-move-option,
+html.oanix-folder-create-v2 .folder-dialog__panel[aria-label="Etiquetas de la nota"] .tag-assign-option {
+  min-width: 0 !important;
+  min-height: 54px !important;
+  display: grid !important;
+  grid-template-columns: 34px minmax(0, 1fr) 28px !important;
+  align-items: center !important;
+  gap: 10px !important;
+  margin: 0 !important;
+  padding: 8px 12px !important;
+  border: 1px solid rgba(148, 163, 184, .13) !important;
+  border-radius: 16px !important;
+  background: rgba(15, 23, 42, .72) !important;
+  color: #e2e8f0 !important;
+  box-shadow: inset 0 1px rgba(255, 255, 255, .025) !important;
+}
+
+html[data-oanix-theme='classic-day'].oanix-folder-create-v2 .folder-dialog__panel[aria-label="Mover nota a carpeta"] .folder-move-option,
+html[data-oanix-theme='classic-day'].oanix-folder-create-v2 .folder-dialog__panel[aria-label="Etiquetas de la nota"] .tag-assign-option {
+  border-color: rgba(100, 116, 139, .16) !important;
+  background: #fff !important;
+  color: #1e293b !important;
+}
+
+html.oanix-folder-create-v2 .folder-dialog__panel[aria-label="Mover nota a carpeta"] .folder-move-option:hover,
+html.oanix-folder-create-v2 .folder-dialog__panel[aria-label="Mover nota a carpeta"] .folder-move-option:focus-visible,
+html.oanix-folder-create-v2 .folder-dialog__panel[aria-label="Etiquetas de la nota"] .tag-assign-option:focus-within {
+  outline: none !important;
+  border-color: rgba(96, 165, 250, .72) !important;
+  background: rgba(30, 64, 175, .20) !important;
+}
+
+html.oanix-folder-create-v2 .folder-dialog__panel[aria-label="Mover nota a carpeta"] .folder-move-option--active {
+  border-color: rgba(59, 130, 246, .78) !important;
+  background: linear-gradient(135deg, rgba(37, 99, 235, .34), rgba(59, 130, 246, .16)) !important;
+  color: #fff !important;
+  box-shadow: inset 0 0 0 1px rgba(96, 165, 250, .15), 0 8px 24px rgba(37, 99, 235, .12) !important;
+}
+
+html[data-oanix-theme='classic-day'].oanix-folder-create-v2 .folder-dialog__panel[aria-label="Mover nota a carpeta"] .folder-move-option--active {
+  background: #eaf2ff !important;
+  color: #1d4ed8 !important;
+}
+
+html.oanix-folder-create-v2 .folder-dialog__panel[aria-label="Etiquetas de la nota"] .tag-assign-option input {
+  width: 22px !important;
+  height: 22px !important;
+  margin: 0 !important;
+  accent-color: #3b82f6 !important;
+}
+
+html.oanix-folder-create-v2 .folder-dialog__panel[aria-label="Etiquetas de la nota"] .tag-assign-option > span {
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+  color: #60a5fa !important;
+  font-size: 13px !important;
+  font-weight: 900 !important;
+}
+
+html.oanix-folder-create-v2 .folder-dialog__panel[aria-label="Etiquetas de la nota"] .tag-assign-option > strong {
+  grid-column: 2 / 4 !important;
+  grid-row: 1 !important;
+  min-width: 0 !important;
+  padding-left: 20px !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  font-size: 14px !important;
+}
+
+html.oanix-folder-create-v2 .folder-dialog__panel[aria-label="Etiquetas de la nota"] .tag-dialog__footer {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 10px !important;
+  padding: 13px 14px 14px !important;
+  border-top: 1px solid rgba(148, 163, 184, .14) !important;
+}
+
+html.oanix-folder-create-v2 .folder-dialog__panel[aria-label="Etiquetas de la nota"] .tag-dialog__footer button {
+  min-height: 44px !important;
+  border: 0 !important;
+  border-radius: 12px !important;
+  background: #334155 !important;
+  color: #fff !important;
+  font: inherit !important;
+  font-size: 13px !important;
+  font-weight: 900 !important;
+}
+
+html.oanix-folder-create-v2 .folder-dialog__panel[aria-label="Etiquetas de la nota"] .tag-dialog__footer .tag-dialog__save {
+  background: #2563eb !important;
+}
+
+html[data-oanix-theme='classic-day'].oanix-folder-create-v2 .folder-dialog__panel[aria-label="Etiquetas de la nota"] .tag-dialog__footer button:not(.tag-dialog__save) {
+  background: #e2e8f0 !important;
+  color: #334155 !important;
+}
+
+html.oanix-folder-create-v2 .folder-dialog__panel[aria-label="Etiquetas de la nota"] .tag-assign-empty {
+  min-height: 170px !important;
+  display: grid !important;
+  place-items: center !important;
+  align-content: center !important;
+  gap: 8px !important;
+  padding: 24px !important;
+  color: #94a3b8 !important;
+  text-align: center !important;
+}
+
+@media (max-width: 520px) {
+  html.oanix-folder-create-v2 .folder-dialog:has(.folder-dialog__panel[aria-label="Etiquetas de la nota"]),
+  html.oanix-folder-create-v2 .folder-dialog:has(.folder-dialog__panel[aria-label="Mover nota a carpeta"]) {
+    place-items: end center !important;
+    padding: 0 !important;
+  }
+
+  html.oanix-folder-create-v2 .folder-dialog__panel[aria-label="Etiquetas de la nota"],
+  html.oanix-folder-create-v2 .folder-dialog__panel[aria-label="Mover nota a carpeta"] {
+    width: 100% !important;
+    max-height: min(72dvh, 620px) !important;
+    border-right: 0 !important;
+    border-bottom: 0 !important;
+    border-left: 0 !important;
+    border-radius: 24px 24px 0 0 !important;
+    padding-bottom: max(0px, env(safe-area-inset-bottom)) !important;
+  }
 }
 
 @media (max-width: 360px) {
