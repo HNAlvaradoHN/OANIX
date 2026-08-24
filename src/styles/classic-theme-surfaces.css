@@ -1,0 +1,287 @@
+/* OANIX classic theme surface authority.
+ *
+ * This file consolidates the former final-visual-polish and classic-day-hard-fix
+ * layers without changing their effective cascade order. Workspace-specific v38.3
+ * geometry still loads afterwards and remains the workspace authority.
+ */
+
+html,
+body,
+#root {
+  min-height: 100%;
+  min-height: 100dvh;
+}
+
+.notes-shell,
+.note-view,
+.vault-shell {
+  min-height: 100dvh;
+}
+
+/* Classic Day: unmistakably light, notebook-like and blue-accented. */
+:root[data-oanix-theme='classic-day'] {
+  --theme-bg: #f4f7fb;
+  --theme-bg-deep: #edf3f9;
+  --theme-surface: #ffffff;
+  --theme-surface-2: #f8fbff;
+  --theme-surface-3: #edf4fb;
+  --theme-surface-hover: #eef5ff;
+  --theme-text: #101828;
+  --theme-text-soft: #344054;
+  --theme-muted: #667085;
+  --theme-muted-2: #98a2b3;
+  --theme-accent: #2563eb;
+  --theme-accent-2: #38bdf8;
+  --theme-accent-soft: #3b82f6;
+  --theme-border: rgba(52,64,84,.16);
+  --theme-border-strong: rgba(37,99,235,.36);
+  --theme-glow: rgba(37,99,235,.09);
+  --theme-grid: rgba(71,85,105,.035);
+  --theme-danger: #b42318;
+  --oanix-bg: #f4f7fb;
+  --oanix-bg-deep: #edf3f9;
+  --oanix-panel: #ffffff;
+  --oanix-panel-2: #f8fbff;
+  --oanix-panel-3: #edf4fb;
+  --oanix-paper: #ffffff;
+  --oanix-paper-hover: #f4f8ff;
+  --oanix-text: #101828;
+  --oanix-text-soft: #344054;
+  --oanix-muted: #667085;
+  --oanix-muted-2: #98a2b3;
+  --oanix-accent: #2563eb;
+  --oanix-accent-strong: #1d4ed8;
+  --oanix-accent-soft: #60a5fa;
+  --oanix-cyan: #38bdf8;
+  --oanix-border: rgba(52,64,84,.16);
+  --oanix-border-strong: rgba(37,99,235,.36);
+  --oanix-border-muted: rgba(52,64,84,.12);
+  --oanix-glow: rgba(37,99,235,.09);
+  --oanix-glow-cyan: rgba(56,189,248,.08);
+  --oanix-grid: rgba(71,85,105,.035);
+  --oanix-shadow: rgba(15,23,42,.12);
+}
+
+:root[data-oanix-theme='classic-day'] html,
+:root[data-oanix-theme='classic-day'] body,
+:root[data-oanix-theme='classic-day'] #root,
+:root[data-oanix-theme='classic-day'] .notes-shell,
+:root[data-oanix-theme='classic-day'] .note-view {
+  background-color: #f4f7fb !important;
+  color: #101828 !important;
+}
+
+:root[data-oanix-theme='classic-day'] .notes-sidebar,
+:root[data-oanix-theme='classic-day'] .notes-header,
+:root[data-oanix-theme='classic-day'] .note-view__header,
+:root[data-oanix-theme='classic-day'] .notes-tabs-shell,
+:root[data-oanix-theme='classic-day'] .notes-tabs,
+:root[data-oanix-theme='classic-day'] .workspace-menu,
+:root[data-oanix-theme='classic-day'] .note-row__menu,
+:root[data-oanix-theme='classic-day'] .note-view__menu,
+:root[data-oanix-theme='classic-day'] .oanix-theme-menu--workspace,
+:root[data-oanix-theme='classic-day'] .mobile-editor-dock {
+  background: rgba(255,255,255,.98) !important;
+  color: #101828 !important;
+  border-color: rgba(52,64,84,.16) !important;
+}
+
+:root[data-oanix-theme='classic-day'] .notes-sidebar {
+  background:
+    linear-gradient(rgba(71,85,105,.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(71,85,105,.025) 1px, transparent 1px),
+    #ffffff !important;
+  background-size: 38px 38px, 38px 38px, auto !important;
+}
+
+:root[data-oanix-theme='classic-day'] .note-row,
+:root[data-oanix-theme='classic-day'] .oanix-theme-option,
+:root[data-oanix-theme='classic-day'] .editor-frame,
+:root[data-oanix-theme='classic-day'] .vault-card,
+:root[data-oanix-theme='classic-day'] .vault-assurances > div,
+:root[data-oanix-theme='classic-day'] .vault-state,
+:root[data-oanix-theme='classic-day'] .vault-access__lock {
+  background: linear-gradient(155deg, #ffffff, #f8fbff) !important;
+  color: #101828 !important;
+  border-color: rgba(52,64,84,.16) !important;
+  box-shadow: 0 10px 28px rgba(15,23,42,.06) !important;
+}
+
+:root[data-oanix-theme='classic-day'] .note-row--selected,
+:root[data-oanix-theme='classic-day'] .note-row--menu-open,
+:root[data-oanix-theme='classic-day'] .oanix-theme-option--selected {
+  background: linear-gradient(145deg, #eef4ff, #ffffff) !important;
+  border-color: #2563eb !important;
+  box-shadow: 0 10px 28px rgba(37,99,235,.1) !important;
+}
+
+:root[data-oanix-theme='classic-day'] .oanix-theme-menu__header,
+:root[data-oanix-theme='classic-day'] .oanix-theme-section + .oanix-theme-section {
+  border-color: rgba(52,64,84,.14) !important;
+}
+
+:root[data-oanix-theme='classic-day'] .oanix-theme-menu__header strong,
+:root[data-oanix-theme='classic-day'] .oanix-theme-section__heading strong,
+:root[data-oanix-theme='classic-day'] .oanix-theme-option__copy strong,
+:root[data-oanix-theme='classic-day'] .notes-brand strong,
+:root[data-oanix-theme='classic-day'] .note-row__topline strong,
+:root[data-oanix-theme='classic-day'] .note-title-field input,
+:root[data-oanix-theme='classic-day'] .editor-surface {
+  color: #101828 !important;
+}
+
+:root[data-oanix-theme='classic-day'] .oanix-theme-menu__header p,
+:root[data-oanix-theme='classic-day'] .oanix-theme-section__heading span,
+:root[data-oanix-theme='classic-day'] .oanix-theme-option__copy small,
+:root[data-oanix-theme='classic-day'] .note-row__preview,
+:root[data-oanix-theme='classic-day'] .notes-brand span {
+  color: #667085 !important;
+}
+
+:root[data-oanix-theme='classic-day'] .oanix-theme-menu__close {
+  background: #f2f6fb !important;
+  color: #344054 !important;
+  border-color: rgba(52,64,84,.16) !important;
+}
+
+:root[data-oanix-theme='classic-day'] .vault-shell,
+:root[data-oanix-theme='classic-day'] .note-view {
+  background:
+    linear-gradient(rgba(71,85,105,.032) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(71,85,105,.032) 1px, transparent 1px),
+    radial-gradient(circle at 86% 8%, rgba(37,99,235,.08), transparent 26rem),
+    #f4f7fb !important;
+  background-size: 46px 46px, 46px 46px, auto, auto !important;
+}
+
+/* Keep mobile controls visually aligned without turning the header into a toolbar wall. */
+@media (max-width: 760px) {
+  .notes-header,
+  .note-view__header {
+    min-height: 4.35rem;
+  }
+
+  .notes-header .icon-button,
+  .note-view__header .icon-button,
+  .workspace-menu-wrap > button {
+    flex: 0 0 auto;
+  }
+
+  .oanix-theme-menu__header {
+    padding: .85rem .9rem .75rem;
+  }
+
+  .oanix-theme-menu__grid {
+    gap: .5rem;
+    padding: .65rem;
+  }
+}
+
+/* Final Classic Day hardening for legacy/non-workspace surfaces.
+ * These selectors intentionally follow the data-theme rules above, matching the
+ * previous cascade order, while v38.3 still owns workspace geometry afterwards.
+ */
+html.oanix-classic-day,
+body.oanix-classic-day,
+html.oanix-classic-day body,
+html.oanix-classic-day #root,
+html.oanix-classic-day .note-view,
+html.oanix-classic-day .vault-shell {
+  background-color: #ffffff !important;
+  color: #101828 !important;
+}
+
+html.oanix-classic-day .note-view__header,
+html.oanix-classic-day .notes-tabs-shell,
+html.oanix-classic-day .notes-tabs,
+html.oanix-classic-day .notes-tabs-scroll-button,
+html.oanix-classic-day .notes-tag-filter,
+html.oanix-classic-day .notes-search,
+html.oanix-classic-day .workspace-menu,
+html.oanix-classic-day .note-view__menu,
+html.oanix-classic-day .note-row__menu,
+html.oanix-classic-day .account-panel,
+html.oanix-classic-day .folder-dialog__panel,
+html.oanix-classic-day .note-info-dialog__panel,
+html.oanix-classic-day .oanix-theme-menu--workspace,
+html.oanix-classic-day .mobile-editor-dock {
+  background: rgba(255,255,255,.965) !important;
+  color: #101828 !important;
+  border-color: rgba(52,64,84,.15) !important;
+}
+
+html.oanix-classic-day .editor-frame,
+html.oanix-classic-day .oanix-theme-option,
+html.oanix-classic-day .vault-card,
+html.oanix-classic-day .vault-assurances > div,
+html.oanix-classic-day .vault-state,
+html.oanix-classic-day .vault-access__lock {
+  background: linear-gradient(155deg, #ffffff, #f8fbff) !important;
+  color: #101828 !important;
+  border-color: rgba(52,64,84,.15) !important;
+  box-shadow: 0 10px 28px rgba(15,23,42,.055) !important;
+}
+
+html.oanix-classic-day .oanix-theme-option--selected {
+  background: linear-gradient(145deg, #edf4ff, #ffffff) !important;
+  border-color: #2563eb !important;
+  box-shadow: 0 10px 28px rgba(37,99,235,.10) !important;
+}
+
+html.oanix-classic-day .note-view__identity strong,
+html.oanix-classic-day .note-title-field input,
+html.oanix-classic-day .editor-surface,
+html.oanix-classic-day .oanix-theme-menu__header strong,
+html.oanix-classic-day .oanix-theme-section__heading strong,
+html.oanix-classic-day .oanix-theme-option__copy strong {
+  color: #101828 !important;
+}
+
+html.oanix-classic-day .note-view__identity span,
+html.oanix-classic-day .oanix-theme-menu__header p,
+html.oanix-classic-day .oanix-theme-section__heading span,
+html.oanix-classic-day .oanix-theme-option__copy small,
+html.oanix-classic-day .oanix-theme-option__mode {
+  color: #667085 !important;
+}
+
+html.oanix-classic-day .oanix-theme-backdrop {
+  background: rgba(15,23,42,.10) !important;
+  backdrop-filter: blur(4px) saturate(.96) !important;
+  -webkit-backdrop-filter: blur(4px) saturate(.96) !important;
+}
+
+html.oanix-classic-day .oanix-theme-menu__close {
+  background: #f4f7fb !important;
+  color: #344054 !important;
+  border-color: rgba(52,64,84,.15) !important;
+}
+
+html.oanix-classic-day .notes-search__field,
+html.oanix-classic-day .field input,
+html.oanix-classic-day .account-form input,
+html.oanix-classic-day .folder-create-row input,
+html.oanix-classic-day .folder-list__rename {
+  background: #ffffff !important;
+  color: #101828 !important;
+  border-color: rgba(52,64,84,.15) !important;
+}
+
+html.oanix-classic-day .vault-shell,
+html.oanix-classic-day .note-view {
+  background:
+    linear-gradient(rgba(71,85,105,.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(71,85,105,.025) 1px, transparent 1px),
+    radial-gradient(circle at 86% 8%, rgba(37,99,235,.065), transparent 26rem),
+    #ffffff !important;
+  background-size: 46px 46px, 46px 46px, auto, auto !important;
+}
+
+/* Match the WebView canvas to Android's transparent gesture-navigation area. */
+html.oanix-classic-day,
+html.oanix-classic-day body,
+html.oanix-classic-day #root {
+  min-height: 100%;
+  min-height: 100dvh;
+  background: #ffffff !important;
+}
