@@ -6,11 +6,12 @@ const runtime = readFileSync('src/features/privacy/PrivateBoxListHint.tsx', 'utf
 
 test('private box list hint observes only the notes workspace', () => {
   assert.match(runtime, /const workspace = document\.querySelector<HTMLElement>\('\.notes-shell'\)/)
-  assert.match(runtime, /observer\.observe\(workspace, \{/)
+  assert.match(runtime, /const observedWorkspace = workspace/)
+  assert.match(runtime, /observer\.observe\(observedWorkspace, \{/)
   assert.doesNotMatch(runtime, /observer\.observe\(document\.body/)
 })
 
 test('private box list hint queries list and search state inside the workspace', () => {
-  assert.match(runtime, /workspace\.querySelector<HTMLElement>\('\.notes-list'\)/)
-  assert.match(runtime, /workspace\.querySelector\('\.notes-search'\)/)
+  assert.match(runtime, /observedWorkspace\.querySelector<HTMLElement>\('\.notes-list'\)/)
+  assert.match(runtime, /observedWorkspace\.querySelector\('\.notes-search'\)/)
 })
