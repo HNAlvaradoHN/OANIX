@@ -4,6 +4,7 @@ import test from 'node:test'
 
 const runtime = readFileSync('src/features/folders/FolderTiltRuntime.tsx', 'utf8')
 const main = readFileSync('src/main.tsx', 'utf8')
+const gate = readFileSync('src/app/WorkspaceRuntimeGate.tsx', 'utf8')
 
 test('el panel de carpeta sigue la posición real del mouse con tilt 3D limitado', () => {
   assert.match(runtime, /\.oanix-folder-focus__details/)
@@ -27,7 +28,8 @@ test('el tilt respeta accesibilidad, mouse fino y se limpia al salir', () => {
   assert.match(runtime, /cancelAnimationFrame/)
 })
 
-test('el runtime de tilt se monta globalmente sin entrar en navegación ni servicios', () => {
-  assert.match(main, /import \{ FolderTiltRuntime \} from '\.\/features\/folders\/FolderTiltRuntime'/)
-  assert.match(main, /<FolderTiltRuntime \/>/)
+test('el runtime de tilt se monta con el workspace desbloqueado sin entrar en navegación ni servicios', () => {
+  assert.match(main, /<WorkspaceRuntimeGate \/>/)
+  assert.match(gate, /import \{ FolderTiltRuntime \} from '\.\.\/features\/folders\/FolderTiltRuntime'/)
+  assert.match(gate, /<FolderTiltRuntime \/>/)
 })
