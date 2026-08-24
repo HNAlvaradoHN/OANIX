@@ -26,7 +26,9 @@ function folderElements(folderId: string): HTMLElement[] {
 
 function applyColor(folderId: string, color: string) {
   folderElements(folderId).forEach((element) => {
-    element.style.setProperty('--oanix-folder-color', color)
+    if (element.style.getPropertyValue('--oanix-folder-color') !== color) {
+      element.style.setProperty('--oanix-folder-color', color)
+    }
   })
 }
 
@@ -34,11 +36,15 @@ function applyIcon(folderId: string, icon: string) {
   folderElements(folderId).forEach((element) => {
     element
       .querySelectorAll<HTMLElement>('.oanix-folder-rail__shape')
-      .forEach((shape) => { shape.dataset.oanixFolderIcon = icon })
+      .forEach((shape) => {
+        if (shape.dataset.oanixFolderIcon !== icon) shape.dataset.oanixFolderIcon = icon
+      })
 
     element
       .querySelectorAll<HTMLElement>('.oanix-folder-customizer__preview > span')
-      .forEach((preview) => { preview.textContent = icon })
+      .forEach((preview) => {
+        if (preview.textContent !== icon) preview.textContent = icon
+      })
   })
 }
 
