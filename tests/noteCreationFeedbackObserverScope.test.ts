@@ -5,8 +5,10 @@ import test from 'node:test'
 const runtime = readFileSync('src/features/notes/NoteCreationFeedbackRuntime.tsx', 'utf8')
 
 test('note creation feedback observes document detail state without a global subtree observer', () => {
-  assert.match(runtime, /detailObserver\.observe\(document\.documentElement, \{\s*attributes: true,\s*attributeFilter: \['class'\]/s)
-  assert.doesNotMatch(runtime, /detailObserver\.observe\(document\.documentElement, \{[\s\S]*subtree: true/)
+  const detailObserverBlock = runtime.match(/detailObserver\.observe\(document\.documentElement, \{([\s\S]*?)\n\s*\}\)/)?.[1] ?? ''
+  assert.match(detailObserverBlock, /attributes: true/)
+  assert.match(detailObserverBlock, /attributeFilter: \['class'\]/)
+  assert.doesNotMatch(detailObserverBlock, /subtree: true/)
 })
 
 test('note creation feedback scopes content mutations to the notes workspace', () => {
