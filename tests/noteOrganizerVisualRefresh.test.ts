@@ -30,16 +30,16 @@ test('note tag and folder actions keep their real encrypted handlers and visible
   )
 })
 
-test('note organizer sheets portal to body so the folder dock cannot cover them', () => {
-  assert.match(notesWorkspace, /import \{ createPortal \} from 'react-dom'/)
+test('note organizer sheets keep the body-level dock below the workspace modal stacking context', () => {
   assert.match(
-    notesWorkspace,
-    /tagEditorNote && createPortal\([\s\S]*?aria-label="Etiquetas de la nota"[\s\S]*?document\.body,\s*\)}/,
+    folderCreationCss,
+    /html\.oanix-folder-create-v2:has\(\.folder-dialog__panel\[aria-label="Etiquetas de la nota"\]\) \.oanix-folder-grid/,
   )
   assert.match(
-    notesWorkspace,
-    /moveTargetNote && createPortal\([\s\S]*?aria-label="Mover nota a carpeta"[\s\S]*?document\.body,\s*\)}/,
+    folderCreationCss,
+    /html\.oanix-folder-create-v2:has\(\.folder-dialog__panel\[aria-label="Mover nota a carpeta"\]\) \.oanix-folder-grid/,
   )
+  assert.match(folderCreationCss, /\.oanix-organic-folder-controls\s*\{\s*z-index:\s*5 !important;\s*pointer-events:\s*none !important;/)
 })
 
 test('single note changes refresh visual runtimes without decrypting the whole note list again', () => {
