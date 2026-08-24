@@ -60,6 +60,66 @@ function currentHistoryState(): Record<string, unknown> {
   return value && typeof value === 'object' ? value as Record<string, unknown> : {}
 }
 
+function setNoteDeleteFeedback(active: boolean) {
+  const id = 'oanix-note-delete-feedback'
+  const existing = document.getElementById(id)
+  if (!active) {
+    existing?.remove()
+    return
+  }
+  if (existing) return
+
+  const feedback = document.createElement('div')
+  feedback.id = id
+  feedback.setAttribute('role', 'status')
+  feedback.setAttribute('aria-live', 'polite')
+  feedback.style.position = 'fixed'
+  feedback.style.zIndex = '7600'
+  feedback.style.left = '50%'
+  feedback.style.top = 'max(86px, calc(env(safe-area-inset-top, 0px) + 72px))'
+  feedback.style.transform = 'translateX(-50%)'
+  feedback.style.display = 'flex'
+  feedback.style.alignItems = 'center'
+  feedback.style.gap = '10px'
+  feedback.style.width = 'max-content'
+  feedback.style.maxWidth = 'calc(100vw - 32px)'
+  feedback.style.padding = '10px 14px'
+  feedback.style.border = '1px solid rgba(96,165,250,.32)'
+  feedback.style.borderRadius = '14px'
+  feedback.style.background = 'rgba(15,23,42,.92)'
+  feedback.style.color = '#f8fafc'
+  feedback.style.boxShadow = '0 14px 34px rgba(0,0,0,.32)'
+  feedback.style.backdropFilter = 'blur(16px)'
+  feedback.style.setProperty('-webkit-backdrop-filter', 'blur(16px)')
+  feedback.style.pointerEvents = 'none'
+
+  const icon = document.createElement('span')
+  icon.setAttribute('aria-hidden', 'true')
+  icon.textContent = '⏳'
+  icon.style.fontSize = '18px'
+  icon.style.lineHeight = '1'
+
+  const copy = document.createElement('span')
+  copy.style.display = 'grid'
+  copy.style.gap = '2px'
+
+  const title = document.createElement('strong')
+  title.textContent = 'Eliminando nota…'
+  title.style.fontSize = '12px'
+  title.style.fontWeight = '900'
+  title.style.lineHeight = '1.2'
+
+  const detail = document.createElement('small')
+  detail.textContent = 'Actualizando tu bóveda cifrada'
+  detail.style.color = 'rgba(226,232,240,.72)'
+  detail.style.fontSize = '9px'
+  detail.style.lineHeight = '1.2'
+
+  copy.append(title, detail)
+  feedback.append(icon, copy)
+  document.body.appendChild(feedback)
+}
+
 function formatNoteTime(isoDate: string): string {
   const date = new Date(isoDate)
   const today = new Date()
@@ -384,6 +444,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
       if (saveTimerRef.current !== null) {
         window.clearTimeout(saveTimerRef.current)
       }
+      setNoteDeleteFeedback(false)
     }
   }, [])
 
@@ -535,46 +596,64 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     )
     if (!confirmed) return
 
-    if (!(await flushPendingContent())) return
-    await finalizeRemovedImages()
-
     const noteId = targetNote.id
     const deletingSelectedNote = selectedIdRef.current === noteId
-    const deletedIndex = notes.findIndex((note) => note.id === noteId)
-    const remainingBeforeStateUpdate = notes.filter((note) => note.id !== noteId)
-    const nextIndex = remainingBeforeStateUpdate.length === 0
-      ? -1
-      : Math.min(Math.max(deletedIndex, 0), remainingBeforeStateUpdate.length - 1)
-    const nextId = nextIndex >= 0 ? remainingBeforeStateUpdate[nextIndex].id : null
 
     setDeletingId(noteId)
     setNoteMenuId(null)
+    setActiveNoteMenuOpen(false)
     setError('')
+    setNoteDeleteFeedback(true)
+
+    let pendingRemovedCleanup: Promise<void> | null = null
 
     try {
+      if (deletingSelectedNote) {
+        if (!(await flushPendingContent())) {
+          setDeletingId(null)
+          setNoteDeleteFeedback(false)
+          return
+        }
+        pendingRemovedCleanup = finalizeRemovedImages()
+      }
+
       const deleted = await deleteNote(noteId)
       const imageIds = deleted.content.blocks.flatMap((block) =>
         block.type === 'image' ? [block.imageId] : [],
       )
-
-      await Promise.allSettled(imageIds.map((imageId) => deleteEncryptedImage(imageId)))
 
       setNotes((current) => current.filter((note) => note.id !== noteId))
 
       if (deletingSelectedNote) {
         clearSaveTimer()
         pendingContentRef.current = null
-        selectedIdRef.current = nextId
-        setSelectedId(nextId)
+        selectedIdRef.current = null
+        setSelectedId(null)
         setSaveState('idle')
+        setNoteInfoOpen(false)
+        setMoveNoteId(null)
+        setTagEditorNoteId(null)
+
+        if (mobileSinglePane()) {
+          const historyState: Record<string, unknown> = { ...currentHistoryState(), oanixView: 'list' }
+          delete historyState.noteId
+          window.history.replaceState(historyState, '')
+        }
       }
 
       setError('')
+      setDeletingId(null)
+      setNoteDeleteFeedback(false)
+
+      void Promise.all([
+        pendingRemovedCleanup ?? Promise.resolve(),
+        Promise.allSettled(imageIds.map((imageId) => deleteEncryptedImage(imageId))),
+      ])
     } catch {
       if (deletingSelectedNote) setSaveState('error')
       setError('No se pudo eliminar la nota cifrada.')
-    } finally {
       setDeletingId(null)
+      setNoteDeleteFeedback(false)
     }
   }
 
