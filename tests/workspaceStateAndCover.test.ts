@@ -19,8 +19,8 @@ test('opening a note marks an exclusive detail state and hides workspace-only ch
 })
 
 test('visual runtime observes only the nodes whose state it mirrors', () => {
-  assert.match(visualRuntime, /shellObserver\?\.observe\(shell/)
-  assert.match(visualRuntime, /backgroundObserver\.observe\(background/)
+  assert.match(visualRuntime, /shellObserver\.observe\((?:observedShell|shell)/)
+  assert.match(visualRuntime, /backgroundObserver\.observe\((?:observedBackground|background)/)
   assert.doesNotMatch(visualRuntime, /observe\(body/)
   assert.doesNotMatch(visualRuntime, /subtree:\s*true/)
 })
