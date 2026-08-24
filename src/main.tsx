@@ -2,19 +2,12 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { registerSW } from 'virtual:pwa-register'
 import { App } from './app/App'
+import { WorkspaceRuntimeGate } from './app/WorkspaceRuntimeGate'
 import { ThemeMenu } from './features/personalization/ThemeMenu'
 import { applyOanixTheme, readSavedOanixTheme } from './features/personalization/themeCatalog'
 import { PwaImagePreviewRuntime } from './features/images/PwaImagePreviewRuntime'
-import { FolderDockFinishingRuntime } from './features/notes/FolderDockFinishingRuntime'
 import { NoteMenuScrollDismiss } from './features/notes/NoteMenuScrollDismiss'
 import { NoteMenuViewportFit } from './features/notes/NoteMenuViewportFit'
-import { WorkspacePersonalizationRuntime } from './features/notes/WorkspacePersonalizationRuntime'
-import { PrivacyStatusHelp } from './features/privacy/PrivacyStatusHelp'
-import { FolderAppearanceRuntime } from './features/folders/FolderAppearanceRuntime'
-import { FolderCreationRuntime } from './features/folders/FolderCreationRuntime'
-import { FolderMobileDragRuntime } from './features/folders/FolderMobileDragRuntime'
-import { FolderTiltRuntime } from './features/folders/FolderTiltRuntime'
-import { TagCreationRuntime } from './features/tags/TagCreationRuntime'
 import './features/folders/folderNavigationState.css'
 import './styles/global.css'
 import './styles/redesign.css'
@@ -31,9 +24,6 @@ import './styles/note-menu-viewport-fit.css'
 import './styles/web-brand-logo.css'
 import './features/images/pwa-image-no-name.css'
 
-// Functional adapters keep using the existing encrypted OANIX models/handlers.
-import { OrganicWorkspaceRuntime } from './features/notes/OrganicWorkspaceRuntime'
-import { V383WorkspaceVisualRuntime } from './features/notes/V383WorkspaceVisualRuntime'
 // Folder options follows the approved v38.7 modal geometry while keeping real OANIX handlers.
 import './features/notes/folderOptionsVisual.css'
 // v38.3 remains the base workspace authority. The state contract below only
@@ -97,15 +87,6 @@ createRoot(document.getElementById('root')!).render(
     <PwaImagePreviewRuntime />
     <NoteMenuScrollDismiss />
     <NoteMenuViewportFit />
-    <OrganicWorkspaceRuntime />
-    <FolderDockFinishingRuntime />
-    <WorkspacePersonalizationRuntime />
-    <PrivacyStatusHelp />
-    <FolderAppearanceRuntime />
-    <FolderCreationRuntime />
-    <FolderMobileDragRuntime />
-    <FolderTiltRuntime />
-    <TagCreationRuntime />
-    <V383WorkspaceVisualRuntime />
+    <WorkspaceRuntimeGate />
   </StrictMode>,
 )
