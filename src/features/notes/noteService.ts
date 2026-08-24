@@ -23,6 +23,13 @@ const UNTITLED_NOTE_TITLE = 'Sin título'
 const MAX_NOTE_TITLE_LENGTH = 160
 const mutationQueues = new Map<string, Promise<unknown>>()
 
+type ManualOrderSnapshot = {
+  canContinue: boolean
+  highest: number
+}
+
+let manualOrderSnapshot: ManualOrderSnapshot | null = null
+
 export interface NoteListAppearanceInput {
   title: string
   description: string
@@ -47,6 +54,18 @@ function createNoteId(): string {
 
 function sameNoteState(left: NoteRecord, right: NoteRecord): boolean {
   return JSON.stringify(left) === JSON.stringify(right)
+}
+
+function buildManualOrderSnapshot(notes: NoteRecord[]): ManualOrderSnapshot {
+  const canContinue = notes.length === 0 || notes.every((note) =>
+    Number.isSafeInteger(note.manualOrder) && (note.manualOrder ?? -1) >= 0,
+  )
+  return {
+    canContinue,
+    highest: canContinue
+      ? notes.reduce((highest, note) => Math.max(highest, note.manualOrder ?? 0), 0)
+      : 0,
+  }
 }
 
 function reportHistoryWarning(noteId: string, error: unknown) {
@@ -87,7 +106,7 @@ function enqueueNoteMutation(
       await saveNote(updated)
       if (historyError) reportHistoryWarning(noteId, historyError)
       return updated
-    })
+    })()
 
   mutationQueues.set(noteId, next)
   const cleanup = () => {
@@ -108,16 +127,13 @@ async function createNewNoteRecord(
   nowDate = new Date(),
 ): Promise<NoteRecord> {
   const now = nowDate.toISOString()
-  const existingNotes = await listNotes()
-  const canContinueManualOrder = existingNotes.length === 0 || existingNotes.every((note) =>
-    Number.isSafeInteger(note.manualOrder) && (note.manualOrder ?? -1) >= 0,
-  )
-  const highestManualOrder = canContinueManualOrder
-    ? existingNotes.reduce((highest, note) => Math.max(highest, note.manualOrder ?? 0), 0
-    )
-    : 0
-  const nextManualOrder = canContinueManualOrder && highestManualOrder < Number.MAX_SAFE_INTEGER
-    ? highestManualOrder + 1
+
+  if (!manualOrderSnapshot) {
+    manualOrderSnapshot = buildManualOrderSnapshot(await listNotes())
+  }
+
+  const nextManualOrder = manualOrderSnapshot.canContinue && manualOrderSnapshot.highest < Number.MAX_SAFE_INTEGER
+    ? manualOrderSnapshot.highest + 1
     : undefined
 
   const note: NoteRecord = {
@@ -136,11 +152,19 @@ async function createNewNoteRecord(
   }
 
   await saveNote(note)
+
+  if (nextManualOrder === undefined) {
+    manualOrderSnapshot = { canContinue: false, highest: 0 }
+  } else {
+    manualOrderSnapshot = { canContinue: true, highest: nextManualOrder }
+  }
+
   return note
 }
 
 export async function loadNotes(): Promise<NoteRecord[]> {
   const notes = await listNotes()
+  manualOrderSnapshot = buildManualOrderSnapshot(notes)
   return notes.sort(compareNotesForList)
 }
 
