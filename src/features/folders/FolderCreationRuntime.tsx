@@ -77,7 +77,7 @@ export function FolderCreationRuntime() {
     }
 
     const observer = new MutationObserver(syncLegacyDialog)
-    observer.observe(document.body, { childList: true, subtree: true })
+    observer.observe(document.body, { childList: true })
     syncLegacyDialog()
 
     const closeBeforeNoteCreation = (event: Event) => {
