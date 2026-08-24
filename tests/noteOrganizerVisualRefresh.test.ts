@@ -30,6 +30,18 @@ test('note tag and folder actions keep their real encrypted handlers and visible
   )
 })
 
+test('note organizer sheets portal to body so the folder dock cannot cover them', () => {
+  assert.match(notesWorkspace, /import \{ createPortal \} from 'react-dom'/)
+  assert.match(
+    notesWorkspace,
+    /tagEditorNote && createPortal\([\s\S]*?aria-label="Etiquetas de la nota"[\s\S]*?document\.body,\s*\)}/,
+  )
+  assert.match(
+    notesWorkspace,
+    /moveTargetNote && createPortal\([\s\S]*?aria-label="Mover nota a carpeta"[\s\S]*?document\.body,\s*\)}/,
+  )
+})
+
 test('single note changes refresh visual runtimes without decrypting the whole note list again', () => {
   assert.match(noteService, /export function loadNote\(noteId: string\): Promise<NoteRecord \| null>/)
   assert.match(noteService, /return readNote\(noteId\)/)
