@@ -30,7 +30,9 @@ function setReactInputValue(input: HTMLInputElement, value: string) {
 }
 
 function legacyDialog(): HTMLElement | null {
-  return document.querySelector<HTMLElement>('.folder-dialog')
+  return document
+    .querySelector<HTMLElement>('.folder-dialog__panel[aria-label="Administrar carpetas"]')
+    ?.closest<HTMLElement>('.folder-dialog') ?? null
 }
 
 function closeLegacyDialog() {

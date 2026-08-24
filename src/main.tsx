@@ -9,11 +9,13 @@ import { FolderDockFinishingRuntime } from './features/notes/FolderDockFinishing
 import { NoteMenuScrollDismiss } from './features/notes/NoteMenuScrollDismiss'
 import { NoteMenuViewportFit } from './features/notes/NoteMenuViewportFit'
 import { WorkspacePersonalizationRuntime } from './features/notes/WorkspacePersonalizationRuntime'
+import { WorkspaceBootRuntime } from './features/notes/WorkspaceBootRuntime'
 import { PrivacyStatusHelp } from './features/privacy/PrivacyStatusHelp'
 import { FolderAppearanceRuntime } from './features/folders/FolderAppearanceRuntime'
 import { FolderCreationRuntime } from './features/folders/FolderCreationRuntime'
 import { FolderMobileDragRuntime } from './features/folders/FolderMobileDragRuntime'
 import { FolderTiltRuntime } from './features/folders/FolderTiltRuntime'
+import { TagCreationRuntime } from './features/tags/TagCreationRuntime'
 import './features/folders/folderNavigationState.css'
 import './styles/global.css'
 import './styles/redesign.css'
@@ -39,6 +41,7 @@ import './features/notes/folderOptionsVisual.css'
 // handles exclusive note-detail and covered-background states that live outside it.
 import './features/notes/v383WorkspaceVisual.css'
 import './features/notes/workspaceStateContract.css'
+import './features/notes/workspaceRefinements.css'
 
 type OanixUpdateWindow = Window & {
   __oanixApplyUpdate?: () => Promise<void>
@@ -96,6 +99,7 @@ createRoot(document.getElementById('root')!).render(
     <NoteMenuScrollDismiss />
     <NoteMenuViewportFit />
     <OrganicWorkspaceRuntime />
+    <WorkspaceBootRuntime />
     <FolderDockFinishingRuntime />
     <WorkspacePersonalizationRuntime />
     <PrivacyStatusHelp />
@@ -103,6 +107,7 @@ createRoot(document.getElementById('root')!).render(
     <FolderCreationRuntime />
     <FolderMobileDragRuntime />
     <FolderTiltRuntime />
+    <TagCreationRuntime />
     <V383WorkspaceVisualRuntime />
   </StrictMode>,
 )

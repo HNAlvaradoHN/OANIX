@@ -1,0 +1,142 @@
+/* Final refinements for the approved workspace contract. */
+
+/* Día should keep depth and separation instead of becoming a flat white sheet. */
+html.oanix-v383-visual[data-oanix-theme='classic-day'] {
+  --v383-bg-body: #dbe4ee;
+  --v383-text: #1f2a3a;
+  --v383-muted: #526174;
+  --v383-border: rgba(51,65,85,.16);
+  --v383-card: rgba(245,248,252,.78);
+  --v383-chip: rgba(248,250,252,.58);
+  --v383-header: rgba(239,244,249,.72);
+  --v383-dock: linear-gradient(180deg,rgba(238,244,250,.64),rgba(218,228,238,.78));
+  --v383-shadow: rgba(51,65,85,.14);
+  --v383-input: rgba(247,250,253,.78);
+}
+
+html.oanix-v383-visual[data-oanix-theme='classic-day'] body {
+  background:
+    radial-gradient(circle at 18% 10%,rgba(96,165,250,.10),transparent 32%),
+    linear-gradient(145deg,#eef3f8,#d4dee9) !important;
+}
+
+/* classic-day-hard-fix keeps the locked vault white. Once the notes workspace exists,
+   the app root must be transparent so the real folder background can remain visible. */
+html.oanix-v383-visual[data-oanix-theme='classic-day'] body:has(.notes-shell) > #root {
+  background: transparent !important;
+}
+
+html.oanix-v383-visual[data-oanix-theme='classic-day'] .oanix-organic-background:not(.oanix-organic-background--covered) {
+  background:
+    radial-gradient(circle at 74% 18%,color-mix(in srgb,var(--oanix-organic-folder-color,#64748b) 18%,transparent),transparent 34%),
+    radial-gradient(circle at 18% 82%,rgba(59,130,246,.10),transparent 34%),
+    linear-gradient(145deg,#edf3f8,#d4dee9) !important;
+}
+
+html.oanix-v383-visual[data-oanix-theme='classic-day'] .oanix-organic-background:not(.oanix-organic-background--covered)::before {
+  background: linear-gradient(180deg,rgba(219,228,238,.70),rgba(219,228,238,.08) 38%,rgba(219,228,238,.08) 64%,rgba(219,228,238,.72)) !important;
+  opacity: 1 !important;
+}
+
+html.oanix-v383-visual[data-oanix-theme='classic-day'] body .oanix-organic-background.oanix-organic-background--covered {
+  background: #cfd9e4 !important;
+}
+
+html.oanix-v383-visual[data-oanix-theme='classic-day'] body .oanix-organic-background.oanix-organic-background--covered::before {
+  opacity: .72 !important;
+  filter: blur(18px) brightness(.76) saturate(.92) !important;
+}
+
+html.oanix-v383-visual[data-oanix-theme='classic-day'] body .oanix-organic-background.oanix-organic-background--covered::after {
+  background-image:
+    linear-gradient(180deg,rgba(236,242,248,.10),rgba(219,228,238,.22)),
+    var(--oanix-organic-cover-image) !important;
+}
+
+html.oanix-v383-visual[data-oanix-theme='classic-day'] .notes-header {
+  border-bottom-color: rgba(51,65,85,.14) !important;
+  box-shadow: 0 8px 24px rgba(51,65,85,.08) !important;
+}
+
+html.oanix-v383-visual[data-oanix-theme='classic-day'] .note-row {
+  border-color: rgba(71,85,105,.17) !important;
+  box-shadow: 0 9px 26px rgba(51,65,85,.14), inset 0 1px 1px rgba(255,255,255,.72) !important;
+}
+
+html.oanix-v383-visual[data-oanix-theme='classic-day'] .note-row__menu-button {
+  border-color: rgba(71,85,105,.13) !important;
+  background: rgba(241,245,249,.62) !important;
+  box-shadow: inset 0 1px 1px rgba(255,255,255,.70) !important;
+}
+
+html.oanix-v383-visual[data-oanix-theme='classic-day'] .oanix-folder-rail {
+  border-top-color: rgba(51,65,85,.15) !important;
+  box-shadow: 0 -12px 32px rgba(51,65,85,.10) !important;
+}
+
+/* The category rail needs to read as a separate glass bar over the background. */
+html.oanix-v383-visual .oanix-organic-tags-host {
+  padding: 10px 20px 9px !important;
+  border-bottom: 1px solid var(--v383-border) !important;
+  background: color-mix(in srgb,var(--v383-header) 82%,transparent) !important;
+  box-shadow: 0 7px 22px rgba(2,6,23,.08) !important;
+  backdrop-filter: blur(18px) saturate(1.08) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(1.08) !important;
+}
+
+html.oanix-v383-visual[data-oanix-theme='classic-night'] .oanix-organic-tags-host {
+  background: rgba(9,15,28,.54) !important;
+  box-shadow: 0 8px 25px rgba(0,0,0,.24) !important;
+}
+
+html.oanix-v383-visual .oanix-organic-tags {
+  min-height: 43px !important;
+}
+
+html.oanix-v383-visual .oanix-organic-tags__scroll {
+  padding-top: 4px !important;
+  padding-bottom: 4px !important;
+}
+
+/* The note already has a real back handler; keep its button visible on PC too. */
+html.oanix-v383-visual.oanix-note-detail-open .note-view__header .back-button {
+  position: relative !important;
+  inset: auto !important;
+  width: 38px !important;
+  height: 38px !important;
+  min-width: 38px !important;
+  min-height: 38px !important;
+  display: grid !important;
+  place-items: center !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  margin: 0 2px 0 0 !important;
+  border: 1px solid color-mix(in srgb,var(--v383-text) 12%,transparent) !important;
+  border-radius: 12px !important;
+  background: color-mix(in srgb,var(--v383-header) 82%,transparent) !important;
+  color: var(--v383-text) !important;
+  box-shadow: 0 5px 14px rgba(2,6,23,.10) !important;
+  font-size: 20px !important;
+}
+
+html.oanix-v383-visual.oanix-note-detail-open .note-view__header .back-button:hover,
+html.oanix-v383-visual.oanix-note-detail-open .note-view__header .back-button:focus-visible {
+  background: color-mix(in srgb,var(--v383-accent) 12%,var(--v383-header)) !important;
+  color: var(--v383-accent) !important;
+}
+
+/* Inside a note, tags are assigned from the reusable set; creation belongs to the top +. */
+html.oanix-v383-visual .tag-assign-empty button {
+  display: none !important;
+}
+
+html.oanix-v383-visual .tag-assign-empty::after {
+  content: 'Crea etiquetas desde el + de la barra principal y luego selecciónalas aquí.';
+  display: block;
+  max-width: 24rem;
+  margin: 6px auto 0;
+  color: var(--v383-muted);
+  font-size: 12px;
+  line-height: 1.45;
+  text-align: center;
+}
