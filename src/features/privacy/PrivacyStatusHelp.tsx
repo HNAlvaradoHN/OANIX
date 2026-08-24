@@ -22,18 +22,27 @@ export function PrivacyStatusHelp() {
 
   useEffect(() => {
     let frame = 0
+    let actionsObserver: MutationObserver | null = null
     let resizeObserver: ResizeObserver | null = null
 
     function inspect() {
       const nextHost = document.querySelector<HTMLElement>('.oanix-privacy-actions')
       setActionsHost((current) => current === nextHost ? current : nextHost)
+
+      actionsObserver?.disconnect()
+      actionsObserver = null
+      resizeObserver?.disconnect()
+      resizeObserver = null
+
       if (!nextHost) {
         setAnchors([])
         setHelpOpen(null)
         return
       }
 
-      resizeObserver?.disconnect()
+      actionsObserver = new MutationObserver(scheduleInspect)
+      actionsObserver.observe(nextHost, { childList: true, subtree: true, characterData: true })
+
       resizeObserver = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(scheduleInspect)
       resizeObserver?.observe(nextHost)
 
@@ -66,12 +75,13 @@ export function PrivacyStatusHelp() {
     }
 
     inspect()
-    const observer = new MutationObserver(scheduleInspect)
-    observer.observe(document.body, { childList: true, subtree: true, characterData: true })
+    const portalObserver = new MutationObserver(scheduleInspect)
+    portalObserver.observe(document.body, { childList: true })
     window.addEventListener('resize', scheduleInspect)
 
     return () => {
-      observer.disconnect()
+      portalObserver.disconnect()
+      actionsObserver?.disconnect()
       resizeObserver?.disconnect()
       window.removeEventListener('resize', scheduleInspect)
       if (frame) window.cancelAnimationFrame(frame)
