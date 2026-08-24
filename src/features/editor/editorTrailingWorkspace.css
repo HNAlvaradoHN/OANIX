@@ -21,7 +21,11 @@
     overscroll-behavior-y: contain;
     -webkit-overflow-scrolling: touch;
     touch-action: pan-y;
-    scroll-padding-bottom: max(36rem, 110dvh);
+    /* Only reserve enough automatic focus clearance for the floating editor dock.
+       The large trailing workspace below remains physical document flow and must
+       not participate in focus scrolling, otherwise Android jumps to the bottom
+       whenever the keyboard opens or the caret regains focus. */
+    scroll-padding-bottom: calc(7rem + env(safe-area-inset-bottom));
   }
 
   html.oanix-v383-visual.oanix-note-detail-open body .notes-shell--open .note-canvas {
@@ -39,18 +43,18 @@
     height: max(36rem, 110dvh);
     clear: both;
     pointer-events: none;
+    overflow-anchor: none;
   }
 
-  html.oanix-v383-visual.oanix-note-detail-open body .notes-shell--open .image-note-editor-root .editor-surface {
-    scroll-padding-bottom: max(28rem, 85dvh) !important;
-  }
-
+  /* Focused atomic blocks only need enough clearance to stay above the dock.
+     Huge viewport-sized scroll margins cause the browser to repeatedly snap the
+     note downward while typing, especially after the visual viewport shrinks. */
   html.oanix-v383-visual.oanix-note-detail-open body .notes-shell--open .image-note-editor-root .editor-code-block,
   html.oanix-v383-visual.oanix-note-detail-open body .notes-shell--open .image-note-editor-root .editor-image-block,
   html.oanix-v383-visual.oanix-note-detail-open body .notes-shell--open .image-note-editor-root .editor-checklist,
   html.oanix-v383-visual.oanix-note-detail-open body .notes-shell--open .image-note-editor-root .editor-contact-card,
   html.oanix-v383-visual.oanix-note-detail-open body .notes-shell--open .image-note-editor-root [data-oanix-trailing-caret='true'] {
-    scroll-margin-bottom: max(28rem, 82dvh);
+    scroll-margin-bottom: calc(7rem + env(safe-area-inset-bottom));
   }
 
   /* Large inline code remains compact; expansion is still the dedicated way to

@@ -17,10 +17,12 @@ test('mobile note detail owns viewport scrolling instead of relying on clipped d
   assert.match(trailing, /\.notes-shell--open > \.note-view \{[\s\S]*touch-action: pan-y/)
 })
 
-test('mobile note preserves clearance above the floating editor dock when the keyboard shrinks the viewport', () => {
-  assert.match(trailing, /\.notes-shell--open > \.note-view \{[\s\S]*scroll-padding-bottom: max\(36rem, 110dvh\)/)
-  assert.match(trailing, /scroll-padding-bottom: max\(28rem, 85dvh\) !important/)
-  assert.match(trailing, /scroll-margin-bottom: max\(28rem, 82dvh\)/)
+test('mobile note keeps physical runway separate from automatic focus clearance', () => {
+  assert.match(trailing, /\.notes-shell--open > \.note-view \{[\s\S]*scroll-padding-bottom: calc\(7rem \+ env\(safe-area-inset-bottom\)\)/)
+  assert.match(trailing, /scroll-margin-bottom: calc\(7rem \+ env\(safe-area-inset-bottom\)\)/)
+  assert.match(trailing, /\.note-canvas::after[\s\S]*height: max\(36rem, 110dvh\)/)
+  assert.doesNotMatch(trailing, /scroll-padding-bottom: max\(36rem, 110dvh\)/)
+  assert.doesNotMatch(trailing, /scroll-margin-bottom: max\(28rem, 82dvh\)/)
   assert.match(trailing, /data-oanix-trailing-caret/)
 })
 
