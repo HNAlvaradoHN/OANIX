@@ -65,6 +65,20 @@ export function TagCreationRuntime() {
       frame = window.requestAnimationFrame(() => void decorate())
     }
 
+    const handleLocalChange = (event: Event) => {
+      const detail = event instanceof CustomEvent
+        ? event.detail as { recordType?: unknown } | null
+        : null
+      if (
+        typeof detail?.recordType === 'string'
+        && detail.recordType !== 'tag'
+        && detail.recordType !== 'tag-order'
+      ) {
+        return
+      }
+      scheduleDecorate()
+    }
+
     const handleClickCapture = (event: MouseEvent) => {
       const target = event.target
       if (!(target instanceof Element)) return
@@ -88,13 +102,13 @@ export function TagCreationRuntime() {
     scheduleDecorate()
     const observer = new MutationObserver(scheduleDecorate)
     observer.observe(document.body, { childList: true, subtree: true })
-    window.addEventListener('oanix:local-data-changed', scheduleDecorate)
+    window.addEventListener('oanix:local-data-changed', handleLocalChange)
     document.addEventListener('click', handleClickCapture, true)
 
     return () => {
       observer.disconnect()
       window.cancelAnimationFrame(frame)
-      window.removeEventListener('oanix:local-data-changed', scheduleDecorate)
+      window.removeEventListener('oanix:local-data-changed', handleLocalChange)
       document.removeEventListener('click', handleClickCapture, true)
     }
   }, [])
