@@ -11,13 +11,14 @@ test('folder dock renders a real persistent name label for every non-add card', 
   assert.match(runtime, /\.oanix-folder-rail__item:not\(\.oanix-folder-rail__item--add\)/)
   assert.match(runtime, /label\.className = 'oanix-folder-card__name'/)
   assert.match(runtime, /if \(label\.textContent !== name\) label\.textContent = name/)
-  assert.match(css, /\.oanix-folder-card__name[\s\S]*bottom: 7px !important[\s\S]*text-overflow: ellipsis !important/)
+  assert.match(css, /\.oanix-folder-card__name[\s\S]*bottom: 34px !important[\s\S]*text-overflow: ellipsis !important/)
   assert.match(css, /\.oanix-folder-rail__item::after[\s\S]*content: none !important/)
 })
 
-test('folder options gear moves to the lower card area and uses a vector mask', () => {
-  assert.match(css, /\.oanix-folder-card__gear[\s\S]*top: auto !important[\s\S]*bottom: 27px !important[\s\S]*border-radius: 50% !important/)
+test('folder options gear is centered below the name and uses a vector mask', () => {
+  assert.match(css, /\.oanix-folder-card__gear[\s\S]*left: 50% !important[\s\S]*bottom: 5px !important[\s\S]*transform: translateX\(-50%\) !important/)
   assert.match(css, /\.oanix-folder-card__gear::before[\s\S]*mask-image:/)
+  assert.match(css, /\.oanix-folder-card__gear:hover[\s\S]*transform: translate\(-50%,-1px\) !important/)
 })
 
 test('folder appearance repaint is idempotent so its MutationObserver cannot self-feed on preview text', () => {
