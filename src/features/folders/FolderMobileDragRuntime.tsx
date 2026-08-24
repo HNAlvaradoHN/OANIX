@@ -261,6 +261,7 @@ export function FolderMobileDragRuntime() {
     const onVisibilityChange = () => {
       if (document.hidden) cancelGesture()
     }
+    const onBlur = () => cancelGesture()
 
     document.addEventListener('pointerdown', onPointerDown, true)
     document.addEventListener('pointermove', onPointerMove, true)
@@ -269,7 +270,7 @@ export function FolderMobileDragRuntime() {
     document.addEventListener('click', onClick, true)
     document.addEventListener('contextmenu', onContextMenu, true)
     document.addEventListener('visibilitychange', onVisibilityChange)
-    window.addEventListener('blur', () => cancelGesture())
+    window.addEventListener('blur', onBlur)
 
     return () => {
       cancelGesture()
@@ -280,6 +281,7 @@ export function FolderMobileDragRuntime() {
       document.removeEventListener('click', onClick, true)
       document.removeEventListener('contextmenu', onContextMenu, true)
       document.removeEventListener('visibilitychange', onVisibilityChange)
+      window.removeEventListener('blur', onBlur)
     }
   }, [])
 
