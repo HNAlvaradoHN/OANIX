@@ -635,7 +635,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
         setTagEditorNoteId(null)
 
         if (mobileSinglePane()) {
-          const historyState = { ...currentHistoryState(), oanixView: 'list' }
+          const historyState: Record<string, unknown> = { ...currentHistoryState(), oanixView: 'list' }
           delete historyState.noteId
           window.history.replaceState(historyState, '')
         }
