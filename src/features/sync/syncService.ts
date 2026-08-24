@@ -178,17 +178,6 @@ function parseRemoteVaultBootstrap(ciphertext: string | null): RemoteVaultBootst
   return candidate as RemoteVaultBootstrap
 }
 
-function encryptedPayloadMatches(
-  left: EncryptedVaultPayload,
-  right: EncryptedVaultPayload,
-): boolean {
-  return (
-    left.scheme === right.scheme &&
-    left.iv === right.iv &&
-    left.ciphertext === right.ciphertext
-  )
-}
-
 function requireRemoteRow(value: unknown): RemoteSyncRow {
   if (!value || typeof value !== 'object') {
     throw new Error('Supabase devolvió un registro de sincronización inválido.')
