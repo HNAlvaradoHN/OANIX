@@ -13,12 +13,13 @@ import { loadFolders } from '../folders/folderService'
 import type { FolderRecord } from '../folders/folderTypes'
 import { loadTags, persistTagOrder } from '../tags/tagService'
 import type { TagRecord } from '../tags/tagTypes'
-import { loadNotes } from './noteService'
+import { loadNote, loadNotes } from './noteService'
 import type { NoteRecord } from './noteTypes'
 import './organicWorkspace.css'
 
 const TAG_LONG_PRESS_MS = 460
 const TAG_MOVE_TOLERANCE = 12
+const PRIVATE_UI_RELOAD_DEBOUNCE_MS = 48
 const NOTE_TAB_COLORS = ['#f59e0b', '#3b82f6', '#10b981', '#8b5cf6', '#ec4899', '#06b6d4']
 
 interface FolderVisualState {
@@ -191,7 +192,25 @@ export function OrganicWorkspaceRuntime() {
       setTagOrderError('')
       window.requestAnimationFrame(decorateWorkspace)
     } catch {
-      // The runtime also exists while the vault is locked; it should stay silent there.
+      // The runtime only paints private UI while an unlocked workspace exists.
+    }
+  }
+
+  async function refreshChangedNote(noteId: string) {
+    if (!document.querySelector('.notes-sidebar')) return
+    try {
+      const note = await loadNote(noteId)
+      const current = notesRef.current
+      const existingIndex = current.findIndex((item) => item.id === noteId)
+      const next = note
+        ? existingIndex >= 0
+          ? current.map((item) => item.id === noteId ? note : item)
+          : [...current, note]
+        : current.filter((item) => item.id !== noteId)
+      notesRef.current = next
+      window.requestAnimationFrame(decorateWorkspace)
+    } catch {
+      // A later full refresh or sync event can recover a transient read failure.
     }
   }
 
@@ -220,11 +239,11 @@ export function OrganicWorkspaceRuntime() {
       reloadTimerRef.current = window.setTimeout(() => {
         reloadTimerRef.current = null
         void reloadPrivateUiData()
-      }, 120)
+      }, PRIVATE_UI_RELOAD_DEBOUNCE_MS)
     }
 
     ensureHost()
-    scheduleReload()
+    void reloadPrivateUiData()
 
     const observer = new MutationObserver(() => {
       ensureHost()
@@ -237,9 +256,19 @@ export function OrganicWorkspaceRuntime() {
       attributeFilter: ['class', 'aria-current'],
     })
 
-    const handleLocalChange = () => scheduleReload()
+    const handleLocalChange = (event: Event) => {
+      const detail = event instanceof CustomEvent
+        ? event.detail as { recordType?: unknown; recordId?: unknown } | null
+        : null
+      if (detail?.recordType === 'note' && typeof detail.recordId === 'string') {
+        void refreshChangedNote(detail.recordId)
+        return
+      }
+      scheduleReload()
+    }
+    const handleConflictResolved = () => scheduleReload()
     window.addEventListener('oanix:local-data-changed', handleLocalChange)
-    window.addEventListener('oanix:conflict-resolved', handleLocalChange)
+    window.addEventListener('oanix:conflict-resolved', handleConflictResolved)
 
     function handleDockClick(event: MouseEvent) {
       const target = event.target
@@ -274,7 +303,7 @@ export function OrganicWorkspaceRuntime() {
     return () => {
       observer.disconnect()
       window.removeEventListener('oanix:local-data-changed', handleLocalChange)
-      window.removeEventListener('oanix:conflict-resolved', handleLocalChange)
+      window.removeEventListener('oanix:conflict-resolved', handleConflictResolved)
       document.removeEventListener('click', handleDockClick)
       document.removeEventListener('pointerup', finishFolderReorder)
       document.removeEventListener('pointercancel', finishFolderReorder)
