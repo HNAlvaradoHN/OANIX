@@ -8,6 +8,9 @@ const folderAppearance = readFileSync('src/features/folders/folderAppearanceServ
 const runtime = readFileSync('src/features/notes/WorkspacePersonalizationRuntime.tsx', 'utf8')
 const css = readFileSync('src/features/notes/workspacePersonalization.css', 'utf8')
 const main = readFileSync('src/main.tsx', 'utf8')
+const gate = readFileSync('src/app/WorkspaceRuntimeGate.tsx', 'utf8')
+const bridge = readFileSync('src/features/folders/FolderCustomizerBridgeRuntime.tsx', 'utf8')
+const bridgeCss = readFileSync('src/features/folders/folderCustomizerBridge.css', 'utf8')
 
 test('la personalización de lista vive dentro del mismo registro cifrado de la nota', () => {
   assert.match(noteTypes, /visualDescription\?: string/)
@@ -46,19 +49,16 @@ test('fijado y favorito de carpeta reutilizan folder-appearance cifrado sin toca
   assert.doesNotMatch(folderAppearance, /folder-order/)
 })
 
-test('el engranaje consolida las acciones reales de carpeta y el control inferior alterna Día Noche', () => {
+test('el engranaje abre directamente el único personalizador de carpeta', () => {
   assert.match(runtime, /oanix-folder-card__gear/)
-  assert.match(runtime, /Abrir carpeta/)
-  assert.match(runtime, /Fijar carpeta/)
-  assert.match(runtime, /Marcar como favorito/)
-  assert.match(runtime, /Renombrar carpeta/)
-  assert.match(runtime, /Cambiar color \/ Icono/)
-  assert.match(runtime, /Cambiar imagen local/)
-  assert.match(runtime, /Eliminar carpeta/)
+  assert.match(bridge, /openUnifiedFolderCustomizer/)
+  assert.match(bridge, /\.oanix-folder-focus__menu/)
+  assert.match(bridge, /stopImmediatePropagation/)
+  assert.match(bridgeCss, /\.oanix-folder-options-backdrop[\s\S]*display:\s*none !important/)
   assert.match(runtime, /applyOanixTheme\(current === 'classic-day' \? 'classic-night' : 'classic-day'\)/)
 })
 
-test('las acciones de carpeta reutilizan los handlers existentes en vez de duplicar CRUD', () => {
+test('las acciones de carpeta siguen reutilizando handlers existentes y no duplican CRUD', () => {
   assert.match(runtime, /\.oanix-folder-focus__open/)
   assert.match(runtime, /\.oanix-folder-focus__menu/)
   assert.match(runtime, /\.oanix-folder-customizer__appearance-toggle/)
@@ -79,8 +79,11 @@ test('la nueva presentación usa el logo real y mantiene fondo legible con Día 
   assert.match(css, /env\(safe-area-inset-bottom\)/)
 })
 
-test('el runtime v39 queda montado sobre la misma app compartida', () => {
-  assert.match(main, /WorkspacePersonalizationRuntime/)
-  assert.match(main, /<WorkspacePersonalizationRuntime \/>/)
-  assert.doesNotMatch(runtime + css, /cdn\.tailwindcss|unpkg\.com|unsplash|picsum/)
+test('los runtimes del workspace se montan solo cuando la bóveda ya mostró notes-sidebar', () => {
+  assert.match(main, /WorkspaceRuntimeGate/)
+  assert.match(main, /<WorkspaceRuntimeGate \/>/)
+  assert.match(gate, /document\.querySelector\('\.notes-sidebar'\)/)
+  assert.match(gate, /<WorkspacePersonalizationRuntime \/>/)
+  assert.match(gate, /<FolderCustomizerBridgeRuntime \/>[\s\S]*<WorkspacePersonalizationRuntime \/>/)
+  assert.doesNotMatch(runtime + css + gate, /cdn\.tailwindcss|unpkg\.com|unsplash|picsum/)
 })

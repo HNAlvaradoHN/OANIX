@@ -6,6 +6,7 @@ test('organic workspace uses real OANIX data and no external prototype dependenc
   const runtime = readFileSync('src/features/notes/OrganicWorkspaceRuntime.tsx', 'utf8')
   const css = readFileSync('src/features/notes/organicWorkspace.css', 'utf8')
   const main = readFileSync('src/main.tsx', 'utf8')
+  const gate = readFileSync('src/app/WorkspaceRuntimeGate.tsx', 'utf8')
 
   assert.match(runtime, /loadFolders/)
   assert.match(runtime, /loadNotes/)
@@ -13,8 +14,9 @@ test('organic workspace uses real OANIX data and no external prototype dependenc
   assert.match(runtime, /loadFolderCovers/)
   assert.match(runtime, /loadFolderColors/)
   assert.match(runtime, /persistTagOrder/)
-  assert.match(main, /<OrganicWorkspaceRuntime \/>/)
-  assert.doesNotMatch(runtime + css, /cdn\.tailwindcss|unpkg\.com|@phosphor-icons/)
+  assert.match(main, /<WorkspaceRuntimeGate \/>/)
+  assert.match(gate, /<OrganicWorkspaceRuntime \/>/)
+  assert.doesNotMatch(runtime + css + gate, /cdn\.tailwindcss|unpkg\.com|@phosphor-icons/)
 })
 
 test('folders become a bottom dock and old duplicate navigation stays only as a hidden handler', () => {
