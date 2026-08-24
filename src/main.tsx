@@ -13,11 +13,10 @@ import './styles/redesign.css'
 import './styles/redesign-polish.css'
 import './styles/themes.css'
 import './styles/base-themes.css'
-// These two files still contain editor/notebook rules. They remain below the
-// workspace contract so they cannot redefine the approved v38.3 list shell.
+// Notebook rules remain below the shared theme tokens. Classic theme surfaces are
+// consolidated in one authority before the v38.3 workspace contract takes over.
 import './styles/notebook-polish.css'
-import './styles/final-visual-polish.css'
-import './styles/classic-day-hard-fix.css'
+import './styles/classic-theme-surfaces.css'
 import './styles/privacy-status-polish.css'
 import './styles/note-menu-viewport-fit.css'
 import './styles/web-brand-logo.css'
