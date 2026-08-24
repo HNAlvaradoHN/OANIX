@@ -1,5 +1,6 @@
-/* OANIX theme presets.
- * This layer is intentionally visual-only. The selected theme is a local UI preference.
+/* OANIX shared theme surfaces.
+ * The selected theme is a local UI preference. Retired presets are normalized
+ * to Classic Day/Night before they can reach the DOM, so they do not live here.
  */
 
 :root,
@@ -24,79 +25,7 @@
   --theme-danger: #ff7d91;
 }
 
-:root[data-oanix-theme='cyber-blue'] {
-  --theme-bg: #07111f; --theme-bg-deep: #040b14; --theme-surface: #0e1b2d;
-  --theme-surface-2: #12243b; --theme-surface-3: #17304b; --theme-surface-hover: #1b3857;
-  --theme-text: #f4f9ff; --theme-text-soft: #d5e6f5; --theme-muted: #91abc2; --theme-muted-2: #68849e;
-  --theme-accent: #3b82f6; --theme-accent-2: #22d3ee; --theme-accent-soft: #93c5fd;
-  --theme-border: rgba(91,151,208,.3); --theme-border-strong: rgba(81,166,226,.56); --theme-glow: rgba(34,211,238,.17); --theme-grid: rgba(100,180,230,.035); --theme-danger: #fb7185;
-}
-
-:root[data-oanix-theme='graphite-neon'] {
-  --theme-bg: #0b1114; --theme-bg-deep: #070b0d; --theme-surface: #121b1d;
-  --theme-surface-2: #182527; --theme-surface-3: #203033; --theme-surface-hover: #263b3e;
-  --theme-text: #f2fbf7; --theme-text-soft: #d5e6df; --theme-muted: #91aaa0; --theme-muted-2: #667d75;
-  --theme-accent: #14b8a6; --theme-accent-2: #86efac; --theme-accent-soft: #5eead4;
-  --theme-border: rgba(89,151,139,.3); --theme-border-strong: rgba(78,187,165,.54); --theme-glow: rgba(20,184,166,.16); --theme-grid: rgba(110,180,160,.035); --theme-danger: #fb7185;
-}
-
-:root[data-oanix-theme='obsidian-gold'] {
-  --theme-bg: #0c0b09; --theme-bg-deep: #070604; --theme-surface: #17140f;
-  --theme-surface-2: #211c14; --theme-surface-3: #2b2419; --theme-surface-hover: #342b1d;
-  --theme-text: #fffaf0; --theme-text-soft: #eadfc9; --theme-muted: #b3a58d; --theme-muted-2: #827661;
-  --theme-accent: #d6a84b; --theme-accent-2: #f5d58b; --theme-accent-soft: #ecd08c;
-  --theme-border: rgba(188,151,78,.3); --theme-border-strong: rgba(214,168,75,.58); --theme-glow: rgba(214,168,75,.15); --theme-grid: rgba(214,188,135,.03); --theme-danger: #ff7b7b;
-}
-
-:root[data-oanix-theme='crimson-core'] {
-  --theme-bg: #110b0f; --theme-bg-deep: #080507; --theme-surface: #1d1118;
-  --theme-surface-2: #291720; --theme-surface-3: #351d29; --theme-surface-hover: #412331;
-  --theme-text: #fff7f8; --theme-text-soft: #ecd9de; --theme-muted: #b2959e; --theme-muted-2: #826a72;
-  --theme-accent: #ef4444; --theme-accent-2: #fb7185; --theme-accent-soft: #fda4af;
-  --theme-border: rgba(178,91,105,.3); --theme-border-strong: rgba(239,68,68,.56); --theme-glow: rgba(239,68,68,.15); --theme-grid: rgba(220,120,135,.03); --theme-danger: #ff6b75;
-}
-
-:root[data-oanix-theme='aurora-rose'] {
-  --theme-bg: #120b16; --theme-bg-deep: #09050c; --theme-surface: #201226;
-  --theme-surface-2: #2c1733; --theme-surface-3: #3a1f43; --theme-surface-hover: #48264f;
-  --theme-text: #fff7fd; --theme-text-soft: #efd9ea; --theme-muted: #bc9ab2; --theme-muted-2: #8b7084;
-  --theme-accent: #db4fa3; --theme-accent-2: #f9a8d4; --theme-accent-soft: #f0a4cf;
-  --theme-border: rgba(188,100,159,.3); --theme-border-strong: rgba(219,79,163,.56); --theme-glow: rgba(219,79,163,.16); --theme-grid: rgba(220,125,185,.03); --theme-danger: #ff7a8c;
-}
-
-:root[data-oanix-theme='pearl-violet'] {
-  --theme-bg: #f7f5fb; --theme-bg-deep: #efedf6; --theme-surface: #ffffff;
-  --theme-surface-2: #f2effa; --theme-surface-3: #eae5f6; --theme-surface-hover: #e7e1f5;
-  --theme-text: #211b2e; --theme-text-soft: #4b425c; --theme-muted: #71677e; --theme-muted-2: #93899d;
-  --theme-accent: #7658d6; --theme-accent-2: #9b87f5; --theme-accent-soft: #a695ef;
-  --theme-border: rgba(102,83,147,.22); --theme-border-strong: rgba(118,88,214,.46); --theme-glow: rgba(118,88,214,.13); --theme-grid: rgba(76,64,110,.035); --theme-danger: #c43d5b;
-}
-
-:root[data-oanix-theme='blush-glass'] {
-  --theme-bg: #fff7fb; --theme-bg-deep: #f9edf4; --theme-surface: #fffdfd;
-  --theme-surface-2: #fceef5; --theme-surface-3: #f8e2ed; --theme-surface-hover: #f7dbe8;
-  --theme-text: #321b28; --theme-text-soft: #604254; --theme-muted: #896879; --theme-muted-2: #a98b9a;
-  --theme-accent: #d9468f; --theme-accent-2: #f3a7c8; --theme-accent-soft: #e987b5;
-  --theme-border: rgba(153,83,117,.2); --theme-border-strong: rgba(217,70,143,.45); --theme-glow: rgba(217,70,143,.12); --theme-grid: rgba(140,80,110,.03); --theme-danger: #c73757;
-}
-
-:root[data-oanix-theme='lavender-mist'] {
-  --theme-bg: #f8f7ff; --theme-bg-deep: #efedfa; --theme-surface: #ffffff;
-  --theme-surface-2: #f0edfb; --theme-surface-3: #e8e3f7; --theme-surface-hover: #e2dcf5;
-  --theme-text: #272037; --theme-text-soft: #514762; --theme-muted: #786d87; --theme-muted-2: #998fa7;
-  --theme-accent: #7c63d9; --theme-accent-2: #c4b5fd; --theme-accent-soft: #a995ee;
-  --theme-border: rgba(107,89,151,.21); --theme-border-strong: rgba(124,99,217,.46); --theme-glow: rgba(124,99,217,.12); --theme-grid: rgba(89,75,120,.03); --theme-danger: #c83f60;
-}
-
-:root[data-oanix-theme='ocean-pearl'] {
-  --theme-bg: #f5fbfc; --theme-bg-deep: #eaf5f7; --theme-surface: #ffffff;
-  --theme-surface-2: #eaf6f8; --theme-surface-3: #e1f0f3; --theme-surface-hover: #dcecef;
-  --theme-text: #16303a; --theme-text-soft: #3d5962; --theme-muted: #688087; --theme-muted-2: #8ca0a5;
-  --theme-accent: #2387b8; --theme-accent-2: #2dd4bf; --theme-accent-soft: #68b9cf;
-  --theme-border: rgba(53,116,137,.22); --theme-border-strong: rgba(35,135,184,.46); --theme-glow: rgba(35,135,184,.12); --theme-grid: rgba(55,115,130,.03); --theme-danger: #c43f5d;
-}
-
-/* Bridge the original redesign tokens to the active preset. */
+/* Bridge the original visual tokens to the active semantic theme. */
 :root[data-oanix-theme] {
   --oanix-bg: var(--theme-bg);
   --oanix-bg-deep: var(--theme-bg-deep);
