@@ -9,13 +9,20 @@ const coverService = readFileSync('src/features/folders/folderCoverService.ts', 
 const appearanceService = readFileSync('src/features/folders/folderAppearanceService.ts', 'utf8')
 
 test('opening a note marks an exclusive detail state and hides workspace-only chrome', () => {
-  assert.match(visualRuntime, /notes-shell\.notes-shell--open \.note-view/)
+  assert.match(visualRuntime, /shell\?\.classList\.contains\('notes-shell--open'\)/)
   assert.match(visualRuntime, /classList\.toggle\('oanix-note-detail-open', noteDetailOpen\)/)
   assert.match(stateCss, /oanix-note-detail-open[\s\S]*\.oanix-folder-grid/)
   assert.match(stateCss, /oanix-note-detail-open[\s\S]*\.oanix-organic-folder-controls/)
   assert.match(stateCss, /oanix-note-detail-open[\s\S]*\.notes-create-fab/)
   assert.match(stateCss, /oanix-note-detail-open[\s\S]*\.notes-sidebar/)
   assert.match(stateCss, /\.notes-shell\.notes-shell--open > \.note-view[\s\S]*width: 100% !important/)
+})
+
+test('visual runtime observes only the nodes whose state it mirrors', () => {
+  assert.match(visualRuntime, /shellObserver\.observe\((?:observedShell|shell)/)
+  assert.match(visualRuntime, /backgroundObserver\.observe\((?:observedBackground|background)/)
+  assert.doesNotMatch(visualRuntime, /observe\(body/)
+  assert.doesNotMatch(visualRuntime, /subtree:\s*true/)
 })
 
 test('covered workspace uses a sharp contained foreground over a soft fill instead of stretching a thumbnail', () => {
