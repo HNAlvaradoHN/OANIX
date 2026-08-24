@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react'
 import { EditorOperationRuntime } from '../features/editor/EditorOperationRuntime'
 import '../features/editor/editorTrailingWorkspace.css'
 import { FolderAppearanceRuntime } from '../features/folders/FolderAppearanceRuntime'
@@ -14,24 +13,7 @@ import { WorkspacePersonalizationRuntime } from '../features/notes/WorkspacePers
 import { PrivacyStatusHelp } from '../features/privacy/PrivacyStatusHelp'
 import { TagCreationRuntime } from '../features/tags/TagCreationRuntime'
 
-function workspaceExists() {
-  return document.querySelector('.notes-sidebar') !== null
-}
-
 export function WorkspaceRuntimeGate() {
-  const [active, setActive] = useState(workspaceExists)
-
-  useEffect(() => {
-    const sync = () => setActive(workspaceExists())
-    sync()
-
-    const observer = new MutationObserver(sync)
-    observer.observe(document.body, { childList: true, subtree: true })
-    return () => observer.disconnect()
-  }, [])
-
-  if (!active) return null
-
   return (
     <>
       <EditorOperationRuntime />
