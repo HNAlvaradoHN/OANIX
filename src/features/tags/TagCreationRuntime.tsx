@@ -1,6 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
 import { createTag, loadTags } from './tagService'
+import {
+  DEFAULT_TAG_COLOR,
+  DEFAULT_TAG_ICON,
+  TAG_COLOR_OPTIONS,
+  TAG_ICON_OPTIONS,
+} from './tagTypes'
 import './tagCreation.css'
 
 function organicTagAddButton(): HTMLButtonElement | null {
@@ -14,15 +20,49 @@ function normalizeTagName(value: string): string {
 export function TagCreationRuntime() {
   const [open, setOpen] = useState(false)
   const [name, setName] = useState('')
+  const [icon, setIcon] = useState(DEFAULT_TAG_ICON)
+  const [color, setColor] = useState(DEFAULT_TAG_COLOR)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const decorateTokenRef = useRef(0)
+
+  function resetDraft() {
+    setName('')
+    setIcon(DEFAULT_TAG_ICON)
+    setColor(DEFAULT_TAG_COLOR)
+    setError('')
+  }
 
   useEffect(() => {
-    const decorate = () => {
+    let frame = 0
+
+    const decorate = async () => {
+      const token = ++decorateTokenRef.current
       const addButton = organicTagAddButton()
-      if (!addButton) return
-      addButton.setAttribute('aria-label', 'Crear nueva etiqueta')
-      addButton.title = 'Crear nueva etiqueta'
+      if (addButton) {
+        addButton.setAttribute('aria-label', 'Crear nueva etiqueta')
+        addButton.title = 'Crear nueva etiqueta'
+      }
+
+      try {
+        const tags = await loadTags()
+        if (token !== decorateTokenRef.current) return
+        const byId = new Map(tags.map((tag) => [tag.id, tag]))
+        document.querySelectorAll<HTMLButtonElement>('.oanix-organic-tag-chip[data-oanix-organic-tag-id]').forEach((chip) => {
+          const id = chip.dataset.oanixOrganicTagId
+          const tag = id ? byId.get(id) : null
+          if (!tag) return
+          chip.dataset.oanixTagIcon = tag.icon || DEFAULT_TAG_ICON
+          chip.style.setProperty('--oanix-tag-color', tag.color || DEFAULT_TAG_COLOR)
+        })
+      } catch {
+        // The workspace owns storage errors. Tag appearance decoration is best-effort.
+      }
+    }
+
+    const scheduleDecorate = () => {
+      window.cancelAnimationFrame(frame)
+      frame = window.requestAnimationFrame(() => void decorate())
     }
 
     const handleClickCapture = (event: MouseEvent) => {
@@ -33,8 +73,7 @@ export function TagCreationRuntime() {
       if (addButton) {
         event.preventDefault()
         event.stopPropagation()
-        setError('')
-        setName('')
+        resetDraft()
         setOpen(true)
         return
       }
@@ -46,13 +85,16 @@ export function TagCreationRuntime() {
       }
     }
 
-    decorate()
-    const observer = new MutationObserver(decorate)
+    scheduleDecorate()
+    const observer = new MutationObserver(scheduleDecorate)
     observer.observe(document.body, { childList: true, subtree: true })
+    window.addEventListener('oanix:local-data-changed', scheduleDecorate)
     document.addEventListener('click', handleClickCapture, true)
 
     return () => {
       observer.disconnect()
+      window.cancelAnimationFrame(frame)
+      window.removeEventListener('oanix:local-data-changed', scheduleDecorate)
       document.removeEventListener('click', handleClickCapture, true)
     }
   }, [])
@@ -73,10 +115,10 @@ export function TagCreationRuntime() {
         setError('Ya existe una etiqueta con ese nombre.')
         return
       }
-      await createTag(normalized)
+      await createTag(normalized, { icon, color })
       window.dispatchEvent(new Event('oanix:local-data-changed'))
       setOpen(false)
-      setName('')
+      resetDraft()
     } catch (createError) {
       setError(createError instanceof Error ? createError.message : 'No se pudo crear la etiqueta.')
     } finally {
@@ -94,11 +136,15 @@ export function TagCreationRuntime() {
         className="oanix-tag-create"
         role="dialog"
         aria-modal="true"
-        aria-label="Crear nueva etiqueta"
+        aria-label="Nueva etiqueta"
         onPointerDown={(event) => event.stopPropagation()}
       >
-        <header><span aria-hidden="true">🏷</span><strong>Crear nueva etiqueta</strong></header>
-        <label>
+        <header>
+          <span className="oanix-tag-create__title-icon" aria-hidden="true">🏷️</span>
+          <strong>Nueva etiqueta</strong>
+        </header>
+
+        <label className="oanix-tag-create__field">
           <span>NOMBRE</span>
           <input
             autoFocus
@@ -109,11 +155,48 @@ export function TagCreationRuntime() {
               if (event.key === 'Escape' && !busy) setOpen(false)
             }}
             maxLength={40}
-            placeholder="Ej. Trabajo"
+            placeholder="Ej. Proyectos 2026..."
             aria-label="Nombre de nueva etiqueta"
           />
         </label>
-        {error && <p role="alert">{error}</p>}
+
+        <fieldset className="oanix-tag-create__section">
+          <legend>ICONO</legend>
+          <div className="oanix-tag-create__icons">
+            {TAG_ICON_OPTIONS.map((candidate) => (
+              <button
+                key={candidate}
+                type="button"
+                className={candidate === icon ? 'is-selected' : ''}
+                aria-label={`Usar icono ${candidate}`}
+                aria-pressed={candidate === icon}
+                onClick={() => setIcon(candidate)}
+              >
+                {candidate}
+              </button>
+            ))}
+          </div>
+        </fieldset>
+
+        <fieldset className="oanix-tag-create__section">
+          <legend>COLOR</legend>
+          <div className="oanix-tag-create__colors">
+            {TAG_COLOR_OPTIONS.map((candidate) => (
+              <button
+                key={candidate}
+                type="button"
+                className={candidate === color ? 'is-selected' : ''}
+                aria-label={`Usar color ${candidate}`}
+                aria-pressed={candidate === color}
+                style={{ '--oanix-tag-create-color': candidate } as CSSProperties}
+                onClick={() => setColor(candidate)}
+              />
+            ))}
+          </div>
+        </fieldset>
+
+        {error && <p className="oanix-tag-create__error" role="alert">{error}</p>}
+
         <footer>
           <button type="button" className="is-cancel" onClick={() => setOpen(false)} disabled={busy}>Cancelar</button>
           <button type="button" className="is-primary" onClick={() => void handleCreate()} disabled={busy}>

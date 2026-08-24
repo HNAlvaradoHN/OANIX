@@ -5,7 +5,8 @@ import test from 'node:test'
 const main = readFileSync('src/main.tsx', 'utf8')
 const folderCreator = readFileSync('src/features/folders/FolderCreationRuntime.tsx', 'utf8')
 const tagCreator = readFileSync('src/features/tags/TagCreationRuntime.tsx', 'utf8')
-const boot = readFileSync('src/features/notes/WorkspaceBootRuntime.tsx', 'utf8')
+const tagService = readFileSync('src/features/tags/tagService.ts', 'utf8')
+const tagTypes = readFileSync('src/features/tags/tagTypes.ts', 'utf8')
 const refinements = readFileSync('src/features/notes/workspaceRefinements.css', 'utf8')
 
 test('folder creation only intercepts the real folder manager dialog', () => {
@@ -13,29 +14,32 @@ test('folder creation only intercepts the real folder manager dialog', () => {
   assert.doesNotMatch(folderCreator, /querySelector<HTMLElement>\('\.folder-dialog'\)/)
 })
 
-test('workspace boot waits for folders tags background and notes before reveal', () => {
-  assert.match(main, /<WorkspaceBootRuntime \/>/)
-  assert.match(boot, /loadFolders\(\), loadTags\(\)/)
-  assert.match(boot, /oanix-folder-rail__item--all/)
-  assert.match(boot, /data-oanix-organic-tag-id/)
-  assert.match(boot, /oanix-organic-background/)
-  assert.match(boot, /Cargando notas…/)
-  assert.match(boot, /finishBoot\(\)/)
+test('workspace no longer blocks behind a fake boot screen and reserves the tag rail from first frame', () => {
+  assert.doesNotMatch(main, /WorkspaceBootRuntime/)
+  assert.match(refinements, /notes-sidebar:not\(:has\(\.oanix-organic-tags-host\)\) \.notes-list[\s\S]*margin-top:\s*62px !important/)
 })
 
-test('top tag plus owns tag creation and does not fall through to legacy manager', () => {
+test('top tag plus owns professional tag creation with persisted icon and color', () => {
   assert.match(main, /<TagCreationRuntime \/>/)
-  assert.match(tagCreator, /Crear nueva etiqueta/)
-  assert.match(tagCreator, /event\.preventDefault\(\)/)
-  assert.match(tagCreator, /event\.stopPropagation\(\)/)
-  assert.match(tagCreator, /createTag\(normalized\)/)
-  assert.match(tagCreator, /oanix:local-data-changed/)
+  assert.match(tagCreator, /Nueva etiqueta/)
+  assert.match(tagCreator, /TAG_ICON_OPTIONS/)
+  assert.match(tagCreator, /TAG_COLOR_OPTIONS/)
+  assert.match(tagCreator, /createTag\(normalized, \{ icon, color \}\)/)
+  assert.match(tagCreator, /data-oanix-tag-icon|oanixTagIcon/)
+  assert.match(tagCreator, /--oanix-tag-color/)
+  assert.match(tagService, /icon:\s*appearance\.icon \|\| DEFAULT_TAG_ICON/)
+  assert.match(tagService, /color:\s*appearance\.color \|\| DEFAULT_TAG_COLOR/)
+  assert.match(tagTypes, /icon\?: string/)
+  assert.match(tagTypes, /color\?: string/)
 })
 
-test('day mode keeps layered surfaces and desktop note back button is visible', () => {
+test('day mode keeps the cover visible with warm layered glass and a pill back action', () => {
   assert.match(main, /workspaceStateContract\.css[\s\S]*workspaceRefinements\.css/)
-  assert.match(refinements, /--v383-card:\s*rgba\(245,248,252,\.78\)/)
+  assert.match(refinements, /--v383-card:\s*rgba\(232,237,243,\.84\)/)
+  assert.match(refinements, /\.notes-header[\s\S]*linear-gradient\(90deg,rgba\(235,121,112,\.88\)/)
+  assert.match(refinements, /oanix-organic-background\.oanix-organic-background--covered::after[\s\S]*var\(--oanix-organic-cover-image\)/)
   assert.match(refinements, /\.oanix-organic-tags-host[\s\S]*backdrop-filter:\s*blur\(18px\)/)
-  assert.match(refinements, /oanix-note-detail-open \.note-view__header \.back-button[\s\S]*display:\s*grid !important/)
+  assert.match(refinements, /oanix-note-detail-open \.note-view__header \.back-button[\s\S]*display:\s*inline-flex !important/)
+  assert.match(refinements, /\.back-button::after[\s\S]*content:\s*'Volver'/)
   assert.match(refinements, /\.tag-assign-empty button[\s\S]*display:\s*none !important/)
 })

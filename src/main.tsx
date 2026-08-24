@@ -9,7 +9,6 @@ import { FolderDockFinishingRuntime } from './features/notes/FolderDockFinishing
 import { NoteMenuScrollDismiss } from './features/notes/NoteMenuScrollDismiss'
 import { NoteMenuViewportFit } from './features/notes/NoteMenuViewportFit'
 import { WorkspacePersonalizationRuntime } from './features/notes/WorkspacePersonalizationRuntime'
-import { WorkspaceBootRuntime } from './features/notes/WorkspaceBootRuntime'
 import { PrivacyStatusHelp } from './features/privacy/PrivacyStatusHelp'
 import { FolderAppearanceRuntime } from './features/folders/FolderAppearanceRuntime'
 import { FolderCreationRuntime } from './features/folders/FolderCreationRuntime'
@@ -99,7 +98,6 @@ createRoot(document.getElementById('root')!).render(
     <NoteMenuScrollDismiss />
     <NoteMenuViewportFit />
     <OrganicWorkspaceRuntime />
-    <WorkspaceBootRuntime />
     <FolderDockFinishingRuntime />
     <WorkspacePersonalizationRuntime />
     <PrivacyStatusHelp />
