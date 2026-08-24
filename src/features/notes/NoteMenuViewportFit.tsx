@@ -53,21 +53,17 @@ export function NoteMenuViewportFit() {
       })
     }
 
-    const observer = new MutationObserver(scheduleFit)
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ['class', 'aria-expanded'],
-    })
-
+    // Note menus only need a fresh measurement after user interaction can open or
+    // close them, or when the viewport changes. Watching every DOM mutation made
+    // the whole application pay for an operation that belongs to this one control.
+    document.addEventListener('click', scheduleFit)
     window.addEventListener('resize', scheduleFit)
     window.visualViewport?.addEventListener('resize', scheduleFit)
     window.visualViewport?.addEventListener('scroll', scheduleFit)
     scheduleFit()
 
     return () => {
-      observer.disconnect()
+      document.removeEventListener('click', scheduleFit)
       window.removeEventListener('resize', scheduleFit)
       window.visualViewport?.removeEventListener('resize', scheduleFit)
       window.visualViewport?.removeEventListener('scroll', scheduleFit)
