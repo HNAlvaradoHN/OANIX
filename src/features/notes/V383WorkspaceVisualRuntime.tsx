@@ -43,8 +43,9 @@ export function V383WorkspaceVisualRuntime() {
 
     let shellObserver: MutationObserver | null = null
     if (shell) {
+      const observedShell = shell
       shellObserver = new MutationObserver(syncNoteDetailState)
-      shellObserver.observe(shell, {
+      shellObserver.observe(observedShell, {
         attributes: true,
         attributeFilter: ['class'],
       })
@@ -65,9 +66,10 @@ export function V383WorkspaceVisualRuntime() {
         return
       }
 
-      syncCoveredBackground(background)
-      backgroundObserver = new MutationObserver(() => syncCoveredBackground(background))
-      backgroundObserver.observe(background, {
+      const observedBackground = background
+      syncCoveredBackground(observedBackground)
+      backgroundObserver = new MutationObserver(() => syncCoveredBackground(observedBackground))
+      backgroundObserver.observe(observedBackground, {
         attributes: true,
         attributeFilter: ['class', 'style'],
       })
