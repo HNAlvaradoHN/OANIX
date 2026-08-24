@@ -1,0 +1,116 @@
+import { useEffect } from 'react'
+import './noteCreationFeedback.css'
+
+const CREATE_BUTTON_SELECTOR = '.notes-create-fab, .notes-empty .empty-action'
+const FEEDBACK_ID = 'oanix-note-create-feedback'
+
+function isCreateButton(button: HTMLButtonElement): boolean {
+  const label = `${button.getAttribute('aria-label') ?? ''} ${button.textContent ?? ''}`.toLocaleLowerCase()
+  return label.includes('crear') || label.includes('nueva nota') || label.includes('creando')
+}
+
+function createFeedback() {
+  if (document.getElementById(FEEDBACK_ID)) return
+
+  const root = document.createElement('div')
+  root.id = FEEDBACK_ID
+  root.setAttribute('role', 'status')
+  root.setAttribute('aria-live', 'polite')
+  root.setAttribute('aria-label', 'Creando nota cifrada')
+
+  const panel = document.createElement('div')
+  panel.className = 'oanix-note-create-feedback__panel'
+
+  const spinner = document.createElement('span')
+  spinner.className = 'oanix-note-create-feedback__spinner'
+  spinner.setAttribute('aria-hidden', 'true')
+
+  const copy = document.createElement('span')
+  copy.className = 'oanix-note-create-feedback__copy'
+  const title = document.createElement('strong')
+  title.textContent = 'Creando nota…'
+  const detail = document.createElement('small')
+  detail.textContent = 'Preparando y guardando la nueva nota cifrada'
+  copy.append(title, detail)
+
+  panel.append(spinner, copy)
+  root.append(panel)
+  document.body.append(root)
+}
+
+function removeFeedback() {
+  document.getElementById(FEEDBACK_ID)?.remove()
+}
+
+export function NoteCreationFeedbackRuntime() {
+  useEffect(() => {
+    let startedAt = 0
+    let sawBusyState = false
+    let timeout = 0
+
+    const stop = () => {
+      window.clearTimeout(timeout)
+      startedAt = 0
+      sawBusyState = false
+      removeFeedback()
+    }
+
+    const scheduleSafetyTimeout = () => {
+      window.clearTimeout(timeout)
+      timeout = window.setTimeout(stop, 15000)
+    }
+
+    const sync = () => {
+      if (!document.getElementById(FEEDBACK_ID)) return
+
+      if (document.documentElement.classList.contains('oanix-note-detail-open')) {
+        stop()
+        return
+      }
+
+      const buttons = Array.from(document.querySelectorAll<HTMLButtonElement>(CREATE_BUTTON_SELECTOR))
+        .filter(isCreateButton)
+      const busy = buttons.some((button) => button.disabled && /creando/i.test(button.textContent ?? ''))
+      if (busy) sawBusyState = true
+
+      const hasError = document.querySelector('.notes-error, .note-save-error') !== null
+      if (hasError && Date.now() - startedAt > 250) {
+        stop()
+        return
+      }
+
+      if (sawBusyState && !busy && Date.now() - startedAt > 250) stop()
+    }
+
+    const onClick = (event: MouseEvent) => {
+      const target = event.target instanceof Element
+        ? event.target.closest<HTMLButtonElement>(CREATE_BUTTON_SELECTOR)
+        : null
+      if (!target || target.disabled || !isCreateButton(target)) return
+
+      startedAt = Date.now()
+      sawBusyState = false
+      createFeedback()
+      scheduleSafetyTimeout()
+      requestAnimationFrame(sync)
+    }
+
+    document.addEventListener('click', onClick, true)
+    const observer = new MutationObserver(sync)
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class'],
+      childList: true,
+      subtree: true,
+      characterData: true,
+    })
+
+    return () => {
+      document.removeEventListener('click', onClick, true)
+      observer.disconnect()
+      stop()
+    }
+  }, [])
+
+  return null
+}
