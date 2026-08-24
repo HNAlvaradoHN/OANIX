@@ -1,5 +1,8 @@
-/* Final post-V3 visual hardening.
- * This file intentionally loads last so theme-specific surfaces win over legacy dark-first CSS.
+/* OANIX classic theme surface authority.
+ *
+ * This file consolidates the former final-visual-polish and classic-day-hard-fix
+ * layers without changing their effective cascade order. Workspace-specific v38.3
+ * geometry still loads afterwards and remains the workspace authority.
  */
 
 html,
@@ -172,4 +175,113 @@ body,
     gap: .5rem;
     padding: .65rem;
   }
+}
+
+/* Final Classic Day hardening for legacy/non-workspace surfaces.
+ * These selectors intentionally follow the data-theme rules above, matching the
+ * previous cascade order, while v38.3 still owns workspace geometry afterwards.
+ */
+html.oanix-classic-day,
+body.oanix-classic-day,
+html.oanix-classic-day body,
+html.oanix-classic-day #root,
+html.oanix-classic-day .note-view,
+html.oanix-classic-day .vault-shell {
+  background-color: #ffffff !important;
+  color: #101828 !important;
+}
+
+html.oanix-classic-day .note-view__header,
+html.oanix-classic-day .notes-tabs-shell,
+html.oanix-classic-day .notes-tabs,
+html.oanix-classic-day .notes-tabs-scroll-button,
+html.oanix-classic-day .notes-tag-filter,
+html.oanix-classic-day .notes-search,
+html.oanix-classic-day .workspace-menu,
+html.oanix-classic-day .note-view__menu,
+html.oanix-classic-day .note-row__menu,
+html.oanix-classic-day .account-panel,
+html.oanix-classic-day .folder-dialog__panel,
+html.oanix-classic-day .note-info-dialog__panel,
+html.oanix-classic-day .oanix-theme-menu--workspace,
+html.oanix-classic-day .mobile-editor-dock {
+  background: rgba(255,255,255,.965) !important;
+  color: #101828 !important;
+  border-color: rgba(52,64,84,.15) !important;
+}
+
+html.oanix-classic-day .editor-frame,
+html.oanix-classic-day .oanix-theme-option,
+html.oanix-classic-day .vault-card,
+html.oanix-classic-day .vault-assurances > div,
+html.oanix-classic-day .vault-state,
+html.oanix-classic-day .vault-access__lock {
+  background: linear-gradient(155deg, #ffffff, #f8fbff) !important;
+  color: #101828 !important;
+  border-color: rgba(52,64,84,.15) !important;
+  box-shadow: 0 10px 28px rgba(15,23,42,.055) !important;
+}
+
+html.oanix-classic-day .oanix-theme-option--selected {
+  background: linear-gradient(145deg, #edf4ff, #ffffff) !important;
+  border-color: #2563eb !important;
+  box-shadow: 0 10px 28px rgba(37,99,235,.10) !important;
+}
+
+html.oanix-classic-day .note-view__identity strong,
+html.oanix-classic-day .note-title-field input,
+html.oanix-classic-day .editor-surface,
+html.oanix-classic-day .oanix-theme-menu__header strong,
+html.oanix-classic-day .oanix-theme-section__heading strong,
+html.oanix-classic-day .oanix-theme-option__copy strong {
+  color: #101828 !important;
+}
+
+html.oanix-classic-day .note-view__identity span,
+html.oanix-classic-day .oanix-theme-menu__header p,
+html.oanix-classic-day .oanix-theme-section__heading span,
+html.oanix-classic-day .oanix-theme-option__copy small,
+html.oanix-classic-day .oanix-theme-option__mode {
+  color: #667085 !important;
+}
+
+html.oanix-classic-day .oanix-theme-backdrop {
+  background: rgba(15,23,42,.10) !important;
+  backdrop-filter: blur(4px) saturate(.96) !important;
+  -webkit-backdrop-filter: blur(4px) saturate(.96) !important;
+}
+
+html.oanix-classic-day .oanix-theme-menu__close {
+  background: #f4f7fb !important;
+  color: #344054 !important;
+  border-color: rgba(52,64,84,.15) !important;
+}
+
+html.oanix-classic-day .notes-search__field,
+html.oanix-classic-day .field input,
+html.oanix-classic-day .account-form input,
+html.oanix-classic-day .folder-create-row input,
+html.oanix-classic-day .folder-list__rename {
+  background: #ffffff !important;
+  color: #101828 !important;
+  border-color: rgba(52,64,84,.15) !important;
+}
+
+html.oanix-classic-day .vault-shell,
+html.oanix-classic-day .note-view {
+  background:
+    linear-gradient(rgba(71,85,105,.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(71,85,105,.025) 1px, transparent 1px),
+    radial-gradient(circle at 86% 8%, rgba(37,99,235,.065), transparent 26rem),
+    #ffffff !important;
+  background-size: 46px 46px, 46px 46px, auto, auto !important;
+}
+
+/* Match the WebView canvas to Android's transparent gesture-navigation area. */
+html.oanix-classic-day,
+html.oanix-classic-day body,
+html.oanix-classic-day #root {
+  min-height: 100%;
+  min-height: 100dvh;
+  background: #ffffff !important;
 }

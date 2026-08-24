@@ -16,8 +16,7 @@ const workspaceMenuCss = readFileSync('src/features/personalization/personalizat
 const themesCss = readFileSync('src/styles/themes.css', 'utf8')
 const baseThemesCss = readFileSync('src/styles/base-themes.css', 'utf8')
 const notebookCss = readFileSync('src/styles/notebook-polish.css', 'utf8')
-const finalPolishCss = readFileSync('src/styles/final-visual-polish.css', 'utf8')
-const classicDayHardFixCss = readFileSync('src/styles/classic-day-hard-fix.css', 'utf8')
+const classicSurfacesCss = readFileSync('src/styles/classic-theme-surfaces.css', 'utf8')
 const androidStyles = readFileSync('android/app/src/main/res/values/styles.xml', 'utf8')
 const mainActivity = readFileSync('android/app/src/main/java/io/github/hnalvaradohn/oanix/MainActivity.java', 'utf8')
 const systemUiPlugin = readFileSync('android/app/src/main/java/io/github/hnalvaradohn/oanix/OanixSystemUiPlugin.java', 'utf8')
@@ -48,7 +47,8 @@ test('theme choice is only a local UI preference and applies before React paints
   assert.match(main, /<ThemeMenu \/>/)
   assert.match(main, /styles\/themes\.css/)
   assert.match(main, /styles\/base-themes\.css/)
-  assert.match(main, /styles\/final-visual-polish\.css/)
+  assert.match(main, /styles\/classic-theme-surfaces\.css/)
+  assert.doesNotMatch(main, /final-visual-polish|classic-day-hard-fix/)
 })
 
 test('the workspace three-dot menu keeps security but no longer duplicates Day Night', () => {
@@ -105,7 +105,7 @@ test('classic day explicitly opts out of mobile forced dark and hardens the shar
   assert.match(catalog, /const colorScheme = theme\.mode === 'light' \? 'only light' : 'dark'/)
   assert.match(catalog, /setProperty\('color-scheme', colorScheme, 'important'\)/)
   assert.match(catalog, /'--oanix-organic-card': 'rgba\(241,245,249,\.86\)'/)
-  assert.match(finalPolishCss, /data-oanix-theme='classic-day'[\s\S]*--theme-bg: #f4f7fb/)
+  assert.match(classicSurfacesCss, /data-oanix-theme='classic-day'[\s\S]*--theme-bg: #f4f7fb/)
 })
 
 test('v38 organic CSS owns workspace surfaces instead of competing Day overrides', () => {
@@ -113,9 +113,9 @@ test('v38 organic CSS owns workspace surfaces instead of competing Day overrides
   assert.doesNotMatch(baseThemesCss, /data-oanix-theme='classic-day'[^\n]*\][\s\S]*\.notes-sidebar/)
   assert.doesNotMatch(baseThemesCss, /data-oanix-theme='classic-day'[^\n]*\][\s\S]*\.notes-header/)
   assert.doesNotMatch(baseThemesCss, /data-oanix-theme='classic-day'[^\n]*\][\s\S]*\.note-row\s*\{/)
-  assert.doesNotMatch(classicDayHardFixCss, /html\.oanix-classic-day \.notes-shell/)
-  assert.doesNotMatch(classicDayHardFixCss, /html\.oanix-classic-day \.notes-header/)
-  assert.doesNotMatch(classicDayHardFixCss, /html\.oanix-classic-day \.note-row\s*\{/)
+  assert.doesNotMatch(classicSurfacesCss, /html\.oanix-classic-day \.notes-shell/)
+  assert.doesNotMatch(classicSurfacesCss, /html\.oanix-classic-day \.notes-header/)
+  assert.doesNotMatch(classicSurfacesCss, /html\.oanix-classic-day \.note-row\s*\{/)
 
   assert.match(organicWorkspaceCss, /\.notes-shell[\s\S]*background: transparent !important/)
   assert.match(organicWorkspaceCss, /\.notes-sidebar[\s\S]*background: transparent !important/)
@@ -123,9 +123,9 @@ test('v38 organic CSS owns workspace surfaces instead of competing Day overrides
   assert.match(organicWorkspaceCss, /\.note-row[\s\S]*background: var\(--oanix-organic-card\) !important/)
   assert.match(organicWorkspaceCss, /backdrop-filter: blur\(15px\)/)
 
-  const dayIndex = main.indexOf("./styles/classic-day-hard-fix.css")
+  const themeSurfaceIndex = main.indexOf("./styles/classic-theme-surfaces.css")
   const visualIndex = main.indexOf("./features/notes/v383WorkspaceVisual.css")
-  assert.ok(dayIndex >= 0 && visualIndex > dayIndex)
+  assert.ok(themeSurfaceIndex >= 0 && visualIndex > themeSurfaceIndex)
   assert.match(app, /<WorkspaceRuntimeGate \/>/)
   assert.match(gate, /<OrganicWorkspaceRuntime \/>/)
 })

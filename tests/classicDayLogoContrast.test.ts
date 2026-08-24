@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
 const brandCss = readFileSync('src/styles/web-brand-logo.css', 'utf8')
-const classicDayHardFix = readFileSync('src/styles/classic-day-hard-fix.css', 'utf8')
+const classicThemeSurfaces = readFileSync('src/styles/classic-theme-surfaces.css', 'utf8')
 
 test('Classic Day keeps the real OANIX logo readable without duplicating workspace branding', () => {
   assert.match(brandCss, /html\.oanix-brand-final \.notes-brand__mark/)
@@ -14,6 +14,6 @@ test('Classic Day keeps the real OANIX logo readable without duplicating workspa
   assert.match(brandCss, /The old purple\/cyan orbital nucleus is decorative history/)
   assert.match(brandCss, /content: none !important/)
 
-  // Theme hardening must not become another visual owner for the workspace logo.
-  assert.doesNotMatch(classicDayHardFix, /\.notes-brand__mark/)
+  // Theme surface hardening must not become another visual owner for the workspace logo.
+  assert.doesNotMatch(classicThemeSurfaces, /\.notes-brand__mark/)
 })
