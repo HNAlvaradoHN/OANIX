@@ -1,0 +1,69 @@
+/* Final mobile-only finishing for the compact note list.
+   Keeps the approved compact geometry while reserving explicit space for
+   icon, text, category/time and menu so those zones never overlap. */
+
+@media (max-width: 760px) {
+  html.oanix-v383-visual .notes-shell:not(.notes-shell--searching)
+  .note-row:not(.note-row--selected):not(.note-row--menu-open)
+  .note-row__open {
+    padding-left: 64px !important;
+    padding-right: clamp(160px, 44vw, 230px) !important;
+  }
+
+  html.oanix-v383-visual .notes-shell:not(.notes-shell--searching)
+  .note-row:not(.note-row--selected):not(.note-row--menu-open)
+  .note-row__body,
+  html.oanix-v383-visual .notes-shell:not(.notes-shell--searching)
+  .note-row:not(.note-row--selected):not(.note-row--menu-open)
+  .note-row__topline,
+  html.oanix-v383-visual .notes-shell:not(.notes-shell--searching)
+  .note-row:not(.note-row--selected):not(.note-row--menu-open)
+  .note-row__topline strong {
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  html.oanix-v383-visual .notes-shell:not(.notes-shell--searching)
+  .note-row:not(.note-row--selected):not(.note-row--menu-open)::after {
+    right: 45px !important;
+    max-width: min(30vw, 180px) !important;
+  }
+
+  html.oanix-v383-visual .notes-shell:not(.notes-shell--searching)
+  .note-row:not(.note-row--selected):not(.note-row--menu-open)
+  .note-row__avatar[data-oanix-note-icon] {
+    left: 14px !important;
+    top: 50% !important;
+    width: 36px !important;
+    height: 36px !important;
+    display: grid !important;
+    place-items: center !important;
+    padding: 0 !important;
+    transform: translateY(-50%) !important;
+  }
+
+  html.oanix-v383-visual .notes-shell:not(.notes-shell--searching)
+  .note-row:not(.note-row--selected):not(.note-row--menu-open)
+  .note-row__avatar[data-oanix-note-icon]::after {
+    position: absolute !important;
+    inset: 0 !important;
+    width: auto !important;
+    height: auto !important;
+    display: grid !important;
+    place-items: center !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    line-height: 1 !important;
+    transform: translateY(-1px) !important;
+  }
+
+  html.oanix-v383-visual .notes-shell:not(.notes-shell--searching)
+  .note-row:not(.note-row--selected):not(.note-row--menu-open)
+  .note-row__topline time {
+    right: 47px !important;
+    max-width: 102px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+}
