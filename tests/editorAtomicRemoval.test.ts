@@ -7,7 +7,7 @@ const operationCss = readFileSync('src/features/editor/editorOperationPolish.css
 const runwayCss = readFileSync('src/features/editor/editorTrailingWorkspace.css', 'utf8')
 
 test('checklists and daily entries expose an explicit complete-block removal action', () => {
-  assert.match(runtime, /data\.atomicBlockRemove = kind/)
+  assert.match(runtime, /button\.dataset\.atomicBlockRemove = kind/)
   assert.match(runtime, /Eliminar checklist/)
   assert.match(runtime, /Eliminar entrada/)
   assert.match(runtime, /\[data-checklist-block="true"\], \[data-daily-entry-block="true"\]/)
