@@ -17,22 +17,23 @@ test('folder gear opens the unified customizer directly without the intermediary
   assert.doesNotMatch(main, /folderOptionsVisual\.css/)
 })
 
-test('the remaining folder customizer is the professional action surface', () => {
-  const labels = [
+test('the remaining folder customizer contains the professional action surface in its DOM flow', () => {
+  for (const label of [
     'Abrir carpeta',
     'Cambiar color / Icono',
     'Cambiar imagen de mi dispositivo',
     'Quitar imagen',
     'Administrar nombre / eliminar',
     'Cancelar',
-  ]
-
-  let previous = -1
-  for (const label of labels) {
-    const index = appearance.indexOf(label)
-    assert.ok(index > previous, `${label} must stay in the unified customizer flow`)
-    previous = index
+  ]) {
+    assert.match(appearance, new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
   }
+
+  // Runtime constructs the final visual order with prepend: Open is inserted last
+  // so it appears first, followed by Appearance and the existing image/name actions.
+  assert.match(appearance, /actions\.prepend\(appearanceButton\)[\s\S]*actions\.prepend\(openButton\)/)
+  assert.match(appearance, /const imageButton = existingActions\[0\]/)
+  assert.match(appearance, /const cancelButton = existingActions\[existingActions\.length - 1\]/)
 })
 
 test('folder bridge mounts before legacy personalization listeners after unlock', () => {
