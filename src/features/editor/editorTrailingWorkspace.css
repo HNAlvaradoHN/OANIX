@@ -1,40 +1,39 @@
 /* OANIX mobile note trailing workspace.
-   Large atomic blocks (code/images) must never consume the visual end of the note. */
+   The notebook editor virtualizes its direct blocks, so breathing room must live
+   outside that virtual surface if it is expected to extend the actual page scroll. */
 
 @media (max-width: 720px) {
-  html.oanix-v383-visual body .notes-shell--open .note-canvas {
-    padding-bottom: max(18rem, calc(32dvh + env(safe-area-inset-bottom))) !important;
+  html.oanix-v383-visual.oanix-note-detail-open body .notes-shell--open,
+  html.oanix-v383-visual.oanix-note-detail-open body .notes-shell--open > .note-view {
+    height: auto !important;
+    min-height: 100dvh !important;
+    overflow: visible !important;
   }
 
-  html.oanix-v383-visual body .notes-shell--open .image-note-editor-root .editor-surface {
-    scroll-padding-bottom: max(16rem, 28dvh) !important;
+  html.oanix-v383-visual.oanix-note-detail-open body .notes-shell--open .note-canvas {
+    position: relative;
+    padding-bottom: max(7rem, calc(5rem + env(safe-area-inset-bottom))) !important;
+    scroll-padding-bottom: max(18rem, 42dvh);
   }
 
-  /* This is a real editable paragraph created by ImageNoteEditor. Make it large
-     enough to behave like the empty lower half of a notebook page instead of a
-     tiny caret row hidden behind the floating editor controls. */
-  html.oanix-v383-visual body .notes-shell--open .image-note-editor-root .editor-surface > p[data-oanix-trailing-caret='true']:last-child {
-    box-sizing: border-box;
-    min-height: clamp(14rem, 36dvh, 24rem) !important;
-    margin: .8rem 0 0 !important;
-    padding: 1rem 0 max(6rem, calc(10dvh + env(safe-area-inset-bottom))) !important;
-    cursor: text !important;
-  }
-
-  /* Always leave visible canvas after the final rendered block, including the
-     case where a code block is currently the last DOM child. The real trailing
-     paragraph above remains the editable target when present. */
-  html.oanix-v383-visual body .notes-shell--open .image-note-editor-root .editor-surface::after {
+  /* Real document-flow runway after ImageNoteEditor. Unlike padding or a child
+     inside .editor-surface, this contributes directly to page height even when
+     notebook blocks are absolutely positioned by NotebookFreeRowsRuntime. */
+  html.oanix-v383-visual.oanix-note-detail-open body .notes-shell--open .note-canvas::after {
     content: '';
     display: block;
-    clear: both;
     width: 100%;
-    min-height: clamp(6rem, 14dvh, 10rem);
+    height: clamp(18rem, 46dvh, 30rem);
+    clear: both;
     pointer-events: none;
   }
 
-  html.oanix-v383-visual body .notes-shell--open .image-note-editor-root .editor-code-block,
-  html.oanix-v383-visual body .notes-shell--open .image-note-editor-root .editor-image-block {
-    scroll-margin-bottom: max(16rem, 30dvh);
+  html.oanix-v383-visual.oanix-note-detail-open body .notes-shell--open .image-note-editor-root .editor-surface {
+    scroll-padding-bottom: max(14rem, 30dvh) !important;
+  }
+
+  html.oanix-v383-visual.oanix-note-detail-open body .notes-shell--open .image-note-editor-root .editor-code-block,
+  html.oanix-v383-visual.oanix-note-detail-open body .notes-shell--open .image-note-editor-root .editor-image-block {
+    scroll-margin-bottom: max(14rem, 30dvh);
   }
 }
