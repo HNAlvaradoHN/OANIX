@@ -116,7 +116,6 @@ export function TagCreationRuntime() {
         return
       }
       await createTag(normalized, { icon, color })
-      window.dispatchEvent(new Event('oanix:local-data-changed'))
       setOpen(false)
       resetDraft()
     } catch (createError) {
