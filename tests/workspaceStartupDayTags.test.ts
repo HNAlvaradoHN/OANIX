@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
 const main = readFileSync('src/main.tsx', 'utf8')
+const gate = readFileSync('src/app/WorkspaceRuntimeGate.tsx', 'utf8')
 const folderCreator = readFileSync('src/features/folders/FolderCreationRuntime.tsx', 'utf8')
 const tagCreator = readFileSync('src/features/tags/TagCreationRuntime.tsx', 'utf8')
 const tagService = readFileSync('src/features/tags/tagService.ts', 'utf8')
@@ -19,8 +20,9 @@ test('workspace no longer blocks behind a fake boot screen and reserves the tag 
   assert.match(refinements, /notes-sidebar:not\(:has\(\.oanix-organic-tags-host\)\) \.notes-list[\s\S]*margin-top:\s*62px !important/)
 })
 
-test('top tag plus owns professional tag creation with persisted icon and color', () => {
-  assert.match(main, /<TagCreationRuntime \/>/)
+test('top tag plus owns professional tag creation with persisted icon and color after unlock', () => {
+  assert.match(main, /<WorkspaceRuntimeGate \/>/)
+  assert.match(gate, /<TagCreationRuntime \/>/)
   assert.match(tagCreator, /Nueva etiqueta/)
   assert.match(tagCreator, /TAG_ICON_OPTIONS/)
   assert.match(tagCreator, /TAG_COLOR_OPTIONS/)
