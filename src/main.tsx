@@ -33,9 +33,10 @@ import { OrganicWorkspaceRuntime } from './features/notes/OrganicWorkspaceRuntim
 import { V383WorkspaceVisualRuntime } from './features/notes/V383WorkspaceVisualRuntime'
 // Folder options follows the approved v38.7 modal geometry while keeping real OANIX handlers.
 import './features/notes/folderOptionsVisual.css'
-// The approved v38.3 contract is intentionally the last workspace stylesheet.
-// Do not append another visual polish/hard-fix after this import.
+// v38.3 remains the base workspace authority. The state contract below only
+// handles exclusive note-detail and covered-background states that live outside it.
 import './features/notes/v383WorkspaceVisual.css'
+import './features/notes/workspaceStateContract.css'
 
 type OanixUpdateWindow = Window & {
   __oanixApplyUpdate?: () => Promise<void>

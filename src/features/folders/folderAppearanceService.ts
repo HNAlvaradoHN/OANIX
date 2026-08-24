@@ -12,6 +12,7 @@ import {
 
 const FOLDER_APPEARANCE_RECORD = 'folder-appearance'
 const HEX_COLOR = /^#[0-9a-f]{6}$/i
+const appearanceWriteQueues = new Map<string, Promise<void>>()
 
 interface FolderAppearanceRecordV1 {
   version: 1
@@ -73,6 +74,15 @@ function appearanceParts(existing: FolderAppearanceRecord | null) {
     pinned: existing?.version === 2 ? existing.pinned === true : false,
     favorite: existing?.version === 2 ? existing.favorite === true : false,
   }
+}
+
+function serializeAppearanceWrite(folderId: string, write: () => Promise<void>): Promise<void> {
+  const previous = appearanceWriteQueues.get(folderId) ?? Promise.resolve()
+  const next = previous.catch(() => undefined).then(write)
+  appearanceWriteQueues.set(folderId, next)
+  return next.finally(() => {
+    if (appearanceWriteQueues.get(folderId) === next) appearanceWriteQueues.delete(folderId)
+  })
 }
 
 async function writeAppearance(
@@ -145,46 +155,60 @@ export async function loadFolderAppearanceFlags(): Promise<Map<string, FolderApp
 }
 
 export async function saveFolderColor(folderId: string, color: string): Promise<void> {
-  const existing = await readAppearance(folderId)
-  const parts = appearanceParts(existing)
-  await writeAppearance(folderId, { ...parts, color: normalizeColor(color) })
+  const normalized = normalizeColor(color)
+  await serializeAppearanceWrite(folderId, async () => {
+    const existing = await readAppearance(folderId)
+    const parts = appearanceParts(existing)
+    await writeAppearance(folderId, { ...parts, color: normalized })
+  })
 }
 
 export async function removeFolderColor(folderId: string): Promise<void> {
-  const existing = await readAppearance(folderId)
-  const parts = appearanceParts(existing)
-  await writeAppearance(folderId, { icon: parts.icon, pinned: parts.pinned, favorite: parts.favorite })
+  await serializeAppearanceWrite(folderId, async () => {
+    const existing = await readAppearance(folderId)
+    const parts = appearanceParts(existing)
+    await writeAppearance(folderId, { icon: parts.icon, pinned: parts.pinned, favorite: parts.favorite })
+  })
 }
 
 export async function saveFolderIcon(folderId: string, icon: string): Promise<void> {
-  const existing = await readAppearance(folderId)
-  const color = existing?.version === 1 ? existing.color : existing?.color
-  const parts = appearanceParts(existing)
-  await writeAppearance(folderId, {
-    color,
-    icon: normalizeIcon(icon),
-    pinned: parts.pinned,
-    favorite: parts.favorite,
+  const normalized = normalizeIcon(icon)
+  await serializeAppearanceWrite(folderId, async () => {
+    const existing = await readAppearance(folderId)
+    const color = existing?.version === 1 ? existing.color : existing?.color
+    const parts = appearanceParts(existing)
+    await writeAppearance(folderId, {
+      color,
+      icon: normalized,
+      pinned: parts.pinned,
+      favorite: parts.favorite,
+    })
   })
 }
 
 export async function removeFolderIcon(folderId: string): Promise<void> {
-  const existing = await readAppearance(folderId)
-  const color = existing?.version === 1 ? existing.color : existing?.color
-  const parts = appearanceParts(existing)
-  await writeAppearance(folderId, { color, pinned: parts.pinned, favorite: parts.favorite })
+  await serializeAppearanceWrite(folderId, async () => {
+    const existing = await readAppearance(folderId)
+    const color = existing?.version === 1 ? existing.color : existing?.color
+    const parts = appearanceParts(existing)
+    await writeAppearance(folderId, { color, pinned: parts.pinned, favorite: parts.favorite })
+  })
 }
 
 export async function saveFolderPinned(folderId: string, pinned: boolean): Promise<void> {
-  const existing = await readAppearance(folderId)
-  const parts = appearanceParts(existing)
-  await writeAppearance(folderId, { ...parts, pinned })
+  await serializeAppearanceWrite(folderId, async () => {
+    const existing = await readAppearance(folderId)
+    const parts = appearanceParts(existing)
+    await writeAppearance(folderId, { ...parts, pinned })
+  })
 }
 
 export async function saveFolderFavorite(folderId: string, favorite: boolean): Promise<void> {
-  const existing = await readAppearance(folderId)
-  const parts = appearanceParts(existing)
-  await writeAppearance(folderId, { ...parts, favorite })
+  await serializeAppearanceWrite(folderId, async () => {
+    const existing = await readAppearance(folderId)
+    const parts = appearanceParts(existing)
+    await writeAppearance(folderId, { ...parts, favorite })
+  })
 }
 
 export function defaultFolderColor(): string {

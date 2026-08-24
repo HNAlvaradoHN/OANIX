@@ -6,7 +6,9 @@ import {
 
 const FOLDER_COVER_RECORD = 'folder-cover'
 const MAX_SOURCE_BYTES = 8 * 1024 * 1024
-const COVER_SIZE = 256
+const MAX_COVER_EDGE = 1440
+const MAX_STORED_BYTES = 900 * 1024
+const COVER_QUALITIES = [.84, .76, .68]
 
 export interface FolderCoverRecord {
   version: 1
@@ -43,37 +45,59 @@ function blobToDataUrl(blob: Blob): Promise<string> {
   })
 }
 
+function fittedCoverSize(width: number, height: number) {
+  if (width <= 0 || height <= 0) throw new Error('La imagen no tiene dimensiones válidas.')
+  const scale = Math.min(1, MAX_COVER_EDGE / Math.max(width, height))
+  return {
+    width: Math.max(1, Math.round(width * scale)),
+    height: Math.max(1, Math.round(height * scale)),
+  }
+}
+
+async function encodeCover(canvas: HTMLCanvasElement): Promise<Blob> {
+  let smallest: Blob | null = null
+
+  for (const type of ['image/webp', 'image/jpeg']) {
+    for (const quality of COVER_QUALITIES) {
+      const candidate = await canvasToBlob(canvas, type, quality)
+      if (!candidate) continue
+      if (!smallest || candidate.size < smallest.size) smallest = candidate
+      if (candidate.size <= MAX_STORED_BYTES) return candidate
+    }
+  }
+
+  if (!smallest) throw new Error('No se pudo comprimir la imagen.')
+  return smallest
+}
+
 export async function prepareFolderCover(file: File): Promise<string> {
   assertImageFile(file)
   const objectUrl = URL.createObjectURL(file)
 
   try {
     const image = await loadImage(objectUrl)
+    const size = fittedCoverSize(image.naturalWidth, image.naturalHeight)
     const canvas = document.createElement('canvas')
-    canvas.width = COVER_SIZE
-    canvas.height = COVER_SIZE
+    canvas.width = size.width
+    canvas.height = size.height
     const context = canvas.getContext('2d')
-    if (!context) throw new Error('No se pudo preparar la miniatura.')
+    if (!context) throw new Error('No se pudo preparar la imagen.')
 
-    const sourceSize = Math.min(image.naturalWidth, image.naturalHeight)
-    const sourceX = Math.max(0, (image.naturalWidth - sourceSize) / 2)
-    const sourceY = Math.max(0, (image.naturalHeight - sourceSize) / 2)
+    context.imageSmoothingEnabled = true
+    context.imageSmoothingQuality = 'high'
     context.drawImage(
       image,
-      sourceX,
-      sourceY,
-      sourceSize,
-      sourceSize,
       0,
       0,
-      COVER_SIZE,
-      COVER_SIZE,
+      image.naturalWidth,
+      image.naturalHeight,
+      0,
+      0,
+      size.width,
+      size.height,
     )
 
-    const webp = await canvasToBlob(canvas, 'image/webp', .82)
-    const output = webp ?? await canvasToBlob(canvas, 'image/jpeg', .84)
-    if (!output) throw new Error('No se pudo comprimir la imagen.')
-    return blobToDataUrl(output)
+    return blobToDataUrl(await encodeCover(canvas))
   } finally {
     URL.revokeObjectURL(objectUrl)
   }
