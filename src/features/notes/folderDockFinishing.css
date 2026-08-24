@@ -11,7 +11,7 @@ html.oanix-v383-visual body .oanix-folder-card__name {
   z-index: 65 !important;
   left: 8px !important;
   right: 8px !important;
-  bottom: 7px !important;
+  bottom: 34px !important;
   display: block !important;
   overflow: hidden !important;
   color: var(--v383-text) !important;
@@ -27,8 +27,9 @@ html.oanix-v383-visual body .oanix-folder-card__name {
 
 html.oanix-v383-visual body .oanix-folder-card__gear {
   top: auto !important;
-  right: 7px !important;
-  bottom: 27px !important;
+  right: auto !important;
+  left: 50% !important;
+  bottom: 5px !important;
   width: 25px !important;
   height: 25px !important;
   border: 1px solid rgba(255,255,255,.42) !important;
@@ -37,8 +38,10 @@ html.oanix-v383-visual body .oanix-folder-card__gear {
   color: color-mix(in srgb,var(--v383-text) 76%,transparent) !important;
   box-shadow: 0 4px 12px rgba(15,23,42,.12), inset 0 1px 1px rgba(255,255,255,.55) !important;
   font-size: 0 !important;
+  transform: translateX(-50%) !important;
   backdrop-filter: blur(10px) !important;
   -webkit-backdrop-filter: blur(10px) !important;
+  touch-action: manipulation !important;
 }
 
 html.oanix-v383-visual body .oanix-folder-card__gear::before {
@@ -61,7 +64,7 @@ html.oanix-v383-visual body .oanix-folder-card__gear:hover,
 html.oanix-v383-visual body .oanix-folder-card__gear:active {
   background: color-mix(in srgb,#3b82f6 14%,var(--v383-card)) !important;
   color: #2563eb !important;
-  transform: translateY(-1px) !important;
+  transform: translate(-50%,-1px) !important;
 }
 
 html.oanix-v383-visual[data-oanix-theme='classic-night'] body .oanix-folder-card__gear {
