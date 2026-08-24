@@ -64,7 +64,8 @@
 
 /* Explicit removal for inserted atomic blocks that cannot be consumed safely by
    ordinary contenteditable deletion. Code, images and contacts already own their
-   removal controls; this covers checklists and daily entries. */
+   removal controls; checklist keeps its explicit control. Daily entry removal
+   remains an internal protected path but is not shown in the normal note UI. */
 .editor-atomic-block__remove {
   justify-self: end;
   min-height: 2.15rem;
@@ -92,7 +93,7 @@
 }
 
 .editor-daily-entry > .editor-atomic-block__remove {
-  margin-top: -.15rem;
+  display: none !important;
 }
 
 /* Note deletion is authoritative and must block navigation until the encrypted
