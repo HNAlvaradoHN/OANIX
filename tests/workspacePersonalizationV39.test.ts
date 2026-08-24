@@ -8,6 +8,7 @@ const folderAppearance = readFileSync('src/features/folders/folderAppearanceServ
 const runtime = readFileSync('src/features/notes/WorkspacePersonalizationRuntime.tsx', 'utf8')
 const css = readFileSync('src/features/notes/workspacePersonalization.css', 'utf8')
 const main = readFileSync('src/main.tsx', 'utf8')
+const app = readFileSync('src/app/App.tsx', 'utf8')
 const gate = readFileSync('src/app/WorkspaceRuntimeGate.tsx', 'utf8')
 const bridge = readFileSync('src/features/folders/FolderCustomizerBridgeRuntime.tsx', 'utf8')
 const bridgeCss = readFileSync('src/features/folders/folderCustomizerBridge.css', 'utf8')
@@ -79,10 +80,11 @@ test('la nueva presentación usa el logo real y mantiene fondo legible con Día 
   assert.match(css, /env\(safe-area-inset-bottom\)/)
 })
 
-test('los runtimes del workspace se montan solo cuando la bóveda ya mostró notes-sidebar', () => {
-  assert.match(main, /WorkspaceRuntimeGate/)
-  assert.match(main, /<WorkspaceRuntimeGate \/>/)
-  assert.match(gate, /document\.querySelector\('\.notes-sidebar'\)/)
+test('los runtimes del workspace se montan con el ciclo de vida desbloqueado sin observar notes-sidebar', () => {
+  assert.doesNotMatch(main, /WorkspaceRuntimeGate/)
+  assert.match(app, /<WorkspaceRuntimeGate \/>/)
+  assert.doesNotMatch(gate, /document\.querySelector/)
+  assert.doesNotMatch(gate, /MutationObserver/)
   assert.match(gate, /<WorkspacePersonalizationRuntime \/>/)
   assert.match(gate, /<FolderCustomizerBridgeRuntime \/>[\s\S]*<WorkspacePersonalizationRuntime \/>/)
   assert.doesNotMatch(runtime + css + gate, /cdn\.tailwindcss|unpkg\.com|unsplash|picsum/)

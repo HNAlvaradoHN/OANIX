@@ -4,6 +4,8 @@ import test from 'node:test'
 
 const runtime = readFileSync('src/features/editor/EditorOperationRuntime.tsx', 'utf8')
 const polish = readFileSync('src/features/editor/editorOperationPolish.css', 'utf8')
+const trailing = readFileSync('src/features/editor/editorTrailingWorkspace.css', 'utf8')
+const app = readFileSync('src/app/App.tsx', 'utf8')
 const gate = readFileSync('src/app/WorkspaceRuntimeGate.tsx', 'utf8')
 
 test('large code paste yields a paint before syncing the complete note model', () => {
@@ -23,10 +25,11 @@ test('image insertion exposes blocking processing feedback until the image block
   assert.match(runtime, /MutationObserver/)
 })
 
-test('mobile note canvas keeps breathing room and constrains inline code height', () => {
-  assert.match(polish, /\.notes-shell--open \.note-canvas[\s\S]*padding-bottom:/)
-  assert.match(polish, /\.editor-code-block__content[\s\S]*max-height: clamp\(10rem, 30dvh, 15rem\) !important/)
-  assert.match(polish, /overflow-y: auto !important/)
+test('mobile note canvas keeps one runway authority and constrains inline code height', () => {
+  assert.doesNotMatch(polish, /\.notes-shell--open \.note-canvas/)
+  assert.match(trailing, /\.notes-shell--open \.note-canvas[\s\S]*padding-bottom:/)
+  assert.match(trailing, /\.editor-code-block__content[\s\S]*max-height: clamp\(10rem, 30dvh, 15rem\) !important/)
+  assert.match(trailing, /overflow-y: auto !important/)
 })
 
 test('note deletion feedback blocks interaction behind the delete operation', () => {
@@ -34,9 +37,9 @@ test('note deletion feedback blocks interaction behind the delete operation', ()
   assert.match(polish, /#oanix-note-delete-feedback[\s\S]*height: 100dvh !important/)
 })
 
-test('editor operation runtime only mounts after the workspace gate opens', () => {
+test('editor operation runtime mounts with the unlocked app lifecycle', () => {
+  assert.match(app, /<WorkspaceRuntimeGate \/>/)
   assert.match(gate, /import \{ EditorOperationRuntime \}/)
-  const activeGuard = gate.indexOf('if (!active) return null')
-  const runtimeMount = gate.indexOf('<EditorOperationRuntime />')
-  assert.ok(activeGuard >= 0 && runtimeMount > activeGuard)
+  assert.match(gate, /<EditorOperationRuntime \/>/)
+  assert.doesNotMatch(gate, /if \(!active\) return null/)
 })

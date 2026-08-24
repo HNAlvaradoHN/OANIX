@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
 const main = readFileSync('src/main.tsx', 'utf8')
+const app = readFileSync('src/app/App.tsx', 'utf8')
 const gate = readFileSync('src/app/WorkspaceRuntimeGate.tsx', 'utf8')
 const catalog = readFileSync('src/features/personalization/themeCatalog.ts', 'utf8')
 const systemBridge = readFileSync('src/features/personalization/systemThemeBridge.ts', 'utf8')
@@ -125,7 +126,7 @@ test('v38 organic CSS owns workspace surfaces instead of competing Day overrides
   const dayIndex = main.indexOf("./styles/classic-day-hard-fix.css")
   const visualIndex = main.indexOf("./features/notes/v383WorkspaceVisual.css")
   assert.ok(dayIndex >= 0 && visualIndex > dayIndex)
-  assert.match(main, /<WorkspaceRuntimeGate \/>/)
+  assert.match(app, /<WorkspaceRuntimeGate \/>/)
   assert.match(gate, /<OrganicWorkspaceRuntime \/>/)
 })
 

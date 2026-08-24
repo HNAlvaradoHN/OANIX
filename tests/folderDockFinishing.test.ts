@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
 const main = readFileSync('src/main.tsx', 'utf8')
+const app = readFileSync('src/app/App.tsx', 'utf8')
 const gate = readFileSync('src/app/WorkspaceRuntimeGate.tsx', 'utf8')
 const runtime = readFileSync('src/features/notes/FolderDockFinishingRuntime.tsx', 'utf8')
 const css = readFileSync('src/features/notes/folderDockFinishing.css', 'utf8')
@@ -29,7 +30,7 @@ test('folder appearance repaint is idempotent so its MutationObserver cannot sel
 })
 
 test('folder dock finishing stays mounted before the final v38.3 visual runtime after unlock', () => {
-  assert.match(main, /<WorkspaceRuntimeGate \/>/)
+  assert.match(app, /<WorkspaceRuntimeGate \/>/)
   const runtimeIndex = gate.indexOf('<FolderDockFinishingRuntime />')
   const visualRuntimeIndex = gate.indexOf('<V383WorkspaceVisualRuntime />')
   const finalCssIndex = main.indexOf("./features/notes/v383WorkspaceVisual.css")

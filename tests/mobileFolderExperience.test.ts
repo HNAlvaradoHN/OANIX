@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
 const main = readFileSync('src/main.tsx', 'utf8')
+const app = readFileSync('src/app/App.tsx', 'utf8')
 const gate = readFileSync('src/app/WorkspaceRuntimeGate.tsx', 'utf8')
 const createRuntime = readFileSync('src/features/folders/FolderCreationRuntime.tsx', 'utf8')
 const createCss = readFileSync('src/features/folders/folderCreation.css', 'utf8')
@@ -17,10 +18,11 @@ test('approved workspace class is present before the first React paint', () => {
   assert.match(main, /document\.body\.classList\.add\('oanix-v383-visual'\)/)
 })
 
-test('workspace-dependent runtimes wait for the unlocked notes shell instead of hydrating late from the lock screen', () => {
-  assert.match(main, /<WorkspaceRuntimeGate \/>/)
-  assert.match(gate, /document\.querySelector\('\.notes-sidebar'\)/)
-  assert.match(gate, /if \(!active\) return null/)
+test('workspace-dependent runtimes mount with the unlocked app instead of observing the lock screen DOM', () => {
+  assert.doesNotMatch(main, /WorkspaceRuntimeGate/)
+  assert.match(app, /<WorkspaceRuntimeGate \/>/)
+  assert.doesNotMatch(gate, /MutationObserver/)
+  assert.doesNotMatch(gate, /document\.querySelector/)
   assert.match(gate, /<OrganicWorkspaceRuntime \/>/)
   assert.match(gate, /<FolderAppearanceRuntime \/>/)
   assert.match(gate, /<FolderMobileDragRuntime \/>/)
