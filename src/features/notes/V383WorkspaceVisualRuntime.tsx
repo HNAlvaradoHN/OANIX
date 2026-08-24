@@ -41,11 +41,14 @@ export function V383WorkspaceVisualRuntime() {
     body.classList.add('oanix-v383-visual')
     syncNoteDetailState()
 
-    const shellObserver = shell ? new MutationObserver(syncNoteDetailState) : null
-    shellObserver?.observe(shell, {
-      attributes: true,
-      attributeFilter: ['class'],
-    })
+    let shellObserver: MutationObserver | null = null
+    if (shell) {
+      shellObserver = new MutationObserver(syncNoteDetailState)
+      shellObserver.observe(shell, {
+        attributes: true,
+        attributeFilter: ['class'],
+      })
+    }
 
     let backgroundObserver: MutationObserver | null = null
     let backgroundFrame = 0
