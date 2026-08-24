@@ -1,23 +1,26 @@
 /* Final refinements for the approved workspace contract. */
 
-/* Día should keep depth and separation instead of becoming a flat white sheet. */
+/* --------------------------------------------------------------------------
+   Classic Day: same depth as Night, but with the warm/glass v38 reference.
+   The folder cover remains visible instead of being replaced by a white sheet.
+   -------------------------------------------------------------------------- */
 html.oanix-v383-visual[data-oanix-theme='classic-day'] {
-  --v383-bg-body: #dbe4ee;
-  --v383-text: #1f2a3a;
+  --v383-bg-body: #cbd3dc;
+  --v383-text: #202d3d;
   --v383-muted: #526174;
-  --v383-border: rgba(51,65,85,.16);
-  --v383-card: rgba(245,248,252,.78);
-  --v383-chip: rgba(248,250,252,.58);
-  --v383-header: rgba(239,244,249,.72);
-  --v383-dock: linear-gradient(180deg,rgba(238,244,250,.64),rgba(218,228,238,.78));
-  --v383-shadow: rgba(51,65,85,.14);
-  --v383-input: rgba(247,250,253,.78);
+  --v383-border: rgba(255,255,255,.46);
+  --v383-card: rgba(232,237,243,.84);
+  --v383-chip: rgba(243,246,249,.46);
+  --v383-header: rgba(232,119,110,.76);
+  --v383-dock: linear-gradient(180deg,rgba(219,225,231,.74),rgba(181,191,201,.82));
+  --v383-shadow: rgba(31,41,55,.18);
+  --v383-input: rgba(244,247,250,.84);
 }
 
 html.oanix-v383-visual[data-oanix-theme='classic-day'] body {
   background:
-    radial-gradient(circle at 18% 10%,rgba(96,165,250,.10),transparent 32%),
-    linear-gradient(145deg,#eef3f8,#d4dee9) !important;
+    radial-gradient(circle at 76% 8%, rgba(236,116,105,.24), transparent 32%),
+    linear-gradient(145deg,#dbe2e9,#bcc7d1) !important;
 }
 
 /* classic-day-hard-fix keeps the locked vault white. Once the notes workspace exists,
@@ -28,60 +31,101 @@ html.oanix-v383-visual[data-oanix-theme='classic-day'] body:has(.notes-shell) > 
 
 html.oanix-v383-visual[data-oanix-theme='classic-day'] .oanix-organic-background:not(.oanix-organic-background--covered) {
   background:
-    radial-gradient(circle at 74% 18%,color-mix(in srgb,var(--oanix-organic-folder-color,#64748b) 18%,transparent),transparent 34%),
-    radial-gradient(circle at 18% 82%,rgba(59,130,246,.10),transparent 34%),
-    linear-gradient(145deg,#edf3f8,#d4dee9) !important;
+    radial-gradient(circle at 64% 18%, color-mix(in srgb,var(--oanix-organic-folder-color,#64748b) 22%,transparent), transparent 34%),
+    linear-gradient(180deg, rgba(238,116,105,.78) 0 24%, rgba(204,213,222,.94) 58%, rgba(171,183,195,.98) 100%) !important;
 }
 
 html.oanix-v383-visual[data-oanix-theme='classic-day'] .oanix-organic-background:not(.oanix-organic-background--covered)::before {
-  background: linear-gradient(180deg,rgba(219,228,238,.70),rgba(219,228,238,.08) 38%,rgba(219,228,238,.08) 64%,rgba(219,228,238,.72)) !important;
+  background: linear-gradient(180deg,rgba(236,116,105,.18),rgba(255,255,255,.02) 38%,rgba(15,23,42,.06) 100%) !important;
   opacity: 1 !important;
 }
 
 html.oanix-v383-visual[data-oanix-theme='classic-day'] body .oanix-organic-background.oanix-organic-background--covered {
-  background: #cfd9e4 !important;
+  background: #aeb9c4 !important;
 }
 
 html.oanix-v383-visual[data-oanix-theme='classic-day'] body .oanix-organic-background.oanix-organic-background--covered::before {
   opacity: .72 !important;
-  filter: blur(18px) brightness(.76) saturate(.92) !important;
+  filter: blur(18px) brightness(.88) saturate(1.02) !important;
 }
 
 html.oanix-v383-visual[data-oanix-theme='classic-day'] body .oanix-organic-background.oanix-organic-background--covered::after {
   background-image:
-    linear-gradient(180deg,rgba(236,242,248,.10),rgba(219,228,238,.22)),
+    linear-gradient(180deg,rgba(235,111,103,.28),rgba(238,125,113,.12) 30%,rgba(15,23,42,.04) 72%,rgba(15,23,42,.12)),
     var(--oanix-organic-cover-image) !important;
+  background-size: cover, contain !important;
+  background-position: center, center !important;
+  background-repeat: no-repeat, no-repeat !important;
+  opacity: 1 !important;
+  filter: brightness(.98) saturate(.98) !important;
 }
 
 html.oanix-v383-visual[data-oanix-theme='classic-day'] .notes-header {
-  border-bottom-color: rgba(51,65,85,.14) !important;
-  box-shadow: 0 8px 24px rgba(51,65,85,.08) !important;
+  border-bottom-color: rgba(255,255,255,.36) !important;
+  background: linear-gradient(90deg,rgba(235,121,112,.88),rgba(232,126,113,.74)) !important;
+  box-shadow: 0 8px 25px rgba(62,45,48,.14), inset 0 1px 1px rgba(255,255,255,.18) !important;
+  backdrop-filter: blur(18px) saturate(1.04) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(1.04) !important;
+}
+
+html.oanix-v383-visual[data-oanix-theme='classic-day'] .notes-header__actions .icon-button,
+html.oanix-v383-visual[data-oanix-theme='classic-day'] .notes-header__actions .account-header-action,
+html.oanix-v383-visual[data-oanix-theme='classic-day'] .notes-header__actions .version-history-launcher {
+  color: #243244 !important;
 }
 
 html.oanix-v383-visual[data-oanix-theme='classic-day'] .note-row {
-  border-color: rgba(71,85,105,.17) !important;
-  box-shadow: 0 9px 26px rgba(51,65,85,.14), inset 0 1px 1px rgba(255,255,255,.72) !important;
+  border-color: rgba(255,255,255,.52) !important;
+  background: rgba(229,235,241,.86) !important;
+  box-shadow: 0 9px 27px rgba(45,55,66,.18), inset 0 1px 2px rgba(255,255,255,.62) !important;
+  backdrop-filter: blur(15px) saturate(.96) !important;
+  -webkit-backdrop-filter: blur(15px) saturate(.96) !important;
 }
 
 html.oanix-v383-visual[data-oanix-theme='classic-day'] .note-row__menu-button {
-  border-color: rgba(71,85,105,.13) !important;
-  background: rgba(241,245,249,.62) !important;
-  box-shadow: inset 0 1px 1px rgba(255,255,255,.70) !important;
+  border-color: rgba(255,255,255,.48) !important;
+  background: rgba(247,249,251,.52) !important;
+  box-shadow: 0 3px 9px rgba(45,55,66,.08), inset 0 1px 1px rgba(255,255,255,.72) !important;
 }
 
 html.oanix-v383-visual[data-oanix-theme='classic-day'] .oanix-folder-rail {
-  border-top-color: rgba(51,65,85,.15) !important;
-  box-shadow: 0 -12px 32px rgba(51,65,85,.10) !important;
+  border-top-color: rgba(255,255,255,.42) !important;
+  background: var(--v383-dock) !important;
+  box-shadow: 0 -12px 32px rgba(45,55,66,.14), inset 0 1px 1px rgba(255,255,255,.28) !important;
+  backdrop-filter: blur(18px) saturate(.94) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(.94) !important;
 }
 
-/* The category rail needs to read as a separate glass bar over the background. */
+html.oanix-v383-visual[data-oanix-theme='classic-day'] .oanix-folder-rail__item {
+  border-color: rgba(255,255,255,.36) !important;
+  background: rgba(229,234,240,.42) !important;
+  box-shadow: 0 8px 22px rgba(45,55,66,.12), inset 0 1px 1px rgba(255,255,255,.42) !important;
+}
+
+/* --------------------------------------------------------------------------
+   Stable first frame. Reserve the category rail height before its runtime mounts;
+   no fake loading screen and no vertical jump when the tags arrive.
+   -------------------------------------------------------------------------- */
+html.oanix-v383-visual .notes-sidebar:not(:has(.oanix-organic-tags-host)) .notes-list {
+  margin-top: 62px !important;
+}
+
+/* --------------------------------------------------------------------------
+   Category rail: separated glass surface plus real icon/color for saved tags.
+   -------------------------------------------------------------------------- */
 html.oanix-v383-visual .oanix-organic-tags-host {
   padding: 10px 20px 9px !important;
   border-bottom: 1px solid var(--v383-border) !important;
-  background: color-mix(in srgb,var(--v383-header) 82%,transparent) !important;
-  box-shadow: 0 7px 22px rgba(2,6,23,.08) !important;
+  background: color-mix(in srgb,var(--v383-header) 76%,transparent) !important;
+  box-shadow: 0 7px 22px rgba(2,6,23,.10) !important;
   backdrop-filter: blur(18px) saturate(1.08) !important;
   -webkit-backdrop-filter: blur(18px) saturate(1.08) !important;
+}
+
+html.oanix-v383-visual[data-oanix-theme='classic-day'] .oanix-organic-tags-host {
+  border-bottom-color: rgba(255,255,255,.34) !important;
+  background: linear-gradient(90deg,rgba(232,111,104,.44),rgba(231,124,111,.28)) !important;
+  box-shadow: 0 8px 24px rgba(70,46,49,.12) !important;
 }
 
 html.oanix-v383-visual[data-oanix-theme='classic-night'] .oanix-organic-tags-host {
@@ -98,30 +142,83 @@ html.oanix-v383-visual .oanix-organic-tags__scroll {
   padding-bottom: 4px !important;
 }
 
-/* The note already has a real back handler; keep its button visible on PC too. */
+html.oanix-v383-visual .oanix-organic-tag-chip[data-oanix-organic-tag-id] {
+  --oanix-tag-color: #2563eb;
+  border-color: color-mix(in srgb,var(--oanix-tag-color) 35%,var(--v383-border)) !important;
+  background: color-mix(in srgb,var(--oanix-tag-color) 10%,var(--v383-chip)) !important;
+}
+
+html.oanix-v383-visual .oanix-organic-tag-chip[data-oanix-organic-tag-id]::before {
+  content: attr(data-oanix-tag-icon) !important;
+  display: inline-grid !important;
+  place-items: center !important;
+  width: 17px !important;
+  min-width: 17px !important;
+  font-size: 13px !important;
+  line-height: 1 !important;
+}
+
+html.oanix-v383-visual .oanix-organic-tag-chip[data-oanix-organic-tag-id].is-active {
+  border-color: color-mix(in srgb,var(--oanix-tag-color) 70%,white) !important;
+  background: var(--oanix-tag-color) !important;
+  color: #fff !important;
+  box-shadow: 0 5px 16px color-mix(in srgb,var(--oanix-tag-color) 42%,transparent), inset 0 1px 1px rgba(255,255,255,.34) !important;
+}
+
+/* --------------------------------------------------------------------------
+   Note back action: pill button matching the reference instead of a square glyph.
+   The real NotesWorkspace handler remains untouched.
+   -------------------------------------------------------------------------- */
 html.oanix-v383-visual.oanix-note-detail-open .note-view__header .back-button {
   position: relative !important;
   inset: auto !important;
-  width: 38px !important;
-  height: 38px !important;
-  min-width: 38px !important;
-  min-height: 38px !important;
-  display: grid !important;
-  place-items: center !important;
+  width: auto !important;
+  height: 42px !important;
+  min-width: 96px !important;
+  min-height: 42px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
   visibility: visible !important;
   opacity: 1 !important;
-  margin: 0 2px 0 0 !important;
-  border: 1px solid color-mix(in srgb,var(--v383-text) 12%,transparent) !important;
-  border-radius: 12px !important;
-  background: color-mix(in srgb,var(--v383-header) 82%,transparent) !important;
+  margin: 0 5px 0 0 !important;
+  padding: 0 15px !important;
+  border: 1px solid color-mix(in srgb,var(--v383-text) 13%,transparent) !important;
+  border-radius: 14px !important;
+  background: color-mix(in srgb,var(--v383-header) 78%,transparent) !important;
   color: var(--v383-text) !important;
-  box-shadow: 0 5px 14px rgba(2,6,23,.10) !important;
-  font-size: 20px !important;
+  box-shadow: 0 6px 18px rgba(2,6,23,.10), inset 0 1px 1px rgba(255,255,255,.10) !important;
+  font-size: 0 !important;
+  font-weight: 850 !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+}
+
+html.oanix-v383-visual.oanix-note-detail-open .note-view__header .back-button::before {
+  content: '‹' !important;
+  display: inline-block !important;
+  color: currentColor !important;
+  font-size: 24px !important;
+  font-weight: 500 !important;
+  line-height: .8 !important;
+  transform: translateY(-1px) !important;
+}
+
+html.oanix-v383-visual.oanix-note-detail-open .note-view__header .back-button::after {
+  content: 'Volver' !important;
+  display: inline-block !important;
+  color: currentColor !important;
+  font-size: 13px !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
 }
 
 html.oanix-v383-visual.oanix-note-detail-open .note-view__header .back-button:hover,
 html.oanix-v383-visual.oanix-note-detail-open .note-view__header .back-button:focus-visible {
-  background: color-mix(in srgb,var(--v383-accent) 12%,var(--v383-header)) !important;
+  outline: none !important;
+  border-color: color-mix(in srgb,var(--v383-accent) 32%,transparent) !important;
+  background: color-mix(in srgb,var(--v383-accent) 10%,var(--v383-header)) !important;
   color: var(--v383-accent) !important;
 }
 
@@ -139,4 +236,21 @@ html.oanix-v383-visual .tag-assign-empty::after {
   font-size: 12px;
   line-height: 1.45;
   text-align: center;
+}
+
+@media (max-width: 520px) {
+  html.oanix-v383-visual .oanix-organic-tags-host {
+    padding-inline: 12px !important;
+  }
+
+  html.oanix-v383-visual .notes-sidebar:not(:has(.oanix-organic-tags-host)) .notes-list {
+    margin-top: 58px !important;
+  }
+
+  html.oanix-v383-visual.oanix-note-detail-open .note-view__header .back-button {
+    min-width: 88px !important;
+    height: 40px !important;
+    min-height: 40px !important;
+    padding-inline: 13px !important;
+  }
 }
