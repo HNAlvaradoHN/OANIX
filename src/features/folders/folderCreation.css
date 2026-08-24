@@ -189,6 +189,17 @@ html[data-oanix-theme='classic-day'] .oanix-folder-create__icons button {
   opacity: .62;
 }
 
+/* The folder dock is rendered at body level while these sheets live in the workspace
+   stacking context. During a modal sheet, move only the dock/control portals below the
+   workspace so the backdrop and footer remain authoritative and fully interactive. */
+html.oanix-folder-create-v2:has(.folder-dialog__panel[aria-label="Etiquetas de la nota"]) .oanix-folder-grid,
+html.oanix-folder-create-v2:has(.folder-dialog__panel[aria-label="Mover nota a carpeta"]) .oanix-folder-grid,
+html.oanix-folder-create-v2:has(.folder-dialog__panel[aria-label="Etiquetas de la nota"]) .oanix-organic-folder-controls,
+html.oanix-folder-create-v2:has(.folder-dialog__panel[aria-label="Mover nota a carpeta"]) .oanix-organic-folder-controls {
+  z-index: 5 !important;
+  pointer-events: none !important;
+}
+
 /* Note organizer sheets: these are the existing encrypted tag/folder flows,
    presented as a first-class part of the v38.3 workspace instead of the legacy dialog. */
 html.oanix-folder-create-v2 .folder-dialog:has(.folder-dialog__panel[aria-label="Etiquetas de la nota"]),
