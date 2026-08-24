@@ -8,6 +8,7 @@ import { FolderMobileDragRuntime } from '../features/folders/FolderMobileDragRun
 import { FolderOperationFeedbackRuntime } from '../features/folders/FolderOperationFeedbackRuntime'
 import { FolderTiltRuntime } from '../features/folders/FolderTiltRuntime'
 import { FolderDockFinishingRuntime } from '../features/notes/FolderDockFinishingRuntime'
+import { NoteCreationFeedbackRuntime } from '../features/notes/NoteCreationFeedbackRuntime'
 import { OrganicWorkspaceRuntime } from '../features/notes/OrganicWorkspaceRuntime'
 import { V383WorkspaceVisualRuntime } from '../features/notes/V383WorkspaceVisualRuntime'
 import { WorkspacePersonalizationRuntime } from '../features/notes/WorkspacePersonalizationRuntime'
@@ -35,6 +36,7 @@ export function WorkspaceRuntimeGate() {
   return (
     <>
       <EditorOperationRuntime />
+      <NoteCreationFeedbackRuntime />
       <FolderCustomizerBridgeRuntime />
       <OrganicWorkspaceRuntime />
       <FolderDockFinishingRuntime />
