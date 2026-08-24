@@ -2,10 +2,11 @@ import { useEffect } from 'react'
 import { persistFolderOrder } from './folderService'
 import './folderMobileDrag.css'
 
-const LONG_PRESS_MS = 340
-const MOVE_CANCEL_PX = 9
-const EDGE_SCROLL_PX = 54
-const MAX_SCROLL_PER_FRAME = 17
+const LONG_PRESS_MS = 320
+const MOVE_CANCEL_PX = 12
+const EDGE_SCROLL_PX = 58
+const MAX_SCROLL_PER_FRAME = 18
+const REFLOW_MS = 180
 
 interface TouchGesture {
   pointerId: number
@@ -17,6 +18,8 @@ interface TouchGesture {
   lastX: number
   lastY: number
   startScrollLeft: number
+  grabOffsetX: number
+  grabOffsetY: number
   moved: boolean
   dragging: boolean
   orderBefore: string[]
@@ -63,25 +66,57 @@ function createGhost(item: HTMLElement): HTMLElement {
 
 function positionGhost(gesture: TouchGesture) {
   if (!gesture.ghost) return
-  const rect = gesture.item.getBoundingClientRect()
-  gesture.ghost.style.left = `${gesture.lastX - rect.width / 2}px`
-  gesture.ghost.style.top = `${gesture.lastY - rect.height / 2}px`
+  gesture.ghost.style.left = `${gesture.lastX - gesture.grabOffsetX}px`
+  gesture.ghost.style.top = `${gesture.lastY - gesture.grabOffsetY}px`
+}
+
+function snapshotRects(rail: HTMLElement): Map<HTMLElement, DOMRect> {
+  return new Map(
+    Array.from(rail.querySelectorAll<HTMLElement>(':scope > .oanix-folder-rail__item[data-oanix-folder-id]'))
+      .map((item) => [item, item.getBoundingClientRect()] as const),
+  )
+}
+
+function animateReflow(rail: HTMLElement, before: Map<HTMLElement, DOMRect>) {
+  for (const item of Array.from(rail.querySelectorAll<HTMLElement>(':scope > .oanix-folder-rail__item[data-oanix-folder-id]'))) {
+    const previous = before.get(item)
+    if (!previous) continue
+    const next = item.getBoundingClientRect()
+    const dx = previous.left - next.left
+    const dy = previous.top - next.top
+    if (Math.abs(dx) < 1 && Math.abs(dy) < 1) continue
+    item.animate(
+      [
+        { transform: `translate(${dx}px, ${dy}px)` },
+        { transform: 'translate(0, 0)' },
+      ],
+      { duration: REFLOW_MS, easing: 'cubic-bezier(.2,.8,.2,1)' },
+    )
+  }
 }
 
 function reorderDomAtPoint(gesture: TouchGesture) {
-  const target = document.elementFromPoint(gesture.lastX, gesture.lastY)
-    ?.closest<HTMLElement>('.oanix-folder-rail__item[data-oanix-folder-id]')
-  if (!target || target === gesture.item || target.parentElement !== gesture.rail) return
+  const siblings = Array.from(
+    gesture.rail.querySelectorAll<HTMLElement>(':scope > .oanix-folder-rail__item[data-oanix-folder-id]'),
+  ).filter((item) => item !== gesture.item)
 
-  const rect = target.getBoundingClientRect()
-  const placeAfter = gesture.lastX > rect.left + rect.width / 2
-  if (placeAfter) {
-    const next = target.nextElementSibling
-    if (next === gesture.item) return
-    gesture.rail.insertBefore(gesture.item, next)
-  } else {
-    if (target.previousElementSibling === gesture.item) return
-    gesture.rail.insertBefore(gesture.item, target)
+  const beforeOrder = folderOrder(gesture.rail).join('|')
+  const beforeRects = snapshotRects(gesture.rail)
+  const insertionTarget = siblings.find((item) => {
+    const rect = item.getBoundingClientRect()
+    return gesture.lastX < rect.left + rect.width / 2
+  })
+
+  if (insertionTarget) gesture.rail.insertBefore(gesture.item, insertionTarget)
+  else gesture.rail.appendChild(gesture.item)
+
+  const changed = folderOrder(gesture.rail).join('|') !== beforeOrder
+  if (changed) {
+    animateReflow(gesture.rail, beforeRects)
+    gesture.item.animate(
+      [{ boxShadow: '0 0 0 0 rgba(59,130,246,0)' }, { boxShadow: '0 0 0 3px rgba(59,130,246,.24)' }],
+      { duration: 120, easing: 'ease-out' },
+    )
   }
 }
 
@@ -166,6 +201,7 @@ export function FolderMobileDragRuntime() {
       if (!item || !folderId || !rail?.classList.contains('oanix-folder-rail__scroll')) return
 
       event.stopPropagation()
+      const rect = item.getBoundingClientRect()
       gesture = {
         pointerId: event.pointerId,
         item,
@@ -176,6 +212,8 @@ export function FolderMobileDragRuntime() {
         lastX: event.clientX,
         lastY: event.clientY,
         startScrollLeft: rail.scrollLeft,
+        grabOffsetX: event.clientX - rect.left,
+        grabOffsetY: event.clientY - rect.top,
         moved: false,
         dragging: false,
         orderBefore: [],
