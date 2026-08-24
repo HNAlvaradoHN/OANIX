@@ -221,8 +221,13 @@ export function FolderGridRuntime() {
     }
 
     refreshTargets()
+    const workspace = document.querySelector<HTMLElement>('.notes-shell')
+    if (!workspace) {
+      return () => window.cancelAnimationFrame(frame)
+    }
+
     const observer = new MutationObserver(refreshTargets)
-    observer.observe(document.body, {
+    observer.observe(workspace, {
       childList: true,
       subtree: true,
       attributes: true,
