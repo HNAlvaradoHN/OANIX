@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { loadNotes } from '../notes/noteService'
 import type { NoteRecord } from '../notes/noteTypes'
