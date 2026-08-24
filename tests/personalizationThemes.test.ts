@@ -13,7 +13,7 @@ const workspacePersonalization = readFileSync('src/features/notes/WorkspacePerso
 const organicWorkspaceCss = readFileSync('src/features/notes/organicWorkspace.css', 'utf8')
 const menuCss = readFileSync('src/features/personalization/personalization.css', 'utf8')
 const workspaceMenuCss = readFileSync('src/features/personalization/personalization-workspace.css', 'utf8')
-const themesCss = readFileSync('src/styles/themes.css', 'utf8')
+const themeSurfaces = readFileSync('src/styles/theme-surfaces.css', 'utf8')
 const classicThemeContract = readFileSync('src/styles/classic-theme-contract.css', 'utf8')
 const notebookContract = readFileSync('src/styles/notebook-contract.css', 'utf8')
 const classicSurfacesCss = readFileSync('src/styles/classic-theme-surfaces.css', 'utf8')
@@ -45,11 +45,11 @@ test('theme choice is only a local UI preference and applies before React paints
   assert.doesNotMatch(catalog, /supabase|encrypted_records|sync_records/i)
   assert.match(main, /applyOanixTheme\(readSavedOanixTheme\(\), false\)/)
   assert.match(main, /<ThemeMenu \/>/)
-  assert.match(main, /styles\/themes\.css/)
+  assert.match(main, /styles\/theme-surfaces\.css/)
   assert.match(main, /styles\/classic-theme-contract\.css/)
   assert.match(main, /styles\/notebook-contract\.css/)
   assert.match(main, /styles\/classic-theme-surfaces\.css/)
-  assert.doesNotMatch(main, /base-themes\.css|notebook-polish\.css|final-visual-polish|classic-day-hard-fix/)
+  assert.doesNotMatch(main, /styles\/themes\.css|base-themes\.css|notebook-polish\.css|final-visual-polish|classic-day-hard-fix/)
 })
 
 test('the workspace three-dot menu keeps security but no longer duplicates Day Night', () => {
@@ -148,10 +148,10 @@ test('Android host never force-darkens web presets', () => {
   assert.doesNotMatch(androidStyles, /Theme\.AppCompat\.DayNight\.NoActionBar/)
 })
 
-test('theme layer fixes the three visual details found during review', () => {
-  assert.match(themesCss, /\.mobile-editor-dock[\s\S]*background: color-mix/)
-  assert.match(themesCss, /\.notes-tab[\s\S]*text-overflow: ellipsis/)
-  assert.match(themesCss, /\.note-title-field input[\s\S]*font-size: clamp\(1\.85rem, 4\.6cqw, 3\.25rem\)/)
+test('theme surface layer fixes the three visual details found during review', () => {
+  assert.match(themeSurfaces, /\.mobile-editor-dock[\s\S]*background: color-mix/)
+  assert.match(themeSurfaces, /\.notes-tab[\s\S]*text-overflow: ellipsis/)
+  assert.match(themeSurfaces, /\.note-title-field input[\s\S]*font-size: clamp\(1\.85rem, 4\.6cqw, 3\.25rem\)/)
 })
 
 test('notebook cues stay subtle and theme-aware', () => {
@@ -161,11 +161,11 @@ test('notebook cues stay subtle and theme-aware', () => {
   assert.doesNotMatch(notebookContract, /spiral|binder|paper texture/i)
 })
 
-test('shared theme layer still maps semantic tokens used by major surfaces', () => {
-  assert.match(themesCss, /--theme-bg:/)
-  assert.match(themesCss, /--theme-surface:/)
-  assert.match(themesCss, /--theme-accent:/)
-  assert.match(themesCss, /--theme-border:/)
-  assert.match(themesCss, /\.note-row[\s\S]*var\(--theme-surface-2\)/)
-  assert.match(themesCss, /\.editor-frame[\s\S]*var\(--theme-surface-2\)/)
+test('shared theme surface layer still maps semantic tokens used by major surfaces', () => {
+  assert.match(themeSurfaces, /--theme-bg:/)
+  assert.match(themeSurfaces, /--theme-surface:/)
+  assert.match(themeSurfaces, /--theme-accent:/)
+  assert.match(themeSurfaces, /--theme-border:/)
+  assert.match(themeSurfaces, /\.note-row[\s\S]*var\(--theme-surface-2\)/)
+  assert.match(themeSurfaces, /\.editor-frame[\s\S]*var\(--theme-surface-2\)/)
 })
