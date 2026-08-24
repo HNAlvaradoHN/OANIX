@@ -20,6 +20,12 @@ html.oanix-v383-visual[data-oanix-theme='classic-day'] body {
     linear-gradient(145deg,#eef3f8,#d4dee9) !important;
 }
 
+/* classic-day-hard-fix keeps the locked vault white. Once the notes workspace exists,
+   the app root must be transparent so the real folder background can remain visible. */
+html.oanix-v383-visual[data-oanix-theme='classic-day'] body:has(.notes-shell) > #root {
+  background: transparent !important;
+}
+
 html.oanix-v383-visual[data-oanix-theme='classic-day'] .oanix-organic-background:not(.oanix-organic-background--covered) {
   background:
     radial-gradient(circle at 74% 18%,color-mix(in srgb,var(--oanix-organic-folder-color,#64748b) 18%,transparent),transparent 34%),
