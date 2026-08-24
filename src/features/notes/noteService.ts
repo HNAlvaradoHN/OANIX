@@ -106,7 +106,7 @@ function enqueueNoteMutation(
       await saveNote(updated)
       if (historyError) reportHistoryWarning(noteId, historyError)
       return updated
-    })()
+    })
 
   mutationQueues.set(noteId, next)
   const cleanup = () => {
