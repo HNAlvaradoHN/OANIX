@@ -5,6 +5,7 @@ import { App } from './app/App'
 import { ThemeMenu } from './features/personalization/ThemeMenu'
 import { applyOanixTheme, readSavedOanixTheme } from './features/personalization/themeCatalog'
 import { PwaImagePreviewRuntime } from './features/images/PwaImagePreviewRuntime'
+import { FolderDockFinishingRuntime } from './features/notes/FolderDockFinishingRuntime'
 import { NoteMenuScrollDismiss } from './features/notes/NoteMenuScrollDismiss'
 import { NoteMenuViewportFit } from './features/notes/NoteMenuViewportFit'
 import { WorkspacePersonalizationRuntime } from './features/notes/WorkspacePersonalizationRuntime'
@@ -87,6 +88,7 @@ createRoot(document.getElementById('root')!).render(
     <NoteMenuScrollDismiss />
     <NoteMenuViewportFit />
     <OrganicWorkspaceRuntime />
+    <FolderDockFinishingRuntime />
     <WorkspacePersonalizationRuntime />
     <PrivacyStatusHelp />
     <FolderAppearanceRuntime />
