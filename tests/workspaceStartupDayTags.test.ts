@@ -37,6 +37,7 @@ test('day mode uses the same folder background stack as night while keeping ligh
   assert.match(main, /workspaceStateContract\.css[\s\S]*workspaceRefinements\.css/)
   assert.match(refinements, /--v383-card:\s*rgba\(232,237,243,\.84\)/)
   assert.doesNotMatch(refinements, /235,121,112|232,111,104|236,116,105/)
+  assert.match(refinements, /classic-day[\s\S]*body \.notes-shell,[\s\S]*body \.notes-sidebar[\s\S]*background:\s*transparent !important[\s\S]*background-image:\s*none !important/)
   assert.match(refinements, /classic-day[\s\S]*oanix-organic-background\.oanix-organic-background--covered::before[\s\S]*brightness\(\.42\) saturate\(\.88\)/)
   assert.match(refinements, /classic-day[\s\S]*oanix-organic-background\.oanix-organic-background--covered::after[\s\S]*rgba\(2,6,23,\.20\)[\s\S]*var\(--oanix-organic-cover-image\)/)
   assert.match(refinements, /\.notes-header[\s\S]*background:\s*rgba\(226,232,240,\.62\)/)

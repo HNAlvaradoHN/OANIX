@@ -27,6 +27,17 @@ html.oanix-v383-visual[data-oanix-theme='classic-day'] body:has(.notes-shell) > 
   background: transparent !important;
 }
 
+/* final-visual-polish has older, more specific Classic Day rules that paint both
+   the workspace shell and sidebar solid white (the faint grid seen on-device).
+   These two layers must be transparent so the same folder cover visible in Night
+   can actually show through in Day. */
+html.oanix-v383-visual[data-oanix-theme='classic-day'] body .notes-shell,
+html.oanix-v383-visual[data-oanix-theme='classic-day'] body .notes-sidebar {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
 /* No cover: Day uses the same neutral/folder-color atmosphere as Night. */
 html.oanix-v383-visual[data-oanix-theme='classic-day'] .oanix-organic-background:not(.oanix-organic-background--covered) {
   background:

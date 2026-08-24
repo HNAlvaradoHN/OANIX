@@ -17,6 +17,8 @@ test('folder drag keeps a lifted copy and a live in-rail drop slot', () => {
   assert.match(styles, /oanix-mobile-folder-drag-source[\s\S]*border:\s*2px dashed/)
   assert.match(styles, /oanix-mobile-folder-drag-source > \*[\s\S]*visibility:\s*hidden/)
   assert.match(styles, /oanix-mobile-folder-drag-ghost[\s\S]*scale\(1\.075\)/)
+  assert.match(styles, /html\.oanix-v383-visual body \.oanix-folder-rail__item\.oanix-mobile-folder-drag-source[\s\S]*background:\s*rgba\(59,130,246,\.10\) !important/)
+  assert.match(styles, /html\.oanix-v383-visual body \.oanix-folder-rail__item\.oanix-mobile-folder-drag-ghost[\s\S]*position:\s*fixed !important/)
 })
 
 test('edge auto-scroll continues reordering while the dragged card is held', () => {
