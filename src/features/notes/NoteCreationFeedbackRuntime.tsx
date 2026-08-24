@@ -104,12 +104,15 @@ export function NoteCreationFeedbackRuntime() {
     })
 
     const workspace = document.querySelector<HTMLElement>('.notes-shell')
-    const workspaceObserver = workspace ? new MutationObserver(sync) : null
-    workspaceObserver?.observe(workspace, {
-      childList: true,
-      subtree: true,
-      characterData: true,
-    })
+    const observedWorkspace = workspace ?? undefined
+    const workspaceObserver = observedWorkspace ? new MutationObserver(sync) : null
+    if (observedWorkspace && workspaceObserver) {
+      workspaceObserver.observe(observedWorkspace, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+      })
+    }
 
     return () => {
       document.removeEventListener('click', onClick, true)
