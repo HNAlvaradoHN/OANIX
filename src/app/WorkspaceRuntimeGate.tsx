@@ -6,7 +6,6 @@ import { FolderCreationRuntime } from '../features/folders/FolderCreationRuntime
 import { FolderCustomizerBridgeRuntime } from '../features/folders/FolderCustomizerBridgeRuntime'
 import { FolderMobileDragRuntime } from '../features/folders/FolderMobileDragRuntime'
 import { FolderOperationFeedbackRuntime } from '../features/folders/FolderOperationFeedbackRuntime'
-import { FolderTiltRuntime } from '../features/folders/FolderTiltRuntime'
 import { FolderDockFinishingRuntime } from '../features/notes/FolderDockFinishingRuntime'
 import { NoteCreationFeedbackRuntime } from '../features/notes/NoteCreationFeedbackRuntime'
 import { OrganicWorkspaceRuntime } from '../features/notes/OrganicWorkspaceRuntime'
@@ -46,7 +45,6 @@ export function WorkspaceRuntimeGate() {
       <FolderOperationFeedbackRuntime />
       <FolderCreationRuntime />
       <FolderMobileDragRuntime />
-      <FolderTiltRuntime />
       <TagCreationRuntime />
       <V383WorkspaceVisualRuntime />
     </>
