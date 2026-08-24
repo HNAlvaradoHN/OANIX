@@ -14,8 +14,8 @@ const organicWorkspaceCss = readFileSync('src/features/notes/organicWorkspace.cs
 const menuCss = readFileSync('src/features/personalization/personalization.css', 'utf8')
 const workspaceMenuCss = readFileSync('src/features/personalization/personalization-workspace.css', 'utf8')
 const themesCss = readFileSync('src/styles/themes.css', 'utf8')
-const baseThemesCss = readFileSync('src/styles/base-themes.css', 'utf8')
-const notebookCss = readFileSync('src/styles/notebook-polish.css', 'utf8')
+const classicThemeContract = readFileSync('src/styles/classic-theme-contract.css', 'utf8')
+const notebookContract = readFileSync('src/styles/notebook-contract.css', 'utf8')
 const classicSurfacesCss = readFileSync('src/styles/classic-theme-surfaces.css', 'utf8')
 const androidStyles = readFileSync('android/app/src/main/res/values/styles.xml', 'utf8')
 const mainActivity = readFileSync('android/app/src/main/java/io/github/hnalvaradohn/oanix/MainActivity.java', 'utf8')
@@ -46,9 +46,10 @@ test('theme choice is only a local UI preference and applies before React paints
   assert.match(main, /applyOanixTheme\(readSavedOanixTheme\(\), false\)/)
   assert.match(main, /<ThemeMenu \/>/)
   assert.match(main, /styles\/themes\.css/)
-  assert.match(main, /styles\/base-themes\.css/)
+  assert.match(main, /styles\/classic-theme-contract\.css/)
+  assert.match(main, /styles\/notebook-contract\.css/)
   assert.match(main, /styles\/classic-theme-surfaces\.css/)
-  assert.doesNotMatch(main, /final-visual-polish|classic-day-hard-fix/)
+  assert.doesNotMatch(main, /base-themes\.css|notebook-polish\.css|final-visual-polish|classic-day-hard-fix/)
 })
 
 test('the workspace three-dot menu keeps security but no longer duplicates Day Night', () => {
@@ -89,19 +90,19 @@ test('Day Night has one workspace control in the bottom folder capsule while sec
 })
 
 test('classic day and night define neutral semantic palettes', () => {
-  assert.match(baseThemesCss, /data-oanix-theme='classic-day'/)
-  assert.match(baseThemesCss, /data-oanix-theme='classic-night'/)
-  assert.match(baseThemesCss, /--theme-bg:/)
-  assert.match(baseThemesCss, /--theme-surface:/)
-  assert.match(baseThemesCss, /--theme-text:/)
-  assert.match(baseThemesCss, /classic-day'[\s\S]*--theme-bg: #eef2f5/)
-  assert.match(baseThemesCss, /classic-day'[\s\S]*--theme-accent: #2563eb/)
-  assert.match(baseThemesCss, /classic-night'[\s\S]*--theme-bg: #05070b/)
-  assert.match(baseThemesCss, /classic-night'[\s\S]*--theme-accent: #8aaeff/)
+  assert.match(classicThemeContract, /data-oanix-theme='classic-day'/)
+  assert.match(classicThemeContract, /data-oanix-theme='classic-night'/)
+  assert.match(classicThemeContract, /--theme-bg:/)
+  assert.match(classicThemeContract, /--theme-surface:/)
+  assert.match(classicThemeContract, /--theme-text:/)
+  assert.match(classicThemeContract, /classic-day'[\s\S]*--theme-bg: #eef2f5/)
+  assert.match(classicThemeContract, /classic-day'[\s\S]*--theme-accent: #2563eb/)
+  assert.match(classicThemeContract, /classic-night'[\s\S]*--theme-bg: #05070b/)
+  assert.match(classicThemeContract, /classic-night'[\s\S]*--theme-accent: #8aaeff/)
 })
 
 test('classic day explicitly opts out of mobile forced dark and hardens the shared workspace tokens', () => {
-  assert.match(baseThemesCss, /data-oanix-theme='classic-day'[^\n]*\{[\s\S]*color-scheme: only light !important/)
+  assert.match(classicThemeContract, /data-oanix-theme='classic-day'[^\n]*\{[\s\S]*color-scheme: only light !important/)
   assert.match(catalog, /const colorScheme = theme\.mode === 'light' \? 'only light' : 'dark'/)
   assert.match(catalog, /setProperty\('color-scheme', colorScheme, 'important'\)/)
   assert.match(catalog, /'--oanix-organic-card': 'rgba\(241,245,249,\.86\)'/)
@@ -109,10 +110,10 @@ test('classic day explicitly opts out of mobile forced dark and hardens the shar
 })
 
 test('v38 organic CSS owns workspace surfaces instead of competing Day overrides', () => {
-  assert.doesNotMatch(baseThemesCss, /data-oanix-theme='classic-day'[^\n]*\][\s\S]*\.notes-shell/)
-  assert.doesNotMatch(baseThemesCss, /data-oanix-theme='classic-day'[^\n]*\][\s\S]*\.notes-sidebar/)
-  assert.doesNotMatch(baseThemesCss, /data-oanix-theme='classic-day'[^\n]*\][\s\S]*\.notes-header/)
-  assert.doesNotMatch(baseThemesCss, /data-oanix-theme='classic-day'[^\n]*\][\s\S]*\.note-row\s*\{/)
+  assert.doesNotMatch(classicThemeContract, /data-oanix-theme='classic-day'[^\n]*\][\s\S]*\.notes-shell/)
+  assert.doesNotMatch(classicThemeContract, /data-oanix-theme='classic-day'[^\n]*\][\s\S]*\.notes-sidebar/)
+  assert.doesNotMatch(classicThemeContract, /data-oanix-theme='classic-day'[^\n]*\][\s\S]*\.notes-header/)
+  assert.doesNotMatch(classicThemeContract, /data-oanix-theme='classic-day'[^\n]*\][\s\S]*\.note-row\s*\{/)
   assert.doesNotMatch(classicSurfacesCss, /html\.oanix-classic-day \.notes-shell/)
   assert.doesNotMatch(classicSurfacesCss, /html\.oanix-classic-day \.notes-header/)
   assert.doesNotMatch(classicSurfacesCss, /html\.oanix-classic-day \.note-row\s*\{/)
@@ -154,10 +155,10 @@ test('theme layer fixes the three visual details found during review', () => {
 })
 
 test('notebook cues stay subtle and theme-aware', () => {
-  assert.match(notebookCss, /repeating-linear-gradient/)
-  assert.match(notebookCss, /var\(--theme-border\)/)
-  assert.match(notebookCss, /\.editor-frame::after/)
-  assert.doesNotMatch(notebookCss, /spiral|binder|paper texture/i)
+  assert.match(notebookContract, /repeating-linear-gradient/)
+  assert.match(notebookContract, /var\(--theme-border\)/)
+  assert.match(notebookContract, /\.editor-frame::after/)
+  assert.doesNotMatch(notebookContract, /spiral|binder|paper texture/i)
 })
 
 test('shared theme layer still maps semantic tokens used by major surfaces', () => {
