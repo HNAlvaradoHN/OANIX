@@ -11,6 +11,8 @@ import { NoteMenuViewportFit } from './features/notes/NoteMenuViewportFit'
 import { WorkspacePersonalizationRuntime } from './features/notes/WorkspacePersonalizationRuntime'
 import { PrivacyStatusHelp } from './features/privacy/PrivacyStatusHelp'
 import { FolderAppearanceRuntime } from './features/folders/FolderAppearanceRuntime'
+import { FolderCreationRuntime } from './features/folders/FolderCreationRuntime'
+import { FolderMobileDragRuntime } from './features/folders/FolderMobileDragRuntime'
 import { FolderTiltRuntime } from './features/folders/FolderTiltRuntime'
 import './features/folders/folderNavigationState.css'
 import './styles/global.css'
@@ -44,6 +46,11 @@ type OanixUpdateWindow = Window & {
 
 const oanixWindow = window as OanixUpdateWindow
 const isCapacitorBuild = import.meta.env.MODE === 'capacitor'
+
+// The approved workspace class must exist before React's first paint. Leaving this
+// to V383WorkspaceVisualRuntime.useEffect exposes the legacy card geometry for a frame.
+document.documentElement.classList.add('oanix-v383-visual')
+document.body.classList.add('oanix-v383-visual')
 
 // PWA uses the selected OANIX brand image.
 // Capacitor keeps the approved native identity until Android launcher assets are regenerated separately.
@@ -93,6 +100,8 @@ createRoot(document.getElementById('root')!).render(
     <WorkspacePersonalizationRuntime />
     <PrivacyStatusHelp />
     <FolderAppearanceRuntime />
+    <FolderCreationRuntime />
+    <FolderMobileDragRuntime />
     <FolderTiltRuntime />
     <V383WorkspaceVisualRuntime />
   </StrictMode>,

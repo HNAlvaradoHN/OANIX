@@ -1,0 +1,210 @@
+/* The old folder manager remains mounted only as the existing React state/CRUD bridge.
+   It is never shown once the focused creation experience is active. */
+html.oanix-folder-create-v2 .folder-dialog,
+body.oanix-folder-create-v2 .folder-dialog {
+  display: none !important;
+}
+
+.oanix-folder-create-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 6100;
+  display: grid;
+  place-items: center;
+  padding: max(14px, env(safe-area-inset-top)) 10px max(14px, env(safe-area-inset-bottom));
+  background: rgba(2, 6, 23, .68);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.oanix-folder-create {
+  width: min(360px, calc(100vw - 20px));
+  max-height: min(720px, calc(100dvh - 28px - env(safe-area-inset-top) - env(safe-area-inset-bottom)));
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  overflow: hidden;
+  padding: 22px 20px 18px;
+  border: 1px solid rgba(148, 163, 184, .14);
+  border-radius: 26px;
+  background: #172033;
+  color: #f8fafc;
+  box-shadow: 0 26px 70px rgba(0, 0, 0, .42);
+}
+
+html[data-oanix-theme='classic-day'] .oanix-folder-create {
+  border-color: rgba(100, 116, 139, .22);
+  background: #eef2f7;
+  color: #0f172a;
+}
+
+.oanix-folder-create header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #3b82f6;
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.oanix-folder-create header > span {
+  font-size: 19px;
+}
+
+.oanix-folder-create__field,
+.oanix-folder-create fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.oanix-folder-create__field > span,
+.oanix-folder-create legend {
+  display: block;
+  margin: 0 0 7px 4px;
+  color: #94a3b8;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .35px;
+}
+
+html[data-oanix-theme='classic-day'] .oanix-folder-create__field > span,
+html[data-oanix-theme='classic-day'] .oanix-folder-create legend {
+  color: #64748b;
+}
+
+.oanix-folder-create input {
+  width: 100%;
+  min-height: 43px;
+  padding: 0 13px;
+  border: 1px solid rgba(148, 163, 184, .16);
+  border-radius: 12px;
+  background: #0f172a;
+  color: #f8fafc;
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+}
+
+html[data-oanix-theme='classic-day'] .oanix-folder-create input {
+  border-color: rgba(100, 116, 139, .22);
+  background: #fff;
+  color: #0f172a;
+}
+
+.oanix-folder-create input:focus {
+  border-color: rgba(59, 130, 246, .76);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, .12);
+}
+
+.oanix-folder-create__colors {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 10px;
+}
+
+.oanix-folder-create__colors button {
+  width: 38px;
+  height: 38px;
+  justify-self: center;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  background: var(--oanix-folder-create-color);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, .18);
+}
+
+.oanix-folder-create__colors button.is-selected {
+  border-color: rgba(255, 255, 255, .92);
+  outline: 2px solid #3b82f6;
+  outline-offset: 1px;
+}
+
+.oanix-folder-create__icons {
+  max-height: 176px;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 7px;
+  padding: 1px 2px 4px;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+
+.oanix-folder-create__icons button {
+  aspect-ratio: 1;
+  min-width: 0;
+  border: 1px solid rgba(148, 163, 184, .13);
+  border-radius: 11px;
+  background: #101827;
+  color: inherit;
+  font-size: 17px;
+}
+
+html[data-oanix-theme='classic-day'] .oanix-folder-create__icons button {
+  border-color: rgba(100, 116, 139, .18);
+  background: #e2e8f0;
+}
+
+.oanix-folder-create__icons button.is-selected {
+  border-color: #3b82f6;
+  background: #2563eb;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .2);
+}
+
+.oanix-folder-create__error {
+  margin: -6px 2px 0;
+  color: #fb7185;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.oanix-folder-create footer {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.oanix-folder-create footer button {
+  min-height: 44px;
+  border: 0;
+  border-radius: 11px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.oanix-folder-create footer .is-cancel {
+  background: #334155;
+  color: #fff;
+}
+
+.oanix-folder-create footer .is-primary {
+  background: #2563eb;
+  color: #fff;
+}
+
+.oanix-folder-create footer button:disabled {
+  opacity: .62;
+}
+
+@media (max-width: 360px) {
+  .oanix-folder-create {
+    gap: 15px;
+    padding: 19px 16px 16px;
+  }
+
+  .oanix-folder-create__colors {
+    gap: 6px;
+  }
+
+  .oanix-folder-create__colors button {
+    width: 34px;
+    height: 34px;
+  }
+
+  .oanix-folder-create__icons {
+    max-height: 156px;
+  }
+}

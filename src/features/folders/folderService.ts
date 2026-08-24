@@ -109,3 +109,27 @@ export async function reorderFolder(
     return folder ? [folder] : []
   })
 }
+
+export async function persistFolderOrder(folderIds: string[]): Promise<FolderRecord[]> {
+  const folders = await loadFolders()
+  const currentIds = folders.map((folder) => folder.id)
+  const nextIds = [...folderIds]
+
+  if (nextIds.length !== currentIds.length || new Set(nextIds).size !== nextIds.length) {
+    throw new Error('El orden de carpetas no es válido.')
+  }
+
+  const currentSet = new Set(currentIds)
+  if (nextIds.some((id) => !currentSet.has(id))) {
+    throw new Error('El orden de carpetas cambió mientras se estaba editando.')
+  }
+
+  if (nextIds.every((id, index) => id === currentIds[index])) return folders
+
+  await saveFolderOrder(nextIds)
+  const byId = new Map(folders.map((folder) => [folder.id, folder]))
+  return nextIds.flatMap((id) => {
+    const folder = byId.get(id)
+    return folder ? [folder] : []
+  })
+}
