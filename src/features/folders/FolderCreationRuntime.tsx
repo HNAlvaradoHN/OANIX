@@ -1,9 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
 import {
   DEFAULT_FOLDER_COLOR,
   DEFAULT_FOLDER_ICON,
-  FOLDER_COLOR_PRESETS,
   FOLDER_ICON_OPTIONS,
   type FolderIcon,
 } from './folderAppearanceCatalog'
@@ -83,7 +82,7 @@ export function FolderCreationRuntime() {
       const target = event.target
       if (!(target instanceof Element)) return
       if (!target.closest('.notes-create-fab, .empty-action')) return
-      if (!legacyDialog() && !open) return
+      if (!legacyDialog()) return
       suppressLegacyOpenRef.current = true
       setOpen(false)
       closeLegacyDialog()
@@ -99,7 +98,7 @@ export function FolderCreationRuntime() {
       root.classList.remove('oanix-folder-create-v2')
       body.classList.remove('oanix-folder-create-v2')
     }
-  }, [open])
+  }, [])
 
   async function createFromLegacyHandler() {
     const normalizedName = name.trim().replace(/\s+/g, ' ')
@@ -130,7 +129,7 @@ export function FolderCreationRuntime() {
       await nextFrame()
       createButton.click()
 
-      let created = null as Awaited<ReturnType<typeof loadFolders>>[number] | null
+      let created: Awaited<ReturnType<typeof loadFolders>>[number] | null = null
       for (let attempt = 0; attempt < POLL_ATTEMPTS; attempt += 1) {
         const current = await loadFolders()
         created = current.find((folder) => !beforeIds.has(folder.id)) ?? null
@@ -184,7 +183,7 @@ export function FolderCreationRuntime() {
                 key={candidate}
                 type="button"
                 className={candidate === color ? 'is-selected' : ''}
-                style={{ '--oanix-folder-create-color': candidate } as React.CSSProperties}
+                style={{ '--oanix-folder-create-color': candidate } as CSSProperties}
                 aria-label={`Usar color ${candidate}`}
                 onClick={() => setColor(candidate)}
               />
