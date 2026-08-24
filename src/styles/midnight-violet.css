@@ -1,0 +1,6 @@
+/* Midnight Violet visual authority.
+ * The foundation owns the original post-V3 visual contract; the surface layer
+ * contains the later graphite/navy refinements. Keep this import order stable.
+ */
+@import './midnight-violet-foundation.css';
+@import './midnight-violet-surfaces.css';
