@@ -100,13 +100,17 @@ export function TagCreationRuntime() {
     }
 
     scheduleDecorate()
-    const observer = new MutationObserver(scheduleDecorate)
-    observer.observe(document.body, { childList: true, subtree: true })
+    const workspace = document.querySelector<HTMLElement>('.notes-shell')
+    let observer: MutationObserver | null = null
+    if (workspace) {
+      observer = new MutationObserver(scheduleDecorate)
+      observer.observe(workspace, { childList: true, subtree: true })
+    }
     window.addEventListener('oanix:local-data-changed', handleLocalChange)
     document.addEventListener('click', handleClickCapture, true)
 
     return () => {
-      observer.disconnect()
+      observer?.disconnect()
       window.cancelAnimationFrame(frame)
       window.removeEventListener('oanix:local-data-changed', handleLocalChange)
       document.removeEventListener('click', handleClickCapture, true)
