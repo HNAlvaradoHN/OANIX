@@ -1,4 +1,4 @@
-/* Final mobile-only finishing for the compact note list.
+/* Mobile contract for the compact note list.
    Keeps the approved compact geometry while reserving explicit space for
    icon, text, category/time and menu so those zones never overlap. */
 
