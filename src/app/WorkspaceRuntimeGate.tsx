@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { EditorOperationRuntime } from '../features/editor/EditorOperationRuntime'
 import { FolderAppearanceRuntime } from '../features/folders/FolderAppearanceRuntime'
 import { FolderCreationRuntime } from '../features/folders/FolderCreationRuntime'
 import { FolderCustomizerBridgeRuntime } from '../features/folders/FolderCustomizerBridgeRuntime'
@@ -32,6 +33,7 @@ export function WorkspaceRuntimeGate() {
 
   return (
     <>
+      <EditorOperationRuntime />
       <FolderCustomizerBridgeRuntime />
       <OrganicWorkspaceRuntime />
       <FolderDockFinishingRuntime />
