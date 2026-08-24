@@ -24,7 +24,7 @@ export function NotebookPaperPreference() {
 
     syncHost()
     const observer = new MutationObserver(syncHost)
-    observer.observe(document.body, { childList: true, subtree: true })
+    observer.observe(document.body, { childList: true })
     window.addEventListener(NOTEBOOK_PAPER_CHANGE_EVENT, syncMode)
     return () => {
       observer.disconnect()
