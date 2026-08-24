@@ -17,6 +17,16 @@ export interface DecryptedRecord<T> {
   value: T
 }
 
+interface CachedDecryptedList {
+  vaultKey: CryptoKey
+  expiresAt: number | null
+  promise: Promise<DecryptedRecord<unknown>[]>
+}
+
+const DECRYPTED_LIST_CACHE_TTL_MS = 1500
+const decryptedListCache = new Map<string, CachedDecryptedList>()
+let encryptedRecordsReadInFlight: Promise<StoredEncryptedRecord[]> | null = null
+
 function encryptedRecordKey(recordType: string, recordId: string): string {
   if (!recordType || !recordId) {
     throw new Error('Encrypted records require a type and an id.')
@@ -44,6 +54,45 @@ function parseEncryptedRecordKey(key: string): { recordType: string; recordId: s
   return null
 }
 
+function invalidateEncryptedRecordCaches(recordType: string) {
+  decryptedListCache.delete(recordType)
+  encryptedRecordsReadInFlight = null
+}
+
+async function readAllEncryptedRecords(): Promise<StoredEncryptedRecord[]> {
+  if (encryptedRecordsReadInFlight) return encryptedRecordsReadInFlight
+
+  const requestPromise = (async () => {
+    const database = await openLocalDatabase()
+
+    try {
+      const transaction = database.transaction(ENCRYPTED_RECORDS_STORE, 'readonly')
+      const completion = transactionCompleted(transaction)
+      const request = transaction.objectStore(ENCRYPTED_RECORDS_STORE).getAll()
+
+      const storedRecords = await new Promise<StoredEncryptedRecord[]>((resolve, reject) => {
+        request.onsuccess = () => resolve((request.result as StoredEncryptedRecord[]) ?? [])
+        request.onerror = () => reject(request.error ?? new Error('Unable to list encrypted records.'))
+      })
+
+      await completion
+      return storedRecords
+    } finally {
+      database.close()
+    }
+  })()
+
+  encryptedRecordsReadInFlight = requestPromise
+
+  try {
+    return await requestPromise
+  } finally {
+    if (encryptedRecordsReadInFlight === requestPromise) {
+      encryptedRecordsReadInFlight = null
+    }
+  }
+}
+
 function notifyLocalEncryptedChange(recordType: string, recordId: string) {
   if (typeof window === 'undefined') return
   window.dispatchEvent(new CustomEvent('oanix:local-data-changed', {
@@ -65,6 +114,7 @@ export async function writeEncryptedRecord<T>(
   value: T,
 ): Promise<void> {
   const vaultKey = requireActiveVaultKey()
+  invalidateEncryptedRecordCaches(recordType)
   const context = { recordType, recordId }
   const payload = await encryptVaultJson(vaultKey, value, context)
   await retryTransientStorageOperation(async () => {
@@ -123,20 +173,19 @@ export async function listEncryptedRecords<T>(recordType: string): Promise<Decry
   }
 
   const vaultKey = requireActiveVaultKey()
-  const database = await openLocalDatabase()
+  const now = Date.now()
+  const cached = decryptedListCache.get(recordType)
 
-  try {
-    const transaction = database.transaction(ENCRYPTED_RECORDS_STORE, 'readonly')
-    const completion = transactionCompleted(transaction)
-    const request = transaction.objectStore(ENCRYPTED_RECORDS_STORE).getAll()
+  if (
+    cached
+    && cached.vaultKey === vaultKey
+    && (cached.expiresAt === null || cached.expiresAt > now)
+  ) {
+    return cached.promise as Promise<DecryptedRecord<T>[]>
+  }
 
-    const storedRecords = await new Promise<StoredEncryptedRecord[]>((resolve, reject) => {
-      request.onsuccess = () => resolve((request.result as StoredEncryptedRecord[]) ?? [])
-      request.onerror = () => reject(request.error ?? new Error('Unable to list encrypted records.'))
-    })
-
-    await completion
-
+  const promise = (async () => {
+    const storedRecords = await readAllEncryptedRecords()
     const matchingRecords = storedRecords.flatMap((storedRecord) => {
       const parsed = parseEncryptedRecordKey(storedRecord.key)
       return parsed?.recordType === recordType
@@ -150,13 +199,32 @@ export async function listEncryptedRecords<T>(recordType: string): Promise<Decry
         value: await decryptVaultJson<T>(vaultKey, payload, { recordType, recordId }),
       })),
     )
-  } finally {
-    database.close()
+  })()
+
+  const cacheEntry: CachedDecryptedList = {
+    vaultKey,
+    expiresAt: null,
+    promise: promise as Promise<DecryptedRecord<unknown>[]>,
+  }
+  decryptedListCache.set(recordType, cacheEntry)
+
+  try {
+    const records = await promise
+    if (decryptedListCache.get(recordType) === cacheEntry) {
+      cacheEntry.expiresAt = Date.now() + DECRYPTED_LIST_CACHE_TTL_MS
+    }
+    return records
+  } catch (error) {
+    if (decryptedListCache.get(recordType) === cacheEntry) {
+      decryptedListCache.delete(recordType)
+    }
+    throw error
   }
 }
 
 export async function deleteEncryptedRecord(recordType: string, recordId: string): Promise<void> {
   requireActiveVaultKey()
+  invalidateEncryptedRecordCaches(recordType)
   const database = await openLocalDatabase()
 
   try {
