@@ -6,9 +6,19 @@ import {
   saveTag,
   saveTagOrder,
 } from '../../storage/repositories/tagRepository'
-import { normalizeTagName, type TagRecord } from './tagTypes'
+import {
+  DEFAULT_TAG_COLOR,
+  DEFAULT_TAG_ICON,
+  normalizeTagName,
+  type TagRecord,
+} from './tagTypes'
 
 const mutationQueues = new Map<string, Promise<unknown>>()
+
+export interface TagAppearanceDraft {
+  icon?: string
+  color?: string
+}
 
 function createTagId(): string {
   if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID()
@@ -70,13 +80,15 @@ export async function loadTags(): Promise<TagRecord[]> {
   return applyTagOrder(tags, orderedIds)
 }
 
-export async function createTag(name: string): Promise<TagRecord> {
+export async function createTag(name: string, appearance: TagAppearanceDraft = {}): Promise<TagRecord> {
   const existingTags = await loadTags()
   const now = new Date().toISOString()
   const tag: TagRecord = {
     version: 1,
     id: createTagId(),
     name: normalizeTagName(name),
+    icon: appearance.icon || DEFAULT_TAG_ICON,
+    color: appearance.color || DEFAULT_TAG_COLOR,
     createdAt: now,
     updatedAt: now,
   }
