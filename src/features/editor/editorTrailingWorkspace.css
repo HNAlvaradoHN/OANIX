@@ -4,17 +4,29 @@
    the persisted editor model. */
 
 @media (max-width: 720px) {
-  html.oanix-v383-visual.oanix-note-detail-open body .notes-shell--open,
-  html.oanix-v383-visual.oanix-note-detail-open body .notes-shell--open > .note-view {
-    height: auto !important;
+  /* The note detail owns the mobile viewport and is the real scroll container.
+     Keeping scrolling on .note-view avoids depending on body/document scrolling
+     while the v38.3 shell intentionally clips workspace overflow. */
+  html.oanix-v383-visual.oanix-note-detail-open body .notes-shell--open {
+    height: 100dvh !important;
     min-height: 100dvh !important;
-    overflow: visible !important;
+    overflow: hidden !important;
+  }
+
+  html.oanix-v383-visual.oanix-note-detail-open body .notes-shell--open > .note-view {
+    height: 100dvh !important;
+    min-height: 0 !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+    scroll-padding-bottom: max(36rem, 110dvh);
   }
 
   html.oanix-v383-visual.oanix-note-detail-open body .notes-shell--open .note-canvas {
     position: relative;
     padding-bottom: max(8rem, calc(6rem + env(safe-area-inset-bottom))) !important;
-    scroll-padding-bottom: max(32rem, 100dvh);
   }
 
   /* Keep at least roughly one full visible phone viewport after the real editor.
@@ -36,7 +48,8 @@
   html.oanix-v383-visual.oanix-note-detail-open body .notes-shell--open .image-note-editor-root .editor-code-block,
   html.oanix-v383-visual.oanix-note-detail-open body .notes-shell--open .image-note-editor-root .editor-image-block,
   html.oanix-v383-visual.oanix-note-detail-open body .notes-shell--open .image-note-editor-root .editor-checklist,
-  html.oanix-v383-visual.oanix-note-detail-open body .notes-shell--open .image-note-editor-root .editor-contact-card {
+  html.oanix-v383-visual.oanix-note-detail-open body .notes-shell--open .image-note-editor-root .editor-contact-card,
+  html.oanix-v383-visual.oanix-note-detail-open body .notes-shell--open .image-note-editor-root [data-oanix-trailing-caret='true'] {
     scroll-margin-bottom: max(28rem, 82dvh);
   }
 

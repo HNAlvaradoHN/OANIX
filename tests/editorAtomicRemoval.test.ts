@@ -29,7 +29,8 @@ test('atomic block decoration watches only inserted DOM nodes and does not obser
 
 test('mobile editing runway has one CSS authority and survives keyboard viewport shrink', () => {
   assert.match(runwayCss, /height: max\(36rem, 110dvh\)/)
-  assert.match(runwayCss, /scroll-padding-bottom: max\(32rem, 100dvh\)/)
+  assert.match(runwayCss, /\.notes-shell--open > \.note-view[\s\S]*scroll-padding-bottom: max\(36rem, 110dvh\)/)
+  assert.match(runwayCss, /\.notes-shell--open > \.note-view[\s\S]*overflow-y: auto !important/)
   assert.doesNotMatch(operationCss, /notes-shell--open \.note-canvas/)
   assert.doesNotMatch(operationCss, /image-note-editor-root \.editor-surface/)
 })
