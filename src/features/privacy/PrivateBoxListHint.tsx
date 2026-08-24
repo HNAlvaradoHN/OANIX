@@ -8,14 +8,15 @@ export function PrivateBoxListHint() {
   useEffect(() => {
     const workspace = document.querySelector<HTMLElement>('.notes-shell')
     if (!workspace) return
+    const observedWorkspace = workspace
 
     let frame = 0
 
     function inspect() {
-      const list = workspace.querySelector<HTMLElement>('.notes-list')
+      const list = observedWorkspace.querySelector<HTMLElement>('.notes-list')
       setHost(list)
 
-      if (!list || workspace.querySelector('.notes-search')) {
+      if (!list || observedWorkspace.querySelector('.notes-search')) {
         setShow(false)
         return
       }
@@ -41,7 +42,7 @@ export function PrivateBoxListHint() {
 
     inspect()
     const observer = new MutationObserver(scheduleInspect)
-    observer.observe(workspace, {
+    observer.observe(observedWorkspace, {
       childList: true,
       subtree: true,
       attributes: true,
