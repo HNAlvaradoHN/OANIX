@@ -1,4 +1,5 @@
-/* OANIX editor operation feedback + mobile editing breathing room. */
+/* OANIX editor operation feedback and atomic-block actions.
+   Mobile note runway geometry lives only in editorTrailingWorkspace.css. */
 
 #oanix-editor-operation-feedback {
   position: fixed;
@@ -61,10 +62,41 @@
   to { transform: rotate(360deg); }
 }
 
+/* Explicit removal for inserted atomic blocks that cannot be consumed safely by
+   ordinary contenteditable deletion. Code, images and contacts already own their
+   removal controls; this covers checklists and daily entries. */
+.editor-atomic-block__remove {
+  justify-self: end;
+  min-height: 2.15rem;
+  padding: .35rem .65rem;
+  border: 0;
+  border-radius: .65rem;
+  background: transparent;
+  color: #dc2626;
+  -webkit-text-fill-color: currentColor;
+  font: inherit;
+  font-size: .72rem;
+  font-weight: 850;
+  line-height: 1.15;
+  cursor: pointer;
+}
+
+.editor-atomic-block__remove:hover,
+.editor-atomic-block__remove:focus-visible {
+  outline: none;
+  background: rgba(220, 38, 38, .09);
+}
+
+.editor-checklist > .editor-atomic-block__remove {
+  margin-top: .15rem;
+}
+
+.editor-daily-entry > .editor-atomic-block__remove {
+  margin-top: -.15rem;
+}
+
 /* Note deletion is authoritative and must block navigation until the encrypted
-   record has actually been removed. NotesWorkspace already owns the operation;
-   this turns its status toast into a clear blocking state instead of allowing
-   taps behind it. */
+   record has actually been removed. */
 #oanix-note-delete-feedback {
   position: fixed !important;
   z-index: 9900 !important;
@@ -134,30 +166,6 @@ body:has(#oanix-note-delete-feedback) {
 }
 
 @media (max-width: 720px) {
-  /* Give the open note a real working area below the last large block so the
-     user can scroll past code/images and reach the next insertion point. */
-  .oanix-v383-visual .notes-shell--open .note-canvas {
-    padding-bottom: max(13rem, calc(24dvh + env(safe-area-inset-bottom))) !important;
-  }
-
-  .oanix-v383-visual .notes-shell--open .image-note-editor-root .editor-surface {
-    padding-bottom: max(10rem, 18dvh) !important;
-    scroll-padding-bottom: max(10rem, 18dvh);
-  }
-
-  /* The inline console remains useful, but no longer consumes most of a phone
-     screen. Full-screen code editing is still available from the expand action. */
-  .oanix-v383-visual .notes-shell--open .code-block-editor-root .editor-code-block__content {
-    max-height: clamp(10rem, 30dvh, 15rem) !important;
-    overflow-y: auto !important;
-    overscroll-behavior: contain;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .oanix-v383-visual .notes-shell--open .code-block-editor-root .editor-code-block {
-    margin-bottom: .9rem;
-  }
-
   #oanix-note-delete-feedback {
     grid-template-columns: 2.8rem minmax(0, 1fr) !important;
     width: 100vw !important;
