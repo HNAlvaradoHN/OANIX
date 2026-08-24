@@ -116,7 +116,6 @@ export function NotePrivacyRuntime() {
   const [privateAuthError, setPrivateAuthError] = useState('')
   const [privacyBusyNoteId, setPrivacyBusyNoteId] = useState<string | null>(null)
   const [domRevision, setDomRevision] = useState(0)
-  const refreshRequestRef = useRef(0)
 
   async function refreshData() {
     const [storedNotes, records] = await Promise.all([loadNotes(), listNotePrivacy()])
