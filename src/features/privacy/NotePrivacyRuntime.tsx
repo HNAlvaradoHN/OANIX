@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { loadNotes } from '../notes/noteService'
 import type { NoteRecord } from '../notes/noteTypes'
@@ -116,7 +116,6 @@ export function NotePrivacyRuntime() {
   const [privateAuthError, setPrivateAuthError] = useState('')
   const [privacyBusyNoteId, setPrivacyBusyNoteId] = useState<string | null>(null)
   const [domRevision, setDomRevision] = useState(0)
-  const refreshRequestRef = useRef(0)
 
   async function refreshData() {
     const [storedNotes, records] = await Promise.all([loadNotes(), listNotePrivacy()])

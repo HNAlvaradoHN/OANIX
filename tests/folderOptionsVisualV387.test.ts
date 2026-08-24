@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import test from 'node:test'
 
 const main = readFileSync('src/main.tsx', 'utf8')
@@ -8,12 +8,13 @@ const bridge = readFileSync('src/features/folders/FolderCustomizerBridgeRuntime.
 const bridgeCss = readFileSync('src/features/folders/folderCustomizerBridge.css', 'utf8')
 const appearance = readFileSync('src/features/folders/FolderAppearanceRuntime.tsx', 'utf8')
 
-test('folder gear opens the unified customizer directly without the intermediary menu', () => {
+test('folder gear opens the unified customizer directly without the retired intermediary visual layer', () => {
   assert.match(bridge, /\.oanix-folder-card__gear/)
   assert.match(bridge, /openUnifiedFolderCustomizer/)
   assert.match(bridge, /\.oanix-folder-focus__menu/)
   assert.match(bridge, /stopImmediatePropagation/)
   assert.match(bridgeCss, /\.oanix-folder-options-backdrop[\s\S]*display:\s*none !important/)
+  assert.equal(existsSync('src/features/notes/folderOptionsVisual.css'), false)
   assert.doesNotMatch(main, /folderOptionsVisual\.css/)
 })
 

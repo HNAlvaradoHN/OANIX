@@ -85,10 +85,6 @@ function activeWorkspaceCount(): string {
   return activeFolderItem()?.querySelector<HTMLElement>(':scope > small')?.textContent?.trim() || '0'
 }
 
-function activeFolderId(): string | null {
-  return activeFolderItem()?.dataset.oanixFolderId ?? null
-}
-
 function folderItem(folderId: string): HTMLButtonElement | null {
   return document.querySelector<HTMLButtonElement>(
     `.oanix-folder-rail__item[data-oanix-folder-id="${CSS.escape(folderId)}"]`,

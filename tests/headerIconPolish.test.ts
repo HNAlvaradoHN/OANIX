@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import test from 'node:test'
 
 const main = readFileSync('src/main.tsx', 'utf8')
@@ -9,7 +9,8 @@ const notes = readFileSync('src/features/notes/NotesWorkspace.tsx', 'utf8')
 const app = readFileSync('src/app/App.tsx', 'utf8')
 const history = readFileSync('src/features/versionHistory/VersionHistoryCenter.tsx', 'utf8')
 
-test('v38.3 is the final header visual authority and legacy icon polish is not loaded', () => {
+test('v38.3 is the final header visual authority and retired icon polish is absent', () => {
+  assert.equal(existsSync('src/styles/header-icon-polish.css'), false)
   assert.doesNotMatch(main, /\.\/styles\/header-icon-polish\.css/)
   const visualIndex = main.indexOf("./features/notes/v383WorkspaceVisual.css")
   const hardFixIndex = main.indexOf("./styles/classic-day-hard-fix.css")
