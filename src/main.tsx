@@ -29,6 +29,7 @@ import './features/images/pwa-image-no-name.css'
 import './features/notes/v383WorkspaceVisual.css'
 import './features/notes/workspaceStateContract.css'
 import './features/notes/workspaceRefinements.css'
+import './features/notes/compactNotePolish.css'
 
 type OanixUpdateWindow = Window & {
   __oanixApplyUpdate?: () => Promise<void>
