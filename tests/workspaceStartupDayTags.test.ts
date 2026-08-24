@@ -33,11 +33,13 @@ test('top tag plus owns professional tag creation with persisted icon and color'
   assert.match(tagTypes, /color\?: string/)
 })
 
-test('day mode keeps the cover visible with warm layered glass and a pill back action', () => {
+test('day mode uses the same folder background stack as night while keeping light surfaces', () => {
   assert.match(main, /workspaceStateContract\.css[\s\S]*workspaceRefinements\.css/)
   assert.match(refinements, /--v383-card:\s*rgba\(232,237,243,\.84\)/)
-  assert.match(refinements, /\.notes-header[\s\S]*linear-gradient\(90deg,rgba\(235,121,112,\.88\)/)
-  assert.match(refinements, /oanix-organic-background\.oanix-organic-background--covered::after[\s\S]*var\(--oanix-organic-cover-image\)/)
+  assert.doesNotMatch(refinements, /235,121,112|232,111,104|236,116,105/)
+  assert.match(refinements, /classic-day[\s\S]*oanix-organic-background\.oanix-organic-background--covered::before[\s\S]*brightness\(\.42\) saturate\(\.88\)/)
+  assert.match(refinements, /classic-day[\s\S]*oanix-organic-background\.oanix-organic-background--covered::after[\s\S]*rgba\(2,6,23,\.20\)[\s\S]*var\(--oanix-organic-cover-image\)/)
+  assert.match(refinements, /\.notes-header[\s\S]*background:\s*rgba\(226,232,240,\.62\)/)
   assert.match(refinements, /\.oanix-organic-tags-host[\s\S]*backdrop-filter:\s*blur\(18px\)/)
   assert.match(refinements, /oanix-note-detail-open \.note-view__header \.back-button[\s\S]*display:\s*inline-flex !important/)
   assert.match(refinements, /\.back-button::after[\s\S]*content:\s*'Volver'/)

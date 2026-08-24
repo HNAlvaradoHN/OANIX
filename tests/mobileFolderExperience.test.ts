@@ -28,9 +28,11 @@ test('legacy folder manager is visually replaced by the focused Nueva carpeta di
   assert.match(createRuntime, /\.notes-create-fab, \.empty-action/)
 })
 
-test('mobile folder long press uses horizontal placement and continuous edge scrolling', () => {
+test('mobile folder long press uses live horizontal placement and continuous edge scrolling', () => {
   assert.match(dragRuntime, /const LONG_PRESS_MS = 340/)
-  assert.match(dragRuntime, /gesture\.lastX > rect\.left \+ rect\.width \/ 2/)
+  assert.match(dragRuntime, /siblings\.find\(\(item\) => \{[\s\S]*gesture\.lastX < rect\.left \+ rect\.width \/ 2/)
+  assert.match(dragRuntime, /insertBefore\(gesture\.item, insertionTarget\)/)
+  assert.match(dragRuntime, /appendChild\(gesture\.item\)/)
   assert.doesNotMatch(dragRuntime, /clientY > rect\.top \+ rect\.height \/ 2/)
   assert.match(dragRuntime, /requestAnimationFrame\(tick\)/)
   assert.match(dragRuntime, /scrollLeft \+= speed/)
