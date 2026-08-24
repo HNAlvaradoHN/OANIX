@@ -9,15 +9,16 @@ const runtime = readFileSync('src/features/notes/V383WorkspaceVisualRuntime.tsx'
 const css = readFileSync('src/features/notes/v383WorkspaceVisual.css', 'utf8')
 const personalization = readFileSync('src/features/notes/WorkspacePersonalizationRuntime.tsx', 'utf8')
 
-test('one scoped v38.3 layer is mounted only for the unlocked workspace above editor-only legacy polish', () => {
+test('one scoped v38.3 layer is mounted only for the unlocked workspace above editor contracts', () => {
   assert.match(app, /<WorkspaceRuntimeGate \/>/)
   assert.match(gate, /<V383WorkspaceVisualRuntime \/>/)
   assert.match(runtime, /classList\.add\('oanix-v383-visual'\)/)
   assert.doesNotMatch(main, /\.\/styles\/header-icon-polish\.css/)
-  assert.match(main, /\.\/styles\/notebook-polish\.css/)
+  assert.match(main, /\.\/styles\/notebook-contract\.css/)
+  assert.doesNotMatch(main, /\.\/styles\/notebook-polish\.css/)
   assert.match(main, /\.\/styles\/classic-theme-surfaces\.css/)
 
-  const notebookIndex = main.indexOf("./styles/notebook-polish.css")
+  const notebookIndex = main.indexOf("./styles/notebook-contract.css")
   const themeSurfaceIndex = main.indexOf("./styles/classic-theme-surfaces.css")
   const brandIndex = main.indexOf("./styles/web-brand-logo.css")
   const visualIndex = main.indexOf("./features/notes/v383WorkspaceVisual.css")

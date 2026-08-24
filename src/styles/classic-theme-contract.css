@@ -1,6 +1,5 @@
-/* Neutral base themes kept alongside the styled presets.
- *
- * IMPORTANT: this file owns semantic Day/Night tokens and non-workspace light hardening only.
+/* Classic Day/Night theme contract.
+ * Owns semantic Day/Night tokens and non-workspace light hardening only.
  * The v38 organic notes workspace owns its own surfaces (background, header, cards and dock)
  * so folder covers and glass effects cannot be overwritten by a second theme layer.
  */

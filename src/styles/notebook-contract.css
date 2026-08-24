@@ -1,4 +1,4 @@
-/* Preserve the notebook identity without turning the editor into literal paper. */
+/* Notebook identity contract: subtle, theme-aware editor cues without literal paper chrome. */
 .editor-frame {
   position: relative;
   overflow: hidden;
@@ -16,7 +16,6 @@
   background-position: 0 .35rem;
 }
 
-/* A restrained inner page edge gives the canvas a sheet-like depth. */
 .editor-frame::after {
   content: '';
   position: absolute;
