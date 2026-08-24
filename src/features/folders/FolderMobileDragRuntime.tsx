@@ -3,9 +3,10 @@ import { persistFolderOrder } from './folderService'
 import './folderMobileDrag.css'
 
 const LONG_PRESS_MS = 340
-const MOVE_CANCEL_PX = 9
-const EDGE_SCROLL_PX = 52
-const MAX_SCROLL_PER_FRAME = 16
+const PRESS_ARM_GRACE_MS = 55
+const MOVE_CANCEL_PX = 14
+const EDGE_SCROLL_PX = 72
+const MAX_SCROLL_PER_FRAME = 9
 const REFLOW_MS = 180
 
 interface TouchGesture {
@@ -17,6 +18,7 @@ interface TouchGesture {
   startY: number
   lastX: number
   lastY: number
+  pressedAt: number
   startScrollLeft: number
   grabOffsetX: number
   grabOffsetY: number
@@ -95,13 +97,13 @@ function animateReflow(rail: HTMLElement, before: Map<HTMLElement, DOMRect>) {
   }
 }
 
-function reorderDomAtPoint(gesture: TouchGesture) {
+function reorderDomAtPoint(gesture: TouchGesture, animate = true) {
   const siblings = Array.from(
     gesture.rail.querySelectorAll<HTMLElement>(':scope > .oanix-folder-rail__item[data-oanix-folder-id]'),
   ).filter((item) => item !== gesture.item)
 
   const beforeOrder = folderOrder(gesture.rail).join('|')
-  const beforeRects = snapshotRects(gesture.rail)
+  const beforeRects = animate ? snapshotRects(gesture.rail) : null
   const insertionTarget = siblings.find((item) => {
     const rect = item.getBoundingClientRect()
     return gesture.lastX < rect.left + rect.width / 2
@@ -111,7 +113,9 @@ function reorderDomAtPoint(gesture: TouchGesture) {
   else gesture.rail.appendChild(gesture.item)
 
   const changed = folderOrder(gesture.rail).join('|') !== beforeOrder
-  if (changed) {
+  if (!changed) return
+
+  if (animate && beforeRects) {
     animateReflow(gesture.rail, beforeRects)
     gesture.item.animate(
       [{ boxShadow: '0 0 0 0 rgba(59,130,246,0)' }, { boxShadow: '0 0 0 3px rgba(59,130,246,.24)' }],
@@ -123,11 +127,11 @@ function reorderDomAtPoint(gesture: TouchGesture) {
 function scrollSpeed(clientX: number, rect: DOMRect): number {
   if (clientX < rect.left + EDGE_SCROLL_PX) {
     const strength = Math.min(1, (rect.left + EDGE_SCROLL_PX - clientX) / EDGE_SCROLL_PX)
-    return -Math.max(4, Math.round(MAX_SCROLL_PER_FRAME * strength))
+    return -Math.max(2, Math.round(MAX_SCROLL_PER_FRAME * strength))
   }
   if (clientX > rect.right - EDGE_SCROLL_PX) {
     const strength = Math.min(1, (clientX - (rect.right - EDGE_SCROLL_PX)) / EDGE_SCROLL_PX)
-    return Math.max(4, Math.round(MAX_SCROLL_PER_FRAME * strength))
+    return Math.max(2, Math.round(MAX_SCROLL_PER_FRAME * strength))
   }
   return 0
 }
@@ -168,7 +172,9 @@ export function FolderMobileDragRuntime() {
         if (speed !== 0) {
           const before = gesture.rail.scrollLeft
           gesture.rail.scrollLeft += speed
-          if (gesture.rail.scrollLeft !== before) reorderDomAtPoint(gesture)
+          // Scrolling the edge already moves every visible card. Reordering still
+          // follows the pointer, but without launching a FLIP animation every frame.
+          if (gesture.rail.scrollLeft !== before) reorderDomAtPoint(gesture, false)
         }
         gesture.scrollFrame = window.requestAnimationFrame(tick)
       }
@@ -177,6 +183,7 @@ export function FolderMobileDragRuntime() {
 
     const beginDrag = () => {
       if (!gesture || gesture.moved || gesture.dragging) return
+      clearTimer()
       gesture.dragging = true
       gesture.orderBefore = folderOrder(gesture.rail)
       gesture.ghost = createGhost(gesture.item)
@@ -211,6 +218,7 @@ export function FolderMobileDragRuntime() {
         startY: event.clientY,
         lastX: event.clientX,
         lastY: event.clientY,
+        pressedAt: performance.now(),
         startScrollLeft: rail.scrollLeft,
         grabOffsetX: event.clientX - rect.left,
         grabOffsetY: event.clientY - rect.top,
@@ -232,7 +240,23 @@ export function FolderMobileDragRuntime() {
       if (!gesture.dragging) {
         const dx = event.clientX - gesture.startX
         const dy = event.clientY - gesture.startY
-        if (Math.hypot(dx, dy) < MOVE_CANCEL_PX) return
+        const distance = Math.hypot(dx, dy)
+        if (distance < MOVE_CANCEL_PX) return
+
+        // A fast movement right as the long press becomes armed must start the
+        // drag instead of cancelling it because the timeout callback lost a race
+        // with this pointermove event.
+        const heldFor = performance.now() - gesture.pressedAt
+        if (heldFor >= LONG_PRESS_MS - PRESS_ARM_GRACE_MS) {
+          beginDrag()
+          if (gesture?.dragging) {
+            event.preventDefault()
+            positionGhost(gesture)
+            reorderDomAtPoint(gesture)
+            return
+          }
+        }
+
         gesture.moved = true
         clearTimer()
         if (Math.abs(dx) >= Math.abs(dy)) {
