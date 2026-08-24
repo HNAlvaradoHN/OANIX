@@ -24,8 +24,6 @@ import './styles/note-menu-viewport-fit.css'
 import './styles/web-brand-logo.css'
 import './features/images/pwa-image-no-name.css'
 
-// Folder options follows the approved v38.7 modal geometry while keeping real OANIX handlers.
-import './features/notes/folderOptionsVisual.css'
 // v38.3 remains the base workspace authority. The state contract below only
 // handles exclusive note-detail and covered-background states that live outside it.
 import './features/notes/v383WorkspaceVisual.css'
