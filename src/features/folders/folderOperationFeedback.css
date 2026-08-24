@@ -1,0 +1,97 @@
+/* Operation feedback for folder customization.
+   This does not replace the encrypted writes; it only makes their progress visible. */
+
+@keyframes oanix-folder-operation-pulse {
+  0%, 100% { opacity: .72; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(-1px); }
+}
+
+.oanix-folder-customizer[data-oanix-operation-status] {
+  position: relative;
+}
+
+.oanix-folder-customizer[data-oanix-operation-status]::after {
+  content: attr(data-oanix-operation-status);
+  position: sticky;
+  z-index: 30;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  margin-top: 12px;
+  padding: 8px 12px;
+  border: 1px solid rgba(96,165,250,.28);
+  border-radius: 12px;
+  background: rgba(15,23,42,.90);
+  color: #dbeafe;
+  box-shadow: 0 10px 24px rgba(0,0,0,.24);
+  font-size: 11px;
+  font-weight: 850;
+  line-height: 1.25;
+  text-align: center;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.oanix-folder-customizer[data-oanix-operation-state='busy']::after {
+  border-color: rgba(96,165,250,.42);
+  color: #bfdbfe;
+  animation: oanix-folder-operation-pulse 1s ease-in-out infinite;
+}
+
+.oanix-folder-customizer[data-oanix-operation-state='success']::after {
+  border-color: rgba(52,211,153,.38);
+  background: rgba(6,78,59,.88);
+  color: #d1fae5;
+}
+
+.oanix-folder-customizer[data-oanix-operation-state='error']::after {
+  border-color: rgba(251,113,133,.40);
+  background: rgba(127,29,29,.88);
+  color: #ffe4e6;
+  animation: none;
+}
+
+.oanix-folder-customizer[data-oanix-operation-state='hint']::after {
+  border-color: rgba(148,163,184,.24);
+  color: #e2e8f0;
+  animation: none;
+}
+
+.oanix-folder-customizer[data-oanix-operation-state='busy'] .oanix-folder-appearance-picker {
+  opacity: .72;
+  pointer-events: none;
+}
+
+.oanix-folder-customizer[data-oanix-operation-state='busy'] .oanix-folder-customizer__appearance-toggle {
+  pointer-events: none;
+}
+
+html[data-oanix-theme='classic-day'] .oanix-folder-customizer[data-oanix-operation-status]::after {
+  border-color: rgba(37,99,235,.22);
+  background: rgba(241,245,249,.96);
+  color: #1e3a8a;
+  box-shadow: 0 10px 24px rgba(15,23,42,.14);
+}
+
+html[data-oanix-theme='classic-day'] .oanix-folder-customizer[data-oanix-operation-state='success']::after {
+  border-color: rgba(5,150,105,.25);
+  background: rgba(236,253,245,.96);
+  color: #065f46;
+}
+
+html[data-oanix-theme='classic-day'] .oanix-folder-customizer[data-oanix-operation-state='error']::after {
+  border-color: rgba(225,29,72,.24);
+  background: rgba(255,241,242,.96);
+  color: #9f1239;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .oanix-folder-customizer[data-oanix-operation-state='busy']::after {
+    animation: none;
+  }
+}
