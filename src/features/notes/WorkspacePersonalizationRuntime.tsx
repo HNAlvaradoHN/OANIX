@@ -11,7 +11,7 @@ import type { FolderRecord } from '../folders/folderTypes'
 import { applyOanixTheme, readSavedOanixTheme } from '../personalization/themeCatalog'
 import { loadTags } from '../tags/tagService'
 import type { TagRecord } from '../tags/tagTypes'
-import { loadNotes, setNoteListAppearance } from './noteService'
+import { loadNote, loadNotes, setNoteListAppearance } from './noteService'
 import {
   DEFAULT_NOTE_VISUAL_COLOR,
   DEFAULT_NOTE_VISUAL_ICON,
@@ -52,6 +52,8 @@ const EMPTY_NOTE_DRAFT: NoteCustomizerDraft = {
   icon: DEFAULT_NOTE_VISUAL_ICON,
   color: DEFAULT_NOTE_VISUAL_COLOR,
 }
+
+const PERSONALIZATION_RELOAD_DEBOUNCE_MS = 48
 
 function waitForElement<T extends Element>(selector: string, attempts = 24): Promise<T | null> {
   return new Promise((resolve) => {
@@ -137,7 +139,27 @@ export function WorkspacePersonalizationRuntime() {
       setData(next)
       scheduleDecorate()
     } catch {
-      // This runtime is mounted while the vault is locked too; no visible error belongs there.
+      // This runtime only reads private UI data while an unlocked workspace exists.
+    }
+  }
+
+  async function refreshChangedNote(noteId: string) {
+    if (!document.querySelector('.notes-sidebar')) return
+    try {
+      const note = await loadNote(noteId)
+      const current = dataRef.current
+      const existingIndex = current.notes.findIndex((item) => item.id === noteId)
+      const notes = note
+        ? existingIndex >= 0
+          ? current.notes.map((item) => item.id === noteId ? note : item)
+          : [...current.notes, note]
+        : current.notes.filter((item) => item.id !== noteId)
+      const next = { ...current, notes }
+      dataRef.current = next
+      setData(next)
+      scheduleDecorate()
+    } catch {
+      // A later full refresh or sync event can recover a transient read failure.
     }
   }
 
@@ -299,9 +321,20 @@ export function WorkspacePersonalizationRuntime() {
       refreshTimerRef.current = window.setTimeout(() => {
         refreshTimerRef.current = null
         void refreshData()
-      }, 100)
+      }, PERSONALIZATION_RELOAD_DEBOUNCE_MS)
     }
 
+    const handleLocalChange = (event: Event) => {
+      const detail = event instanceof CustomEvent
+        ? event.detail as { recordType?: unknown; recordId?: unknown } | null
+        : null
+      if (detail?.recordType === 'note' && typeof detail.recordId === 'string') {
+        void refreshChangedNote(detail.recordId)
+        return
+      }
+      scheduleRefresh()
+    }
+    const handleConflictResolved = () => scheduleRefresh()
     const handleThemeChange = () => scheduleDecorate()
 
     function handlePointerDownCapture(event: PointerEvent) {
@@ -340,8 +373,8 @@ export function WorkspacePersonalizationRuntime() {
 
     document.addEventListener('pointerdown', handlePointerDownCapture, true)
     document.addEventListener('click', handleClickCapture, true)
-    window.addEventListener('oanix:local-data-changed', scheduleRefresh)
-    window.addEventListener('oanix:conflict-resolved', scheduleRefresh)
+    window.addEventListener('oanix:local-data-changed', handleLocalChange)
+    window.addEventListener('oanix:conflict-resolved', handleConflictResolved)
     window.addEventListener('oanix:theme-change', handleThemeChange)
 
     void refreshData()
@@ -351,8 +384,8 @@ export function WorkspacePersonalizationRuntime() {
       observer.disconnect()
       document.removeEventListener('pointerdown', handlePointerDownCapture, true)
       document.removeEventListener('click', handleClickCapture, true)
-      window.removeEventListener('oanix:local-data-changed', scheduleRefresh)
-      window.removeEventListener('oanix:conflict-resolved', scheduleRefresh)
+      window.removeEventListener('oanix:local-data-changed', handleLocalChange)
+      window.removeEventListener('oanix:conflict-resolved', handleConflictResolved)
       window.removeEventListener('oanix:theme-change', handleThemeChange)
       if (refreshTimerRef.current !== null) window.clearTimeout(refreshTimerRef.current)
       if (decorateFrameRef.current !== null) window.cancelAnimationFrame(decorateFrameRef.current)
@@ -376,7 +409,6 @@ export function WorkspacePersonalizationRuntime() {
       dataRef.current = next
       setData(next)
       setNoteCustomizerId(null)
-      window.dispatchEvent(new Event('oanix:local-data-changed'))
       scheduleDecorate()
     } catch (error) {
       setNoteError(error instanceof Error ? error.message : 'No se pudo guardar la personalización de la nota.')
@@ -401,7 +433,6 @@ export function WorkspacePersonalizationRuntime() {
       const next = { ...dataRef.current, folderFlags }
       dataRef.current = next
       setData(next)
-      window.dispatchEvent(new Event('oanix:local-data-changed'))
       scheduleDecorate()
     } catch {
       setFolderError(flag === 'pinned' ? 'No se pudo cambiar el estado fijado.' : 'No se pudo cambiar el favorito.')
