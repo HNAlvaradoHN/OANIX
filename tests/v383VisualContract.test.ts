@@ -3,12 +3,14 @@ import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
 const main = readFileSync('src/main.tsx', 'utf8')
+const gate = readFileSync('src/app/WorkspaceRuntimeGate.tsx', 'utf8')
 const runtime = readFileSync('src/features/notes/V383WorkspaceVisualRuntime.tsx', 'utf8')
 const css = readFileSync('src/features/notes/v383WorkspaceVisual.css', 'utf8')
 const personalization = readFileSync('src/features/notes/WorkspacePersonalizationRuntime.tsx', 'utf8')
 
-test('one scoped v38.3 layer is mounted last above editor-only legacy polish', () => {
-  assert.match(main, /<V383WorkspaceVisualRuntime \/>/)
+test('one scoped v38.3 layer is mounted only for the unlocked workspace above editor-only legacy polish', () => {
+  assert.match(main, /<WorkspaceRuntimeGate \/>/)
+  assert.match(gate, /<V383WorkspaceVisualRuntime \/>/)
   assert.match(runtime, /classList\.add\('oanix-v383-visual'\)/)
   assert.doesNotMatch(main, /\.\/styles\/header-icon-polish\.css/)
   assert.match(main, /\.\/styles\/notebook-polish\.css/)
