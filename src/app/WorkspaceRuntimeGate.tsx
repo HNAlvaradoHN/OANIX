@@ -3,6 +3,7 @@ import { FolderAppearanceRuntime } from '../features/folders/FolderAppearanceRun
 import { FolderCreationRuntime } from '../features/folders/FolderCreationRuntime'
 import { FolderCustomizerBridgeRuntime } from '../features/folders/FolderCustomizerBridgeRuntime'
 import { FolderMobileDragRuntime } from '../features/folders/FolderMobileDragRuntime'
+import { FolderOperationFeedbackRuntime } from '../features/folders/FolderOperationFeedbackRuntime'
 import { FolderTiltRuntime } from '../features/folders/FolderTiltRuntime'
 import { FolderDockFinishingRuntime } from '../features/notes/FolderDockFinishingRuntime'
 import { OrganicWorkspaceRuntime } from '../features/notes/OrganicWorkspaceRuntime'
@@ -37,6 +38,7 @@ export function WorkspaceRuntimeGate() {
       <WorkspacePersonalizationRuntime />
       <PrivacyStatusHelp />
       <FolderAppearanceRuntime />
+      <FolderOperationFeedbackRuntime />
       <FolderCreationRuntime />
       <FolderMobileDragRuntime />
       <FolderTiltRuntime />
