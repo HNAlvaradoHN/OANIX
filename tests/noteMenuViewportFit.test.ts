@@ -17,6 +17,15 @@ test('note menus measure their real height and flip toward available space', () 
   assert.match(runtimeSource, /spaceAbove > spaceBelow \? 'up' : 'down'/)
 })
 
+test('note menu fitting reacts to interactions and viewport changes without a global DOM observer', () => {
+  assert.doesNotMatch(runtimeSource, /MutationObserver/)
+  assert.match(runtimeSource, /document\.addEventListener\('click', scheduleFit\)/)
+  assert.match(runtimeSource, /window\.addEventListener\('resize', scheduleFit\)/)
+  assert.match(runtimeSource, /visualViewport\?\.addEventListener\('resize', scheduleFit\)/)
+  assert.match(runtimeSource, /visualViewport\?\.addEventListener\('scroll', scheduleFit\)/)
+  assert.match(runtimeSource, /requestAnimationFrame/)
+})
+
 test('note menus become internally scrollable when neither side fits', () => {
   assert.match(runtimeSource, /--oanix-note-menu-max-height/)
   assert.match(fitCss, /max-height: var\(--oanix-note-menu-max-height/)
