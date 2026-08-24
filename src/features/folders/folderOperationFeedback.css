@@ -71,6 +71,13 @@
   pointer-events: none;
 }
 
+/* Appearance writes are short, but they preserve several encrypted properties in one
+   record. Keep the surrounding actions inert until the selected icon/color is confirmed. */
+.oanix-folder-customizer[data-oanix-operation-state='busy'][data-oanix-operation-source='appearance'] .oanix-folder-customizer__actions {
+  opacity: .62;
+  pointer-events: none;
+}
+
 html[data-oanix-theme='classic-day'] .oanix-folder-customizer[data-oanix-operation-status]::after {
   border-color: rgba(37,99,235,.22);
   background: rgba(241,245,249,.96);
