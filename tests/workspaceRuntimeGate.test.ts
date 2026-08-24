@@ -3,18 +3,18 @@ import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
 const main = readFileSync('src/main.tsx', 'utf8')
+const app = readFileSync('src/app/App.tsx', 'utf8')
 const gate = readFileSync('src/app/WorkspaceRuntimeGate.tsx', 'utf8')
 
-test('workspace data runtimes are not mounted while the vault screen is visible', () => {
-  assert.match(main, /<WorkspaceRuntimeGate \/>/)
-  assert.doesNotMatch(main, /<OrganicWorkspaceRuntime \/>/)
-  assert.doesNotMatch(main, /<WorkspacePersonalizationRuntime \/>/)
-  assert.doesNotMatch(main, /<FolderAppearanceRuntime \/>/)
-  assert.match(gate, /document\.querySelector\('\.notes-sidebar'\) !== null/)
-  assert.match(gate, /if \(!active\) return null/)
+test('workspace data runtimes mount only inside the unlocked app lifecycle', () => {
+  assert.doesNotMatch(main, /WorkspaceRuntimeGate/)
+  assert.match(app, /function UnlockedApp/)
+  assert.match(app, /<WorkspaceRuntimeGate \/>/)
+  assert.doesNotMatch(gate, /MutationObserver/)
+  assert.doesNotMatch(gate, /document\.querySelector/)
 })
 
-test('all workspace-only runtimes hydrate together after notes-sidebar exists', () => {
+test('all workspace-only runtimes hydrate together once the unlocked app mounts the gate', () => {
   assert.match(gate, /<OrganicWorkspaceRuntime \/>/)
   assert.match(gate, /<FolderDockFinishingRuntime \/>/)
   assert.match(gate, /<WorkspacePersonalizationRuntime \/>/)

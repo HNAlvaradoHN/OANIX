@@ -5,7 +5,7 @@ import test from 'node:test'
 test('organic workspace uses real OANIX data and no external prototype dependencies', () => {
   const runtime = readFileSync('src/features/notes/OrganicWorkspaceRuntime.tsx', 'utf8')
   const css = readFileSync('src/features/notes/organicWorkspace.css', 'utf8')
-  const main = readFileSync('src/main.tsx', 'utf8')
+  const app = readFileSync('src/app/App.tsx', 'utf8')
   const gate = readFileSync('src/app/WorkspaceRuntimeGate.tsx', 'utf8')
 
   assert.match(runtime, /loadFolders/)
@@ -14,7 +14,7 @@ test('organic workspace uses real OANIX data and no external prototype dependenc
   assert.match(runtime, /loadFolderCovers/)
   assert.match(runtime, /loadFolderColors/)
   assert.match(runtime, /persistTagOrder/)
-  assert.match(main, /<WorkspaceRuntimeGate \/>/)
+  assert.match(app, /<WorkspaceRuntimeGate \/>/)
   assert.match(gate, /<OrganicWorkspaceRuntime \/>/)
   assert.doesNotMatch(runtime + css + gate, /cdn\.tailwindcss|unpkg\.com|@phosphor-icons/)
 })

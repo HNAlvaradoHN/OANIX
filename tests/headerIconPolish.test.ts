@@ -15,7 +15,7 @@ test('v38.3 is the final header visual authority and legacy icon polish is not l
   const hardFixIndex = main.indexOf("./styles/classic-day-hard-fix.css")
   assert.ok(hardFixIndex >= 0)
   assert.ok(visualIndex > hardFixIndex)
-  assert.match(main, /<WorkspaceRuntimeGate \/>/)
+  assert.match(app, /<WorkspaceRuntimeGate \/>/)
   assert.match(gate, /<OrganicWorkspaceRuntime \/>/)
   assert.match(gate, /<V383WorkspaceVisualRuntime \/>/)
 })

@@ -1,6 +1,7 @@
-/* OANIX mobile note trailing workspace.
-   The notebook editor virtualizes its direct blocks, so breathing room must live
-   outside that virtual surface if it is expected to extend the actual page scroll. */
+/* OANIX mobile note visual workspace.
+   This file is the only authority for trailing editing room in note detail.
+   It extends real document flow without creating fake paragraphs or changing
+   the persisted editor model. */
 
 @media (max-width: 720px) {
   html.oanix-v383-visual.oanix-note-detail-open body .notes-shell--open,
@@ -12,28 +13,44 @@
 
   html.oanix-v383-visual.oanix-note-detail-open body .notes-shell--open .note-canvas {
     position: relative;
-    padding-bottom: max(7rem, calc(5rem + env(safe-area-inset-bottom))) !important;
-    scroll-padding-bottom: max(18rem, 42dvh);
+    padding-bottom: max(8rem, calc(6rem + env(safe-area-inset-bottom))) !important;
+    scroll-padding-bottom: max(32rem, 100dvh);
   }
 
-  /* Real document-flow runway after ImageNoteEditor. Unlike padding or a child
-     inside .editor-surface, this contributes directly to page height even when
-     notebook blocks are absolutely positioned by NotebookFreeRowsRuntime. */
+  /* Keep at least roughly one full visible phone viewport after the real editor.
+     Android shrinks dvh while the keyboard is open, so the fixed rem floor is
+     intentional: the keyboard must not collapse the workspace we need. */
   html.oanix-v383-visual.oanix-note-detail-open body .notes-shell--open .note-canvas::after {
     content: '';
     display: block;
     width: 100%;
-    height: clamp(18rem, 46dvh, 30rem);
+    height: max(36rem, 110dvh);
     clear: both;
     pointer-events: none;
   }
 
   html.oanix-v383-visual.oanix-note-detail-open body .notes-shell--open .image-note-editor-root .editor-surface {
-    scroll-padding-bottom: max(14rem, 30dvh) !important;
+    scroll-padding-bottom: max(28rem, 85dvh) !important;
   }
 
   html.oanix-v383-visual.oanix-note-detail-open body .notes-shell--open .image-note-editor-root .editor-code-block,
-  html.oanix-v383-visual.oanix-note-detail-open body .notes-shell--open .image-note-editor-root .editor-image-block {
-    scroll-margin-bottom: max(14rem, 30dvh);
+  html.oanix-v383-visual.oanix-note-detail-open body .notes-shell--open .image-note-editor-root .editor-image-block,
+  html.oanix-v383-visual.oanix-note-detail-open body .notes-shell--open .image-note-editor-root .editor-checklist,
+  html.oanix-v383-visual.oanix-note-detail-open body .notes-shell--open .image-note-editor-root .editor-contact-card {
+    scroll-margin-bottom: max(28rem, 82dvh);
+  }
+
+  /* Large inline code remains compact; expansion is still the dedicated way to
+     edit a long block full-screen. Keeping this rule here avoids a second mobile
+     spacing authority in editorOperationPolish.css. */
+  html.oanix-v383-visual.oanix-note-detail-open body .notes-shell--open .code-block-editor-root .editor-code-block__content {
+    max-height: clamp(10rem, 30dvh, 15rem) !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  html.oanix-v383-visual.oanix-note-detail-open body .notes-shell--open .code-block-editor-root .editor-code-block {
+    margin-bottom: .9rem;
   }
 }

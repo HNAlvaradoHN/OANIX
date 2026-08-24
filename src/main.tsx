@@ -2,7 +2,6 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { registerSW } from 'virtual:pwa-register'
 import { App } from './app/App'
-import { WorkspaceRuntimeGate } from './app/WorkspaceRuntimeGate'
 import { ThemeMenu } from './features/personalization/ThemeMenu'
 import { applyOanixTheme, readSavedOanixTheme } from './features/personalization/themeCatalog'
 import { PwaImagePreviewRuntime } from './features/images/PwaImagePreviewRuntime'
@@ -86,6 +85,5 @@ createRoot(document.getElementById('root')!).render(
     <PwaImagePreviewRuntime />
     <NoteMenuScrollDismiss />
     <NoteMenuViewportFit />
-    <WorkspaceRuntimeGate />
   </StrictMode>,
 )

@@ -141,6 +141,116 @@ function watchImageOperation(root: Element, expectedIncrease: number, feedback: 
   check()
 }
 
+function createBlockId(): string {
+  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID()
+
+  if (!globalThis.crypto?.getRandomValues) {
+    throw new Error('Secure random generation is not available in this browser.')
+  }
+
+  return Array.from(globalThis.crypto.getRandomValues(new Uint8Array(16)))
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('')
+}
+
+function createCaretParagraph(): HTMLParagraphElement {
+  const paragraph = document.createElement('p')
+  paragraph.dataset.blockId = createBlockId()
+  paragraph.append(document.createElement('br'))
+  return paragraph
+}
+
+function placeCaretAtEnd(element: HTMLElement) {
+  const selection = document.getSelection()
+  if (!selection) return
+
+  const range = document.createRange()
+  range.selectNodeContents(element)
+  range.collapse(false)
+  selection.removeAllRanges()
+  selection.addRange(range)
+}
+
+function createAtomicRemoveButton(kind: 'checklist' | 'dailyEntry'): HTMLButtonElement {
+  const button = document.createElement('button')
+  button.type = 'button'
+  button.className = 'editor-atomic-block__remove'
+  button.dataset.atomicBlockRemove = kind
+  button.textContent = kind === 'checklist' ? 'Eliminar checklist' : 'Eliminar entrada'
+  button.title = button.textContent
+  button.setAttribute('aria-label', button.textContent)
+  return button
+}
+
+function decorateAtomicBlock(block: HTMLElement) {
+  if (block.querySelector(':scope > [data-atomic-block-remove]')) return
+
+  if (block.dataset.checklistBlock === 'true') {
+    block.append(createAtomicRemoveButton('checklist'))
+    return
+  }
+
+  if (block.dataset.dailyEntryBlock === 'true') {
+    block.append(createAtomicRemoveButton('dailyEntry'))
+  }
+}
+
+function decorateAtomicBlocks(root: ParentNode) {
+  if (root instanceof HTMLElement) {
+    if (root.dataset.checklistBlock === 'true' || root.dataset.dailyEntryBlock === 'true') {
+      decorateAtomicBlock(root)
+    }
+  }
+
+  root.querySelectorAll<HTMLElement>('[data-checklist-block="true"], [data-daily-entry-block="true"]')
+    .forEach(decorateAtomicBlock)
+}
+
+function removeAtomicBlock(button: HTMLButtonElement) {
+  const kind = button.dataset.atomicBlockRemove
+  const blockSelector = kind === 'dailyEntry'
+    ? '[data-daily-entry-block="true"]'
+    : '[data-checklist-block="true"]'
+  const block = button.closest<HTMLElement>(blockSelector)
+  const editor = block?.closest<HTMLElement>('.editor-surface') ?? null
+  if (!block || !editor) return
+
+  const question = kind === 'dailyEntry'
+    ? '¿Eliminar esta entrada diaria completa?'
+    : '¿Eliminar este checklist completo?'
+  if (!window.confirm(question)) return
+
+  const blockId = block.dataset.blockId ?? ''
+  const previous = block.previousElementSibling instanceof HTMLElement ? block.previousElementSibling : null
+  const next = block.nextElementSibling instanceof HTMLElement ? block.nextElementSibling : null
+
+  if (kind === 'dailyEntry' && blockId) {
+    editor.dataset.oanixAuthorizedProtectedRemoval = blockId
+  }
+
+  block.remove()
+
+  let focusTarget = next?.isConnected ? next : previous?.isConnected ? previous : null
+  if (!focusTarget) {
+    const paragraph = createCaretParagraph()
+    editor.append(paragraph)
+    focusTarget = paragraph
+  }
+
+  editor.dispatchEvent(new Event('input', { bubbles: true }))
+
+  const editable = focusTarget.matches('[contenteditable="true"]')
+    ? focusTarget
+    : focusTarget.querySelector<HTMLElement>('[contenteditable="true"]')
+  if (editable) {
+    editable.focus()
+    placeCaretAtEnd(editable)
+  } else {
+    editor.focus()
+    placeCaretAtEnd(focusTarget)
+  }
+}
+
 export function EditorOperationRuntime() {
   useEffect(() => {
     function handlePaste(event: ClipboardEvent) {
@@ -188,8 +298,6 @@ export function EditorOperationRuntime() {
       window.requestAnimationFrame(() => {
         insertPlainText(codeContent, plainText, range)
 
-        // Let the browser paint the pasted text before RichTextEditor reparses the
-        // complete note model. The model sync still runs immediately afterwards.
         window.setTimeout(() => {
           try {
             codeContent.dispatchEvent(new Event('input', { bubbles: true }))
@@ -216,11 +324,35 @@ export function EditorOperationRuntime() {
       watchImageOperation(editorRoot, files.length, feedback)
     }
 
+    function handleAtomicRemove(event: MouseEvent) {
+      const target = event.target
+      if (!(target instanceof Element)) return
+      const button = target.closest<HTMLButtonElement>('[data-atomic-block-remove]')
+      if (!button || !button.closest('.image-note-editor-root')) return
+
+      event.preventDefault()
+      event.stopPropagation()
+      removeAtomicBlock(button)
+    }
+
+    decorateAtomicBlocks(document)
+    const atomicObserver = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        mutation.addedNodes.forEach((node) => {
+          if (node instanceof Element) decorateAtomicBlocks(node)
+        })
+      }
+    })
+    atomicObserver.observe(document.body, { childList: true, subtree: true })
+
     document.addEventListener('paste', handlePaste, true)
     document.addEventListener('change', handleFileChange, true)
+    document.addEventListener('click', handleAtomicRemove, true)
     return () => {
+      atomicObserver.disconnect()
       document.removeEventListener('paste', handlePaste, true)
       document.removeEventListener('change', handleFileChange, true)
+      document.removeEventListener('click', handleAtomicRemove, true)
       feedbackElement()?.remove()
     }
   }, [])
