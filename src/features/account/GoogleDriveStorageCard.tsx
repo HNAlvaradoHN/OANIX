@@ -9,7 +9,7 @@ import {
   type GoogleDriveConnectionAvailability,
 } from '../largeObjects/googleDriveConnectionService.ts'
 import type { LargeObjectStorageCapacity } from '../largeObjects/largeObjectTransferContract.ts'
-import { GoogleDriveControlledTransferTest } from './GoogleDriveControlledTransferTest.tsx'
+import { GoogleDriveControlledTransferPanel } from './GoogleDriveControlledTransferPanel.tsx'
 import './googleDriveStorageCard.css'
 
 function formatBytes(value: number | null): string {
@@ -225,7 +225,7 @@ export function GoogleDriveStorageCard() {
         </div>
 
         {connected && (
-          <GoogleDriveControlledTransferTest
+          <GoogleDriveControlledTransferPanel
             disabled={busy}
             onStored={() => refreshCapacity()}
           />

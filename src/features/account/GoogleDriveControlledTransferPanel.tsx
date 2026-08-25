@@ -15,7 +15,7 @@ function formatPercent(verifiedBytes: number, totalBytes: number): string {
   return `${Math.min(100, Math.round((verifiedBytes / totalBytes) * 100))}%`
 }
 
-export function GoogleDriveControlledTransferTest({
+export function GoogleDriveControlledTransferPanel({
   disabled = false,
   onStored,
 }: {
