@@ -8,16 +8,18 @@ const workspace = readFileSync('src/features/notes/NotesWorkspace.tsx', 'utf8')
 const privacyRuntime = readFileSync('src/features/privacy/NoteBulkPrivacyRuntime.tsx', 'utf8')
 const app = readFileSync('src/app/App.tsx', 'utf8')
 
-test('el arrastre de notas se arma pronto y conserva el scroll rápido', () => {
-  assert.match(runtime, /const LONG_PRESS_MS = 340/)
-  assert.match(runtime, /const PRESS_ARM_GRACE_MS = 220/)
-  assert.match(runtime, /const MOVE_CANCEL_PX = 14/)
-  assert.match(runtime, /Math\.hypot\(dx, dy\)/)
-  assert.match(runtime, /beginDrag\(\)/)
-  assert.match(runtime, /navigator\.vibrate\?\.\(24\)/)
+test('el gesto usa estados explícitos y separa scroll rápido de long press', () => {
+  assert.match(runtime, /const LONG_PRESS_MS = 220/)
+  assert.match(runtime, /const MOVE_CANCEL_PX = 12/)
+  assert.match(runtime, /type GesturePhase = 'pressing' \| 'dragging'/)
+  assert.match(runtime, /phase: 'pressing'/)
+  assert.match(runtime, /gesture\.phase = 'dragging'/)
+  assert.match(runtime, /Math\.hypot\(/)
+  assert.match(runtime, /if \(distance >= MOVE_CANCEL_PX\) cancelGesture\(event\)/)
+  assert.doesNotMatch(runtime, /PRESS_ARM_GRACE_MS|pressedAt/)
 })
 
-test('el drag usa ghost e indicador de destino sin reflow de filas reales', () => {
+test('el drag usa ghost e indicador sin reordenar nodos React durante el gesto', () => {
   assert.match(runtime, /createGhost/)
   assert.match(runtime, /positionGhost/)
   assert.match(runtime, /previewOrderAtPoint/)
@@ -28,15 +30,44 @@ test('el drag usa ghost e indicador de destino sin reflow de filas reales', () =
   assert.match(css, /oanix-mobile-note-drag-ghost/)
   assert.match(css, /oanix-mobile-note-drop-before/)
   assert.match(css, /oanix-mobile-note-drop-after/)
+  assert.doesNotMatch(runtime, /insertBefore|appendChild\(gesture\.item\)/)
 })
 
-test('el ghost y el preview quedan encerrados dentro de la lista de notas', () => {
+test('ghost preview y auto-scroll quedan encerrados en la lista', () => {
   assert.match(runtime, /function clamp\(/)
   assert.match(runtime, /listRect\.right - ghostWidth/)
   assert.match(runtime, /listRect\.bottom - ghostHeight/)
   assert.match(runtime, /function pointInsideList\(/)
-  assert.match(runtime, /pointInsideList\(gesture\)/)
   assert.match(runtime, /if \(clientY < rect\.top \|\| clientY > rect\.bottom\) return 0/)
+})
+
+test('Android no puede apropiarse del long press con selección o drag nativos', () => {
+  assert.match(css, /\.note-row\[data-reorder-note-id\],\s*\.note-row\[data-reorder-note-id\] \*/)
+  assert.match(css, /-webkit-user-select: none !important/)
+  assert.match(css, /user-select: none !important/)
+  assert.match(css, /-webkit-touch-callout: none !important/)
+  assert.match(runtime, /selectstart/)
+  assert.match(runtime, /contextmenu/)
+  assert.match(runtime, /dragstart/)
+  assert.match(runtime, /window\.getSelection\(\)\?\.removeAllRanges\(\)/)
+})
+
+test('captura cancelación y multitouch tienen salidas explícitas', () => {
+  assert.match(runtime, /!event\.isPrimary/)
+  assert.match(runtime, /setPointerCapture/)
+  assert.match(runtime, /pointercancel/)
+  assert.match(runtime, /lostpointercapture/)
+  assert.match(runtime, /visibilitychange/)
+  assert.match(runtime, /window\.addEventListener\('blur'/)
+  assert.match(runtime, /cleanupVisuals/)
+})
+
+test('controles interactivos y marcado múltiple no compiten con el drag', () => {
+  assert.match(runtime, /button, a, input, textarea, select/)
+  assert.match(runtime, /oanix-note-bulk-selecting/)
+  assert.match(privacyRuntime, /\.notes-create-fab/)
+  assert.match(privacyRuntime, /data-oanix-bulk-mode/)
+  assert.doesNotMatch(privacyRuntime, /LONG_PRESS_MS|pointerdown|note-bulk-selection-start/)
 })
 
 test('el arrastre ya no depende del modo manual ni de eventos sintéticos', () => {
@@ -46,21 +77,13 @@ test('el arrastre ya no depende del modo manual ni de eventos sintéticos', () =
   assert.doesNotMatch(css, /oanix-note-jiggle|data-oanix-note-reorder-mode|data-oanix-note-drop-finishing/)
 })
 
-test('NotesWorkspace ya no conserva el motor manual retirado ni un botón oculto de ordenar', () => {
+test('NotesWorkspace no conserva el motor manual retirado', () => {
   assert.doesNotMatch(workspace, /reorderMode|orderingBusy|draggingNoteId|dragTargetId|dragPlacement/)
   assert.doesNotMatch(workspace, /handleReorderPointer|persistDraggedOrder|autoScrollNoteList/)
   assert.doesNotMatch(workspace, /Ordenar notas manualmente|Terminar de ordenar notas|Orden manual de/)
   assert.doesNotMatch(workspace, /ReactPointerEvent|persistNoteOrder/)
-  assert.doesNotMatch(css, /Ordenar notas manualmente|Terminar de ordenar notas/)
 })
 
-test('el marcado se desactiva como gesto y bloquea el drag solo cuando el modo explícito está activo', () => {
-  assert.match(runtime, /oanix-note-bulk-selecting/)
-  assert.match(privacyRuntime, /\.notes-create-fab/)
-  assert.match(privacyRuntime, /data-oanix-bulk-mode/)
-  assert.doesNotMatch(privacyRuntime, /LONG_PRESS_MS|pointerdown|note-bulk-selection-start/)
-})
-
-test('el runtime de gesto solo vive durante la sesión desbloqueada', () => {
+test('el runtime solo vive durante la sesión desbloqueada', () => {
   assert.match(app, /<NoteListReorderGestureRuntime key=\{`note-reorder-\$\{workspaceRevision\}`\} \/>/)
 })
