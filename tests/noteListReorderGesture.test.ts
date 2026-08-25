@@ -49,16 +49,16 @@ test('notas fijadas y no fijadas no se mezclan', () => {
 })
 
 test('controles interactivos y selección múltiple no compiten con reorder', () => {
-  assert.match(runtime, /filter: '.note-row__menu-wrap, button, a, input, textarea, select/)
+  assert.match(runtime, /function isInteractiveTarget/)
+  assert.match(runtime, /filter: \(_event, target\) => interactionBlocked\(\) \|\| isInteractiveTarget\(target\)/)
   assert.match(runtime, /preventOnFilter: false/)
   assert.match(runtime, /oanix-note-bulk-selecting/)
-  assert.match(runtime, /sortable\.option\('disabled', interactionBlocked\(\)\)/)
   assert.match(privacyRuntime, /data-oanix-bulk-mode/)
 })
 
 test('orden se persiste una sola vez al finalizar', () => {
   assert.match(runtime, /onEnd:/)
-  assert.match(runtime, /const nextOrder = noteOrder\(listElement\)/)
+  assert.match(runtime, /const nextOrder = noteOrder\(event\.to\)/)
   assert.match(runtime, /persistNoteOrder\(nextOrder\)/)
   assert.match(runtime, /oanix:workspace-refresh/)
   assert.doesNotMatch(runtime, /persistNoteOrder[\s\S]{0,120}onMove/)
@@ -79,8 +79,10 @@ test('NotesWorkspace no conserva otro motor de reorder', () => {
   assert.doesNotMatch(workspace, /ReactPointerEvent|persistNoteOrder/)
 })
 
-test('runtime se vuelve a conectar si React reemplaza la lista', () => {
-  assert.match(runtime, /new MutationObserver\(attach\)/)
-  assert.match(runtime, /sortable\?\.destroy\(\)/)
+test('runtime queda ligado a la lista actual y React lo remonta con cada revision', () => {
+  assert.match(runtime, /const list = document\.querySelector<HTMLElement>\('\.notes-list'\)/)
+  assert.match(runtime, /list\?\.classList\.contains\('notes-list'\)/)
+  assert.match(runtime, /sortable\.destroy\(\)/)
+  assert.doesNotMatch(runtime, /new MutationObserver/)
   assert.match(app, /<NoteListReorderGestureRuntime key=\{`note-reorder-\$\{workspaceRevision\}`\} \/>/)
 })
