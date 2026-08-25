@@ -159,8 +159,6 @@ export function NoteListReorderGestureRuntime() {
         trace('sortable-move', {
           dragged: event.dragged.dataset.reorderNoteId ?? null,
           related: (event.related as HTMLElement | null)?.dataset?.reorderNoteId ?? null,
-          willInsertAfter: event.willInsertAfter,
-          ...eventCoordinates(event.originalEvent),
         })
         if (interactionBlocked()) return false
         return rowPinned(event.dragged) === rowPinned(event.related)
