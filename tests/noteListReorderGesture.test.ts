@@ -21,7 +21,7 @@ test('reorder móvil usa SortableJS y conserva scroll nativo fuera del handle', 
   assert.match(runtime, /touchStartThreshold: TOUCH_START_THRESHOLD_PX/)
   assert.doesNotMatch(runtime, /supportPointer:\s*false/)
   assert.match(css, /touch-action: pan-y !important/)
-  assert.doesNotMatch(runtime, /setPointerCapture|scrollTop -=|pointermove|pointercancel/)
+  assert.doesNotMatch(runtime, /setPointerCapture|scrollTop -=/)
 })
 
 test('avatar es el handle táctil y el contrato funcional gobierna su interacción', () => {
@@ -33,7 +33,20 @@ test('avatar es el handle táctil y el contrato funcional gobierna su interacci�
   assert.match(avatar, /className=\{className\}/)
   assert.match(css, /\.note-row\[data-reorder-note-id\] \.note-row__avatar,[\s\S]*?html\.oanix-v383-visual \.note-row\[data-reorder-note-id\] \.note-row__avatar\s*\{[\s\S]*?pointer-events:\s*auto !important;[\s\S]*?touch-action:\s*none !important/)
   assert.doesNotMatch(css, /data-oanix-note-icon/)
-  assert.doesNotMatch(runtime, /touchArmTimer|touchArmed|onTouchMove|addEventListener\('touchmove'/)
+  assert.doesNotMatch(runtime, /touchArmTimer|touchArmed|function onTouchMove/)
+})
+
+test('diagnóstico temporal de drag observa eventos sin convertirse en otro motor', () => {
+  assert.match(runtime, /document\.addEventListener\('pointermove', onPointerMoveDiagnostic, true\)/)
+  assert.match(runtime, /document\.addEventListener\('pointercancel', onPointerCancelDiagnostic, true\)/)
+  assert.match(runtime, /document\.addEventListener\('touchmove', onTouchMoveDiagnostic, true\)/)
+  assert.match(runtime, /document\.addEventListener\('touchcancel', onTouchCancelDiagnostic, true\)/)
+  assert.match(runtime, /document\.removeEventListener\('pointermove', onPointerMoveDiagnostic, true\)/)
+  assert.match(runtime, /document\.removeEventListener\('pointercancel', onPointerCancelDiagnostic, true\)/)
+  assert.match(runtime, /document\.removeEventListener\('touchmove', onTouchMoveDiagnostic, true\)/)
+  assert.match(runtime, /document\.removeEventListener\('touchcancel', onTouchCancelDiagnostic, true\)/)
+  assert.match(runtime, /if \(!dragDiagnosticActive\) return/)
+  assert.doesNotMatch(runtime, /setPointerCapture|releasePointerCapture|elementFromPoint|scrollTop -=/)
 })
 
 test('fallback táctil crea ghost y placeholder sin CSS que pise transform', () => {
