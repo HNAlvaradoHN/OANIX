@@ -138,13 +138,16 @@ export function NotePrivacyRuntime() {
       })
     }
 
+    const workspace = document.querySelector<HTMLElement>('.notes-shell')
     const observer = new MutationObserver(bump)
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ['class', 'aria-expanded'],
-    })
+    if (workspace) {
+      observer.observe(workspace, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['class', 'aria-expanded'],
+      })
+    }
     window.addEventListener('input', bump, true)
 
     return () => {
