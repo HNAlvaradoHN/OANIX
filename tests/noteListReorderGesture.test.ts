@@ -31,6 +31,15 @@ test('el drag replica el patrón de carpetas con ghost, hueco de destino y reflo
   assert.match(css, /border: 2px dashed/)
 })
 
+test('el ghost y el reordenamiento quedan encerrados dentro de la lista de notas', () => {
+  assert.match(runtime, /function clamp\(/)
+  assert.match(runtime, /listRect\.right - ghostWidth/)
+  assert.match(runtime, /listRect\.bottom - ghostHeight/)
+  assert.match(runtime, /function pointInsideList\(/)
+  assert.match(runtime, /if \(!pointInsideList\(gesture\)\) return/)
+  assert.match(runtime, /if \(clientY < rect\.top \|\| clientY > rect\.bottom\) return 0/)
+})
+
 test('el arrastre ya no depende del modo manual ni de eventos sintéticos', () => {
   assert.doesNotMatch(runtime, /findReorderToggle|finishAutomaticMode|dispatchDragStart/)
   assert.doesNotMatch(runtime, /new PointerEvent/)
