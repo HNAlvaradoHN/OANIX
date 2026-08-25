@@ -16,10 +16,12 @@ test('las notas nuevas fuerzan refresco aislado del runtime de privacidad', () =
   assert.doesNotMatch(app, /setWorkspaceRevision\(\(value\) => value \+ 1\).*NOTE_PRIVACY_REFRESH_EVENT/s)
 })
 
-test('pulsación prolongada entra en selección múltiple sin reemplazar el clic normal', () => {
-  assert.match(runtime, /LONG_PRESS_MS = 520/)
+test('pulsación prolongada quieta entra en selección múltiple sin competir con el arrastre', () => {
+  assert.match(runtime, /LONG_PRESS_MS = 760/)
   assert.match(runtime, /pointerdown/)
   assert.match(runtime, /pointermove/)
+  assert.match(runtime, /data-oanix-note-drag-active/)
+  assert.match(runtime, /oanix:note-bulk-selection-start/)
   assert.match(runtime, /suppressNextClickRef/)
   assert.match(runtime, /selectedIdsRef\.current\.size > 0/)
   assert.match(runtime, /oanix-note-bulk-selecting/)
