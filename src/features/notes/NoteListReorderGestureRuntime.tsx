@@ -47,8 +47,11 @@ export function NoteListReorderGestureRuntime() {
       pressedNoteId = ''
     }
 
+    const appRoot = document.getElementById('root')
+    if (!appRoot) return
+
     const observer = new MutationObserver(() => window.requestAnimationFrame(syncModeAttribute))
-    observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['aria-label'] })
+    observer.observe(appRoot, { childList: true, subtree: true, attributes: true, attributeFilter: ['aria-label'] })
     syncModeAttribute()
 
     function dispatchDragStart(noteId: string, attempts = 0) {
