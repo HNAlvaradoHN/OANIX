@@ -5,6 +5,7 @@ import test from 'node:test'
 const runtime = readFileSync('src/features/notes/NoteListReorderGestureRuntime.tsx', 'utf8')
 const css = readFileSync('src/features/notes/noteReorderGesture.css', 'utf8')
 const workspace = readFileSync('src/features/notes/NotesWorkspace.tsx', 'utf8')
+const avatar = readFileSync('src/features/notes/NoteAvatar.tsx', 'utf8')
 const privacyRuntime = readFileSync('src/features/privacy/NoteBulkPrivacyRuntime.tsx', 'utf8')
 const app = readFileSync('src/app/App.tsx', 'utf8')
 const pkg = readFileSync('package.json', 'utf8')
@@ -23,12 +24,15 @@ test('reorder móvil usa SortableJS y conserva scroll nativo fuera del handle', 
   assert.doesNotMatch(runtime, /setPointerCapture|scrollTop -=|pointermove|pointercancel/)
 })
 
-test('avatar es el handle táctil y reserva su gesto desde touchstart', () => {
+test('avatar es el handle táctil y el contrato funcional gobierna su interacción', () => {
   assert.match(runtime, /handle: '\.note-row__avatar'/)
   assert.match(runtime, /function isDragHandle/)
   assert.match(runtime, /target\.closest\('\.note-row__avatar'\)/)
   assert.match(runtime, /!isDragHandle\(target\) && isInteractiveTarget\(target\)/)
-  assert.match(css, /html\.oanix-v383-visual[\s\S]*?\.note-row\[data-reorder-note-id\][\s\S]*?\.note-row__avatar\[data-oanix-note-icon\]\s*\{[\s\S]*?pointer-events:\s*auto !important;[\s\S]*?touch-action:\s*none !important/)
+  assert.match(workspace, /NoteAvatar[\s\S]*?className="note-row__avatar"/)
+  assert.match(avatar, /className=\{className\}/)
+  assert.match(css, /\.note-row\[data-reorder-note-id\] \.note-row__avatar,[\s\S]*?html\.oanix-v383-visual \.note-row\[data-reorder-note-id\] \.note-row__avatar\s*\{[\s\S]*?pointer-events:\s*auto !important;[\s\S]*?touch-action:\s*none !important/)
+  assert.doesNotMatch(css, /data-oanix-note-icon/)
   assert.doesNotMatch(runtime, /touchArmTimer|touchArmed|onTouchMove|addEventListener\('touchmove'/)
 })
 

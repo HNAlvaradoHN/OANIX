@@ -4,7 +4,7 @@ Este documento conserva **decisiones duraderas y restricciones de producto/arqui
 
 Antes de trabajar: leer `AGENTS.md` y `docs/CURRENT_STATE.md`, verificar `main` y PR recientes. GitHub es la fuente de verdad del código actual.
 
-**Última actualización:** 2026-08-23
+**Última actualización:** 2026-08-25
 
 ## 1. Principios permanentes
 
@@ -62,6 +62,7 @@ Reglas duraderas:
 - La categoría se elige entre etiquetas reales. Marcar una categoría principal no debe borrar otras etiquetas ya asignadas.
 - La personalización de lista vive como campos opcionales dentro del mismo `NoteRecord` cifrado; no crear un `note-appearance` paralelo ni cambiar `blocks-v1` por motivos visuales.
 - La personalización visual no sustituye el contenido real ni la edición normal de la nota.
+- En el drag de notas, V383 conserva apariencia; `pointer-events` y `touch-action` pertenecen al contrato funcional de reorder. PR #323 fue cerrado como superseded por el parche mínimo de autoridad táctil; no resucitar un motor pointer paralelo sin una causa nueva demostrada.
 
 ### Carpetas
 

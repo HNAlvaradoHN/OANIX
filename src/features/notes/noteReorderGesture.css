@@ -10,12 +10,10 @@
     touch-action: pan-y !important;
   }
 
-  /* v38.3 paints the avatar as a decorative layer with pointer-events:none.
-     The reorder runtime now uses that same avatar as its only drag handle, so
-     it must be hit-testable from the beginning of the touch gesture. */
-  html.oanix-v383-visual
-  .note-row[data-reorder-note-id]
-  .note-row__avatar[data-oanix-note-icon] {
+  /* Functional reorder contract owns handle interaction. V383 may keep the
+     visual appearance, but it must not decide pointer/touch behavior. */
+  .note-row[data-reorder-note-id] .note-row__avatar,
+  html.oanix-v383-visual .note-row[data-reorder-note-id] .note-row__avatar {
     pointer-events: auto !important;
     touch-action: none !important;
   }
