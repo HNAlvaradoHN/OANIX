@@ -51,6 +51,14 @@ test('borrado múltiple elimina notas e imágenes y refresca el workspace autori
   assert.match(app, /window\.addEventListener\('oanix:workspace-refresh'/)
 })
 
+test('borrado múltiple no atraviesa una nota que siga bloqueada', () => {
+  assert.match(runtime, /row\?\.dataset\.oanixNoteLocked === 'true'/)
+  assert.match(runtime, /Desbloquéala con su código antes de borrarla/)
+  assert.match(runtime, /Desbloquéalas con sus códigos antes de borrarlas/)
+  assert.match(runtime, /oanix-note-action-sheet__notice/)
+  assert.match(css, /\.oanix-note-action-sheet__notice/)
+})
+
 test('desbloqueo individual existente no se sustituye por un desbloqueo grupal', () => {
   assert.doesNotMatch(runtime, /verifyNotePrivacyLock/)
   assert.doesNotMatch(runtime, /unlockedNoteIds/)
