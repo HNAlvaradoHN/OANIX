@@ -20,95 +20,81 @@ function interactionBlocked(): boolean {
     || Boolean(document.querySelector('.notes-shell--searching'))
 }
 
+function isInteractiveTarget(target: HTMLElement): boolean {
+  return Boolean(target.closest('.note-row__menu-wrap, button, a, input, textarea, select, [contenteditable="true"]'))
+}
+
 export function NoteListReorderGestureRuntime() {
   useEffect(() => {
-    let sortable: Sortable | null = null
-    let activeList: HTMLElement | null = null
     let suppressClickUntil = 0
+    const list = document.querySelector<HTMLElement>('.notes-list')
+    if (!list?.classList.contains('notes-list')) return
 
     const clearDragVisuals = () => {
       document.body.classList.remove('oanix-mobile-note-dragging')
       document.documentElement.classList.remove('oanix-mobile-note-dragging')
-      document.querySelectorAll<HTMLElement>('[data-oanix-note-dragging="true"]')
+      list.querySelectorAll<HTMLElement>('[data-oanix-note-dragging="true"]')
         .forEach((row) => row.removeAttribute('data-oanix-note-dragging'))
       window.getSelection()?.removeAllRanges()
     }
 
-    const attach = () => {
-      const list = document.querySelector<HTMLElement>('.notes-list')
-      if (list === activeList && sortable) {
-        sortable.option('disabled', interactionBlocked())
-        return
-      }
+    const sortable = Sortable.create(list, {
+      draggable: ':scope > .note-row[data-reorder-note-id]',
+      filter: (_event, target) => interactionBlocked() || isInteractiveTarget(target),
+      preventOnFilter: false,
+      direction: 'vertical',
+      animation: 165,
+      easing: 'cubic-bezier(.2,.8,.2,1)',
+      delay: LONG_PRESS_MS,
+      delayOnTouchOnly: true,
+      touchStartThreshold: 7,
+      forceFallback: true,
+      fallbackOnBody: true,
+      fallbackTolerance: 4,
+      fallbackClass: 'oanix-mobile-note-drag-ghost',
+      chosenClass: 'oanix-mobile-note-chosen',
+      ghostClass: 'oanix-mobile-note-placeholder',
+      dragClass: 'oanix-mobile-note-drag-source',
+      swapThreshold: 0.62,
+      invertSwap: false,
+      scroll: true,
+      scrollSensitivity: 72,
+      scrollSpeed: 12,
+      bubbleScroll: false,
+      dataIdAttr: 'data-reorder-note-id',
+      supportPointer: false,
+      onChoose: (event) => {
+        event.item.setAttribute('data-oanix-note-dragging', 'true')
+        window.getSelection()?.removeAllRanges()
+      },
+      onStart: () => {
+        document.body.classList.add('oanix-mobile-note-dragging')
+        document.documentElement.classList.add('oanix-mobile-note-dragging')
+        navigator.vibrate?.(30)
+      },
+      onMove: (event) => {
+        if (interactionBlocked()) return false
+        return rowPinned(event.dragged) === rowPinned(event.related)
+      },
+      onEnd: (event) => {
+        suppressClickUntil = performance.now() + 520
+        clearDragVisuals()
+        const nextOrder = noteOrder(event.to)
 
-      sortable?.destroy()
-      sortable = null
-      activeList = list
-      clearDragVisuals()
-      if (!list) return
+        if (event.oldIndex === event.newIndex || nextOrder.length === 0) return
 
-      sortable = Sortable.create(list, {
-        draggable: ':scope > .note-row[data-reorder-note-id]',
-        filter: '.note-row__menu-wrap, button, a, input, textarea, select, [contenteditable="true"]',
-        preventOnFilter: false,
-        direction: 'vertical',
-        animation: 165,
-        easing: 'cubic-bezier(.2,.8,.2,1)',
-        delay: LONG_PRESS_MS,
-        delayOnTouchOnly: true,
-        touchStartThreshold: 7,
-        forceFallback: true,
-        fallbackOnBody: true,
-        fallbackTolerance: 4,
-        fallbackClass: 'oanix-mobile-note-drag-ghost',
-        chosenClass: 'oanix-mobile-note-chosen',
-        ghostClass: 'oanix-mobile-note-placeholder',
-        dragClass: 'oanix-mobile-note-drag-source',
-        swapThreshold: 0.62,
-        invertSwap: false,
-        scroll: true,
-        scrollSensitivity: 72,
-        scrollSpeed: 12,
-        bubbleScroll: false,
-        dataIdAttr: 'data-reorder-note-id',
-        supportPointer: false,
-        onChoose: (event) => {
-          if (interactionBlocked()) return
-          event.item.setAttribute('data-oanix-note-dragging', 'true')
-          window.getSelection()?.removeAllRanges()
-        },
-        onStart: () => {
-          document.body.classList.add('oanix-mobile-note-dragging')
-          document.documentElement.classList.add('oanix-mobile-note-dragging')
-          navigator.vibrate?.(30)
-        },
-        onMove: (event) => {
-          if (interactionBlocked()) return false
-          return rowPinned(event.dragged) === rowPinned(event.related)
-        },
-        onEnd: (event) => {
-          suppressClickUntil = performance.now() + 520
-          clearDragVisuals()
-          const listElement = event.to
-          const nextOrder = noteOrder(listElement)
-
-          if (event.oldIndex === event.newIndex || nextOrder.length === 0) return
-
-          void (async () => {
-            try {
-              await persistNoteOrder(nextOrder)
-              window.dispatchEvent(new CustomEvent('oanix:local-data-changed', { detail: { recordType: 'note' } }))
-              window.dispatchEvent(new Event('oanix:workspace-refresh'))
-              navigator.vibrate?.(12)
-            } catch {
-              window.dispatchEvent(new Event('oanix:workspace-refresh'))
-            }
-          })()
-        },
-      })
-
-      sortable.option('disabled', interactionBlocked())
-    }
+        void (async () => {
+          try {
+            await persistNoteOrder(nextOrder)
+            window.dispatchEvent(new CustomEvent('oanix:local-data-changed', { detail: { recordType: 'note' } }))
+            window.dispatchEvent(new Event('oanix:workspace-refresh'))
+            navigator.vibrate?.(12)
+          } catch {
+            window.dispatchEvent(new Event('oanix:workspace-refresh'))
+          }
+        })()
+      },
+    })
 
     const onClick = (event: MouseEvent) => {
       if (performance.now() >= suppressClickUntil) return
@@ -122,22 +108,12 @@ export function NoteListReorderGestureRuntime() {
       event.preventDefault()
     }
 
-    attach()
-    const observer = new MutationObserver(attach)
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ['class'],
-    })
-
     document.addEventListener('click', onClick, true)
     document.addEventListener('contextmenu', blockNativeLongPress, true)
     document.addEventListener('selectstart', blockNativeLongPress, true)
 
     return () => {
-      observer.disconnect()
-      sortable?.destroy()
+      sortable.destroy()
       clearDragVisuals()
       document.removeEventListener('click', onClick, true)
       document.removeEventListener('contextmenu', blockNativeLongPress, true)
