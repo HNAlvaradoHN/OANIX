@@ -1,384 +1,123 @@
 import { useEffect } from 'react'
+import Sortable from 'sortablejs'
 import { persistNoteOrder } from './noteService'
 import './noteReorderGesture.css'
 
-const LONG_PRESS_MS = 280
-const MOVE_CANCEL_PX = 10
-const EDGE_SCROLL_PX = 72
-const MAX_SCROLL_PER_FRAME = 12
-
-type PointerDragGesture = {
-  pointerId: number
-  item: HTMLElement
-  noteId: string
-  list: HTMLElement
-  startX: number
-  startY: number
-  lastX: number
-  lastY: number
-  offsetX: number
-  offsetY: number
-  timer: number | null
-  dragging: boolean
-  scrolling: boolean
-  scrollOnly: boolean
-  clone: HTMLElement | null
-  placeholder: HTMLElement | null
-  originalDisplay: string
-  scrollFrame: number | null
-}
-
-function rawNoteRow(target: EventTarget | null): HTMLElement | null {
-  if (!(target instanceof Element)) return null
-  return target.closest<HTMLElement>('.note-row[data-reorder-note-id]')
-}
-
-function isInteractiveTarget(target: EventTarget | null): boolean {
-  if (!(target instanceof Element)) return false
-  return Boolean(target.closest('.note-row__menu-wrap, button, a, input, textarea, select, [contenteditable="true"]'))
-}
+const LONG_PRESS_MS = 300
 
 function rowPinned(row: HTMLElement): boolean {
   const title = row.querySelector<HTMLElement>('.note-row__topline > strong')
   return Boolean(title?.textContent?.trim().startsWith('📌'))
 }
 
-function clamp(value: number, min: number, max: number): number {
-  if (max <= min) return min
-  return Math.min(max, Math.max(min, value))
+function noteOrder(list: HTMLElement): string[] {
+  return Array.from(list.querySelectorAll<HTMLElement>(':scope > .note-row[data-reorder-note-id]'))
+    .flatMap((row) => row.dataset.reorderNoteId ? [row.dataset.reorderNoteId] : [])
 }
 
-function createPlaceholder(item: HTMLElement): HTMLElement {
-  const rect = item.getBoundingClientRect()
-  const placeholder = document.createElement('div')
-  placeholder.className = 'oanix-mobile-note-placeholder'
-  placeholder.style.height = `${rect.height}px`
-  placeholder.setAttribute('aria-hidden', 'true')
-  return placeholder
+function interactionBlocked(): boolean {
+  return document.documentElement.classList.contains('oanix-note-bulk-selecting')
+    || Boolean(document.querySelector('.notes-shell--searching'))
 }
 
-function createClone(item: HTMLElement): HTMLElement {
-  const rect = item.getBoundingClientRect()
-  const clone = item.cloneNode(true) as HTMLElement
-  clone.classList.add('oanix-mobile-note-drag-ghost')
-  clone.removeAttribute('data-reorder-note-id')
-  clone.removeAttribute('data-oanix-bulk-selected')
-  clone.setAttribute('aria-hidden', 'true')
-  clone.querySelectorAll<HTMLElement>('button, [role="button"]').forEach((element) => element.setAttribute('tabindex', '-1'))
-  clone.style.width = `${rect.width}px`
-  clone.style.height = `${rect.height}px`
-  clone.style.left = `${rect.left}px`
-  clone.style.top = `${rect.top}px`
-  document.body.appendChild(clone)
-  return clone
-}
-
-function positionClone(gesture: PointerDragGesture) {
-  if (!gesture.clone) return
-  const listRect = gesture.list.getBoundingClientRect()
-  const width = gesture.clone.offsetWidth
-  const height = gesture.clone.offsetHeight
-  gesture.clone.style.left = `${clamp(gesture.lastX - gesture.offsetX, listRect.left, listRect.right - width)}px`
-  gesture.clone.style.top = `${clamp(gesture.lastY - gesture.offsetY, listRect.top, listRect.bottom - height)}px`
-}
-
-function updatePlaceholder(gesture: PointerDragGesture) {
-  const placeholder = gesture.placeholder
-  if (!placeholder) return
-
-  const listRect = gesture.list.getBoundingClientRect()
-  if (gesture.lastY < listRect.top || gesture.lastY > listRect.bottom) return
-
-  const pinned = rowPinned(gesture.item)
-  const candidates = Array.from(
-    gesture.list.querySelectorAll<HTMLElement>(':scope > .note-row[data-reorder-note-id]'),
-  ).filter((row) => row !== gesture.item && rowPinned(row) === pinned && row.style.display !== 'none')
-
-  if (candidates.length === 0) return
-
-  for (const row of candidates) {
-    const rect = row.getBoundingClientRect()
-    if (gesture.lastY < rect.top + rect.height / 2) {
-      gesture.list.insertBefore(placeholder, row)
-      return
-    }
-  }
-
-  candidates[candidates.length - 1].insertAdjacentElement('afterend', placeholder)
-}
-
-function orderFromPlaceholder(gesture: PointerDragGesture): string[] {
-  const ids: string[] = []
-  for (const child of Array.from(gesture.list.children)) {
-    if (child === gesture.placeholder) {
-      ids.push(gesture.noteId)
-      continue
-    }
-    if (!(child instanceof HTMLElement) || child === gesture.item) continue
-    const id = child.dataset.reorderNoteId
-    if (id) ids.push(id)
-  }
-  return ids
-}
-
-function scrollSpeed(clientY: number, rect: DOMRect): number {
-  if (clientY < rect.top || clientY > rect.bottom) return 0
-  if (clientY < rect.top + EDGE_SCROLL_PX) {
-    const strength = Math.min(1, (rect.top + EDGE_SCROLL_PX - clientY) / EDGE_SCROLL_PX)
-    return -Math.max(2, Math.round(MAX_SCROLL_PER_FRAME * strength))
-  }
-  if (clientY > rect.bottom - EDGE_SCROLL_PX) {
-    const strength = Math.min(1, (clientY - (rect.bottom - EDGE_SCROLL_PX)) / EDGE_SCROLL_PX)
-    return Math.max(2, Math.round(MAX_SCROLL_PER_FRAME * strength))
-  }
-  return 0
+function isInteractiveTarget(target: HTMLElement): boolean {
+  return Boolean(target.closest('.note-row__menu-wrap, button, a, input, textarea, select, [contenteditable="true"]'))
 }
 
 export function NoteListReorderGestureRuntime() {
   useEffect(() => {
-    let gesture: PointerDragGesture | null = null
     let suppressClickUntil = 0
-    let cleaningUp = false
+    const list = document.querySelector<HTMLElement>('.notes-list')
+    if (!list?.classList.contains('notes-list')) return
 
-    const clearTimer = () => {
-      if (!gesture || gesture.timer === null) return
-      window.clearTimeout(gesture.timer)
-      gesture.timer = null
-    }
-
-    const stopAutoScroll = () => {
-      if (!gesture || gesture.scrollFrame === null) return
-      window.cancelAnimationFrame(gesture.scrollFrame)
-      gesture.scrollFrame = null
-    }
-
-    const releasePointer = () => {
-      if (!gesture) return
-      try {
-        if (gesture.list.hasPointerCapture(gesture.pointerId)) {
-          gesture.list.releasePointerCapture(gesture.pointerId)
-        }
-      } catch {
-        // Pointer capture can already be gone after cancellation/visibility changes.
-      }
-    }
-
-    const cleanup = () => {
-      if (!gesture || cleaningUp) return
-      cleaningUp = true
-      clearTimer()
-      stopAutoScroll()
-      releasePointer()
-      gesture.clone?.remove()
-      gesture.placeholder?.remove()
-      gesture.item.style.display = gesture.originalDisplay
-      gesture.item.removeAttribute('data-oanix-note-dragging')
+    const clearDragVisuals = () => {
       document.body.classList.remove('oanix-mobile-note-dragging')
       document.documentElement.classList.remove('oanix-mobile-note-dragging')
+      list.querySelectorAll<HTMLElement>('[data-oanix-note-dragging="true"]')
+        .forEach((row) => row.removeAttribute('data-oanix-note-dragging'))
       window.getSelection()?.removeAllRanges()
-      cleaningUp = false
     }
 
-    const cancelGesture = () => {
-      cleanup()
-      gesture = null
-    }
+    const sortable = Sortable.create(list, {
+      draggable: ':scope > .note-row[data-reorder-note-id]',
+      filter: (_event, target) => interactionBlocked() || isInteractiveTarget(target),
+      preventOnFilter: false,
+      direction: 'vertical',
+      animation: 165,
+      easing: 'cubic-bezier(.2,.8,.2,1)',
+      delay: LONG_PRESS_MS,
+      delayOnTouchOnly: true,
+      touchStartThreshold: 7,
+      forceFallback: true,
+      fallbackOnBody: true,
+      fallbackTolerance: 4,
+      fallbackClass: 'oanix-mobile-note-drag-ghost',
+      chosenClass: 'oanix-mobile-note-chosen',
+      ghostClass: 'oanix-mobile-note-placeholder',
+      dragClass: 'oanix-mobile-note-drag-source',
+      swapThreshold: 0.62,
+      invertSwap: false,
+      scroll: true,
+      scrollSensitivity: 72,
+      scrollSpeed: 12,
+      bubbleScroll: false,
+      dataIdAttr: 'data-reorder-note-id',
+      supportPointer: false,
+      onChoose: (event) => {
+        event.item.setAttribute('data-oanix-note-dragging', 'true')
+        window.getSelection()?.removeAllRanges()
+      },
+      onStart: () => {
+        document.body.classList.add('oanix-mobile-note-dragging')
+        document.documentElement.classList.add('oanix-mobile-note-dragging')
+        navigator.vibrate?.(30)
+      },
+      onMove: (event) => {
+        if (interactionBlocked()) return false
+        return rowPinned(event.dragged) === rowPinned(event.related)
+      },
+      onEnd: (event) => {
+        suppressClickUntil = performance.now() + 520
+        clearDragVisuals()
+        const nextOrder = noteOrder(event.to)
 
-    const startAutoScroll = () => {
-      if (!gesture?.dragging || gesture.scrollFrame !== null) return
-      const tick = () => {
-        if (!gesture?.dragging) return
-        const speed = scrollSpeed(gesture.lastY, gesture.list.getBoundingClientRect())
-        if (speed !== 0) {
-          const before = gesture.list.scrollTop
-          gesture.list.scrollTop += speed
-          if (gesture.list.scrollTop !== before) {
-            positionClone(gesture)
-            updatePlaceholder(gesture)
+        if (event.oldIndex === event.newIndex || nextOrder.length === 0) return
+
+        void (async () => {
+          try {
+            await persistNoteOrder(nextOrder)
+            window.dispatchEvent(new CustomEvent('oanix:local-data-changed', { detail: { recordType: 'note' } }))
+            window.dispatchEvent(new Event('oanix:workspace-refresh'))
+            navigator.vibrate?.(12)
+          } catch {
+            window.dispatchEvent(new Event('oanix:workspace-refresh'))
           }
-        }
-        gesture.scrollFrame = window.requestAnimationFrame(tick)
-      }
-      gesture.scrollFrame = window.requestAnimationFrame(tick)
-    }
-
-    const activateDrag = () => {
-      if (!gesture || gesture.dragging || gesture.scrolling || gesture.scrollOnly) return
-      if (document.documentElement.classList.contains('oanix-note-bulk-selecting')) return cancelGesture()
-
-      clearTimer()
-      const rect = gesture.item.getBoundingClientRect()
-      gesture.offsetX = gesture.lastX - rect.left
-      gesture.offsetY = gesture.lastY - rect.top
-      gesture.placeholder = createPlaceholder(gesture.item)
-      gesture.item.insertAdjacentElement('beforebegin', gesture.placeholder)
-      gesture.clone = createClone(gesture.item)
-      gesture.originalDisplay = gesture.item.style.display
-      gesture.item.style.display = 'none'
-      gesture.item.setAttribute('data-oanix-note-dragging', 'true')
-      gesture.dragging = true
-
-      document.body.classList.add('oanix-mobile-note-dragging')
-      document.documentElement.classList.add('oanix-mobile-note-dragging')
-      window.getSelection()?.removeAllRanges()
-      positionClone(gesture)
-      updatePlaceholder(gesture)
-      startAutoScroll()
-      navigator.vibrate?.(30)
-    }
-
-    const onPointerDown = (event: PointerEvent) => {
-      if (event.pointerType !== 'touch' || !event.isPrimary || gesture) return
-      if (document.documentElement.classList.contains('oanix-note-bulk-selecting')) return
-      if (document.querySelector('.notes-shell--searching')) return
-
-      const item = rawNoteRow(event.target)
-      const noteId = item?.dataset.reorderNoteId
-      const list = item?.parentElement
-      if (!item || !noteId || !list?.classList.contains('notes-list')) return
-
-      const scrollOnly = isInteractiveTarget(event.target)
-      gesture = {
-        pointerId: event.pointerId,
-        item,
-        noteId,
-        list,
-        startX: event.clientX,
-        startY: event.clientY,
-        lastX: event.clientX,
-        lastY: event.clientY,
-        offsetX: 0,
-        offsetY: 0,
-        timer: scrollOnly ? null : window.setTimeout(activateDrag, LONG_PRESS_MS),
-        dragging: false,
-        scrolling: false,
-        scrollOnly,
-        clone: null,
-        placeholder: null,
-        originalDisplay: item.style.display,
-        scrollFrame: null,
-      }
-
-      try {
-        list.setPointerCapture(event.pointerId)
-      } catch {
-        cancelGesture()
-      }
-    }
-
-    const onPointerMove = (event: PointerEvent) => {
-      if (!gesture || event.pointerId !== gesture.pointerId) return
-
-      const previousY = gesture.lastY
-      gesture.lastX = event.clientX
-      gesture.lastY = event.clientY
-
-      if (!gesture.dragging) {
-        const distance = Math.hypot(event.clientX - gesture.startX, event.clientY - gesture.startY)
-        if (!gesture.scrolling && distance >= MOVE_CANCEL_PX) {
-          clearTimer()
-          gesture.scrolling = true
-        }
-        if (!gesture.scrolling) return
-
-        if (event.cancelable) event.preventDefault()
-        event.stopPropagation()
-        const before = gesture.list.scrollTop
-        gesture.list.scrollTop -= event.clientY - previousY
-        if (gesture.list.scrollTop !== before) suppressClickUntil = performance.now() + 320
-        return
-      }
-
-      if (event.cancelable) event.preventDefault()
-      event.stopPropagation()
-      positionClone(gesture)
-      updatePlaceholder(gesture)
-    }
-
-    const finishGesture = async (event: PointerEvent) => {
-      if (!gesture || event.pointerId !== gesture.pointerId) return
-
-      if (!gesture.dragging) {
-        if (gesture.scrolling) {
-          if (event.cancelable) event.preventDefault()
-          event.stopPropagation()
-          suppressClickUntil = performance.now() + 320
-        }
-        cleanup()
-        gesture = null
-        return
-      }
-
-      if (event.cancelable) event.preventDefault()
-      event.stopPropagation()
-      suppressClickUntil = performance.now() + 520
-
-      const finished = gesture
-      const nextOrder = orderFromPlaceholder(finished)
-      const beforeOrder = Array.from(finished.list.querySelectorAll<HTMLElement>(':scope > .note-row[data-reorder-note-id]'))
-        .flatMap((row) => row.dataset.reorderNoteId ? [row.dataset.reorderNoteId] : [])
-
-      cleanup()
-      gesture = null
-
-      if (event.type === 'pointercancel' || nextOrder.length !== beforeOrder.length || nextOrder.join('|') === beforeOrder.join('|')) return
-
-      try {
-        await persistNoteOrder(nextOrder)
-        window.dispatchEvent(new CustomEvent('oanix:local-data-changed', { detail: { recordType: 'note' } }))
-        window.dispatchEvent(new Event('oanix:workspace-refresh'))
-        navigator.vibrate?.(12)
-      } catch {
-        window.dispatchEvent(new Event('oanix:workspace-refresh'))
-      }
-    }
-
-    const onLostPointerCapture = (event: PointerEvent) => {
-      if (cleaningUp || !gesture || event.pointerId !== gesture.pointerId) return
-      cancelGesture()
-    }
+        })()
+      },
+    })
 
     const onClick = (event: MouseEvent) => {
-      if (performance.now() >= suppressClickUntil || !rawNoteRow(event.target)) return
+      if (performance.now() >= suppressClickUntil) return
+      if (!(event.target instanceof Element) || !event.target.closest('.note-row[data-reorder-note-id]')) return
       event.preventDefault()
       event.stopImmediatePropagation()
     }
 
-    const blockNative = (event: Event) => {
-      if (!rawNoteRow(event.target)) return
+    const blockNativeLongPress = (event: Event) => {
+      if (!(event.target instanceof Element) || !event.target.closest('.note-row[data-reorder-note-id]')) return
       event.preventDefault()
     }
 
-    const onVisibilityChange = () => { if (document.hidden) cancelGesture() }
-    const onBlur = () => cancelGesture()
-
-    document.addEventListener('pointerdown', onPointerDown, { capture: true, passive: true })
-    document.addEventListener('pointermove', onPointerMove, { capture: true, passive: false })
-    document.addEventListener('pointerup', finishGesture, { capture: true, passive: false })
-    document.addEventListener('pointercancel', finishGesture, { capture: true, passive: false })
-    document.addEventListener('lostpointercapture', onLostPointerCapture, true)
     document.addEventListener('click', onClick, true)
-    document.addEventListener('contextmenu', blockNative, true)
-    document.addEventListener('selectstart', blockNative, true)
-    document.addEventListener('dragstart', blockNative, true)
-    document.addEventListener('visibilitychange', onVisibilityChange)
-    window.addEventListener('blur', onBlur)
+    document.addEventListener('contextmenu', blockNativeLongPress, true)
+    document.addEventListener('selectstart', blockNativeLongPress, true)
 
     return () => {
-      cancelGesture()
-      document.removeEventListener('pointerdown', onPointerDown, true)
-      document.removeEventListener('pointermove', onPointerMove, true)
-      document.removeEventListener('pointerup', finishGesture, true)
-      document.removeEventListener('pointercancel', finishGesture, true)
-      document.removeEventListener('lostpointercapture', onLostPointerCapture, true)
+      sortable.destroy()
+      clearDragVisuals()
       document.removeEventListener('click', onClick, true)
-      document.removeEventListener('contextmenu', blockNative, true)
-      document.removeEventListener('selectstart', blockNative, true)
-      document.removeEventListener('dragstart', blockNative, true)
-      document.removeEventListener('visibilitychange', onVisibilityChange)
-      window.removeEventListener('blur', onBlur)
-      document.body.classList.remove('oanix-mobile-note-dragging')
-      document.documentElement.classList.remove('oanix-mobile-note-dragging')
+      document.removeEventListener('contextmenu', blockNativeLongPress, true)
+      document.removeEventListener('selectstart', blockNativeLongPress, true)
     }
   }, [])
 

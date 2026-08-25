@@ -7,96 +7,82 @@ const css = readFileSync('src/features/notes/noteReorderGesture.css', 'utf8')
 const workspace = readFileSync('src/features/notes/NotesWorkspace.tsx', 'utf8')
 const privacyRuntime = readFileSync('src/features/privacy/NoteBulkPrivacyRuntime.tsx', 'utf8')
 const app = readFileSync('src/app/App.tsx', 'utf8')
+const pkg = readFileSync('package.json', 'utf8')
 
-test('el gesto touch se reserva desde pointerdown y conserva scroll manual antes del long press', () => {
-  assert.match(runtime, /const LONG_PRESS_MS = 280/)
-  assert.match(runtime, /const MOVE_CANCEL_PX = 10/)
-  assert.match(css, /touch-action: none !important/)
-  assert.match(runtime, /event\.pointerType !== 'touch'/)
-  assert.match(runtime, /list\.setPointerCapture\(event\.pointerId\)/)
-  assert.match(runtime, /gesture\.list\.scrollTop -= event\.clientY - previousY/)
-  assert.match(runtime, /if \(!gesture\.scrolling && distance >= MOVE_CANCEL_PX\)/)
-  assert.match(runtime, /gesture\.scrolling = true/)
-  assert.match(runtime, /document\.addEventListener\('pointermove', onPointerMove, \{ capture: true, passive: false \}\)/)
+test('reorder móvil usa SortableJS y devuelve el scroll al navegador', () => {
+  assert.match(pkg, /"sortablejs": "1\.15\.7"/)
+  assert.match(runtime, /import Sortable from 'sortablejs'/)
+  assert.match(runtime, /Sortable\.create\(list/)
+  assert.match(runtime, /const LONG_PRESS_MS = 300/)
+  assert.match(runtime, /delay: LONG_PRESS_MS/)
+  assert.match(runtime, /delayOnTouchOnly: true/)
+  assert.match(runtime, /touchStartThreshold: 7/)
+  assert.match(runtime, /supportPointer: false/)
+  assert.match(css, /touch-action: pan-y !important/)
+  assert.doesNotMatch(runtime, /setPointerCapture|scrollTop -=|pointermove|pointercancel/)
 })
 
-test('controles interactivos conservan taps y entran en scroll manual sin activar drag', () => {
-  assert.match(runtime, /function rawNoteRow/)
-  assert.match(runtime, /function isInteractiveTarget/)
-  assert.match(runtime, /const scrollOnly = isInteractiveTarget\(event\.target\)/)
-  assert.match(runtime, /timer: scrollOnly \? null : window\.setTimeout\(activateDrag, LONG_PRESS_MS\)/)
-  assert.match(runtime, /scrollOnly,/)
-  assert.match(runtime, /gesture\.scrolling/)
-  assert.match(runtime, /if \(!gesture\.scrolling\) return/)
-  assert.match(runtime, /if \(gesture\.scrolling\) \{/)
-  assert.match(runtime, /!rawNoteRow\(event\.target\)/)
-})
-
-test('el drag usa el mismo pointerId, clon fixed y placeholder real sin mover filas React', () => {
-  assert.match(runtime, /event\.pointerId !== gesture\.pointerId/)
-  assert.match(runtime, /createClone/)
-  assert.match(runtime, /createPlaceholder/)
-  assert.match(runtime, /positionClone/)
-  assert.match(runtime, /updatePlaceholder/)
-  assert.match(runtime, /orderFromPlaceholder/)
-  assert.match(runtime, /gesture\.item\.style\.display = 'none'/)
-  assert.match(runtime, /gesture\.list\.insertBefore\(placeholder, row\)/)
-  assert.match(css, /oanix-mobile-note-placeholder/)
+test('fallback táctil crea ghost y placeholder sin CSS que pise transform', () => {
+  assert.match(runtime, /forceFallback: true/)
+  assert.match(runtime, /fallbackOnBody: true/)
+  assert.match(runtime, /fallbackTolerance: 4/)
+  assert.match(runtime, /fallbackClass: 'oanix-mobile-note-drag-ghost'/)
+  assert.match(runtime, /ghostClass: 'oanix-mobile-note-placeholder'/)
   assert.match(css, /oanix-mobile-note-drag-ghost/)
+  assert.match(css, /oanix-mobile-note-placeholder/)
+  assert.doesNotMatch(css, /oanix-mobile-note-drag-ghost[\s\S]{0,500}transform:/)
+  assert.doesNotMatch(css, /@keyframes oanix-note-drag-pulse/)
+})
+
+test('auto-scroll y orden vertical pertenecen a SortableJS', () => {
+  assert.match(runtime, /direction: 'vertical'/)
+  assert.match(runtime, /scroll: true/)
+  assert.match(runtime, /scrollSensitivity: 72/)
+  assert.match(runtime, /scrollSpeed: 12/)
+  assert.match(runtime, /bubbleScroll: false/)
+  assert.match(runtime, /swapThreshold: 0\.62/)
+})
+
+test('notas fijadas y no fijadas no se mezclan', () => {
+  assert.match(runtime, /function rowPinned/)
+  assert.match(runtime, /rowPinned\(event\.dragged\) === rowPinned\(event\.related\)/)
+})
+
+test('controles interactivos y selección múltiple no compiten con reorder', () => {
+  assert.match(runtime, /function isInteractiveTarget/)
+  assert.match(runtime, /filter: \(_event, target\) => interactionBlocked\(\) \|\| isInteractiveTarget\(target\)/)
+  assert.match(runtime, /preventOnFilter: false/)
+  assert.match(runtime, /oanix-note-bulk-selecting/)
+  assert.match(privacyRuntime, /data-oanix-bulk-mode/)
+})
+
+test('orden se persiste una sola vez al finalizar', () => {
+  assert.match(runtime, /onEnd:/)
+  assert.match(runtime, /const nextOrder = noteOrder\(event\.to\)/)
   assert.match(runtime, /persistNoteOrder\(nextOrder\)/)
   assert.match(runtime, /oanix:workspace-refresh/)
+  assert.doesNotMatch(runtime, /persistNoteOrder[\s\S]{0,120}onMove/)
 })
 
-test('pointer capture se libera sin limpieza reentrante y pointercancel cancela el gesto', () => {
-  assert.match(runtime, /let cleaningUp = false/)
-  assert.match(runtime, /if \(!gesture \|\| cleaningUp\) return/)
-  assert.match(runtime, /cleaningUp = true/)
-  assert.match(runtime, /hasPointerCapture\(gesture\.pointerId\)/)
-  assert.match(runtime, /releasePointerCapture\(gesture\.pointerId\)/)
-  assert.match(runtime, /if \(cleaningUp \|\| !gesture \|\| event\.pointerId !== gesture\.pointerId\) return/)
-  assert.match(runtime, /pointercancel/)
-  assert.match(runtime, /lostpointercapture/)
-  assert.match(runtime, /visibilitychange/)
-  assert.match(runtime, /window\.addEventListener\('blur'/)
-  assert.match(runtime, /gesture\.clone\?\.remove\(\)/)
-  assert.match(runtime, /gesture\.placeholder\?\.remove\(\)/)
-})
-
-test('el clon queda dentro de notes-list y el auto-scroll usa sus bordes', () => {
-  assert.match(runtime, /function clamp\(/)
-  assert.match(runtime, /listRect\.right - width/)
-  assert.match(runtime, /listRect\.bottom - height/)
-  assert.match(runtime, /scrollSpeed/)
-  assert.match(runtime, /gesture\.list\.scrollTop \+= speed/)
-})
-
-test('notas fijadas y no fijadas no se mezclan al mover placeholder', () => {
-  assert.match(runtime, /function rowPinned/)
-  assert.match(runtime, /rowPinned\(row\) === pinned/)
-})
-
-test('selección contexto y drag nativos están bloqueados', () => {
+test('selección y menú contextual nativos siguen bloqueados', () => {
   assert.match(css, /-webkit-user-select: none !important/)
   assert.match(css, /user-select: none !important/)
   assert.match(css, /-webkit-touch-callout: none !important/)
   assert.match(runtime, /contextmenu/)
   assert.match(runtime, /selectstart/)
-  assert.match(runtime, /dragstart/)
   assert.match(runtime, /window\.getSelection\(\)\?\.removeAllRanges\(\)/)
 })
 
-test('marcado múltiple no compite con el drag', () => {
-  assert.match(runtime, /oanix-note-bulk-selecting/)
-  assert.match(privacyRuntime, /\.notes-create-fab/)
-  assert.match(privacyRuntime, /data-oanix-bulk-mode/)
-})
-
-test('NotesWorkspace no conserva el motor manual retirado', () => {
+test('NotesWorkspace no conserva otro motor de reorder', () => {
   assert.doesNotMatch(workspace, /reorderMode|orderingBusy|draggingNoteId|dragTargetId|dragPlacement/)
   assert.doesNotMatch(workspace, /handleReorderPointer|persistDraggedOrder|autoScrollNoteList/)
   assert.doesNotMatch(workspace, /ReactPointerEvent|persistNoteOrder/)
 })
 
-test('el runtime solo vive durante la sesión desbloqueada', () => {
+test('runtime queda ligado a la lista actual y React lo remonta con cada revision', () => {
+  assert.match(runtime, /const list = document\.querySelector<HTMLElement>\('\.notes-list'\)/)
+  assert.match(runtime, /list\?\.classList\.contains\('notes-list'\)/)
+  assert.match(runtime, /sortable\.destroy\(\)/)
+  assert.doesNotMatch(runtime, /new MutationObserver/)
   assert.match(app, /<NoteListReorderGestureRuntime key=\{`note-reorder-\$\{workspaceRevision\}`\} \/>/)
 })
