@@ -45,13 +45,13 @@ test('existing OANIX marks receive the technological nucleus/orbit treatment', (
   assert.match(foundation, /prefers-reduced-motion/)
 })
 
-test('note avatars are manually selected encrypted images independent from note content', () => {
-  assert.match(avatar, /chooseNoteAvatar/)
+test('note avatars remain encrypted visuals but the list avatar is a passive reorder handle', () => {
+  assert.match(avatar, /readNoteAvatar/)
   assert.match(avatar, /loadNoteAvatarPreview/)
-  assert.match(avatar, /input\.type = 'file'/)
-  assert.match(avatar, /event\.stopPropagation\(\)/)
+  assert.match(avatar, /title="Mantén pulsado para reordenar"/)
   assert.match(avatar, /URL\.createObjectURL/)
   assert.match(avatar, /URL\.revokeObjectURL/)
+  assert.doesNotMatch(avatar, /chooseNoteAvatar|input\.type = 'file'|onClick=|onPointerDown=|createPortal|stopPropagation/)
   assert.doesNotMatch(avatar, /block\.type === 'image'/)
   assert.match(avatarService, /NOTE_AVATAR_RECORD_TYPE = 'note-avatar'/)
   assert.match(avatarService, /storeEncryptedImage/)
