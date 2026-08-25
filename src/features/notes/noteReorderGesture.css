@@ -10,9 +10,6 @@
     touch-action: pan-y !important;
   }
 
-  /* v38.3 paints the avatar as a decorative layer with pointer-events:none.
-     The reorder runtime now uses that same avatar as its only drag handle, so
-     it must be hit-testable from the beginning of the touch gesture. */
   html.oanix-v383-visual
   .note-row[data-reorder-note-id]
   .note-row__avatar[data-oanix-note-icon] {
@@ -21,28 +18,51 @@
   }
 }
 
-.note-row.oanix-mobile-note-chosen {
-  box-shadow: 0 0 0 2px rgba(96,165,250,.26) !important;
+/* Igual que las carpetas: la fila real queda como hueco vivo mientras una copia
+   elevada sigue el dedo. */
+html.oanix-v383-visual body .note-row.oanix-mobile-note-drag-source {
+  position: relative !important;
+  opacity: 1 !important;
+  transform: scale(.985) !important;
+  border: 2px dashed rgba(96,165,250,.88) !important;
+  background: rgba(59,130,246,.10) !important;
+  box-shadow:
+    0 0 0 3px rgba(59,130,246,.12),
+    inset 0 0 0 1px rgba(255,255,255,.14) !important;
+  transition: border-color 120ms ease, background 120ms ease, box-shadow 120ms ease !important;
 }
 
-.note-row.oanix-mobile-note-placeholder {
-  opacity: .24 !important;
-  border: 2px dashed rgba(96,165,250,.9) !important;
-  background: rgba(59,130,246,.08) !important;
-  box-shadow: none !important;
+html.oanix-v383-visual body .note-row.oanix-mobile-note-drag-source > * {
+  visibility: hidden !important;
 }
 
-.note-row.oanix-mobile-note-drag-ghost {
+html.oanix-v383-visual body .note-row.oanix-mobile-note-drag-source::after {
+  content: '' !important;
+  position: absolute !important;
+  inset: 12px !important;
+  display: block !important;
+  border-radius: 18px !important;
+  background: radial-gradient(circle at 20% 50%,rgba(96,165,250,.22),transparent 62%) !important;
+  pointer-events: none !important;
+}
+
+html.oanix-v383-visual body .note-row.oanix-mobile-note-drag-ghost {
+  position: fixed !important;
   z-index: 9800 !important;
   margin: 0 !important;
   pointer-events: none !important;
-  opacity: .99 !important;
-  border-color: rgba(147,197,253,.9) !important;
-  box-shadow: 0 22px 46px rgba(2,6,23,.46), 0 0 0 2px rgba(96,165,250,.3), inset 0 1px 1px rgba(255,255,255,.18) !important;
-  will-change: transform;
+  opacity: .98 !important;
+  transform: scale(1.025) rotate(-.4deg) !important;
+  border-color: rgba(147,197,253,.82) !important;
+  box-shadow:
+    0 24px 54px rgba(2,6,23,.48),
+    0 0 0 2px rgba(96,165,250,.24),
+    inset 0 1px 1px rgba(255,255,255,.18) !important;
+  transition: transform 110ms ease, box-shadow 110ms ease !important;
+  will-change: left, top, transform;
 }
 
-.note-row.oanix-mobile-note-drag-ghost .note-row__menu-wrap {
+html.oanix-v383-visual body .note-row.oanix-mobile-note-drag-ghost .note-row__menu-wrap {
   display: none !important;
 }
 
@@ -61,6 +81,8 @@ html.oanix-mobile-note-dragging .notes-list {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  html.oanix-v383-visual body .note-row.oanix-mobile-note-drag-source,
+  html.oanix-v383-visual body .note-row.oanix-mobile-note-drag-ghost,
   .note-row[data-reorder-note-id] {
     transition: none !important;
   }
