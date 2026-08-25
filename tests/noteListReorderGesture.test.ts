@@ -20,6 +20,18 @@ test('el gesto touch se reserva desde pointerdown y conserva scroll manual antes
   assert.match(runtime, /document\.addEventListener\('pointermove', onPointerMove, \{ capture: true, passive: false \}\)/)
 })
 
+test('controles interactivos conservan taps y entran en scroll manual sin activar drag', () => {
+  assert.match(runtime, /function rawNoteRow/)
+  assert.match(runtime, /function isInteractiveTarget/)
+  assert.match(runtime, /const scrollOnly = isInteractiveTarget\(event\.target\)/)
+  assert.match(runtime, /timer: scrollOnly \? null : window\.setTimeout\(activateDrag, LONG_PRESS_MS\)/)
+  assert.match(runtime, /scrollOnly,/)
+  assert.match(runtime, /gesture\.scrolling/)
+  assert.match(runtime, /if \(!gesture\.scrolling\) return/)
+  assert.match(runtime, /if \(gesture\.scrolling\) \{/)
+  assert.match(runtime, /!rawNoteRow\(event\.target\)/)
+})
+
 test('el drag usa el mismo pointerId, clon fixed y placeholder real sin mover filas React', () => {
   assert.match(runtime, /event\.pointerId !== gesture\.pointerId/)
   assert.match(runtime, /createClone/)
@@ -35,9 +47,13 @@ test('el drag usa el mismo pointerId, clon fixed y placeholder real sin mover fi
   assert.match(runtime, /oanix:workspace-refresh/)
 })
 
-test('pointer capture se libera y pointercancel limpia el gesto', () => {
+test('pointer capture se libera sin limpieza reentrante y pointercancel cancela el gesto', () => {
+  assert.match(runtime, /let cleaningUp = false/)
+  assert.match(runtime, /if \(!gesture \|\| cleaningUp\) return/)
+  assert.match(runtime, /cleaningUp = true/)
   assert.match(runtime, /hasPointerCapture\(gesture\.pointerId\)/)
   assert.match(runtime, /releasePointerCapture\(gesture\.pointerId\)/)
+  assert.match(runtime, /if \(cleaningUp \|\| !gesture \|\| event\.pointerId !== gesture\.pointerId\) return/)
   assert.match(runtime, /pointercancel/)
   assert.match(runtime, /lostpointercapture/)
   assert.match(runtime, /visibilitychange/)
@@ -69,8 +85,7 @@ test('selección contexto y drag nativos están bloqueados', () => {
   assert.match(runtime, /window\.getSelection\(\)\?\.removeAllRanges\(\)/)
 })
 
-test('controles interactivos y marcado múltiple no compiten con el drag', () => {
-  assert.match(runtime, /button, a, input, textarea, select/)
+test('marcado múltiple no compite con el drag', () => {
   assert.match(runtime, /oanix-note-bulk-selecting/)
   assert.match(privacyRuntime, /\.notes-create-fab/)
   assert.match(privacyRuntime, /data-oanix-bulk-mode/)
