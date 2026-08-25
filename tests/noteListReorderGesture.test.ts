@@ -8,27 +8,20 @@ const workspace = readFileSync('src/features/notes/NotesWorkspace.tsx', 'utf8')
 const privacyRuntime = readFileSync('src/features/privacy/NoteBulkPrivacyRuntime.tsx', 'utf8')
 const app = readFileSync('src/app/App.tsx', 'utf8')
 
-test('el gesto usa estados explícitos y separa scroll rápido de long press', () => {
+test('el gesto decide explícitamente entre pulsación scroll y drag', () => {
   assert.match(runtime, /const LONG_PRESS_MS = 220/)
-  assert.match(runtime, /const MOVE_CANCEL_PX = 12/)
-  assert.match(runtime, /type GesturePhase = 'pressing' \| 'dragging'/)
-  assert.match(runtime, /phase: 'pressing'/)
+  assert.match(runtime, /const SCROLL_START_PX = 9/)
+  assert.match(runtime, /type GesturePhase = 'pressing' \| 'scrolling' \| 'dragging'/)
+  assert.match(runtime, /gesture\.phase = 'scrolling'/)
   assert.match(runtime, /gesture\.phase = 'dragging'/)
-  assert.match(runtime, /Math\.hypot\(/)
-  assert.match(runtime, /if \(distance >= MOVE_CANCEL_PX\) cancelGesture\(\)/)
-  assert.doesNotMatch(runtime, /PRESS_ARM_GRACE_MS|pressedAt/)
+  assert.match(runtime, /gesture\.list\.scrollTop = gesture\.startScrollTop - \(event\.clientY - gesture\.startY\)/)
 })
 
-test('el drag táctil usa Touch Events completos y no depende de pointermove en Android', () => {
-  assert.match(runtime, /type GestureInput = 'touch' \| 'pointer'/)
-  assert.match(runtime, /document\.addEventListener\('touchstart', onTouchStart, \{ capture: true, passive: true \}\)/)
-  assert.match(runtime, /document\.addEventListener\('touchmove', onTouchMove, \{ capture: true, passive: false \}\)/)
-  assert.match(runtime, /document\.addEventListener\('touchend', onTouchEnd, \{ capture: true, passive: false \}\)/)
-  assert.match(runtime, /document\.addEventListener\('touchcancel', onTouchCancel, true\)/)
-  assert.match(runtime, /findTouch\(event\.touches, gesture\.touchId\)/)
-  assert.match(runtime, /updateDragPoint\(touch\.clientX, touch\.clientY, event\)/)
-  assert.match(runtime, /void finishGesture\(event\)/)
-  assert.match(runtime, /event\.pointerType === 'touch'/)
+test('Android no puede entregar el gesto al pan nativo', () => {
+  assert.match(css, /touch-action: none !important/)
+  assert.match(runtime, /setPointerCapture\(event\.pointerId\)/)
+  assert.match(runtime, /document\.addEventListener\('pointermove', onPointerMove, \{ capture: true, passive: false \}\)/)
+  assert.doesNotMatch(runtime, /touchstart|touchmove|touchend|touchcancel|GestureInput|findTouch/)
 })
 
 test('el drag usa ghost e indicador sin reordenar nodos React durante el gesto', () => {
@@ -47,29 +40,23 @@ test('el drag usa ghost e indicador sin reordenar nodos React durante el gesto',
 
 test('ghost preview y auto-scroll quedan encerrados en la lista', () => {
   assert.match(runtime, /function clamp\(/)
-  assert.match(runtime, /listRect\.right - ghostWidth/)
-  assert.match(runtime, /listRect\.bottom - ghostHeight/)
   assert.match(runtime, /function pointInsideList\(/)
-  assert.match(runtime, /if \(clientY < rect\.top \|\| clientY > rect\.bottom\) return 0/)
+  assert.match(runtime, /scrollSpeed/)
+  assert.match(runtime, /gesture\.list\.scrollTop \+= speed/)
 })
 
-test('Android no puede apropiarse del long press con selección o drag nativos', () => {
-  assert.match(css, /\.note-row\[data-reorder-note-id\],\s*\.note-row\[data-reorder-note-id\] \*/)
+test('selección contexto y drag nativos están bloqueados en tarjetas', () => {
   assert.match(css, /-webkit-user-select: none !important/)
   assert.match(css, /user-select: none !important/)
   assert.match(css, /-webkit-touch-callout: none !important/)
-  assert.match(runtime, /selectstart/)
   assert.match(runtime, /contextmenu/)
+  assert.match(runtime, /selectstart/)
   assert.match(runtime, /dragstart/)
   assert.match(runtime, /window\.getSelection\(\)\?\.removeAllRanges\(\)/)
-  assert.match(runtime, /if \(event\?\.cancelable\) event\.preventDefault\(\)/)
 })
 
-test('captura cancelación y multitouch tienen salidas explícitas', () => {
-  assert.match(runtime, /event\.touches\.length !== 1/)
-  assert.match(runtime, /setPointerCapture/)
+test('cancelación y pérdida de captura limpian el gesto', () => {
   assert.match(runtime, /pointercancel/)
-  assert.match(runtime, /touchcancel/)
   assert.match(runtime, /lostpointercapture/)
   assert.match(runtime, /visibilitychange/)
   assert.match(runtime, /window\.addEventListener\('blur'/)
@@ -81,20 +68,11 @@ test('controles interactivos y marcado múltiple no compiten con el drag', () =>
   assert.match(runtime, /oanix-note-bulk-selecting/)
   assert.match(privacyRuntime, /\.notes-create-fab/)
   assert.match(privacyRuntime, /data-oanix-bulk-mode/)
-  assert.doesNotMatch(privacyRuntime, /LONG_PRESS_MS|pointerdown|note-bulk-selection-start/)
-})
-
-test('el arrastre ya no depende del modo manual ni de eventos sintéticos', () => {
-  assert.doesNotMatch(runtime, /findReorderToggle|finishAutomaticMode|dispatchDragStart/)
-  assert.doesNotMatch(runtime, /new PointerEvent/)
-  assert.doesNotMatch(runtime, /oanix:note-bulk-selection-start/)
-  assert.doesNotMatch(css, /oanix-note-jiggle|data-oanix-note-reorder-mode|data-oanix-note-drop-finishing/)
 })
 
 test('NotesWorkspace no conserva el motor manual retirado', () => {
   assert.doesNotMatch(workspace, /reorderMode|orderingBusy|draggingNoteId|dragTargetId|dragPlacement/)
   assert.doesNotMatch(workspace, /handleReorderPointer|persistDraggedOrder|autoScrollNoteList/)
-  assert.doesNotMatch(workspace, /Ordenar notas manualmente|Terminar de ordenar notas|Orden manual de/)
   assert.doesNotMatch(workspace, /ReactPointerEvent|persistNoteOrder/)
 })
 

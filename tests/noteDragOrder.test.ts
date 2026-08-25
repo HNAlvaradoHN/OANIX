@@ -9,7 +9,7 @@ test('note ordering is owned by the direct long-press drag runtime', () => {
   assert.match(workspace, /data-reorder-note-id=\{note\.id\}/)
   assert.doesNotMatch(workspace, /handleReorderPointerDown|handleReorderPointerMove|handleReorderPointerEnd|handleReorderPointerCancel/)
   assert.doesNotMatch(workspace, /setPointerCapture|document\.elementFromPoint|touchAction: 'none'|⠿/)
-  assert.match(runtime, /setPointerCapture\(gesture\.pointerId\)/)
+  assert.match(runtime, /setPointerCapture\(event\.pointerId\)/)
   assert.match(runtime, /createGhost/)
   assert.match(runtime, /previewOrderAtPoint/)
   assert.match(runtime, /persistNoteOrder\(nextOrder\)/)
