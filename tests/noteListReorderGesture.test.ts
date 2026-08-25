@@ -39,6 +39,13 @@ test('el ghost y el preview quedan encerrados dentro de la lista de notas', () =
   assert.match(runtime, /if \(clientY < rect\.top \|\| clientY > rect\.bottom\) return 0/)
 })
 
+test('Android no puede seleccionar texto dentro de una tarjeta arrastrable', () => {
+  assert.match(css, /\.note-row\[data-reorder-note-id\],\s*\.note-row\[data-reorder-note-id\] \*/)
+  assert.match(css, /-webkit-user-select: none !important/)
+  assert.match(css, /user-select: none !important/)
+  assert.match(css, /-webkit-touch-callout: none !important/)
+})
+
 test('el arrastre ya no depende del modo manual ni de eventos sintéticos', () => {
   assert.doesNotMatch(runtime, /findReorderToggle|finishAutomaticMode|dispatchDragStart/)
   assert.doesNotMatch(runtime, /new PointerEvent/)
