@@ -1,0 +1,18 @@
+import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import test from 'node:test'
+
+const organic = readFileSync('src/features/notes/OrganicWorkspaceRuntime.tsx', 'utf8')
+const personalization = readFileSync('src/features/notes/WorkspacePersonalizationRuntime.tsx', 'utf8')
+
+test('organic workspace observes the notes shell instead of the whole document body', () => {
+  assert.match(organic, /querySelector<HTMLElement>\('\.notes-shell'\)/)
+  assert.match(organic, /observer\.observe\(workspace,\s*\{[\s\S]*subtree:\s*true/)
+  assert.doesNotMatch(organic, /observer\.observe\(document\.body,\s*\{[\s\S]*subtree:\s*true/)
+})
+
+test('workspace personalization scopes deep observation to notes shell and body only detects direct portals', () => {
+  assert.match(personalization, /workspaceObserver\.observe\(workspace,\s*\{[\s\S]*subtree:\s*true/)
+  assert.match(personalization, /portalObserver\.observe\(document\.body,\s*\{\s*childList:\s*true\s*\}\)/)
+  assert.doesNotMatch(personalization, /portalObserver\.observe\(document\.body,\s*\{[\s\S]*subtree:\s*true/)
+})
