@@ -10,8 +10,9 @@ import './noteBulkPrivacy.css'
 
 export const NOTE_PRIVACY_REFRESH_EVENT = 'oanix:note-privacy-refresh'
 
-const LONG_PRESS_MS = 520
+const LONG_PRESS_MS = 760
 const LONG_PRESS_MOVE_TOLERANCE = 12
+const NOTE_BULK_SELECTION_START_EVENT = 'oanix:note-bulk-selection-start'
 
 interface ActivePress {
   pointerId: number
@@ -160,8 +161,13 @@ export function NoteBulkPrivacyRuntime() {
         triggered: false,
       }
       active.timer = window.setTimeout(() => {
+        if (document.body.hasAttribute('data-oanix-note-drag-active')) {
+          activePressRef.current = null
+          return
+        }
         active.triggered = true
         suppressNextClickRef.current = noteId
+        window.dispatchEvent(new CustomEvent(NOTE_BULK_SELECTION_START_EVENT, { detail: { noteId } }))
         setSelectedIds((current) => new Set(current).add(noteId))
         void refreshProtectedIds()
       }, LONG_PRESS_MS)
@@ -293,7 +299,7 @@ export function NoteBulkPrivacyRuntime() {
           <button className="oanix-note-bulk-bar__close" type="button" onClick={clearSelection} aria-label="Cancelar selección">×</button>
           <div>
             <strong>{selectedIds.size} seleccionada{selectedIds.size === 1 ? '' : 's'}</strong>
-            <small>Mantén otra nota presionada o tócala para marcarla.</small>
+            <small>Toca otras notas para marcarlas o desmarcarlas.</small>
           </div>
           <button
             className="oanix-note-bulk-bar__protect"
