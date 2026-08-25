@@ -66,13 +66,16 @@ export function AndroidBiometricRetryRuntime({ onUnlocked }: AndroidBiometricRet
     }
 
     refresh()
-    const observer = new MutationObserver(refresh)
-    observer.observe(document.body, { childList: true, subtree: true })
+    const appRoot = document.getElementById('root')
+    const observer = appRoot ? new MutationObserver(refresh) : null
+    if (appRoot && observer) {
+      observer.observe(appRoot, { childList: true, subtree: true })
+    }
     window.addEventListener('focus', refresh)
 
     return () => {
       active = false
-      observer.disconnect()
+      observer?.disconnect()
       window.removeEventListener('focus', refresh)
     }
   }, [])
