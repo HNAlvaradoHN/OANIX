@@ -39,11 +39,12 @@ test('folders, tags and notes finish reordering automatically after the pointer 
   assert.match(organic, /finishFolderReorder/)
   assert.match(organic, /\.oanix-folder-rail__done/)
   assert.match(organic, /finishTagDrag/)
-  assert.match(noteGesture, /NOTE_REORDER_LONG_PRESS_MS = 460/)
-  assert.match(noteGesture, /dispatchDragStart/)
-  assert.match(noteGesture, /finishAutomaticMode/)
-  assert.doesNotMatch(noteGesture, /oanix-note-reorder-done|oanix-note-reorder-menu-proxy/)
-  assert.doesNotMatch(noteCss, /\.oanix-note-reorder-done|\.oanix-note-reorder-menu-proxy/)
+  assert.match(noteGesture, /const LONG_PRESS_MS = 340/)
+  assert.match(noteGesture, /persistAndFinish/)
+  assert.match(noteGesture, /persistNoteOrder\(nextOrder\)/)
+  assert.match(noteGesture, /oanix-mobile-note-drag-source/)
+  assert.doesNotMatch(noteGesture, /finishAutomaticMode|dispatchDragStart|new PointerEvent/)
+  assert.doesNotMatch(noteCss, /oanix-note-jiggle|data-oanix-note-reorder-mode/)
 })
 
 test('manual tag order reuses encrypted records and remains backward compatible with tag records', () => {
