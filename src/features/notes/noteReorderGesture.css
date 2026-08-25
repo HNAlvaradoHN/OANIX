@@ -8,27 +8,11 @@
 
 .note-row.oanix-mobile-note-drag-source {
   position: relative !important;
-  opacity: 1 !important;
-  transform: scale(.985) !important;
-  border: 2px dashed rgba(96,165,250,.9) !important;
-  background: rgba(59,130,246,.10) !important;
-  box-shadow:
-    0 0 0 3px rgba(59,130,246,.12),
-    inset 0 0 0 1px rgba(255,255,255,.12) !important;
-  transition: border-color 120ms ease, background 120ms ease, box-shadow 120ms ease !important;
-}
-
-.note-row.oanix-mobile-note-drag-source > * {
-  visibility: hidden !important;
-}
-
-.note-row.oanix-mobile-note-drag-source::after {
-  content: '';
-  position: absolute;
-  inset: 10px;
-  border-radius: 20px;
-  background: radial-gradient(circle at 50% 45%, rgba(96,165,250,.22), transparent 66%);
-  pointer-events: none;
+  opacity: .28 !important;
+  transform: none !important;
+  filter: saturate(.65) !important;
+  pointer-events: none !important;
+  transition: opacity 100ms ease, filter 100ms ease !important;
 }
 
 .note-row.oanix-mobile-note-drag-ghost {
@@ -36,19 +20,46 @@
   z-index: 9800 !important;
   margin: 0 !important;
   pointer-events: none !important;
-  opacity: .98 !important;
-  transform: scale(1.035) rotate(-.45deg) !important;
-  border-color: rgba(147,197,253,.8) !important;
+  opacity: .99 !important;
+  transform: scale(1.018) !important;
+  border-color: rgba(147,197,253,.9) !important;
   box-shadow:
-    0 24px 54px rgba(2,6,23,.5),
-    0 0 0 2px rgba(96,165,250,.24),
-    inset 0 1px 1px rgba(255,255,255,.16) !important;
-  transition: transform 110ms ease, box-shadow 110ms ease !important;
-  will-change: left, top, transform;
+    0 22px 46px rgba(2,6,23,.46),
+    0 0 0 2px rgba(96,165,250,.3),
+    inset 0 1px 1px rgba(255,255,255,.18) !important;
+  transition: box-shadow 100ms ease, transform 100ms ease !important;
+  will-change: left, top;
 }
 
 .note-row.oanix-mobile-note-drag-ghost .note-row__menu-wrap {
   display: none !important;
+}
+
+.note-row.oanix-mobile-note-drop-before,
+.note-row.oanix-mobile-note-drop-after {
+  position: relative !important;
+}
+
+.note-row.oanix-mobile-note-drop-before::before,
+.note-row.oanix-mobile-note-drop-after::after {
+  content: '' !important;
+  position: absolute !important;
+  z-index: 12 !important;
+  left: 18px !important;
+  right: 18px !important;
+  height: 4px !important;
+  border-radius: 999px !important;
+  background: #3b82f6 !important;
+  box-shadow: 0 0 0 3px rgba(59,130,246,.18), 0 4px 12px rgba(37,99,235,.28) !important;
+  pointer-events: none !important;
+}
+
+.note-row.oanix-mobile-note-drop-before::before {
+  top: -2px !important;
+}
+
+.note-row.oanix-mobile-note-drop-after::after {
+  bottom: -2px !important;
 }
 
 html.oanix-mobile-note-dragging,
