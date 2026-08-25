@@ -7,17 +7,18 @@
   }
 
   .note-row[data-reorder-note-id] {
-    touch-action: none !important;
+    touch-action: pan-y !important;
   }
 }
 
-.note-row.oanix-mobile-note-drag-source {
-  position: relative !important;
-  opacity: .28 !important;
-  transform: none !important;
-  filter: saturate(.65) !important;
+.oanix-mobile-note-placeholder {
+  min-height: 54px;
+  margin: 0 0 8px !important;
+  border: 2px dashed rgba(96,165,250,.9) !important;
+  border-radius: 14px !important;
+  background: rgba(59,130,246,.08) !important;
+  box-sizing: border-box !important;
   pointer-events: none !important;
-  transition: opacity 100ms ease, filter 100ms ease !important;
 }
 
 .note-row.oanix-mobile-note-drag-ghost {
@@ -37,27 +38,14 @@
   display: none !important;
 }
 
-.note-row.oanix-mobile-note-drop-before,
-.note-row.oanix-mobile-note-drop-after {
-  position: relative !important;
+@keyframes oanix-note-drag-pulse {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-1px); }
 }
 
-.note-row.oanix-mobile-note-drop-before::before,
-.note-row.oanix-mobile-note-drop-after::after {
-  content: '' !important;
-  position: absolute !important;
-  z-index: 12 !important;
-  left: 18px !important;
-  right: 18px !important;
-  height: 4px !important;
-  border-radius: 999px !important;
-  background: #3b82f6 !important;
-  box-shadow: 0 0 0 3px rgba(59,130,246,.18), 0 4px 12px rgba(37,99,235,.28) !important;
-  pointer-events: none !important;
+body.oanix-mobile-note-dragging .note-row[data-reorder-note-id]:not([data-oanix-note-dragging='true']) {
+  animation: oanix-note-drag-pulse 280ms ease-in-out infinite;
 }
-
-.note-row.oanix-mobile-note-drop-before::before { top: -2px !important; }
-.note-row.oanix-mobile-note-drop-after::after { bottom: -2px !important; }
 
 html.oanix-mobile-note-dragging,
 body.oanix-mobile-note-dragging {
@@ -70,8 +58,9 @@ html.oanix-mobile-note-dragging .notes-list {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .note-row.oanix-mobile-note-drag-source,
-  .note-row.oanix-mobile-note-drag-ghost {
+  .note-row.oanix-mobile-note-drag-ghost,
+  body.oanix-mobile-note-dragging .note-row[data-reorder-note-id]:not([data-oanix-note-dragging='true']) {
     transition: none !important;
+    animation: none !important;
   }
 }
