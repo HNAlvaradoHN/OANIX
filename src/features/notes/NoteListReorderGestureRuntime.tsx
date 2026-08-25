@@ -119,7 +119,7 @@ export function NoteListReorderGestureRuntime() {
     }
 
     const sortableOptions: SortableOptionsWithHandle = {
-      draggable: ':scope > .note-row[data-reorder-note-id]',
+      draggable: '.note-row[data-reorder-note-id]',
       handle: '.note-row__avatar',
       filter: (_event, target) => interactionBlocked() || (!isDragHandle(target) && isInteractiveTarget(target)),
       preventOnFilter: false,
