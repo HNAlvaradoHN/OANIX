@@ -5,7 +5,7 @@ import test from 'node:test'
 const main = readFileSync('src/main.tsx', 'utf8')
 const gate = readFileSync('src/app/WorkspaceRuntimeGate.tsx', 'utf8')
 const bridge = readFileSync('src/features/folders/FolderCustomizerBridgeRuntime.tsx', 'utf8')
-const bridgeCss = readFileSync('src/features/folders/folderCustomizerBridge.css', 'utf8')
+const personalization = readFileSync('src/features/notes/WorkspacePersonalizationRuntime.tsx', 'utf8')
 const appearance = readFileSync('src/features/folders/FolderAppearanceRuntime.tsx', 'utf8')
 
 test('folder gear opens the unified customizer directly without the retired intermediary visual layer', () => {
@@ -13,7 +13,8 @@ test('folder gear opens the unified customizer directly without the retired inte
   assert.match(bridge, /openUnifiedFolderCustomizer/)
   assert.match(bridge, /\.oanix-folder-focus__menu/)
   assert.match(bridge, /stopImmediatePropagation/)
-  assert.match(bridgeCss, /\.oanix-folder-options-backdrop[\s\S]*display:\s*none !important/)
+  assert.doesNotMatch(personalization, /oanix-folder-options-backdrop|oanix-folder-options__actions/)
+  assert.equal(existsSync('src/features/folders/folderCustomizerBridge.css'), false)
   assert.equal(existsSync('src/features/notes/folderOptionsVisual.css'), false)
   assert.doesNotMatch(main, /folderOptionsVisual\.css/)
 })
@@ -37,7 +38,7 @@ test('the remaining folder customizer contains the professional action surface i
   assert.match(appearance, /const cancelButton = existingActions\[existingActions\.length - 1\]/)
 })
 
-test('folder bridge mounts before legacy personalization listeners after unlock', () => {
+test('folder bridge mounts before workspace personalization after unlock', () => {
   const bridgeIndex = gate.indexOf('<FolderCustomizerBridgeRuntime />')
   const personalizationIndex = gate.indexOf('<WorkspacePersonalizationRuntime />')
   assert.ok(bridgeIndex >= 0 && personalizationIndex > bridgeIndex)
