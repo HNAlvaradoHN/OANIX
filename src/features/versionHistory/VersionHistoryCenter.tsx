@@ -70,9 +70,12 @@ export function VersionHistoryCenter({ onRestored }: VersionHistoryCenterProps) 
       setHost(document.querySelector<HTMLElement>('.notes-header__actions'))
     }
 
+    const appRoot = document.getElementById('root')
+    if (!appRoot) return
+
     refreshHost()
     const observer = new MutationObserver(refreshHost)
-    observer.observe(document.body, { childList: true, subtree: true })
+    observer.observe(appRoot, { childList: true, subtree: true })
     return () => observer.disconnect()
   }, [])
 
