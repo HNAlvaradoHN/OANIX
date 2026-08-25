@@ -251,5 +251,110 @@ export function NoteListReorderGestureRuntime() {
     }
   }, [])
 
+  useEffect(() => {
+    const existing = document.getElementById('oanix-note-drag-debug')
+    existing?.remove()
+
+    const button = document.createElement('button')
+    button.id = 'oanix-note-drag-debug'
+    button.type = 'button'
+    button.textContent = '🔍 Drag logs'
+    button.setAttribute('aria-label', 'Abrir diagnóstico del arrastre de notas')
+    button.style.cssText = [
+      'position:fixed',
+      'right:14px',
+      'bottom:calc(92px + env(safe-area-inset-bottom))',
+      'z-index:99990',
+      'padding:10px 12px',
+      'border:1px solid rgba(103,232,249,.9)',
+      'border-radius:10px',
+      'background:rgba(2,6,23,.94)',
+      'color:#e0f2fe',
+      'font:600 12px/1.2 system-ui,sans-serif',
+      'box-shadow:0 8px 24px rgba(2,6,23,.4)',
+      'touch-action:manipulation',
+    ].join(';')
+
+    const closeModal = () => document.getElementById('oanix-note-drag-debug-modal')?.remove()
+
+    button.addEventListener('click', () => {
+      closeModal()
+      const traceWindow = window as WindowWithDragTrace
+      const entries = traceWindow.__OANIX_NOTE_DRAG_TRACE__ ?? []
+      const output = entries.length > 0
+        ? entries.map((entry, index) => `${index + 1}. ${JSON.stringify(entry)}`).join('\n\n')
+        : 'No hay eventos todavía. Intenta arrastrar una nota desde el avatar y vuelve a abrir este visor.'
+
+      const modal = document.createElement('div')
+      modal.id = 'oanix-note-drag-debug-modal'
+      modal.style.cssText = [
+        'position:fixed',
+        'inset:0',
+        'z-index:99999',
+        'background:rgba(2,6,23,.94)',
+        'padding:calc(18px + env(safe-area-inset-top)) 14px calc(18px + env(safe-area-inset-bottom))',
+        'overflow:auto',
+        'color:#f8fafc',
+      ].join(';')
+
+      const panel = document.createElement('section')
+      panel.style.cssText = 'max-width:720px;margin:0 auto;background:#0f172a;border:1px solid rgba(103,232,249,.75);border-radius:14px;padding:14px;box-shadow:0 20px 60px rgba(0,0,0,.45)'
+
+      const header = document.createElement('div')
+      header.style.cssText = 'display:flex;gap:8px;align-items:center;justify-content:space-between;margin-bottom:12px'
+
+      const title = document.createElement('strong')
+      title.textContent = `Drag logs · ${entries.length} eventos`
+      title.style.cssText = 'color:#67e8f9;font:700 14px system-ui,sans-serif'
+
+      const actions = document.createElement('div')
+      actions.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end'
+
+      const copy = document.createElement('button')
+      copy.type = 'button'
+      copy.textContent = 'Copiar'
+      copy.style.cssText = 'padding:8px 10px;border:0;border-radius:8px;background:#0891b2;color:white;font-weight:700'
+      copy.addEventListener('click', () => {
+        void navigator.clipboard.writeText(output).then(() => {
+          copy.textContent = 'Copiado ✓'
+        }).catch(() => {
+          copy.textContent = 'No se pudo copiar'
+        })
+      })
+
+      const clear = document.createElement('button')
+      clear.type = 'button'
+      clear.textContent = 'Limpiar'
+      clear.style.cssText = 'padding:8px 10px;border:1px solid #475569;border-radius:8px;background:#1e293b;color:#e2e8f0;font-weight:700'
+      clear.addEventListener('click', () => {
+        traceWindow.__OANIX_NOTE_DRAG_TRACE__ = []
+        closeModal()
+      })
+
+      const close = document.createElement('button')
+      close.type = 'button'
+      close.textContent = 'Cerrar'
+      close.style.cssText = 'padding:8px 10px;border:0;border-radius:8px;background:#dc2626;color:white;font-weight:700'
+      close.addEventListener('click', closeModal)
+
+      const pre = document.createElement('pre')
+      pre.textContent = output
+      pre.style.cssText = 'white-space:pre-wrap;overflow-wrap:anywhere;margin:0;max-height:70dvh;overflow:auto;padding:12px;border-radius:10px;background:#020617;color:#cbd5e1;font:11px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace'
+
+      actions.append(copy, clear, close)
+      header.append(title, actions)
+      panel.append(header, pre)
+      modal.append(panel)
+      document.body.append(modal)
+    })
+
+    document.body.append(button)
+
+    return () => {
+      button.remove()
+      closeModal()
+    }
+  }, [])
+
   return null
 }
