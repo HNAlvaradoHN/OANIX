@@ -7,7 +7,7 @@
   }
 
   .note-row[data-reorder-note-id] {
-    touch-action: pan-y !important;
+    touch-action: none !important;
   }
 }
 
