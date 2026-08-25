@@ -1,5 +1,6 @@
 @media (pointer: coarse) {
-  .note-row[data-reorder-note-id] {
+  .note-row[data-reorder-note-id],
+  .note-row[data-reorder-note-id] * {
     -webkit-user-select: none !important;
     user-select: none !important;
     -webkit-touch-callout: none !important;
