@@ -4,6 +4,7 @@ import test from 'node:test'
 
 const runtime = readFileSync('src/features/notes/NoteListReorderGestureRuntime.tsx', 'utf8')
 const css = readFileSync('src/features/notes/noteReorderGesture.css', 'utf8')
+const workspace = readFileSync('src/features/notes/NotesWorkspace.tsx', 'utf8')
 const privacyRuntime = readFileSync('src/features/privacy/NoteBulkPrivacyRuntime.tsx', 'utf8')
 const app = readFileSync('src/app/App.tsx', 'utf8')
 
@@ -35,6 +36,14 @@ test('el arrastre ya no depende del modo manual ni de eventos sintéticos', () =
   assert.doesNotMatch(runtime, /new PointerEvent/)
   assert.doesNotMatch(runtime, /oanix:note-bulk-selection-start/)
   assert.doesNotMatch(css, /oanix-note-jiggle|data-oanix-note-reorder-mode|data-oanix-note-drop-finishing/)
+})
+
+test('NotesWorkspace ya no conserva el motor manual retirado ni un botón oculto de ordenar', () => {
+  assert.doesNotMatch(workspace, /reorderMode|orderingBusy|draggingNoteId|dragTargetId|dragPlacement/)
+  assert.doesNotMatch(workspace, /handleReorderPointer|persistDraggedOrder|autoScrollNoteList/)
+  assert.doesNotMatch(workspace, /Ordenar notas manualmente|Terminar de ordenar notas|Orden manual de/)
+  assert.doesNotMatch(workspace, /ReactPointerEvent|persistNoteOrder/)
+  assert.doesNotMatch(css, /Ordenar notas manualmente|Terminar de ordenar notas/)
 })
 
 test('el marcado se desactiva como gesto y bloquea el drag solo cuando el modo explícito está activo', () => {
