@@ -5,9 +5,10 @@ import test from 'node:test'
 const avatar = readFileSync('src/features/notes/NoteAvatar.tsx', 'utf8')
 const reorder = readFileSync('src/features/notes/NoteListReorderGestureRuntime.tsx', 'utf8')
 
-test('el avatar deja pasar pointerdown al runtime de reorder', () => {
+test('avatar es un handle puro y no consume eventos antes de SortableJS', () => {
   assert.match(reorder, /handle: '\.note-row__avatar'/)
-  assert.doesNotMatch(avatar, /function handlePointerDown/)
-  assert.doesNotMatch(avatar, /onPointerDown=\{handlePointerDown\}/)
-  assert.match(avatar, /onClick=\{handleClick\}/)
+  assert.doesNotMatch(avatar, /onPointerDown=/)
+  assert.doesNotMatch(avatar, /onClick=/)
+  assert.doesNotMatch(avatar, /stopPropagation\(\)|preventDefault\(\)/)
+  assert.doesNotMatch(avatar, /createPortal|openImagePicker|selectAvatarFile/)
 })
