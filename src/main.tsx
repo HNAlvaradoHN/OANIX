@@ -19,6 +19,7 @@ import './styles/classic-theme-surfaces.css'
 import './styles/privacy-status-polish.css'
 import './styles/note-menu-viewport-fit.css'
 import './styles/web-brand-logo.css'
+import './styles/vaultCloudProgress.css'
 import './features/images/pwa-image-no-name.css'
 
 // v38.3 remains the base workspace authority. The state contract below only
@@ -27,6 +28,7 @@ import './features/notes/v383WorkspaceVisual.css'
 import './features/notes/workspaceStateContract.css'
 import './features/notes/workspaceRefinements.css'
 import './features/notes/compactNoteContract.css'
+import './features/notes/responsiveCompactNoteContract.css'
 
 type OanixUpdateWindow = Window & {
   __oanixApplyUpdate?: () => Promise<void>
