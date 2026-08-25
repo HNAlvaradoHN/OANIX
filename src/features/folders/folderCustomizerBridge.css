@@ -1,7 +1,0 @@
-/* The v38.7 folder customizer is the only folder options surface.
-   The older intermediary menu must never flash or block interaction. */
-html.oanix-v383-visual .oanix-folder-options-backdrop {
-  display: none !important;
-  visibility: hidden !important;
-  pointer-events: none !important;
-}
