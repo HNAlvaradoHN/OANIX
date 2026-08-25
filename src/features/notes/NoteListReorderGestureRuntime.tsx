@@ -82,11 +82,9 @@ export function NoteListReorderGestureRuntime() {
     let dragDiagnosticActive = false
     let lastPointerMoveLogAt = 0
     let lastTouchMoveLogAt = 0
-    const list = document.querySelector<HTMLElement>('.notes-list')
-    if (!list?.classList.contains('notes-list')) return
 
     const traceWindow = window as WindowWithDragTrace
-    traceWindow.__OANIX_NOTE_DRAG_TRACE__ = []
+    traceWindow.__OANIX_NOTE_DRAG_TRACE__ ??= []
 
     const trace = (stage: string, detail?: Record<string, unknown>, level: 'info' | 'warn' = 'info') => {
       const entry: DragTraceEntry = {
@@ -101,6 +99,16 @@ export function NoteListReorderGestureRuntime() {
       if (level === 'warn') console.warn('[NOTE_DRAG]', stage, detail ?? '')
       else console.info('[NOTE_DRAG]', stage, detail ?? '')
     }
+
+    const list = document.querySelector<HTMLElement>('.notes-list')
+    if (!list?.classList.contains('notes-list')) {
+      trace('runtime-missing-list', { workspaceRevisionRemount: true }, 'warn')
+      return
+    }
+
+    trace('runtime-ready', {
+      rows: list.querySelectorAll(':scope > .note-row[data-reorder-note-id]').length,
+    })
 
     const clearDragVisuals = () => {
       document.body.classList.remove('oanix-mobile-note-dragging')
@@ -238,6 +246,7 @@ export function NoteListReorderGestureRuntime() {
     document.addEventListener('selectstart', blockNativeLongPress, true)
 
     return () => {
+      trace('runtime-dispose')
       sortable.destroy()
       dragDiagnosticActive = false
       clearDragVisuals()
