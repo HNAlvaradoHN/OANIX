@@ -12,6 +12,7 @@ import { V383WorkspaceVisualRuntime } from '../features/notes/V383WorkspaceVisua
 import { WorkspacePersonalizationRuntime } from '../features/notes/WorkspacePersonalizationRuntime'
 import { PrivacyStatusHelp } from '../features/privacy/PrivacyStatusHelp'
 import { TagCreationRuntime } from '../features/tags/TagCreationRuntime'
+import { TagMobileGestureRuntime } from '../features/tags/TagMobileGestureRuntime'
 
 export function WorkspaceRuntimeGate() {
   return (
@@ -27,6 +28,7 @@ export function WorkspaceRuntimeGate() {
       <FolderCreationRuntime />
       <FolderMobileDragRuntime />
       <TagCreationRuntime />
+      <TagMobileGestureRuntime />
       <V383WorkspaceVisualRuntime />
     </>
   )
