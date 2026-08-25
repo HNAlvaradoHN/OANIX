@@ -180,13 +180,16 @@ export function NoteAttachmentsRuntime() {
     }
 
     refresh()
+    const workspace = document.querySelector<HTMLElement>('.notes-shell')
     const observer = new MutationObserver(refresh)
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ['class'],
-    })
+    if (workspace) {
+      observer.observe(workspace, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['class'],
+      })
+    }
     window.addEventListener('popstate', refresh)
 
     function handlePossibleDelete(event: MouseEvent) {
