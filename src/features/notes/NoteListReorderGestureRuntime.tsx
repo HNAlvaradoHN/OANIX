@@ -21,16 +21,21 @@ type PointerDragGesture = {
   timer: number | null
   dragging: boolean
   scrolling: boolean
+  scrollOnly: boolean
   clone: HTMLElement | null
   placeholder: HTMLElement | null
   originalDisplay: string
   scrollFrame: number | null
 }
 
-function noteRow(target: EventTarget | null): HTMLElement | null {
+function rawNoteRow(target: EventTarget | null): HTMLElement | null {
   if (!(target instanceof Element)) return null
-  if (target.closest('.note-row__menu-wrap, button, a, input, textarea, select, [contenteditable="true"]')) return null
   return target.closest<HTMLElement>('.note-row[data-reorder-note-id]')
+}
+
+function isInteractiveTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof Element)) return false
+  return Boolean(target.closest('.note-row__menu-wrap, button, a, input, textarea, select, [contenteditable="true"]'))
 }
 
 function rowPinned(row: HTMLElement): boolean {
@@ -133,6 +138,7 @@ export function NoteListReorderGestureRuntime() {
   useEffect(() => {
     let gesture: PointerDragGesture | null = null
     let suppressClickUntil = 0
+    let cleaningUp = false
 
     const clearTimer = () => {
       if (!gesture || gesture.timer === null) return
@@ -158,7 +164,8 @@ export function NoteListReorderGestureRuntime() {
     }
 
     const cleanup = () => {
-      if (!gesture) return
+      if (!gesture || cleaningUp) return
+      cleaningUp = true
       clearTimer()
       stopAutoScroll()
       releasePointer()
@@ -169,6 +176,7 @@ export function NoteListReorderGestureRuntime() {
       document.body.classList.remove('oanix-mobile-note-dragging')
       document.documentElement.classList.remove('oanix-mobile-note-dragging')
       window.getSelection()?.removeAllRanges()
+      cleaningUp = false
     }
 
     const cancelGesture = () => {
@@ -195,7 +203,7 @@ export function NoteListReorderGestureRuntime() {
     }
 
     const activateDrag = () => {
-      if (!gesture || gesture.dragging || gesture.scrolling) return
+      if (!gesture || gesture.dragging || gesture.scrolling || gesture.scrollOnly) return
       if (document.documentElement.classList.contains('oanix-note-bulk-selecting')) return cancelGesture()
 
       clearTimer()
@@ -224,11 +232,12 @@ export function NoteListReorderGestureRuntime() {
       if (document.documentElement.classList.contains('oanix-note-bulk-selecting')) return
       if (document.querySelector('.notes-shell--searching')) return
 
-      const item = noteRow(event.target)
+      const item = rawNoteRow(event.target)
       const noteId = item?.dataset.reorderNoteId
       const list = item?.parentElement
       if (!item || !noteId || !list?.classList.contains('notes-list')) return
 
+      const scrollOnly = isInteractiveTarget(event.target)
       gesture = {
         pointerId: event.pointerId,
         item,
@@ -240,9 +249,10 @@ export function NoteListReorderGestureRuntime() {
         lastY: event.clientY,
         offsetX: 0,
         offsetY: 0,
-        timer: window.setTimeout(activateDrag, LONG_PRESS_MS),
+        timer: scrollOnly ? null : window.setTimeout(activateDrag, LONG_PRESS_MS),
         dragging: false,
         scrolling: false,
+        scrollOnly,
         clone: null,
         placeholder: null,
         originalDisplay: item.style.display,
@@ -263,23 +273,24 @@ export function NoteListReorderGestureRuntime() {
       gesture.lastX = event.clientX
       gesture.lastY = event.clientY
 
-      if (event.cancelable) event.preventDefault()
-      event.stopPropagation()
-
       if (!gesture.dragging) {
         const distance = Math.hypot(event.clientX - gesture.startX, event.clientY - gesture.startY)
         if (!gesture.scrolling && distance >= MOVE_CANCEL_PX) {
           clearTimer()
           gesture.scrolling = true
         }
-        if (gesture.scrolling) {
-          const before = gesture.list.scrollTop
-          gesture.list.scrollTop -= event.clientY - previousY
-          if (gesture.list.scrollTop !== before) suppressClickUntil = performance.now() + 320
-        }
+        if (!gesture.scrolling) return
+
+        if (event.cancelable) event.preventDefault()
+        event.stopPropagation()
+        const before = gesture.list.scrollTop
+        gesture.list.scrollTop -= event.clientY - previousY
+        if (gesture.list.scrollTop !== before) suppressClickUntil = performance.now() + 320
         return
       }
 
+      if (event.cancelable) event.preventDefault()
+      event.stopPropagation()
       positionClone(gesture)
       updatePlaceholder(gesture)
     }
@@ -287,16 +298,19 @@ export function NoteListReorderGestureRuntime() {
     const finishGesture = async (event: PointerEvent) => {
       if (!gesture || event.pointerId !== gesture.pointerId) return
 
-      if (event.cancelable) event.preventDefault()
-      event.stopPropagation()
-
       if (!gesture.dragging) {
-        if (gesture.scrolling) suppressClickUntil = performance.now() + 320
+        if (gesture.scrolling) {
+          if (event.cancelable) event.preventDefault()
+          event.stopPropagation()
+          suppressClickUntil = performance.now() + 320
+        }
         cleanup()
         gesture = null
         return
       }
 
+      if (event.cancelable) event.preventDefault()
+      event.stopPropagation()
       suppressClickUntil = performance.now() + 520
 
       const finished = gesture
@@ -320,18 +334,18 @@ export function NoteListReorderGestureRuntime() {
     }
 
     const onLostPointerCapture = (event: PointerEvent) => {
-      if (!gesture || event.pointerId !== gesture.pointerId) return
+      if (cleaningUp || !gesture || event.pointerId !== gesture.pointerId) return
       cancelGesture()
     }
 
     const onClick = (event: MouseEvent) => {
-      if (performance.now() >= suppressClickUntil || !noteRow(event.target)) return
+      if (performance.now() >= suppressClickUntil || !rawNoteRow(event.target)) return
       event.preventDefault()
       event.stopImmediatePropagation()
     }
 
     const blockNative = (event: Event) => {
-      if (!noteRow(event.target)) return
+      if (!rawNoteRow(event.target)) return
       event.preventDefault()
     }
 
