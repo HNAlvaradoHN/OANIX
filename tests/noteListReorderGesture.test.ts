@@ -9,7 +9,7 @@ const privacyRuntime = readFileSync('src/features/privacy/NoteBulkPrivacyRuntime
 const app = readFileSync('src/app/App.tsx', 'utf8')
 const pkg = readFileSync('package.json', 'utf8')
 
-test('reorder móvil usa SortableJS y devuelve el scroll al navegador', () => {
+test('reorder móvil usa SortableJS y conserva scroll nativo fuera del handle', () => {
   assert.match(pkg, /"sortablejs": "1\.15\.7"/)
   assert.match(runtime, /import Sortable from 'sortablejs'/)
   assert.match(runtime, /Sortable\.create\(list/)
@@ -23,14 +23,13 @@ test('reorder móvil usa SortableJS y devuelve el scroll al navegador', () => {
   assert.doesNotMatch(runtime, /setPointerCapture|scrollTop -=|pointermove|pointercancel/)
 })
 
-test('long-press táctil reserva el gesto sólo después del umbral temporal', () => {
-  assert.match(runtime, /touchArmTimer = window\.setTimeout\(\(\) => \{/)
-  assert.match(runtime, /touchArmed = true[\s\S]{0,80}LONG_PRESS_MS/)
-  assert.match(runtime, /Math\.hypot\(movedX, movedY\) >= TOUCH_START_THRESHOLD_PX/)
-  assert.match(runtime, /if \(touchArmed\) \{[\s\S]{0,80}event\.preventDefault\(\)/)
-  assert.match(runtime, /addEventListener\('touchmove', onTouchMove, \{ capture: true, passive: false \}\)/)
-  assert.match(runtime, /addEventListener\('touchstart', onTouchStart, \{ capture: true, passive: true \}\)/)
-  assert.match(runtime, /removeEventListener\('touchcancel', onTouchEnd, true\)/)
+test('avatar es el handle táctil y reserva su gesto desde touchstart', () => {
+  assert.match(runtime, /handle: '\.note-row__avatar'/)
+  assert.match(runtime, /function isDragHandle/)
+  assert.match(runtime, /target\.closest\('\.note-row__avatar'\)/)
+  assert.match(runtime, /!isDragHandle\(target\) && isInteractiveTarget\(target\)/)
+  assert.match(css, /\.note-row\[data-reorder-note-id\] \.note-row__avatar \{[\s\S]{0,80}touch-action: none !important/)
+  assert.doesNotMatch(runtime, /touchArmTimer|touchArmed|onTouchMove|addEventListener\('touchmove'/)
 })
 
 test('fallback táctil crea ghost y placeholder sin CSS que pise transform', () => {
@@ -61,7 +60,7 @@ test('notas fijadas y no fijadas no se mezclan', () => {
 
 test('controles interactivos y selección múltiple no compiten con reorder', () => {
   assert.match(runtime, /function isInteractiveTarget/)
-  assert.match(runtime, /filter: \(_event, target\) => interactionBlocked\(\) \|\| isInteractiveTarget\(target\)/)
+  assert.match(runtime, /interactionBlocked\(\) \|\| \(!isDragHandle\(target\) && isInteractiveTarget\(target\)\)/)
   assert.match(runtime, /preventOnFilter: false/)
   assert.match(runtime, /oanix-note-bulk-selecting/)
   assert.match(privacyRuntime, /data-oanix-bulk-mode/)

@@ -9,6 +9,10 @@
   .note-row[data-reorder-note-id] {
     touch-action: pan-y !important;
   }
+
+  .note-row[data-reorder-note-id] .note-row__avatar {
+    touch-action: none !important;
+  }
 }
 
 .note-row.oanix-mobile-note-chosen {
