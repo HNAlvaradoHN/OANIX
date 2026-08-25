@@ -56,6 +56,19 @@ function rowPinned(row: HTMLElement): boolean {
   return Boolean(title?.textContent?.trim().startsWith('📌'))
 }
 
+function clamp(value: number, min: number, max: number): number {
+  if (max <= min) return min
+  return Math.min(max, Math.max(min, value))
+}
+
+function pointInsideList(gesture: NoteDragGesture): boolean {
+  const rect = gesture.list.getBoundingClientRect()
+  return gesture.lastX >= rect.left
+    && gesture.lastX <= rect.right
+    && gesture.lastY >= rect.top
+    && gesture.lastY <= rect.bottom
+}
+
 function createGhost(item: HTMLElement): HTMLElement {
   const rect = item.getBoundingClientRect()
   const ghost = item.cloneNode(true) as HTMLElement
@@ -76,8 +89,21 @@ function createGhost(item: HTMLElement): HTMLElement {
 
 function positionGhost(gesture: NoteDragGesture) {
   if (!gesture.ghost) return
-  gesture.ghost.style.left = `${gesture.lastX - gesture.grabOffsetX}px`
-  gesture.ghost.style.top = `${gesture.lastY - gesture.grabOffsetY}px`
+  const listRect = gesture.list.getBoundingClientRect()
+  const ghostWidth = gesture.ghost.offsetWidth
+  const ghostHeight = gesture.ghost.offsetHeight
+  const left = clamp(
+    gesture.lastX - gesture.grabOffsetX,
+    listRect.left,
+    listRect.right - ghostWidth,
+  )
+  const top = clamp(
+    gesture.lastY - gesture.grabOffsetY,
+    listRect.top,
+    listRect.bottom - ghostHeight,
+  )
+  gesture.ghost.style.left = `${left}px`
+  gesture.ghost.style.top = `${top}px`
 }
 
 function snapshotRects(list: HTMLElement): Map<HTMLElement, DOMRect> {
@@ -106,6 +132,8 @@ function animateReflow(list: HTMLElement, before: Map<HTMLElement, DOMRect>) {
 }
 
 function reorderDomAtPoint(gesture: NoteDragGesture, animate = true) {
+  if (!pointInsideList(gesture)) return
+
   const sourcePinned = rowPinned(gesture.item)
   const siblings = Array.from(
     gesture.list.querySelectorAll<HTMLElement>(':scope > .note-row[data-reorder-note-id]'),
@@ -139,6 +167,7 @@ function reorderDomAtPoint(gesture: NoteDragGesture, animate = true) {
 }
 
 function scrollSpeed(clientY: number, rect: DOMRect): number {
+  if (clientY < rect.top || clientY > rect.bottom) return 0
   if (clientY < rect.top + EDGE_SCROLL_PX) {
     const strength = Math.min(1, (rect.top + EDGE_SCROLL_PX - clientY) / EDGE_SCROLL_PX)
     return -Math.max(2, Math.round(MAX_SCROLL_PER_FRAME * strength))
