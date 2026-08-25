@@ -37,6 +37,11 @@ function rowPinned(row: HTMLElement): boolean {
   return Boolean(title?.textContent?.trim().startsWith('📌'))
 }
 
+function clamp(value: number, min: number, max: number): number {
+  if (max <= min) return min
+  return Math.min(max, Math.max(min, value))
+}
+
 function activeTouch(event: TouchEvent, touchId: number): Touch | null {
   for (const touch of Array.from(event.touches)) {
     if (touch.identifier === touchId) return touch
@@ -74,8 +79,11 @@ function createClone(item: HTMLElement): HTMLElement {
 
 function positionClone(gesture: TouchDragGesture) {
   if (!gesture.clone) return
-  gesture.clone.style.left = `${gesture.lastX - gesture.offsetX}px`
-  gesture.clone.style.top = `${gesture.lastY - gesture.offsetY}px`
+  const listRect = gesture.list.getBoundingClientRect()
+  const width = gesture.clone.offsetWidth
+  const height = gesture.clone.offsetHeight
+  gesture.clone.style.left = `${clamp(gesture.lastX - gesture.offsetX, listRect.left, listRect.right - width)}px`
+  gesture.clone.style.top = `${clamp(gesture.lastY - gesture.offsetY, listRect.top, listRect.bottom - height)}px`
 }
 
 function updatePlaceholder(gesture: TouchDragGesture) {
@@ -173,7 +181,10 @@ export function NoteListReorderGestureRuntime() {
         if (speed !== 0) {
           const before = gesture.list.scrollTop
           gesture.list.scrollTop += speed
-          if (gesture.list.scrollTop !== before) updatePlaceholder(gesture)
+          if (gesture.list.scrollTop !== before) {
+            positionClone(gesture)
+            updatePlaceholder(gesture)
+          }
         }
         gesture.scrollFrame = window.requestAnimationFrame(tick)
       }
