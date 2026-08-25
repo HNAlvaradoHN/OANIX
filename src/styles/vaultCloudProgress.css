@@ -1,0 +1,35 @@
+/* Visible progress feedback while a synchronized vault is being restored on a device.
+   The real stage text continues to come from VaultGate; this only makes the wait visibly active. */
+
+.vault-form:has(#cloud-master-password:disabled) .primary-button:disabled {
+  position: relative;
+  overflow: hidden;
+}
+
+.vault-form:has(#cloud-master-password:disabled) .primary-button:disabled::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 34%;
+  height: 3px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, #dbe7ff 18%, #8fb0ff 52%, #69e7c1 82%, transparent);
+  box-shadow: 0 0 12px rgba(143,176,255,.55);
+  animation: oanixCloudProgressSweep 1.15s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes oanixCloudProgressSweep {
+  from { transform: translateX(-110%); }
+  to { transform: translateX(320%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vault-form:has(#cloud-master-password:disabled) .primary-button:disabled::after {
+    width: 100%;
+    opacity: .82;
+    animation: none;
+    transform: none;
+  }
+}
