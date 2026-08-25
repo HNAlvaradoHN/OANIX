@@ -14,12 +14,23 @@ test('reorder móvil usa SortableJS y devuelve el scroll al navegador', () => {
   assert.match(runtime, /import Sortable from 'sortablejs'/)
   assert.match(runtime, /Sortable\.create\(list/)
   assert.match(runtime, /const LONG_PRESS_MS = 300/)
+  assert.match(runtime, /const TOUCH_START_THRESHOLD_PX = 7/)
   assert.match(runtime, /delay: LONG_PRESS_MS/)
   assert.match(runtime, /delayOnTouchOnly: true/)
-  assert.match(runtime, /touchStartThreshold: 7/)
+  assert.match(runtime, /touchStartThreshold: TOUCH_START_THRESHOLD_PX/)
   assert.match(runtime, /supportPointer: false/)
   assert.match(css, /touch-action: pan-y !important/)
   assert.doesNotMatch(runtime, /setPointerCapture|scrollTop -=|pointermove|pointercancel/)
+})
+
+test('long-press táctil reserva el gesto sólo después del umbral temporal', () => {
+  assert.match(runtime, /touchArmTimer = window\.setTimeout\(\(\) => \{/)
+  assert.match(runtime, /touchArmed = true[\s\S]{0,80}LONG_PRESS_MS/)
+  assert.match(runtime, /Math\.hypot\(movedX, movedY\) >= TOUCH_START_THRESHOLD_PX/)
+  assert.match(runtime, /if \(touchArmed\) \{[\s\S]{0,80}event\.preventDefault\(\)/)
+  assert.match(runtime, /addEventListener\('touchmove', onTouchMove, \{ capture: true, passive: false \}\)/)
+  assert.match(runtime, /addEventListener\('touchstart', onTouchStart, \{ capture: true, passive: true \}\)/)
+  assert.match(runtime, /removeEventListener\('touchcancel', onTouchEnd, true\)/)
 })
 
 test('fallback táctil crea ghost y placeholder sin CSS que pise transform', () => {
