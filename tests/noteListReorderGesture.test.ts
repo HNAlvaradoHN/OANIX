@@ -19,7 +19,7 @@ test('reorder móvil usa SortableJS y conserva scroll nativo fuera del handle', 
   assert.match(runtime, /delay: LONG_PRESS_MS/)
   assert.match(runtime, /delayOnTouchOnly: true/)
   assert.match(runtime, /touchStartThreshold: TOUCH_START_THRESHOLD_PX/)
-  assert.match(runtime, /supportPointer: false/)
+  assert.doesNotMatch(runtime, /supportPointer:\s*false/)
   assert.match(css, /touch-action: pan-y !important/)
   assert.doesNotMatch(runtime, /setPointerCapture|scrollTop -=|pointermove|pointercancel/)
 })
