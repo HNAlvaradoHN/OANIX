@@ -245,16 +245,19 @@ export function OrganicWorkspaceRuntime() {
     ensureHost()
     void reloadPrivateUiData()
 
+    const workspace = document.querySelector<HTMLElement>('.notes-shell')
     const observer = new MutationObserver(() => {
       ensureHost()
       window.requestAnimationFrame(decorateWorkspace)
     })
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ['class', 'aria-current'],
-    })
+    if (workspace) {
+      observer.observe(workspace, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['class', 'aria-current'],
+      })
+    }
 
     const handleLocalChange = (event: Event) => {
       const detail = event instanceof CustomEvent
