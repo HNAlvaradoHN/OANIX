@@ -304,13 +304,19 @@ export function WorkspacePersonalizationRuntime() {
   }
 
   useEffect(() => {
-    const observer = new MutationObserver(() => scheduleDecorate())
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ['class', 'aria-current'],
-    })
+    const workspace = document.querySelector<HTMLElement>('.notes-shell')
+    const workspaceObserver = new MutationObserver(() => scheduleDecorate())
+    if (workspace) {
+      workspaceObserver.observe(workspace, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['class', 'aria-current'],
+      })
+    }
+
+    const portalObserver = new MutationObserver(() => scheduleDecorate())
+    portalObserver.observe(document.body, { childList: true })
 
     const scheduleRefresh = () => {
       if (refreshTimerRef.current !== null) window.clearTimeout(refreshTimerRef.current)
@@ -377,7 +383,8 @@ export function WorkspacePersonalizationRuntime() {
     scheduleDecorate()
 
     return () => {
-      observer.disconnect()
+      workspaceObserver.disconnect()
+      portalObserver.disconnect()
       document.removeEventListener('pointerdown', handlePointerDownCapture, true)
       document.removeEventListener('click', handleClickCapture, true)
       window.removeEventListener('oanix:local-data-changed', handleLocalChange)
