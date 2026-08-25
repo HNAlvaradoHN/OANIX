@@ -1,0 +1,27 @@
+.oanix-organic-tag-chip[data-oanix-organic-tag-id] {
+  touch-action: none !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -webkit-touch-callout: none !important;
+  cursor: grab;
+}
+
+.oanix-organic-tags.is-reordering .oanix-organic-tag-chip[data-oanix-organic-tag-id] {
+  touch-action: none !important;
+  cursor: grabbing;
+}
+
+.oanix-organic-tags.is-reordering .oanix-organic-tag-chip.is-dragging {
+  opacity: .82 !important;
+  transform: scale(1.04) !important;
+  border-style: solid !important;
+  border-color: rgba(96,165,250,.95) !important;
+  box-shadow:
+    0 14px 30px rgba(0,0,0,.38),
+    0 0 0 2px rgba(96,165,250,.2) !important;
+  filter: brightness(1.08) saturate(1.08);
+}
+
+.oanix-organic-tags__scroll {
+  overscroll-behavior-x: contain;
+}

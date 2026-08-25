@@ -39,7 +39,7 @@ test('folders, tags and notes finish reordering automatically after the pointer 
   assert.match(organic, /finishFolderReorder/)
   assert.match(organic, /\.oanix-folder-rail__done/)
   assert.match(organic, /finishTagDrag/)
-  assert.match(noteGesture, /NOTE_REORDER_LONG_PRESS_MS = 520/)
+  assert.match(noteGesture, /NOTE_REORDER_LONG_PRESS_MS = 460/)
   assert.match(noteGesture, /dispatchDragStart/)
   assert.match(noteGesture, /finishAutomaticMode/)
   assert.doesNotMatch(noteGesture, /oanix-note-reorder-done|oanix-note-reorder-menu-proxy/)
