@@ -5,7 +5,6 @@ import {
   useState,
   type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent as ReactMouseEvent,
-  type PointerEvent as ReactPointerEvent,
 } from 'react'
 import { deleteEncryptedImage } from '../images/imageService'
 import { downloadEncryptedBackup } from '../backup/backupService'
@@ -21,7 +20,6 @@ import {
   deleteNote,
   loadNotes,
   moveNoteToFolder,
-  persistNoteOrder,
   renameNote,
   replaceNoteContent,
   setNotePinned,
@@ -38,7 +36,6 @@ interface NotesWorkspaceProps {
 }
 
 type SaveState = 'idle' | 'dirty' | 'saving' | 'saved' | 'error'
-type DropPlacement = 'before' | 'after'
 
 interface PendingContent {
   noteId: string
@@ -136,7 +133,6 @@ function formatNoteTime(isoDate: string): string {
     month: '2-digit',
   }).format(date)
 }
-
 
 function notePreview(note: NoteRecord): string {
   return noteBlocksToPlainText(note.content.blocks) || 'Nota vacía · empieza a escribir'
@@ -248,11 +244,6 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [backupBusy, setBackupBusy] = useState(false)
-  const [reorderMode, setReorderMode] = useState(false)
-  const [orderingBusy, setOrderingBusy] = useState(false)
-  const [draggingNoteId, setDraggingNoteId] = useState<string | null>(null)
-  const [dragTargetId, setDragTargetId] = useState<string | null>(null)
-  const [dragPlacement, setDragPlacement] = useState<DropPlacement>('before')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [draftTitle, setDraftTitle] = useState('')
   const [loading, setLoading] = useState(true)
@@ -275,9 +266,6 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
   const notesRef = useRef<NoteRecord[]>([])
   const historyBackAlreadySavedRef = useRef(false)
   const pendingImageDeletesRef = useRef(new Set<string>())
-  const draggingNoteIdRef = useRef<string | null>(null)
-  const dragTargetIdRef = useRef<string | null>(null)
-  const dragPlacementRef = useRef<DropPlacement>('before')
 
   const selectedNote = useMemo(
     () => notes.find((note) => note.id === selectedId) ?? null,
@@ -470,8 +458,6 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
         setTagEditorNoteId(null)
         setSearchOpen(false)
         setSearchQuery('')
-        setReorderMode(false)
-        clearDragState()
       }
     }
 
@@ -513,15 +499,6 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
       window.clearTimeout(saveTimerRef.current)
       saveTimerRef.current = null
     }
-  }
-
-  function clearDragState() {
-    draggingNoteIdRef.current = null
-    dragTargetIdRef.current = null
-    dragPlacementRef.current = 'before'
-    setDraggingNoteId(null)
-    setDragTargetId(null)
-    setDragPlacement('before')
   }
 
   async function flushPendingContent(): Promise<boolean> {
@@ -677,7 +654,6 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     setNoteMenuId(null)
     setActiveNoteMenuOpen(false)
     setNoteInfoOpen(false)
-    clearDragState()
 
     if (mobileSinglePane()) {
       window.history.replaceState({ ...currentHistoryState(), oanixView: 'list' }, '')
@@ -700,7 +676,6 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     setActiveNoteMenuOpen(false)
     setNoteInfoOpen(false)
     setTagFilterOpen(false)
-    clearDragState()
 
     if (mobileSinglePane()) {
       window.history.replaceState({ ...currentHistoryState(), oanixView: 'list' }, '')
@@ -838,111 +813,6 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     } catch {
       setError('No se pudo cambiar el estado fijado de la nota.')
     }
-  }
-
-  function autoScrollNoteList(clientY: number) {
-    const list = document.querySelector<HTMLElement>('.notes-list')
-    if (!list) return
-    const rect = list.getBoundingClientRect()
-    const edge = Math.min(56, rect.height * 0.16)
-
-    if (clientY < rect.top + edge) {
-      list.scrollBy({ top: -18, behavior: 'auto' })
-    } else if (clientY > rect.bottom - edge) {
-      list.scrollBy({ top: 18, behavior: 'auto' })
-    }
-  }
-
-  function handleReorderPointerDown(note: NoteRecord, event: ReactPointerEvent<HTMLButtonElement>) {
-    if (!reorderMode || orderingBusy || hasSearchQuery) return
-    event.preventDefault()
-    event.stopPropagation()
-    event.currentTarget.setPointerCapture(event.pointerId)
-    draggingNoteIdRef.current = note.id
-    dragTargetIdRef.current = note.id
-    dragPlacementRef.current = 'before'
-    setDraggingNoteId(note.id)
-    setDragTargetId(note.id)
-    setDragPlacement('before')
-    setNoteMenuId(null)
-  }
-
-  function handleReorderPointerMove(note: NoteRecord, event: ReactPointerEvent<HTMLButtonElement>) {
-    if (draggingNoteIdRef.current !== note.id || orderingBusy) return
-    event.preventDefault()
-    autoScrollNoteList(event.clientY)
-
-    const targetElement = document.elementFromPoint(event.clientX, event.clientY)
-    const targetRow = targetElement?.closest<HTMLElement>('[data-reorder-note-id]')
-    const targetId = targetRow?.dataset.reorderNoteId
-    if (!targetId) return
-
-    const source = notesRef.current.find((item) => item.id === note.id)
-    const target = notesRef.current.find((item) => item.id === targetId)
-    if (!source || !target || (source.pinned === true) !== (target.pinned === true)) return
-
-    const rect = targetRow.getBoundingClientRect()
-    const placement: DropPlacement = event.clientY < rect.top + rect.height / 2 ? 'before' : 'after'
-    dragTargetIdRef.current = targetId
-    dragPlacementRef.current = placement
-    setDragTargetId(targetId)
-    setDragPlacement(placement)
-  }
-
-  async function persistDraggedOrder(sourceId: string, targetId: string, placement: DropPlacement) {
-    if (sourceId === targetId || orderingBusy) return
-
-    const nextOrder = [...notesRef.current].sort(compareNotesForList)
-    const sourceIndex = nextOrder.findIndex((note) => note.id === sourceId)
-    if (sourceIndex < 0) return
-
-    const [source] = nextOrder.splice(sourceIndex, 1)
-    const targetIndex = nextOrder.findIndex((note) => note.id === targetId)
-    if (!source || targetIndex < 0) return
-
-    const target = nextOrder[targetIndex]
-    if ((source.pinned === true) !== (target.pinned === true)) return
-
-    const insertIndex = placement === 'after' ? targetIndex + 1 : targetIndex
-    nextOrder.splice(insertIndex, 0, source)
-
-    setOrderingBusy(true)
-    setError('')
-    try {
-      const persisted = await persistNoteOrder(nextOrder.map((note) => note.id))
-      setNotes([...persisted].sort(compareNotesForList))
-    } catch {
-      setError('No se pudo guardar el nuevo orden cifrado de las notas.')
-    } finally {
-      setOrderingBusy(false)
-    }
-  }
-
-  function handleReorderPointerEnd(note: NoteRecord, event: ReactPointerEvent<HTMLButtonElement>) {
-    if (draggingNoteIdRef.current !== note.id) return
-    event.preventDefault()
-    event.stopPropagation()
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId)
-    }
-
-    const sourceId = draggingNoteIdRef.current
-    const targetId = dragTargetIdRef.current
-    const placement = dragPlacementRef.current
-    clearDragState()
-
-    if (sourceId && targetId) {
-      void persistDraggedOrder(sourceId, targetId, placement)
-    }
-  }
-
-  function handleReorderPointerCancel(note: NoteRecord, event: ReactPointerEvent<HTMLButtonElement>) {
-    if (draggingNoteIdRef.current !== note.id) return
-    event.preventDefault()
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId)
-    }
-    clearDragState()
   }
 
   async function handleDeleteFolder(folder: FolderRecord) {
@@ -1140,7 +1010,6 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
   }
 
   async function handleSelectNote(noteId: string) {
-    if (reorderMode) return
     setNoteMenuId(null)
     setActiveNoteMenuOpen(false)
     if (noteId === selectedId) return
@@ -1219,8 +1088,6 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     setActiveNoteMenuOpen(false)
     setNoteInfoOpen(false)
     setWorkspaceMenuOpen(false)
-    setReorderMode(false)
-    clearDragState()
     setSearchOpen(true)
 
     if (mobileSinglePane()) {
@@ -1460,7 +1327,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
 
         <div
           className="notes-tag-filter"
-          style={{ gridTemplateColumns: 'minmax(0, 1fr) 2.7rem 2.7rem' }}
+          style={{ gridTemplateColumns: 'minmax(0, 1fr) 2.7rem' }}
         >
           <button
             className={`tag-filter-button${activeTag ? ' tag-filter-button--active' : ''}`}
@@ -1472,26 +1339,6 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
             <span aria-hidden="true">🏷</span>
             <span>{activeTag?.name ?? 'Todas las etiquetas'}</span>
             <span aria-hidden="true">⌄</span>
-          </button>
-          <button
-            className="tag-manage-button"
-            type="button"
-            onClick={() => {
-              setNoteMenuId(null)
-              clearDragState()
-              setReorderMode((active) => !active)
-            }}
-            disabled={visibleNotes.length < 2 || orderingBusy}
-            aria-label={reorderMode ? 'Terminar de ordenar notas' : 'Ordenar notas manualmente'}
-            aria-pressed={reorderMode}
-            title={reorderMode ? 'Terminar de ordenar' : 'Ordenar notas'}
-            style={reorderMode ? {
-              borderColor: '#93b4ff',
-              background: '#eaf2ff',
-              color: '#1d4ed8',
-            } : undefined}
-          >
-            ↕
           </button>
           <button
             className="tag-manage-button"
@@ -1553,165 +1400,106 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
               </div>
             )
           ) : (
-            visibleNotes.map((note) => {
-              const isDragging = draggingNoteId === note.id
-              const isDropTarget = dragTargetId === note.id && draggingNoteId !== null && !isDragging
-              return (
-                <div
-                  className={`note-row${selectedId === note.id ? ' note-row--selected' : ''}${noteMenuId === note.id ? ' note-row--menu-open' : ''}`}
-                  key={note.id}
-                  data-note-menu-root="true"
-                  data-reorder-note-id={note.id}
-                  style={reorderMode ? {
-                    opacity: isDragging ? .58 : 1,
-                    boxShadow: isDropTarget
-                      ? dragPlacement === 'before'
-                        ? 'inset 0 3px #2563eb'
-                        : 'inset 0 -3px #2563eb'
-                      : undefined,
-                    background: isDragging ? '#eef4ff' : undefined,
-                    transition: isDragging ? 'none' : 'box-shadow .12s ease, background .12s ease, opacity .12s ease',
-                  } : undefined}
+            visibleNotes.map((note) => (
+              <div
+                className={`note-row${selectedId === note.id ? ' note-row--selected' : ''}${noteMenuId === note.id ? ' note-row--menu-open' : ''}`}
+                key={note.id}
+                data-note-menu-root="true"
+                data-reorder-note-id={note.id}
+              >
+                <button
+                  className="note-row__open"
+                  type="button"
+                  onClick={() => void handleSelectNote(note.id)}
                 >
-                  <button
-                    className="note-row__open"
-                    type="button"
-                    onClick={() => void handleSelectNote(note.id)}
-                    aria-disabled={reorderMode}
-                    tabIndex={reorderMode ? -1 : undefined}
-                  >
-                    <NoteAvatar note={note} className="note-row__avatar" />
-                    <span className="note-row__body">
-                      <span className="note-row__topline">
-                        <strong>{note.pinned === true && <span aria-hidden="true">📌 </span>}{note.title}</strong>
-                        <time dateTime={note.updatedAt}>{formatNoteTime(note.updatedAt)}</time>
-                      </span>
-                      <span className="note-row__preview">
-                        {hasSearchQuery
-                          ? `📁 ${folderName(note.folderId)} · ${searchResultByNoteId.get(note.id)?.totalOccurrences ?? 0} coincidencia${(searchResultByNoteId.get(note.id)?.totalOccurrences ?? 0) === 1 ? '' : 's'}`
-                          : notePreview(note)}
-                      </span>
-                      {hasSearchQuery && searchResultByNoteId.get(note.id) && (
-                        <span className="search-result-locations" aria-label="Ubicaciones de las coincidencias">
-                          {searchResultByNoteId.get(note.id)?.matches.slice(0, 4).map((match) => (
-                            <span className="search-result-location" key={match.key}>
-                              <span className="search-result-location__label">
-                                {match.label}{match.occurrences > 1 ? ` · ${match.occurrences}×` : ''}
-                              </span>
-                              <span className="search-result-location__snippet">{match.snippet}</span>
-                            </span>
-                          ))}
-                          {(searchResultByNoteId.get(note.id)?.matches.length ?? 0) > 4 && (
-                            <span className="search-result-location__more">
-                              +{(searchResultByNoteId.get(note.id)?.matches.length ?? 0) - 4} ubicaciones más
-                            </span>
-                          )}
-                        </span>
-                      )}
+                  <NoteAvatar note={note} className="note-row__avatar" />
+                  <span className="note-row__body">
+                    <span className="note-row__topline">
+                      <strong>{note.pinned === true && <span aria-hidden="true">📌 </span>}{note.title}</strong>
+                      <time dateTime={note.updatedAt}>{formatNoteTime(note.updatedAt)}</time>
                     </span>
+                    <span className="note-row__preview">
+                      {hasSearchQuery
+                        ? `📁 ${folderName(note.folderId)} · ${searchResultByNoteId.get(note.id)?.totalOccurrences ?? 0} coincidencia${(searchResultByNoteId.get(note.id)?.totalOccurrences ?? 0) === 1 ? '' : 's'}`
+                        : notePreview(note)}
+                    </span>
+                    {hasSearchQuery && searchResultByNoteId.get(note.id) && (
+                      <span className="search-result-locations" aria-label="Ubicaciones de las coincidencias">
+                        {searchResultByNoteId.get(note.id)?.matches.slice(0, 4).map((match) => (
+                          <span className="search-result-location" key={match.key}>
+                            <span className="search-result-location__label">
+                              {match.label}{match.occurrences > 1 ? ` · ${match.occurrences}×` : ''}
+                            </span>
+                            <span className="search-result-location__snippet">{match.snippet}</span>
+                          </span>
+                        ))}
+                        {(searchResultByNoteId.get(note.id)?.matches.length ?? 0) > 4 && (
+                          <span className="search-result-location__more">
+                            +{(searchResultByNoteId.get(note.id)?.matches.length ?? 0) - 4} ubicaciones más
+                          </span>
+                        )}
+                      </span>
+                    )}
+                  </span>
+                </button>
+
+                <div className="note-row__menu-wrap">
+                  <button
+                    className="note-row__menu-button"
+                    type="button"
+                    aria-label={`Acciones de ${note.title}`}
+                    aria-haspopup="menu"
+                    aria-expanded={noteMenuId === note.id}
+                    title="Acciones de la nota"
+                    onClick={(event) => toggleNoteMenu(note.id, event)}
+                  >
+                    ⋮
                   </button>
 
-                  {reorderMode && !hasSearchQuery ? (
+                  {noteMenuId === note.id && (
                     <div
-                      aria-label={`Orden manual de ${note.title}`}
-                      style={{
-                        flex: '0 0 auto',
-                        display: 'grid',
-                        placeItems: 'center',
-                        paddingRight: '.5rem',
-                      }}
+                      className={`note-row__menu${noteMenuDirection === 'up' ? ' note-row__menu--up' : ''}`}
+                      role="menu"
+                      aria-label={`Acciones de ${note.title}`}
                     >
                       <button
                         type="button"
-                        onPointerDown={(event) => handleReorderPointerDown(note, event)}
-                        onPointerMove={(event) => handleReorderPointerMove(note, event)}
-                        onPointerUp={(event) => handleReorderPointerEnd(note, event)}
-                        onPointerCancel={(event) => handleReorderPointerCancel(note, event)}
-                        disabled={orderingBusy}
-                        aria-label={`Mantén presionado y arrastra ${note.title}`}
-                        title="Mantén presionado y arrastra"
-                        style={{
-                          width: '2.35rem',
-                          height: '2.7rem',
-                          display: 'grid',
-                          placeItems: 'center',
-                          padding: 0,
-                          border: 0,
-                          borderRadius: '.65rem',
-                          background: isDragging ? '#dbeafe' : '#eef4ff',
-                          color: '#1d4ed8',
-                          font: 'inherit',
-                          fontSize: '1.2rem',
-                          fontWeight: 900,
-                          cursor: isDragging ? 'grabbing' : 'grab',
-                          touchAction: 'none',
-                          userSelect: 'none',
-                          WebkitUserSelect: 'none',
+                        role="menuitem"
+                        onClick={() => void handleTogglePinned(note)}
+                      >
+                        {note.pinned === true ? 'Desfijar nota' : 'Fijar nota'}
+                      </button>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => openTagEditor(note)}
+                      >
+                        Etiquetas
+                      </button>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          setNoteMenuId(null)
+                          setMoveNoteId(note.id)
                         }}
                       >
-                        ⠿
+                        Mover a carpeta
                       </button>
-                    </div>
-                  ) : (
-                    <div className="note-row__menu-wrap">
                       <button
-                        className="note-row__menu-button"
+                        className="note-row__menu-danger"
                         type="button"
-                        aria-label={`Acciones de ${note.title}`}
-                        aria-haspopup="menu"
-                        aria-expanded={noteMenuId === note.id}
-                        title="Acciones de la nota"
-                        onClick={(event) => toggleNoteMenu(note.id, event)}
+                        role="menuitem"
+                        disabled={deletingId !== null}
+                        onClick={() => void handleDeleteNote(note)}
                       >
-                        ⋮
+                        {deletingId === note.id ? 'Eliminando…' : 'Eliminar nota'}
                       </button>
-
-                      {noteMenuId === note.id && (
-                        <div
-                          className={`note-row__menu${noteMenuDirection === 'up' ? ' note-row__menu--up' : ''}`}
-                          role="menu"
-                          aria-label={`Acciones de ${note.title}`}
-                        >
-                          <button
-                            type="button"
-                            role="menuitem"
-                            onClick={() => void handleTogglePinned(note)}
-                          >
-                            {note.pinned === true ? 'Desfijar nota' : 'Fijar nota'}
-                          </button>
-                          <button
-                            type="button"
-                            role="menuitem"
-                            onClick={() => openTagEditor(note)}
-                          >
-                            Etiquetas
-                          </button>
-                          <button
-                            type="button"
-                            role="menuitem"
-                            onClick={() => {
-                              setNoteMenuId(null)
-                              setMoveNoteId(note.id)
-                            }}
-                          >
-                            Mover a carpeta
-                          </button>
-                          <button
-                            className="note-row__menu-danger"
-                            type="button"
-                            role="menuitem"
-                            disabled={deletingId !== null}
-                            onClick={() => void handleDeleteNote(note)}
-                          >
-                            {deletingId === note.id ? 'Eliminando…' : 'Eliminar nota'}
-                          </button>
-                        </div>
-                      )}
                     </div>
                   )}
                 </div>
-              )
-            })
+              </div>
+            ))
           )}
         </div>
 
@@ -1720,9 +1508,9 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
             className="notes-create-fab"
             type="button"
             onClick={() => void handleCreateNote()}
-            disabled={creating || reorderMode}
+            disabled={creating}
             aria-label={creating ? 'Creando nota' : 'Crear nueva nota'}
-            title={reorderMode ? 'Termina de ordenar para crear una nota' : 'Nueva nota'}
+            title="Nueva nota"
           >
             <span aria-hidden="true">＋</span>
             <span>{creating ? 'Creando…' : 'Nueva nota'}</span>
