@@ -42,6 +42,8 @@ test('folders, tags and notes finish reordering automatically after the pointer 
   assert.match(noteGesture, /const LONG_PRESS_MS = 220/)
   assert.match(noteGesture, /type GesturePhase = 'pressing' \| 'dragging'/)
   assert.match(noteGesture, /document\.addEventListener\('pointerup', persistAndFinish, true\)/)
+  assert.match(noteGesture, /document\.addEventListener\('touchmove', onTouchMove, \{ capture: true, passive: false \}\)/)
+  assert.match(noteGesture, /if \(!gesture \|\| gesture\.phase !== 'dragging'\) return[\s\S]*event\.preventDefault\(\)/)
   assert.match(noteGesture, /persistNoteOrder\(nextOrder\)/)
   assert.match(noteGesture, /oanix-mobile-note-drag-source/)
   assert.doesNotMatch(noteGesture, /PRESS_ARM_GRACE_MS|finishAutomaticMode|dispatchDragStart|new PointerEvent/)

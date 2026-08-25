@@ -247,6 +247,11 @@ export function NoteListReorderGestureRuntime() {
       positionGhost(gesture)
       previewOrderAtPoint(gesture)
     }
+    const onTouchMove = (event: TouchEvent) => {
+      if (!gesture || gesture.phase !== 'dragging') return
+      event.preventDefault()
+      event.stopPropagation()
+    }
     const persistAndFinish = async (event: PointerEvent) => {
       if (!gesture || event.pointerId !== gesture.pointerId) return
       const finished = gesture
@@ -295,6 +300,7 @@ export function NoteListReorderGestureRuntime() {
 
     document.addEventListener('pointerdown', onPointerDown, true)
     document.addEventListener('pointermove', onPointerMove, { capture: true, passive: false })
+    document.addEventListener('touchmove', onTouchMove, { capture: true, passive: false })
     document.addEventListener('pointerup', persistAndFinish, true)
     document.addEventListener('pointercancel', cancelGesture, true)
     document.addEventListener('lostpointercapture', onLostPointerCapture, true)
@@ -308,6 +314,7 @@ export function NoteListReorderGestureRuntime() {
       cancelGesture()
       document.removeEventListener('pointerdown', onPointerDown, true)
       document.removeEventListener('pointermove', onPointerMove, true)
+      document.removeEventListener('touchmove', onTouchMove, true)
       document.removeEventListener('pointerup', persistAndFinish, true)
       document.removeEventListener('pointercancel', cancelGesture, true)
       document.removeEventListener('lostpointercapture', onLostPointerCapture, true)
