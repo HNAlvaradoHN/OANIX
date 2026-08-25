@@ -43,6 +43,7 @@ export function NoteBulkPrivacyRuntime() {
   const selectedIdsRef = useRef(selectedIds)
   const selectionModeRef = useRef(selectionMode)
   const bypassCreateClickRef = useRef(false)
+  const knownRowIdsRef = useRef<Set<string>>(new Set())
 
   useEffect(() => {
     selectedIdsRef.current = selectedIds
@@ -51,6 +52,35 @@ export function NoteBulkPrivacyRuntime() {
   useEffect(() => {
     selectionModeRef.current = selectionMode
   }, [selectionMode])
+
+  useEffect(() => {
+    knownRowIdsRef.current = new Set(
+      noteRows().flatMap((row) => row.dataset.reorderNoteId ? [row.dataset.reorderNoteId] : []),
+    )
+    let frame = 0
+    const scanRows = () => {
+      window.cancelAnimationFrame(frame)
+      frame = window.requestAnimationFrame(() => {
+        let foundNewNote = false
+        for (const row of noteRows()) {
+          const noteId = row.dataset.reorderNoteId
+          if (!noteId || knownRowIdsRef.current.has(noteId)) continue
+          knownRowIdsRef.current.add(noteId)
+          foundNewNote = true
+        }
+        if (foundNewNote) dispatchPrivacyRefresh()
+      })
+    }
+
+    const workspace = document.querySelector<HTMLElement>('.notes-shell')
+    if (!workspace) return
+    const observer = new MutationObserver(scanRows)
+    observer.observe(workspace, { childList: true, subtree: true })
+    return () => {
+      window.cancelAnimationFrame(frame)
+      observer.disconnect()
+    }
+  }, [])
 
   async function refreshProtectedIds() {
     try {
