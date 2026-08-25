@@ -107,6 +107,8 @@ export function NoteBulkPrivacyRuntime() {
     setLauncherOpen(false)
     setFinishMenuOpen(false)
     setSelectedIds(new Set())
+    setError('')
+    setStatus('')
     setSelectionMode(true)
     navigator.vibrate?.(12)
   }
@@ -165,7 +167,11 @@ export function NoteBulkPrivacyRuntime() {
         event.stopImmediatePropagation()
         if (selectionModeRef.current) {
           if (selectedIdsRef.current.size === 0) clearSelection()
-          else setFinishMenuOpen(true)
+          else {
+            setError('')
+            setStatus('')
+            setFinishMenuOpen(true)
+          }
         } else {
           setLauncherOpen(true)
         }
@@ -189,6 +195,7 @@ export function NoteBulkPrivacyRuntime() {
       }
       if (finishMenuOpen) {
         setFinishMenuOpen(false)
+        setError('')
         return
       }
       if (selectionModeRef.current) clearSelection()
@@ -267,6 +274,21 @@ export function NoteBulkPrivacyRuntime() {
   async function handleDeleteSelected() {
     const ids = [...selectedIdsRef.current]
     if (ids.length === 0 || busy) return
+
+    const lockedIds = ids.filter((noteId) => {
+      const row = noteRows().find((candidate) => candidate.dataset.reorderNoteId === noteId)
+      return row?.dataset.oanixNoteLocked === 'true'
+    })
+    if (lockedIds.length > 0) {
+      setError(
+        lockedIds.length === 1
+          ? 'Hay una nota todavía bloqueada. Desbloquéala con su código antes de borrarla.'
+          : `Hay ${lockedIds.length} notas todavía bloqueadas. Desbloquéalas con sus códigos antes de borrarlas.`,
+      )
+      setStatus('')
+      return
+    }
+
     const confirmed = window.confirm(
       `¿Eliminar ${ids.length} nota${ids.length === 1 ? '' : 's'} de forma permanente?\n\nSe eliminarán de este dispositivo junto con sus imágenes asociadas. Esta acción no se puede deshacer.`,
     )
@@ -320,10 +342,14 @@ export function NoteBulkPrivacyRuntime() {
       )}
 
       {finishMenuOpen && createPortal(
-        <div className="oanix-note-action-backdrop" role="presentation" onClick={() => setFinishMenuOpen(false)}>
+        <div className="oanix-note-action-backdrop" role="presentation" onClick={() => {
+          setFinishMenuOpen(false)
+          setError('')
+        }}>
           <div className="oanix-note-action-sheet oanix-note-action-sheet--finish" role="menu" aria-label="Acciones para notas seleccionadas" onClick={(event) => event.stopPropagation()}>
             <span className="oanix-note-action-sheet__eyebrow">{selectedIds.size} SELECCIONADA{selectedIds.size === 1 ? '' : 'S'}</span>
             <strong>Terminar selección</strong>
+            {error && <p className="oanix-note-action-sheet__notice" role="alert">{error}</p>}
             <button type="button" role="menuitem" onClick={() => void openBulkDialog()}>
               <span className="oanix-note-action-sheet__icon" aria-hidden="true">🔒</span>
               <span><b>Aplicar código</b><small>Proteger las que todavía no tengan código</small></span>
