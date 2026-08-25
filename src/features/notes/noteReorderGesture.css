@@ -3,87 +3,72 @@ button[aria-label="Terminar de ordenar notas"] {
   display: none !important;
 }
 
-body[data-oanix-note-reorder-mode] .note-row {
-  position: relative;
-  animation: oanix-note-jiggle .16s ease-in-out infinite alternate;
-  transform-origin: center;
+@media (pointer: coarse) {
+  .note-row[data-reorder-note-id] {
+    -webkit-user-select: none !important;
+    user-select: none !important;
+    -webkit-touch-callout: none !important;
+  }
 }
 
-body[data-oanix-note-reorder-mode] .note-row:nth-child(even) {
-  animation-delay: -.08s;
+.note-row.oanix-mobile-note-drag-source {
+  position: relative !important;
+  opacity: 1 !important;
+  transform: scale(.985) !important;
+  border: 2px dashed rgba(96,165,250,.9) !important;
+  background: rgba(59,130,246,.10) !important;
+  box-shadow:
+    0 0 0 3px rgba(59,130,246,.12),
+    inset 0 0 0 1px rgba(255,255,255,.12) !important;
+  transition: border-color 120ms ease, background 120ms ease, box-shadow 120ms ease !important;
 }
 
-body[data-oanix-note-reorder-mode] .note-row > [aria-label^="Orden manual de "] {
+.note-row.oanix-mobile-note-drag-source > * {
+  visibility: hidden !important;
+}
+
+.note-row.oanix-mobile-note-drag-source::after {
+  content: '';
   position: absolute;
-  inset: 0;
-  z-index: 24;
-  margin: 0 !important;
-  padding: 0 !important;
-  display: block !important;
+  inset: 10px;
+  border-radius: 20px;
+  background: radial-gradient(circle at 50% 45%, rgba(96,165,250,.22), transparent 66%);
+  pointer-events: none;
 }
 
-body[data-oanix-note-reorder-mode] .note-row > [aria-label^="Orden manual de "] > button {
-  width: 100% !important;
-  height: 100% !important;
-  min-height: 100% !important;
-  padding: 0 !important;
-  border: 0 !important;
-  border-radius: inherit !important;
-  background: transparent !important;
-  color: transparent !important;
-  opacity: 0;
-  cursor: grab;
-  touch-action: none;
-  user-select: none;
-  -webkit-user-select: none;
-}
-
-body[data-oanix-note-reorder-mode] .note-row:has(> [aria-label^="Orden manual de "] > button:active) {
-  animation: none;
-  opacity: .3;
-  transform: scale(.985);
-  border-style: dashed !important;
-  border-color: #60a5fa !important;
-  z-index: 30;
-}
-
-.oanix-note-drag-ghost {
+.note-row.oanix-mobile-note-drag-ghost {
   position: fixed !important;
   z-index: 9800 !important;
   margin: 0 !important;
   pointer-events: none !important;
-  animation: none !important;
-  opacity: .96 !important;
-  transform-origin: center !important;
-  border-color: rgba(96,165,250,.95) !important;
+  opacity: .98 !important;
+  transform: scale(1.035) rotate(-.45deg) !important;
+  border-color: rgba(147,197,253,.8) !important;
   box-shadow:
-    0 22px 52px rgba(0,0,0,.48),
+    0 24px 54px rgba(2,6,23,.5),
     0 0 0 2px rgba(96,165,250,.24),
-    inset 0 1px 2px rgba(255,255,255,.18) !important;
-  filter: saturate(1.08) brightness(1.06);
-  will-change: transform;
+    inset 0 1px 1px rgba(255,255,255,.16) !important;
+  transition: transform 110ms ease, box-shadow 110ms ease !important;
+  will-change: left, top, transform;
 }
 
-.oanix-note-drag-ghost > [aria-label^="Orden manual de "] {
+.note-row.oanix-mobile-note-drag-ghost .note-row__menu-wrap {
   display: none !important;
 }
 
-body[data-oanix-note-reorder-mode] .note-row__menu-wrap,
-body[data-oanix-note-reorder-mode] .notes-create-fab {
-  pointer-events: none;
-  opacity: .35;
+html.oanix-mobile-note-dragging,
+body.oanix-mobile-note-dragging {
+  overscroll-behavior: none;
 }
 
-body[data-oanix-note-drop-finishing] .note-row {
-  animation: none !important;
-}
-
-@keyframes oanix-note-jiggle {
-  from { transform: rotate(-.45deg) translateX(-.25px); }
-  to { transform: rotate(.45deg) translateX(.25px); }
+html.oanix-mobile-note-dragging .notes-list {
+  scroll-behavior: auto !important;
+  cursor: grabbing;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  body[data-oanix-note-reorder-mode] .note-row { animation: none !important; }
-  .oanix-note-drag-ghost { transition: none !important; }
+  .note-row.oanix-mobile-note-drag-source,
+  .note-row.oanix-mobile-note-drag-ghost {
+    transition: none !important;
+  }
 }
