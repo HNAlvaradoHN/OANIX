@@ -6,6 +6,10 @@ import './noteReorderGesture.css'
 const LONG_PRESS_MS = 300
 const TOUCH_START_THRESHOLD_PX = 7
 
+type SortableOptionsWithHandle = NonNullable<Parameters<typeof Sortable.create>[1]> & {
+  handle: string
+}
+
 function rowPinned(row: HTMLElement): boolean {
   const title = row.querySelector<HTMLElement>('.note-row__topline > strong')
   return Boolean(title?.textContent?.trim().startsWith('📌'))
@@ -43,7 +47,7 @@ export function NoteListReorderGestureRuntime() {
       window.getSelection()?.removeAllRanges()
     }
 
-    const sortable = Sortable.create(list, {
+    const sortableOptions: SortableOptionsWithHandle = {
       draggable: ':scope > .note-row[data-reorder-note-id]',
       handle: '.note-row__avatar',
       filter: (_event, target) => interactionBlocked() || (!isDragHandle(target) && isInteractiveTarget(target)),
@@ -100,7 +104,9 @@ export function NoteListReorderGestureRuntime() {
           }
         })()
       },
-    })
+    }
+
+    const sortable = Sortable.create(list, sortableOptions)
 
     const onClick = (event: MouseEvent) => {
       if (performance.now() >= suppressClickUntil) return
