@@ -15,8 +15,6 @@ import {
   saveFolderColor,
   saveFolderIcon,
 } from './folderAppearanceService'
-import './folderReferencePolish.css'
-import './folderFullWorkspace.css'
 
 function folderElements(folderId: string): HTMLElement[] {
   return Array.from(document.querySelectorAll<HTMLElement>(
