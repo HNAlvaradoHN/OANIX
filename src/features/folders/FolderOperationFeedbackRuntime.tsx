@@ -115,10 +115,36 @@ export function FolderOperationFeedbackRuntime() {
       }
     }
 
-    const observer = new MutationObserver(() => {
+    const handleModalMutation = () => {
       if (pendingSelection?.button.dataset.selected === 'true') finishSelection()
       syncReactBusyState()
-    })
+    }
+
+    let modalObserver: MutationObserver | null = null
+    let observedModal: HTMLElement | null = null
+
+    const bindModalObserver = () => {
+      const nextModal = document.querySelector<HTMLElement>('.oanix-folder-customizer')
+      if (nextModal === observedModal) return
+
+      modalObserver?.disconnect()
+      observedModal = nextModal
+      if (!observedModal) {
+        modalObserver = null
+        return
+      }
+
+      modalObserver = new MutationObserver(handleModalMutation)
+      modalObserver.observe(observedModal, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['data-selected', 'disabled'],
+      })
+      syncReactBusyState()
+    }
+
+    const portalObserver = new MutationObserver(bindModalObserver)
 
     const handleClickCapture = (event: MouseEvent) => {
       const target = event.target
@@ -206,18 +232,15 @@ export function FolderOperationFeedbackRuntime() {
 
     document.addEventListener('click', handleClickCapture, true)
     document.addEventListener('change', handleChangeCapture, true)
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ['data-selected', 'disabled'],
-    })
+    bindModalObserver()
+    portalObserver.observe(document.body, { childList: true })
     syncReactBusyState()
 
     return () => {
       document.removeEventListener('click', handleClickCapture, true)
       document.removeEventListener('change', handleChangeCapture, true)
-      observer.disconnect()
+      portalObserver.disconnect()
+      modalObserver?.disconnect()
       if (pendingSelection) window.clearTimeout(pendingSelection.timeoutId)
       if (clearTimer !== null) window.clearTimeout(clearTimer)
       if (hintTimer !== null) window.clearTimeout(hintTimer)
