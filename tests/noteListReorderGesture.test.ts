@@ -28,7 +28,7 @@ test('avatar es el handle táctil y reserva su gesto desde touchstart', () => {
   assert.match(runtime, /function isDragHandle/)
   assert.match(runtime, /target\.closest\('\.note-row__avatar'\)/)
   assert.match(runtime, /!isDragHandle\(target\) && isInteractiveTarget\(target\)/)
-  assert.match(css, /\.note-row\[data-reorder-note-id\] \.note-row__avatar \{[\s\S]{0,80}touch-action: none !important/)
+  assert.match(css, /html\.oanix-v383-visual[\s\S]*?\.note-row\[data-reorder-note-id\][\s\S]*?\.note-row__avatar\[data-oanix-note-icon\]\s*\{[\s\S]*?pointer-events:\s*auto !important;[\s\S]*?touch-action:\s*none !important/)
   assert.doesNotMatch(runtime, /touchArmTimer|touchArmed|onTouchMove|addEventListener\('touchmove'/)
 })
 
