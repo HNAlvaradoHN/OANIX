@@ -7,44 +7,37 @@
   }
 
   .note-row[data-reorder-note-id] {
-    touch-action: none !important;
+    touch-action: pan-y !important;
   }
 }
 
-.oanix-mobile-note-placeholder {
-  min-height: 54px;
-  margin: 0 0 8px !important;
+.note-row.oanix-mobile-note-chosen {
+  box-shadow: 0 0 0 2px rgba(96,165,250,.26) !important;
+}
+
+.note-row.oanix-mobile-note-placeholder {
+  opacity: .24 !important;
   border: 2px dashed rgba(96,165,250,.9) !important;
-  border-radius: 14px !important;
   background: rgba(59,130,246,.08) !important;
-  box-sizing: border-box !important;
-  pointer-events: none !important;
+  box-shadow: none !important;
 }
 
 .note-row.oanix-mobile-note-drag-ghost {
-  position: fixed !important;
   z-index: 9800 !important;
   margin: 0 !important;
   pointer-events: none !important;
   opacity: .99 !important;
-  transform: scale(1.018) !important;
   border-color: rgba(147,197,253,.9) !important;
   box-shadow: 0 22px 46px rgba(2,6,23,.46), 0 0 0 2px rgba(96,165,250,.3), inset 0 1px 1px rgba(255,255,255,.18) !important;
-  transition: box-shadow 100ms ease, transform 100ms ease !important;
-  will-change: left, top;
+  will-change: transform;
 }
 
 .note-row.oanix-mobile-note-drag-ghost .note-row__menu-wrap {
   display: none !important;
 }
 
-@keyframes oanix-note-drag-pulse {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-1px); }
-}
-
-body.oanix-mobile-note-dragging .note-row[data-reorder-note-id]:not([data-oanix-note-dragging='true']) {
-  animation: oanix-note-drag-pulse 280ms ease-in-out infinite;
+body.oanix-mobile-note-dragging .note-row[data-reorder-note-id]:not(.oanix-mobile-note-drag-ghost) {
+  transition: box-shadow 140ms ease, opacity 140ms ease;
 }
 
 html.oanix-mobile-note-dragging,
@@ -58,9 +51,7 @@ html.oanix-mobile-note-dragging .notes-list {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .note-row.oanix-mobile-note-drag-ghost,
-  body.oanix-mobile-note-dragging .note-row[data-reorder-note-id]:not([data-oanix-note-dragging='true']) {
+  .note-row[data-reorder-note-id] {
     transition: none !important;
-    animation: none !important;
   }
 }
