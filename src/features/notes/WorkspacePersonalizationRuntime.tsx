@@ -2,8 +2,6 @@ import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
 import {
   loadFolderAppearanceFlags,
-  saveFolderFavorite,
-  saveFolderPinned,
   type FolderAppearanceFlags,
 } from '../folders/folderAppearanceService'
 import { loadFolders } from '../folders/folderService'
@@ -55,28 +53,6 @@ const EMPTY_NOTE_DRAFT: NoteCustomizerDraft = {
 
 const PERSONALIZATION_RELOAD_DEBOUNCE_MS = 48
 
-function waitForElement<T extends Element>(selector: string, attempts = 24): Promise<T | null> {
-  return new Promise((resolve) => {
-    let remaining = attempts
-    const find = () => {
-      const element = document.querySelector<T>(selector)
-      if (element || remaining <= 0) {
-        resolve(element)
-        return
-      }
-      remaining -= 1
-      window.setTimeout(find, 40)
-    }
-    find()
-  })
-}
-
-function nextFrame(): Promise<void> {
-  return new Promise((resolve) => {
-    window.requestAnimationFrame(() => window.requestAnimationFrame(() => resolve()))
-  })
-}
-
 function activeFolderItem(): HTMLElement | null {
   return document.querySelector<HTMLElement>('.oanix-folder-rail__item.is-selected')
 }
@@ -85,26 +61,12 @@ function activeWorkspaceCount(): string {
   return activeFolderItem()?.querySelector<HTMLElement>(':scope > small')?.textContent?.trim() || '0'
 }
 
-function folderItem(folderId: string): HTMLButtonElement | null {
-  return document.querySelector<HTMLButtonElement>(
-    `.oanix-folder-rail__item[data-oanix-folder-id="${CSS.escape(folderId)}"]`,
-  )
-}
-
-function folderManagerRow(folderName: string): HTMLElement | null {
-  return Array.from(document.querySelectorAll<HTMLElement>('.folder-list__row'))
-    .find((row) => row.querySelector('strong')?.textContent?.trim() === folderName) ?? null
-}
-
 export function WorkspacePersonalizationRuntime() {
   const [data, setData] = useState<WorkspacePersonalizationData>(EMPTY_DATA)
   const [noteCustomizerId, setNoteCustomizerId] = useState<string | null>(null)
   const [noteDraft, setNoteDraft] = useState<NoteCustomizerDraft>(EMPTY_NOTE_DRAFT)
   const [noteSaving, setNoteSaving] = useState(false)
   const [noteError, setNoteError] = useState('')
-  const [folderMenuId, setFolderMenuId] = useState<string | null>(null)
-  const [folderBusy, setFolderBusy] = useState(false)
-  const [folderError, setFolderError] = useState('')
   const dataRef = useRef(data)
   const refreshTimerRef = useRef<number | null>(null)
   const decorateFrameRef = useRef<number | null>(null)
@@ -342,26 +304,12 @@ export function WorkspacePersonalizationRuntime() {
     function handlePointerDownCapture(event: PointerEvent) {
       const target = event.target
       if (!(target instanceof Element)) return
-      if (target.closest('.oanix-folder-card__gear') || target.closest('[data-oanix-theme-toggle="true"]')) {
-        event.stopPropagation()
-      }
+      if (target.closest('[data-oanix-theme-toggle="true"]')) event.stopPropagation()
     }
 
     function handleClickCapture(event: MouseEvent) {
       const target = event.target
       if (!(target instanceof Element)) return
-
-      const gear = target.closest<HTMLElement>('.oanix-folder-card__gear')
-      if (gear) {
-        const item = gear.closest<HTMLElement>('.oanix-folder-rail__item[data-oanix-folder-id]')
-        const folderId = item?.dataset.oanixFolderId
-        if (!folderId) return
-        event.preventDefault()
-        event.stopPropagation()
-        setFolderError('')
-        setFolderMenuId(folderId)
-        return
-      }
 
       const themeButton = target.closest<HTMLElement>('[data-oanix-theme-toggle="true"]')
       if (themeButton) {
@@ -420,88 +368,9 @@ export function WorkspacePersonalizationRuntime() {
     }
   }
 
-  async function toggleFolderFlag(folderId: string, flag: 'pinned' | 'favorite') {
-    if (folderBusy) return
-    const current = dataRef.current.folderFlags.get(folderId) ?? { pinned: false, favorite: false }
-    const nextValue = !current[flag]
-    setFolderBusy(true)
-    setFolderError('')
-    try {
-      if (flag === 'pinned') await saveFolderPinned(folderId, nextValue)
-      else await saveFolderFavorite(folderId, nextValue)
-      const folderFlags = new Map(dataRef.current.folderFlags)
-      const updatedFlags = { ...current, [flag]: nextValue }
-      if (!updatedFlags.pinned && !updatedFlags.favorite) folderFlags.delete(folderId)
-      else folderFlags.set(folderId, updatedFlags)
-      const next = { ...dataRef.current, folderFlags }
-      dataRef.current = next
-      setData(next)
-      scheduleDecorate()
-    } catch {
-      setFolderError(flag === 'pinned' ? 'No se pudo cambiar el estado fijado.' : 'No se pudo cambiar el favorito.')
-    } finally {
-      setFolderBusy(false)
-    }
-  }
-
-  async function selectFolderForAction(folderId: string) {
-    const item = folderItem(folderId)
-    if (!item) return false
-    if (!item.classList.contains('is-selected')) item.click()
-    await nextFrame()
-    return true
-  }
-
-  async function openFolder(folderId: string) {
-    setFolderMenuId(null)
-    if (!(await selectFolderForAction(folderId))) return
-    document
-      .querySelector<HTMLButtonElement>(`.oanix-folder-focus[data-oanix-folder-id="${CSS.escape(folderId)}"] .oanix-folder-focus__open`)
-      ?.click()
-  }
-
-  async function openFolderCustomizer(folderId: string, action: 'appearance' | 'image') {
-    setFolderMenuId(null)
-    if (!(await selectFolderForAction(folderId))) return
-    document
-      .querySelector<HTMLButtonElement>(`.oanix-folder-focus[data-oanix-folder-id="${CSS.escape(folderId)}"] .oanix-folder-focus__menu`)
-      ?.click()
-
-    if (action === 'appearance') {
-      const appearance = await waitForElement<HTMLButtonElement>('.oanix-folder-customizer__appearance-toggle')
-      appearance?.click()
-      return
-    }
-
-    const image = await waitForElement<HTMLButtonElement>('.oanix-folder-customizer__image-action')
-    image?.click()
-  }
-
-  async function openFolderManagerAction(folder: FolderRecord, action: 'rename' | 'delete') {
-    setFolderMenuId(null)
-    document.querySelector<HTMLButtonElement>('.notes-tab--add')?.click()
-    const panel = await waitForElement<HTMLElement>('.folder-dialog__panel[aria-label="Administrar carpetas"]')
-    if (!panel) return
-    const row = folderManagerRow(folder.name)
-    if (!row) return
-    if (action === 'rename') {
-      Array.from(row.querySelectorAll<HTMLButtonElement>('button'))
-        .find((button) => button.textContent?.trim() === 'Renombrar')
-        ?.click()
-      return
-    }
-    row.querySelector<HTMLButtonElement>('.folder-list__delete')?.click()
-  }
-
   const noteCustomizer = noteCustomizerId
     ? data.notes.find((note) => note.id === noteCustomizerId) ?? null
     : null
-  const folderMenu = folderMenuId
-    ? data.folders.find((folder) => folder.id === folderMenuId) ?? null
-    : null
-  const folderFlags = folderMenu
-    ? data.folderFlags.get(folderMenu.id) ?? { pinned: false, favorite: false }
-    : { pinned: false, favorite: false }
 
   return (
     <>
@@ -603,42 +472,6 @@ export function WorkspacePersonalizationRuntime() {
                 {noteSaving ? 'Guardando…' : 'Guardar'}
               </button>
             </footer>
-          </section>
-        </div>,
-        document.body,
-      )}
-
-      {folderMenu && createPortal(
-        <div
-          className="oanix-folder-options-backdrop"
-          role="presentation"
-          onPointerDown={(event) => {
-            if (event.target === event.currentTarget && !folderBusy) setFolderMenuId(null)
-          }}
-        >
-          <section
-            className="oanix-folder-options"
-            role="dialog"
-            aria-modal="true"
-            aria-label={`Opciones de ${folderMenu.name}`}
-            onPointerDown={(event) => event.stopPropagation()}
-          >
-            <h3>{folderMenu.name}</h3>
-            <div className="oanix-folder-options__actions">
-              <button type="button" onClick={() => void openFolder(folderMenu.id)}><span>📂</span>Abrir carpeta</button>
-              <button type="button" disabled={folderBusy} onClick={() => void toggleFolderFlag(folderMenu.id, 'pinned')}>
-                <span>📌</span>{folderFlags.pinned ? 'Desfijar carpeta' : 'Fijar carpeta'}
-              </button>
-              <button type="button" disabled={folderBusy} onClick={() => void toggleFolderFlag(folderMenu.id, 'favorite')}>
-                <span>☆</span>{folderFlags.favorite ? 'Quitar de favoritos' : 'Marcar como favorito'}
-              </button>
-              <button type="button" onClick={() => void openFolderManagerAction(folderMenu, 'rename')}><span>✎</span>Renombrar carpeta</button>
-              <button type="button" onClick={() => void openFolderCustomizer(folderMenu.id, 'appearance')}><span>🎨</span>Cambiar color / Icono</button>
-              <button type="button" onClick={() => void openFolderCustomizer(folderMenu.id, 'image')}><span>▧</span>Cambiar imagen local</button>
-              <button className="is-danger" type="button" onClick={() => void openFolderManagerAction(folderMenu, 'delete')}><span>🗑</span>Eliminar carpeta</button>
-              <button className="is-cancel" type="button" onClick={() => setFolderMenuId(null)}>Cancelar</button>
-            </div>
-            {folderError && <p className="oanix-folder-options__error" role="alert">{folderError}</p>}
           </section>
         </div>,
         document.body,
