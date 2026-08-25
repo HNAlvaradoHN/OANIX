@@ -11,7 +11,7 @@ test('note ordering is owned by the direct long-press drag runtime', () => {
   assert.doesNotMatch(workspace, /setPointerCapture|document\.elementFromPoint|touchAction: 'none'|⠿/)
   assert.match(runtime, /setPointerCapture\(gesture\.pointerId\)/)
   assert.match(runtime, /createGhost/)
-  assert.match(runtime, /reorderDomAtPoint/)
+  assert.match(runtime, /previewOrderAtPoint/)
   assert.match(runtime, /persistNoteOrder\(nextOrder\)/)
   assert.doesNotMatch(workspace, /aria-label=\{`Mover \$\{note\.title\} arriba`\}/)
   assert.doesNotMatch(workspace, /aria-label=\{`Mover \$\{note\.title\} abajo`\}/)

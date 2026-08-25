@@ -3,11 +3,12 @@ import { persistNoteOrder } from './noteService'
 import './noteReorderGesture.css'
 
 const LONG_PRESS_MS = 340
-const PRESS_ARM_GRACE_MS = 55
+const PRESS_ARM_GRACE_MS = 220
 const MOVE_CANCEL_PX = 14
 const EDGE_SCROLL_PX = 86
 const MAX_SCROLL_PER_FRAME = 11
-const REFLOW_MS = 180
+
+type DropPlacement = 'before' | 'after'
 
 interface NoteDragGesture {
   pointerId: number
@@ -24,9 +25,12 @@ interface NoteDragGesture {
   moved: boolean
   dragging: boolean
   orderBefore: string[]
+  nextOrder: string[]
   timer: number | null
   ghost: HTMLElement | null
   scrollFrame: number | null
+  dropTarget: HTMLElement | null
+  dropPlacement: DropPlacement | null
 }
 
 function noteRow(target: EventTarget | null): HTMLElement | null {
@@ -38,17 +42,6 @@ function noteRow(target: EventTarget | null): HTMLElement | null {
 function noteOrder(list: HTMLElement): string[] {
   return Array.from(list.querySelectorAll<HTMLElement>(':scope > .note-row[data-reorder-note-id]'))
     .flatMap((item) => item.dataset.reorderNoteId ? [item.dataset.reorderNoteId] : [])
-}
-
-function restoreDomOrder(list: HTMLElement, ids: string[]) {
-  const byId = new Map(
-    Array.from(list.querySelectorAll<HTMLElement>(':scope > .note-row[data-reorder-note-id]'))
-      .flatMap((item) => item.dataset.reorderNoteId ? [[item.dataset.reorderNoteId, item] as const] : []),
-  )
-  ids.forEach((id) => {
-    const item = byId.get(id)
-    if (item) list.appendChild(item)
-  })
 }
 
 function rowPinned(row: HTMLElement): boolean {
@@ -106,64 +99,72 @@ function positionGhost(gesture: NoteDragGesture) {
   gesture.ghost.style.top = `${top}px`
 }
 
-function snapshotRects(list: HTMLElement): Map<HTMLElement, DOMRect> {
-  return new Map(
-    Array.from(list.querySelectorAll<HTMLElement>(':scope > .note-row[data-reorder-note-id]'))
-      .map((item) => [item, item.getBoundingClientRect()] as const),
-  )
+function clearDropIndicator(gesture: NoteDragGesture) {
+  gesture.dropTarget?.classList.remove('oanix-mobile-note-drop-before', 'oanix-mobile-note-drop-after')
+  gesture.dropTarget = null
+  gesture.dropPlacement = null
 }
 
-function animateReflow(list: HTMLElement, before: Map<HTMLElement, DOMRect>) {
-  for (const item of Array.from(list.querySelectorAll<HTMLElement>(':scope > .note-row[data-reorder-note-id]'))) {
-    const previous = before.get(item)
-    if (!previous) continue
-    const next = item.getBoundingClientRect()
-    const dx = previous.left - next.left
-    const dy = previous.top - next.top
-    if (Math.abs(dx) < 1 && Math.abs(dy) < 1) continue
-    item.animate(
-      [
-        { transform: `translate(${dx}px, ${dy}px)` },
-        { transform: 'translate(0, 0)' },
-      ],
-      { duration: REFLOW_MS, easing: 'cubic-bezier(.2,.8,.2,1)' },
-    )
+function buildNextOrder(
+  orderBefore: string[],
+  noteId: string,
+  targetId: string,
+  placement: DropPlacement,
+): string[] {
+  const withoutSource = orderBefore.filter((id) => id !== noteId)
+  const targetIndex = withoutSource.indexOf(targetId)
+  if (targetIndex < 0) return orderBefore
+  const insertionIndex = placement === 'before' ? targetIndex : targetIndex + 1
+  return [
+    ...withoutSource.slice(0, insertionIndex),
+    noteId,
+    ...withoutSource.slice(insertionIndex),
+  ]
+}
+
+function previewOrderAtPoint(gesture: NoteDragGesture) {
+  if (!pointInsideList(gesture)) {
+    clearDropIndicator(gesture)
+    gesture.nextOrder = gesture.orderBefore
+    return
   }
-}
-
-function reorderDomAtPoint(gesture: NoteDragGesture, animate = true) {
-  if (!pointInsideList(gesture)) return
 
   const sourcePinned = rowPinned(gesture.item)
   const siblings = Array.from(
     gesture.list.querySelectorAll<HTMLElement>(':scope > .note-row[data-reorder-note-id]'),
   ).filter((item) => item !== gesture.item && rowPinned(item) === sourcePinned)
 
-  if (siblings.length === 0) return
-
-  const beforeOrder = noteOrder(gesture.list).join('|')
-  const beforeRects = animate ? snapshotRects(gesture.list) : null
-  const insertionTarget = siblings.find((item) => {
-    const rect = item.getBoundingClientRect()
-    return gesture.lastY < rect.top + rect.height / 2
-  })
-
-  if (insertionTarget) gesture.list.insertBefore(gesture.item, insertionTarget)
-  else {
-    const lastCompatible = siblings[siblings.length - 1]
-    if (lastCompatible.nextSibling) gesture.list.insertBefore(gesture.item, lastCompatible.nextSibling)
-    else gesture.list.appendChild(gesture.item)
+  if (siblings.length === 0) {
+    clearDropIndicator(gesture)
+    gesture.nextOrder = gesture.orderBefore
+    return
   }
 
-  if (noteOrder(gesture.list).join('|') === beforeOrder) return
+  let target = siblings[siblings.length - 1]
+  let placement: DropPlacement = 'after'
 
-  if (animate && beforeRects) {
-    animateReflow(gesture.list, beforeRects)
-    gesture.item.animate(
-      [{ boxShadow: '0 0 0 0 rgba(59,130,246,0)' }, { boxShadow: '0 0 0 3px rgba(59,130,246,.24)' }],
-      { duration: 120, easing: 'ease-out' },
+  for (const sibling of siblings) {
+    const rect = sibling.getBoundingClientRect()
+    if (gesture.lastY < rect.top + rect.height / 2) {
+      target = sibling
+      placement = 'before'
+      break
+    }
+  }
+
+  const targetId = target.dataset.reorderNoteId
+  if (!targetId) return
+
+  if (gesture.dropTarget !== target || gesture.dropPlacement !== placement) {
+    clearDropIndicator(gesture)
+    gesture.dropTarget = target
+    gesture.dropPlacement = placement
+    target.classList.add(
+      placement === 'before' ? 'oanix-mobile-note-drop-before' : 'oanix-mobile-note-drop-after',
     )
   }
+
+  gesture.nextOrder = buildNextOrder(gesture.orderBefore, gesture.noteId, targetId, placement)
 }
 
 function scrollSpeed(clientY: number, rect: DOMRect): number {
@@ -199,6 +200,7 @@ export function NoteListReorderGestureRuntime() {
     const cleanupVisuals = () => {
       if (!gesture) return
       stopAutoScroll()
+      clearDropIndicator(gesture)
       gesture.ghost?.remove()
       gesture.ghost = null
       gesture.item.classList.remove('oanix-mobile-note-drag-source')
@@ -215,7 +217,10 @@ export function NoteListReorderGestureRuntime() {
         if (speed !== 0) {
           const before = gesture.list.scrollTop
           gesture.list.scrollTop += speed
-          if (gesture.list.scrollTop !== before) reorderDomAtPoint(gesture, false)
+          if (gesture.list.scrollTop !== before) {
+            positionGhost(gesture)
+            previewOrderAtPoint(gesture)
+          }
         }
         gesture.scrollFrame = window.requestAnimationFrame(tick)
       }
@@ -228,11 +233,13 @@ export function NoteListReorderGestureRuntime() {
       clearTimer()
       gesture.dragging = true
       gesture.orderBefore = noteOrder(gesture.list)
+      gesture.nextOrder = gesture.orderBefore
       gesture.ghost = createGhost(gesture.item)
       gesture.item.classList.add('oanix-mobile-note-drag-source')
       document.documentElement.classList.add('oanix-mobile-note-dragging')
       document.body.classList.add('oanix-mobile-note-dragging')
       positionGhost(gesture)
+      previewOrderAtPoint(gesture)
       startAutoScroll()
       navigator.vibrate?.(24)
       try {
@@ -267,9 +274,12 @@ export function NoteListReorderGestureRuntime() {
         moved: false,
         dragging: false,
         orderBefore: [],
+        nextOrder: [],
         timer: window.setTimeout(beginDrag, LONG_PRESS_MS),
         ghost: null,
         scrollFrame: null,
+        dropTarget: null,
+        dropPlacement: null,
       }
     }
 
@@ -291,7 +301,7 @@ export function NoteListReorderGestureRuntime() {
             event.preventDefault()
             event.stopPropagation()
             positionGhost(gesture)
-            reorderDomAtPoint(gesture)
+            previewOrderAtPoint(gesture)
             return
           }
         }
@@ -304,7 +314,7 @@ export function NoteListReorderGestureRuntime() {
       event.preventDefault()
       event.stopPropagation()
       positionGhost(gesture)
-      reorderDomAtPoint(gesture)
+      previewOrderAtPoint(gesture)
     }
 
     const persistAndFinish = async (event: PointerEvent) => {
@@ -320,9 +330,11 @@ export function NoteListReorderGestureRuntime() {
       event.preventDefault()
       event.stopPropagation()
       suppressClickUntil = performance.now() + 520
-      const nextOrder = noteOrder(finished.list)
+      const nextOrder = finished.nextOrder.length > 0 ? finished.nextOrder : finished.orderBefore
       cleanupVisuals()
       gesture = null
+
+      if (nextOrder.join('|') === finished.orderBefore.join('|')) return
 
       try {
         await persistNoteOrder(nextOrder)
@@ -330,14 +342,13 @@ export function NoteListReorderGestureRuntime() {
         window.dispatchEvent(new Event('oanix:workspace-refresh'))
         navigator.vibrate?.(12)
       } catch {
-        restoreDomOrder(finished.list, finished.orderBefore)
+        window.dispatchEvent(new Event('oanix:workspace-refresh'))
       }
     }
 
     const cancelGesture = (event?: PointerEvent) => {
       if (!gesture || (event && event.pointerId !== gesture.pointerId)) return
       clearTimer()
-      if (gesture.dragging && gesture.orderBefore.length) restoreDomOrder(gesture.list, gesture.orderBefore)
       cleanupVisuals()
       gesture = null
     }

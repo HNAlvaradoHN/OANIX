@@ -8,35 +8,34 @@ const workspace = readFileSync('src/features/notes/NotesWorkspace.tsx', 'utf8')
 const privacyRuntime = readFileSync('src/features/privacy/NoteBulkPrivacyRuntime.tsx', 'utf8')
 const app = readFileSync('src/app/App.tsx', 'utf8')
 
-test('el arrastre de notas usa pulsación larga directa y conserva el scroll previo', () => {
+test('el arrastre de notas se arma pronto y conserva el scroll rápido', () => {
   assert.match(runtime, /const LONG_PRESS_MS = 340/)
-  assert.match(runtime, /const PRESS_ARM_GRACE_MS = 55/)
+  assert.match(runtime, /const PRESS_ARM_GRACE_MS = 220/)
   assert.match(runtime, /const MOVE_CANCEL_PX = 14/)
   assert.match(runtime, /Math\.hypot\(dx, dy\)/)
   assert.match(runtime, /beginDrag\(\)/)
   assert.match(runtime, /navigator\.vibrate\?\.\(24\)/)
 })
 
-test('el drag replica el patrón de carpetas con ghost, hueco de destino y reflow', () => {
+test('el drag usa ghost e indicador de destino sin reflow de filas reales', () => {
   assert.match(runtime, /createGhost/)
   assert.match(runtime, /positionGhost/)
-  assert.match(runtime, /snapshotRects/)
-  assert.match(runtime, /animateReflow/)
-  assert.match(runtime, /reorderDomAtPoint/)
-  assert.match(runtime, /rect\.top \+ rect\.height \/ 2/)
+  assert.match(runtime, /previewOrderAtPoint/)
+  assert.match(runtime, /buildNextOrder/)
   assert.match(runtime, /persistNoteOrder\(nextOrder\)/)
   assert.match(runtime, /oanix:workspace-refresh/)
   assert.match(css, /oanix-mobile-note-drag-source/)
   assert.match(css, /oanix-mobile-note-drag-ghost/)
-  assert.match(css, /border: 2px dashed/)
+  assert.match(css, /oanix-mobile-note-drop-before/)
+  assert.match(css, /oanix-mobile-note-drop-after/)
 })
 
-test('el ghost y el reordenamiento quedan encerrados dentro de la lista de notas', () => {
+test('el ghost y el preview quedan encerrados dentro de la lista de notas', () => {
   assert.match(runtime, /function clamp\(/)
   assert.match(runtime, /listRect\.right - ghostWidth/)
   assert.match(runtime, /listRect\.bottom - ghostHeight/)
   assert.match(runtime, /function pointInsideList\(/)
-  assert.match(runtime, /if \(!pointInsideList\(gesture\)\) return/)
+  assert.match(runtime, /pointInsideList\(gesture\)/)
   assert.match(runtime, /if \(clientY < rect\.top \|\| clientY > rect\.bottom\) return 0/)
 })
 
