@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import test from 'node:test'
 
-const pickerUrl = new URL('../src/features/account/GoogleDriveControlledTransferTest.tsx', import.meta.url)
+const pickerUrl = new URL('../src/features/account/GoogleDriveControlledTransferPanel.tsx', import.meta.url)
 const cardUrl = new URL('../src/features/account/GoogleDriveStorageCard.tsx', import.meta.url)
 
 async function source(url: URL) {
@@ -12,7 +12,7 @@ async function source(url: URL) {
 test('controlled Drive field picker is visible only after Drive is connected', async () => {
   const card = await source(cardUrl)
   assert.match(card, /connected && \(/u)
-  assert.match(card, /GoogleDriveControlledTransferTest/u)
+  assert.match(card, /GoogleDriveControlledTransferPanel/u)
 })
 
 test('controlled picker reuses the active vault key and the 100 MiB–1 GiB transfer bridge', async () => {
