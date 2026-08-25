@@ -18,82 +18,17 @@ test('one V1 note can contain every supported block without invalidating the rec
     content: {
       format: 'blocks-v1',
       blocks: [
-        {
-          id: 'day-1',
-          type: 'dailyEntry',
-          date: '2026-08-16',
-          title: 'Entrada del día',
-        },
-        {
-          id: 'paragraph-1',
-          type: 'paragraph',
-          runs: [
-            { text: 'Texto enriquecido ' },
-            { text: 'seguro', bold: true },
-            { text: ' con enlace', href: 'https://example.com' },
-          ],
-        },
-        {
-          id: 'heading-1',
-          type: 'heading',
-          level: 2,
-          runs: [{ text: 'Encabezado V1' }],
-        },
-        {
-          id: 'quote-1',
-          type: 'quote',
-          runs: [{ text: 'Cita privada' }],
-        },
-        {
-          id: 'bullets-1',
-          type: 'bulletList',
-          items: [[{ text: 'Elemento con viñeta' }]],
-        },
-        {
-          id: 'ordered-1',
-          type: 'orderedList',
-          items: [[{ text: 'Elemento ordenado' }]],
-        },
-        {
-          id: 'checklist-1',
-          type: 'checklist',
-          items: [
-            { text: 'Tarea pendiente', checked: false },
-            { text: 'Tarea terminada', checked: true },
-          ],
-        },
-        {
-          id: 'contact-1',
-          type: 'contact',
-          name: 'Contacto privado',
-          phone: '+504 9999-9999',
-          email: 'privado@example.com',
-          organization: 'OANIX',
-          notes: 'Dato de contacto cifrado',
-        },
-        {
-          id: 'divider-1',
-          type: 'divider',
-        },
-        {
-          id: 'code-1',
-          type: 'code',
-          language: 'typescript',
-          text: 'const offline = true',
-        },
-        {
-          id: 'image-1',
-          type: 'image',
-          imageId: 'encrypted-image-1',
-          mimeType: 'image/jpeg',
-          name: 'recibo.jpg',
-          byteLength: 2048,
-          alt: 'Recibo privado',
-          widthPercent: 22,
-          alignment: 'right',
-          locked: true,
-          showName: false,
-        },
+        { id: 'day-1', type: 'dailyEntry', date: '2026-08-16', title: 'Entrada del día' },
+        { id: 'paragraph-1', type: 'paragraph', runs: [{ text: 'Texto enriquecido ' }, { text: 'seguro', bold: true }, { text: ' con enlace', href: 'https://example.com' }] },
+        { id: 'heading-1', type: 'heading', level: 2, runs: [{ text: 'Encabezado V1' }] },
+        { id: 'quote-1', type: 'quote', runs: [{ text: 'Cita privada' }] },
+        { id: 'bullets-1', type: 'bulletList', items: [[{ text: 'Elemento con viñeta' }]] },
+        { id: 'ordered-1', type: 'orderedList', items: [[{ text: 'Elemento ordenado' }]] },
+        { id: 'checklist-1', type: 'checklist', items: [{ text: 'Tarea pendiente', checked: false }, { text: 'Tarea terminada', checked: true }] },
+        { id: 'contact-1', type: 'contact', name: 'Contacto privado', phone: '+504 9999-9999', email: 'privado@example.com', organization: 'OANIX', notes: 'Dato de contacto cifrado' },
+        { id: 'divider-1', type: 'divider' },
+        { id: 'code-1', type: 'code', language: 'typescript', text: 'const offline = true' },
+        { id: 'image-1', type: 'image', imageId: 'encrypted-image-1', mimeType: 'image/jpeg', name: 'recibo.jpg', byteLength: 2048, alt: 'Recibo privado', widthPercent: 22, alignment: 'right', locked: true, showName: false },
       ],
     },
   }
@@ -188,7 +123,7 @@ test('pinning and direct drag ordering reuse encrypted note records without anot
   assert.doesNotMatch(workspaceSource, /aria-label=\{`Mover \$\{note\.title\} abajo`\}/)
   assert.match(reorderRuntime, /persistNoteOrder/)
   assert.match(reorderRuntime, /createGhost/)
-  assert.match(reorderRuntime, /reorderDomAtPoint/)
+  assert.match(reorderRuntime, /previewOrderAtPoint/)
 })
 
 test('PWA updates stay prompt-based and reuse the existing service worker cache', () => {
