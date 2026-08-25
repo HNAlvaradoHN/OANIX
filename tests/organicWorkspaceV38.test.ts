@@ -30,7 +30,7 @@ test('folders become a bottom dock and old duplicate navigation stays only as a 
   assert.match(runtime, /\.notes-tab:not\(\.notes-tab--add\)/)
 })
 
-test('folders, tags and notes finish reordering automatically after the pointer is released', () => {
+test('folders, tags and notes finish reordering automatically after release', () => {
   const organic = readFileSync('src/features/notes/OrganicWorkspaceRuntime.tsx', 'utf8')
   const noteGesture = readFileSync('src/features/notes/NoteListReorderGestureRuntime.tsx', 'utf8')
   const noteCss = readFileSync('src/features/notes/noteReorderGesture.css', 'utf8')
@@ -41,9 +41,9 @@ test('folders, tags and notes finish reordering automatically after the pointer 
   assert.match(organic, /finishTagDrag/)
   assert.match(noteGesture, /const LONG_PRESS_MS = 220/)
   assert.match(noteGesture, /type GesturePhase = 'pressing' \| 'dragging'/)
-  assert.match(noteGesture, /document\.addEventListener\('pointerup', persistAndFinish, true\)/)
-  assert.match(noteGesture, /document\.addEventListener\('touchmove', onTouchMove, \{ capture: true, passive: false \}\)/)
-  assert.match(noteGesture, /if \(!gesture \|\| gesture\.phase !== 'dragging'\) return[\s\S]*event\.preventDefault\(\)/)
+  assert.match(noteGesture, /document\.addEventListener\('touchend', onTouchEnd, \{ capture: true, passive: false \}\)/)
+  assert.match(noteGesture, /document\.addEventListener\('pointerup', onPointerUp, true\)/)
+  assert.match(noteGesture, /updateDragPoint\(touch\.clientX, touch\.clientY, event\)/)
   assert.match(noteGesture, /persistNoteOrder\(nextOrder\)/)
   assert.match(noteGesture, /oanix-mobile-note-drag-source/)
   assert.doesNotMatch(noteGesture, /PRESS_ARM_GRACE_MS|finishAutomaticMode|dispatchDragStart|new PointerEvent/)
