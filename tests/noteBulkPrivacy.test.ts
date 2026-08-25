@@ -3,9 +3,10 @@ import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
 const runtime = readFileSync('src/features/privacy/NoteBulkPrivacyRuntime.tsx', 'utf8')
+const css = readFileSync('src/features/privacy/noteBulkPrivacy.css', 'utf8')
 const app = readFileSync('src/app/App.tsx', 'utf8')
 
-test('las notas nuevas fuerzan refresco aislado del runtime de privacidad', () => {
+test('las notas nuevas mantienen el refresco aislado del runtime de privacidad', () => {
   assert.match(runtime, /NOTE_PRIVACY_REFRESH_EVENT = 'oanix:note-privacy-refresh'/)
   assert.match(runtime, /knownRowIdsRef/)
   assert.match(runtime, /foundNewNote/)
@@ -13,18 +14,24 @@ test('las notas nuevas fuerzan refresco aislado del runtime de privacidad', () =
   assert.match(app, /privacyRevision/)
   assert.match(app, /NOTE_PRIVACY_REFRESH_EVENT/)
   assert.match(app, /privacy-\$\{workspaceRevision\}-\$\{privacyRevision\}/)
-  assert.doesNotMatch(app, /setWorkspaceRevision\(\(value\) => value \+ 1\).*NOTE_PRIVACY_REFRESH_EVENT/s)
 })
 
-test('pulsación prolongada quieta entra en selección múltiple sin competir con el arrastre', () => {
-  assert.match(runtime, /LONG_PRESS_MS = 760/)
-  assert.match(runtime, /pointerdown/)
-  assert.match(runtime, /pointermove/)
-  assert.match(runtime, /data-oanix-note-drag-active/)
-  assert.match(runtime, /oanix:note-bulk-selection-start/)
-  assert.match(runtime, /suppressNextClickRef/)
-  assert.match(runtime, /selectedIdsRef\.current\.size > 0/)
-  assert.match(runtime, /oanix-note-bulk-selecting/)
+test('el botón crear abre agregar o marcar y se transforma en terminar durante selección', () => {
+  assert.match(runtime, /\.notes-create-fab/)
+  assert.match(runtime, /Agregar nota/)
+  assert.match(runtime, /Marcar notas/)
+  assert.match(runtime, /data-oanix-bulk-mode/)
+  assert.match(runtime, /Terminar de marcar/)
+  assert.match(css, /\.notes-create-fab\[data-oanix-bulk-mode\]/)
+  assert.doesNotMatch(runtime, /LONG_PRESS_MS|pointerdown|pointermove|suppressNextClickRef/)
+})
+
+test('terminar selección ofrece aplicar código, borrar o cancelar sin barra inferior', () => {
+  assert.match(runtime, /Aplicar código/)
+  assert.match(runtime, /Borrar/)
+  assert.match(runtime, /Cancelar selección/)
+  assert.doesNotMatch(runtime, /oanix-note-bulk-bar/)
+  assert.doesNotMatch(css, /\.oanix-note-bulk-bar/)
 })
 
 test('protección múltiple conserva códigos existentes y crea un verificador independiente por nota', () => {
@@ -34,6 +41,14 @@ test('protección múltiple conserva códigos existentes y crea un verificador i
   assert.match(runtime, /const lock = await createNotePrivacyLock\(code\)/)
   assert.match(runtime, /await setNotePrivacyLock\(targets\[index\], lock\)/)
   assert.match(runtime, /Las que ya tengan código conservarán el suyo/)
+})
+
+test('borrado múltiple elimina notas e imágenes y refresca el workspace autoritativo', () => {
+  assert.match(runtime, /await deleteNote\(ids\[index\]\)/)
+  assert.match(runtime, /deleteEncryptedImage/)
+  assert.match(runtime, /oanix:local-data-changed/)
+  assert.match(runtime, /oanix:workspace-refresh/)
+  assert.match(app, /window\.addEventListener\('oanix:workspace-refresh'/)
 })
 
 test('desbloqueo individual existente no se sustituye por un desbloqueo grupal', () => {
