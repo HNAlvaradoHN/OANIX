@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import './noteReorderGesture.css'
 
-const NOTE_REORDER_LONG_PRESS_MS = 520
+const NOTE_REORDER_LONG_PRESS_MS = 460
 const NOTE_REORDER_MOVE_TOLERANCE = 12
 
 function findReorderToggle(): HTMLButtonElement | null {
@@ -19,7 +19,8 @@ function noteIdFromRow(row: HTMLElement): string {
 }
 
 function syncModeAttribute() {
-  document.body.toggleAttribute('data-oanix-note-reorder-mode', reorderModeActive())
+  const finishing = document.body.hasAttribute('data-oanix-note-drop-finishing')
+  document.body.toggleAttribute('data-oanix-note-reorder-mode', !finishing && reorderModeActive())
 }
 
 export function NoteListReorderGestureRuntime() {
@@ -32,10 +33,16 @@ export function NoteListReorderGestureRuntime() {
     let pressedNoteId = ''
     let suppressClickForId = ''
     let gestureDragActive = false
+    let dragGhost: HTMLElement | null = null
 
     const clearTimer = () => {
       if (timer !== null) window.clearTimeout(timer)
       timer = null
+    }
+
+    const removeDragGhost = () => {
+      dragGhost?.remove()
+      dragGhost = null
     }
 
     const resetPress = () => {
@@ -53,6 +60,30 @@ export function NoteListReorderGestureRuntime() {
     const observer = new MutationObserver(() => window.requestAnimationFrame(syncModeAttribute))
     observer.observe(appRoot, { childList: true, subtree: true, attributes: true, attributeFilter: ['aria-label'] })
     syncModeAttribute()
+
+    function createDragGhost(noteId: string) {
+      removeDragGhost()
+      const row = document.querySelector<HTMLElement>(`.note-row[data-reorder-note-id="${CSS.escape(noteId)}"]`)
+      if (!row) return
+      const rect = row.getBoundingClientRect()
+      const clone = row.cloneNode(true) as HTMLElement
+      clone.classList.add('oanix-note-drag-ghost')
+      clone.removeAttribute('data-reorder-note-id')
+      clone.querySelectorAll<HTMLElement>('button, [role="button"]').forEach((element) => {
+        element.setAttribute('tabindex', '-1')
+      })
+      clone.style.left = `${rect.left}px`
+      clone.style.top = `${rect.top}px`
+      clone.style.width = `${rect.width}px`
+      clone.style.height = `${rect.height}px`
+      document.body.appendChild(clone)
+      dragGhost = clone
+    }
+
+    function moveDragGhost(clientX: number, clientY: number) {
+      if (!dragGhost) return
+      dragGhost.style.transform = `translate3d(${clientX - startX}px, ${clientY - startY}px, 0) scale(1.025)`
+    }
 
     function dispatchDragStart(noteId: string, attempts = 0) {
       const row = document.querySelector<HTMLElement>(`.note-row[data-reorder-note-id="${CSS.escape(noteId)}"]`)
@@ -88,6 +119,10 @@ export function NoteListReorderGestureRuntime() {
       const toggle = findReorderToggle()
       if (!toggle || toggle.disabled) return
 
+      // On touch/pen this gesture owns the long press. This prevents the bulk-privacy
+      // long-press listener from selecting the same note while it is being dragged.
+      if (event.pointerType !== 'mouse') event.stopImmediatePropagation()
+
       resetPress()
       pointerId = event.pointerId
       pointerType = event.pointerType || 'touch'
@@ -102,20 +137,29 @@ export function NoteListReorderGestureRuntime() {
         suppressClickForId = pressedNoteId
         gestureDragActive = true
         toggle.click()
+        createDragGhost(pressedNoteId)
         if ('vibrate' in navigator) navigator.vibrate?.(18)
         window.requestAnimationFrame(() => dispatchDragStart(pressedNoteId))
       }, NOTE_REORDER_LONG_PRESS_MS)
     }
 
     function handlePointerMove(event: PointerEvent) {
-      if (timer === null || event.pointerId !== pointerId) return
-      if (Math.hypot(event.clientX - startX, event.clientY - startY) > NOTE_REORDER_MOVE_TOLERANCE) {
+      if (event.pointerId !== pointerId) return
+
+      if (gestureDragActive) {
+        event.preventDefault()
+        moveDragGhost(event.clientX, event.clientY)
+        return
+      }
+
+      if (timer !== null && Math.hypot(event.clientX - startX, event.clientY - startY) > NOTE_REORDER_MOVE_TOLERANCE) {
         resetPress()
       }
     }
 
     function finishAutomaticMode() {
       document.body.setAttribute('data-oanix-note-drop-finishing', 'true')
+      document.body.removeAttribute('data-oanix-note-reorder-mode')
       let attempts = 0
       const finish = () => {
         attempts += 1
@@ -123,10 +167,14 @@ export function NoteListReorderGestureRuntime() {
         if (toggle && toggle.getAttribute('aria-label') === 'Terminar de ordenar notas' && !toggle.disabled) {
           toggle.click()
           document.body.removeAttribute('data-oanix-note-drop-finishing')
+          syncModeAttribute()
           return
         }
         if (attempts < 100) window.setTimeout(finish, 40)
-        else document.body.removeAttribute('data-oanix-note-drop-finishing')
+        else {
+          document.body.removeAttribute('data-oanix-note-drop-finishing')
+          syncModeAttribute()
+        }
       }
       window.setTimeout(finish, 0)
     }
@@ -134,6 +182,7 @@ export function NoteListReorderGestureRuntime() {
     function handlePointerEnd(event: PointerEvent) {
       if (pointerId !== -1 && event.pointerId !== pointerId) return
       clearTimer()
+      removeDragGhost()
       if (gestureDragActive) {
         gestureDragActive = false
         finishAutomaticMode()
@@ -160,6 +209,7 @@ export function NoteListReorderGestureRuntime() {
 
     return () => {
       resetPress()
+      removeDragGhost()
       observer.disconnect()
       document.body.removeAttribute('data-oanix-note-reorder-mode')
       document.body.removeAttribute('data-oanix-note-drop-finishing')
