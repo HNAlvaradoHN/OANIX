@@ -335,7 +335,10 @@ export function EditorOperationRuntime() {
       removeAtomicBlock(button)
     }
 
-    decorateAtomicBlocks(document)
+    const appRoot = document.getElementById('root')
+    if (!appRoot) return
+
+    decorateAtomicBlocks(appRoot)
     const atomicObserver = new MutationObserver((mutations) => {
       for (const mutation of mutations) {
         mutation.addedNodes.forEach((node) => {
@@ -343,7 +346,7 @@ export function EditorOperationRuntime() {
         })
       }
     })
-    atomicObserver.observe(document.body, { childList: true, subtree: true })
+    atomicObserver.observe(appRoot, { childList: true, subtree: true })
 
     document.addEventListener('paste', handlePaste, true)
     document.addEventListener('change', handleFileChange, true)
