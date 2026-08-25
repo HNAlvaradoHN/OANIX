@@ -67,7 +67,7 @@ test('controlled Google Drive upload and recovery reuse the provider without per
 
 test('controlled UI verifies recovery only after the upload returns stored metadata', async () => {
   const source = await readFile(
-    new URL('../src/features/account/GoogleDriveControlledTransferTest.tsx', import.meta.url),
+    new URL('../src/features/account/GoogleDriveControlledTransferPanel.tsx', import.meta.url),
     'utf8',
   )
 
