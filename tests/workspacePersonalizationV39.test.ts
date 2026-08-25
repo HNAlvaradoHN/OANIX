@@ -1,17 +1,17 @@
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import test from 'node:test'
 
 const noteTypes = readFileSync('src/features/notes/noteTypes.ts', 'utf8')
 const noteService = readFileSync('src/features/notes/noteService.ts', 'utf8')
 const folderAppearance = readFileSync('src/features/folders/folderAppearanceService.ts', 'utf8')
+const appearanceRuntime = readFileSync('src/features/folders/FolderAppearanceRuntime.tsx', 'utf8')
 const runtime = readFileSync('src/features/notes/WorkspacePersonalizationRuntime.tsx', 'utf8')
 const css = readFileSync('src/features/notes/workspacePersonalization.css', 'utf8')
 const main = readFileSync('src/main.tsx', 'utf8')
 const app = readFileSync('src/app/App.tsx', 'utf8')
 const gate = readFileSync('src/app/WorkspaceRuntimeGate.tsx', 'utf8')
 const bridge = readFileSync('src/features/folders/FolderCustomizerBridgeRuntime.tsx', 'utf8')
-const bridgeCss = readFileSync('src/features/folders/folderCustomizerBridge.css', 'utf8')
 
 test('la personalización de lista vive dentro del mismo registro cifrado de la nota', () => {
   assert.match(noteTypes, /visualDescription\?: string/)
@@ -55,17 +55,17 @@ test('el engranaje abre directamente el único personalizador de carpeta', () =>
   assert.match(bridge, /openUnifiedFolderCustomizer/)
   assert.match(bridge, /\.oanix-folder-focus__menu/)
   assert.match(bridge, /stopImmediatePropagation/)
-  assert.match(bridgeCss, /\.oanix-folder-options-backdrop[\s\S]*display:\s*none !important/)
+  assert.doesNotMatch(runtime, /oanix-folder-options-backdrop|folderMenuId|setFolderMenuId/)
+  assert.equal(existsSync('src/features/folders/folderCustomizerBridge.css'), false)
   assert.match(runtime, /applyOanixTheme\(current === 'classic-day' \? 'classic-night' : 'classic-day'\)/)
 })
 
-test('las acciones de carpeta siguen reutilizando handlers existentes y no duplican CRUD', () => {
-  assert.match(runtime, /\.oanix-folder-focus__open/)
-  assert.match(runtime, /\.oanix-folder-focus__menu/)
-  assert.match(runtime, /\.oanix-folder-customizer__appearance-toggle/)
-  assert.match(runtime, /\.oanix-folder-customizer__image-action/)
-  assert.match(runtime, /\.notes-tab--add/)
-  assert.match(runtime, /\.folder-list__delete/)
+test('las acciones de carpeta viven en el personalizador real y no en un menú CRUD duplicado', () => {
+  assert.match(appearanceRuntime, /Abrir carpeta/)
+  assert.match(appearanceRuntime, /Cambiar color \/ Icono/)
+  assert.match(appearanceRuntime, /Administrar nombre \/ eliminar/)
+  assert.doesNotMatch(runtime, /openFolderManagerAction|openFolderCustomizer|toggleFolderFlag/)
+  assert.doesNotMatch(runtime, /saveFolderPinned|saveFolderFavorite/)
 })
 
 test('la nueva presentación usa el logo real y mantiene fondo legible con Día Noche y responsive', () => {
