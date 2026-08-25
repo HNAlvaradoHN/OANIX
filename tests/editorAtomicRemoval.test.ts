@@ -20,10 +20,12 @@ test('removing a protected daily entry uses the existing protected-block authori
   assert.match(runtime, /editor\.dispatchEvent\(new Event\('input', \{ bubbles: true \}\)\)/)
 })
 
-test('atomic block decoration watches only inserted DOM nodes and does not observe attribute churn', () => {
+test('atomic block decoration watches only inserted app-root nodes and does not observe attribute churn', () => {
+  assert.match(runtime, /const appRoot = document\.getElementById\('root'\)/)
   assert.match(runtime, /new MutationObserver/)
   assert.match(runtime, /mutation\.addedNodes/)
-  assert.match(runtime, /atomicObserver\.observe\(document\.body, \{ childList: true, subtree: true \}\)/)
+  assert.match(runtime, /atomicObserver\.observe\(appRoot, \{ childList: true, subtree: true \}\)/)
+  assert.doesNotMatch(runtime, /atomicObserver\.observe\(document\.body/)
   assert.doesNotMatch(runtime, /atomicObserver\.observe[^\n]*attributes/)
 })
 
