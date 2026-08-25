@@ -1,8 +1,3 @@
-button[aria-label="Ordenar notas manualmente"],
-button[aria-label="Terminar de ordenar notas"] {
-  display: none !important;
-}
-
 @media (pointer: coarse) {
   .note-row[data-reorder-note-id] {
     -webkit-user-select: none !important;
