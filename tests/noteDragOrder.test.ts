@@ -2,15 +2,16 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
-test('note ordering is owned by the direct long-press touch runtime', () => {
+test('note ordering is owned by the direct long-press pointer runtime', () => {
   const workspace = readFileSync('src/features/notes/NotesWorkspace.tsx', 'utf8')
   const runtime = readFileSync('src/features/notes/NoteListReorderGestureRuntime.tsx', 'utf8')
 
   assert.match(workspace, /data-reorder-note-id=\{note\.id\}/)
   assert.doesNotMatch(workspace, /handleReorderPointerDown|handleReorderPointerMove|handleReorderPointerEnd|handleReorderPointerCancel/)
   assert.doesNotMatch(workspace, /setPointerCapture|document\.elementFromPoint|touchAction: 'none'|⠿/)
-  assert.match(runtime, /document\.addEventListener\('touchstart'/)
-  assert.match(runtime, /document\.addEventListener\('touchmove'/)
+  assert.match(runtime, /document\.addEventListener\('pointerdown'/)
+  assert.match(runtime, /document\.addEventListener\('pointermove'/)
+  assert.match(runtime, /list\.setPointerCapture\(event\.pointerId\)/)
   assert.match(runtime, /createClone/)
   assert.match(runtime, /createPlaceholder/)
   assert.match(runtime, /persistNoteOrder\(nextOrder\)/)
