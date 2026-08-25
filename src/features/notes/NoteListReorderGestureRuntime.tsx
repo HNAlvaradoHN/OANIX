@@ -3,6 +3,8 @@ import './noteReorderGesture.css'
 
 const NOTE_REORDER_LONG_PRESS_MS = 460
 const NOTE_REORDER_MOVE_TOLERANCE = 12
+const NOTE_REORDER_DRAG_START_PX = 4
+const NOTE_BULK_SELECTION_START_EVENT = 'oanix:note-bulk-selection-start'
 
 function findReorderToggle(): HTMLButtonElement | null {
   return document.querySelector<HTMLButtonElement>(
@@ -32,6 +34,7 @@ export function NoteListReorderGestureRuntime() {
     let startY = 0
     let pressedNoteId = ''
     let suppressClickForId = ''
+    let holdReady = false
     let gestureDragActive = false
     let dragGhost: HTMLElement | null = null
 
@@ -52,6 +55,7 @@ export function NoteListReorderGestureRuntime() {
       startX = 0
       startY = 0
       pressedNoteId = ''
+      holdReady = false
     }
 
     const appRoot = document.getElementById('root')
@@ -106,8 +110,23 @@ export function NoteListReorderGestureRuntime() {
       }))
     }
 
+    function startGestureDrag() {
+      if (!holdReady || gestureDragActive || !pressedNoteId) return
+      const toggle = findReorderToggle()
+      if (!toggle || toggle.disabled) return
+
+      suppressClickForId = pressedNoteId
+      gestureDragActive = true
+      document.body.setAttribute('data-oanix-note-drag-active', pressedNoteId)
+      toggle.click()
+      createDragGhost(pressedNoteId)
+      if ('vibrate' in navigator) navigator.vibrate?.(18)
+      window.requestAnimationFrame(() => dispatchDragStart(pressedNoteId))
+    }
+
     function handlePointerDown(event: PointerEvent) {
       if (reorderModeActive()) return
+      if (document.documentElement.classList.contains('oanix-note-bulk-selecting')) return
       if (event.pointerType === 'mouse' && event.button !== 0) return
       const target = event.target
       if (!(target instanceof Element)) return
@@ -118,10 +137,6 @@ export function NoteListReorderGestureRuntime() {
 
       const toggle = findReorderToggle()
       if (!toggle || toggle.disabled) return
-
-      // On touch/pen this gesture owns the long press. This prevents the bulk-privacy
-      // long-press listener from selecting the same note while it is being dragged.
-      if (event.pointerType !== 'mouse') event.stopImmediatePropagation()
 
       resetPress()
       pointerId = event.pointerId
@@ -134,12 +149,7 @@ export function NoteListReorderGestureRuntime() {
       timer = window.setTimeout(() => {
         timer = null
         if (!pressedNoteId) return
-        suppressClickForId = pressedNoteId
-        gestureDragActive = true
-        toggle.click()
-        createDragGhost(pressedNoteId)
-        if ('vibrate' in navigator) navigator.vibrate?.(18)
-        window.requestAnimationFrame(() => dispatchDragStart(pressedNoteId))
+        holdReady = true
       }, NOTE_REORDER_LONG_PRESS_MS)
     }
 
@@ -152,14 +162,24 @@ export function NoteListReorderGestureRuntime() {
         return
       }
 
-      if (timer !== null && Math.hypot(event.clientX - startX, event.clientY - startY) > NOTE_REORDER_MOVE_TOLERANCE) {
-        resetPress()
+      const moved = Math.hypot(event.clientX - startX, event.clientY - startY)
+      if (!holdReady) {
+        if (timer !== null && moved > NOTE_REORDER_MOVE_TOLERANCE) resetPress()
+        return
+      }
+
+      if (moved >= NOTE_REORDER_DRAG_START_PX) {
+        event.preventDefault()
+        event.stopImmediatePropagation()
+        startGestureDrag()
+        moveDragGhost(event.clientX, event.clientY)
       }
     }
 
     function finishAutomaticMode() {
       document.body.setAttribute('data-oanix-note-drop-finishing', 'true')
       document.body.removeAttribute('data-oanix-note-reorder-mode')
+      document.body.removeAttribute('data-oanix-note-drag-active')
       let attempts = 0
       const finish = () => {
         attempts += 1
@@ -190,6 +210,12 @@ export function NoteListReorderGestureRuntime() {
       resetPress()
     }
 
+    function handleBulkSelectionStart() {
+      if (gestureDragActive) return
+      resetPress()
+      removeDragGhost()
+    }
+
     function handleClick(event: MouseEvent) {
       if (!suppressClickForId) return
       const target = event.target
@@ -202,10 +228,11 @@ export function NoteListReorderGestureRuntime() {
     }
 
     document.addEventListener('pointerdown', handlePointerDown, true)
-    document.addEventListener('pointermove', handlePointerMove, true)
+    document.addEventListener('pointermove', handlePointerMove, { capture: true, passive: false })
     document.addEventListener('pointerup', handlePointerEnd)
     document.addEventListener('pointercancel', handlePointerEnd)
     document.addEventListener('click', handleClick, true)
+    window.addEventListener(NOTE_BULK_SELECTION_START_EVENT, handleBulkSelectionStart)
 
     return () => {
       resetPress()
@@ -213,11 +240,13 @@ export function NoteListReorderGestureRuntime() {
       observer.disconnect()
       document.body.removeAttribute('data-oanix-note-reorder-mode')
       document.body.removeAttribute('data-oanix-note-drop-finishing')
+      document.body.removeAttribute('data-oanix-note-drag-active')
       document.removeEventListener('pointerdown', handlePointerDown, true)
       document.removeEventListener('pointermove', handlePointerMove, true)
       document.removeEventListener('pointerup', handlePointerEnd)
       document.removeEventListener('pointercancel', handlePointerEnd)
       document.removeEventListener('click', handleClick, true)
+      window.removeEventListener(NOTE_BULK_SELECTION_START_EVENT, handleBulkSelectionStart)
     }
   }, [])
 
