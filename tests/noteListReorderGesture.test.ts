@@ -8,44 +8,45 @@ const workspace = readFileSync('src/features/notes/NotesWorkspace.tsx', 'utf8')
 const privacyRuntime = readFileSync('src/features/privacy/NoteBulkPrivacyRuntime.tsx', 'utf8')
 const app = readFileSync('src/app/App.tsx', 'utf8')
 
-test('el gesto decide explícitamente entre pulsación scroll y drag', () => {
-  assert.match(runtime, /const LONG_PRESS_MS = 220/)
-  assert.match(runtime, /const SCROLL_START_PX = 9/)
-  assert.match(runtime, /type GesturePhase = 'pressing' \| 'scrolling' \| 'dragging'/)
-  assert.match(runtime, /gesture\.phase = 'scrolling'/)
-  assert.match(runtime, /gesture\.phase = 'dragging'/)
-  assert.match(runtime, /gesture\.list\.scrollTop = gesture\.startScrollTop - \(event\.clientY - gesture\.startY\)/)
+test('scroll nativo queda libre hasta que el long press activa el drag', () => {
+  assert.match(runtime, /const LONG_PRESS_MS = 280/)
+  assert.match(runtime, /const MOVE_CANCEL_PX = 10/)
+  assert.match(css, /touch-action: pan-y !important/)
+  assert.match(runtime, /document\.addEventListener\('touchstart', onTouchStart, \{ capture: true, passive: true \}\)/)
+  assert.match(runtime, /document\.addEventListener\('touchmove', onTouchMove, \{ capture: true, passive: false \}\)/)
+  assert.match(runtime, /if \(distance >= MOVE_CANCEL_PX\)/)
+  assert.match(runtime, /if \(event\.cancelable\) event\.preventDefault\(\)/)
+  assert.doesNotMatch(runtime, /setPointerCapture|pointermove|pointercancel|touch-action: none/)
 })
 
-test('Android no puede entregar el gesto al pan nativo', () => {
-  assert.match(css, /touch-action: none !important/)
-  assert.match(runtime, /setPointerCapture\(event\.pointerId\)/)
-  assert.match(runtime, /document\.addEventListener\('pointermove', onPointerMove, \{ capture: true, passive: false \}\)/)
-  assert.doesNotMatch(runtime, /touchstart|touchmove|touchend|touchcancel|GestureInput|findTouch/)
-})
-
-test('el drag usa ghost e indicador sin reordenar nodos React durante el gesto', () => {
-  assert.match(runtime, /createGhost/)
-  assert.match(runtime, /positionGhost/)
-  assert.match(runtime, /previewOrderAtPoint/)
-  assert.match(runtime, /buildNextOrder/)
+test('el drag usa clon fixed y placeholder real sin mover filas React', () => {
+  assert.match(runtime, /createClone/)
+  assert.match(runtime, /createPlaceholder/)
+  assert.match(runtime, /positionClone/)
+  assert.match(runtime, /updatePlaceholder/)
+  assert.match(runtime, /orderFromPlaceholder/)
+  assert.match(runtime, /gesture\.item\.style\.display = 'none'/)
+  assert.match(runtime, /gesture\.list\.insertBefore\(placeholder, row\)/)
+  assert.match(css, /oanix-mobile-note-placeholder/)
+  assert.match(css, /oanix-mobile-note-drag-ghost/)
   assert.match(runtime, /persistNoteOrder\(nextOrder\)/)
   assert.match(runtime, /oanix:workspace-refresh/)
-  assert.match(css, /oanix-mobile-note-drag-source/)
-  assert.match(css, /oanix-mobile-note-drag-ghost/)
-  assert.match(css, /oanix-mobile-note-drop-before/)
-  assert.match(css, /oanix-mobile-note-drop-after/)
-  assert.doesNotMatch(runtime, /insertBefore|appendChild\(gesture\.item\)/)
 })
 
-test('ghost preview y auto-scroll quedan encerrados en la lista', () => {
+test('el clon queda dentro de notes-list y el auto-scroll usa sus bordes', () => {
   assert.match(runtime, /function clamp\(/)
-  assert.match(runtime, /function pointInsideList\(/)
+  assert.match(runtime, /listRect\.right - width/)
+  assert.match(runtime, /listRect\.bottom - height/)
   assert.match(runtime, /scrollSpeed/)
   assert.match(runtime, /gesture\.list\.scrollTop \+= speed/)
 })
 
-test('selección contexto y drag nativos están bloqueados en tarjetas', () => {
+test('notas fijadas y no fijadas no se mezclan al mover placeholder', () => {
+  assert.match(runtime, /function rowPinned/)
+  assert.match(runtime, /rowPinned\(row\) === pinned/)
+})
+
+test('selección contexto y drag nativos están bloqueados sin secuestrar scroll', () => {
   assert.match(css, /-webkit-user-select: none !important/)
   assert.match(css, /user-select: none !important/)
   assert.match(css, /-webkit-touch-callout: none !important/)
@@ -55,12 +56,12 @@ test('selección contexto y drag nativos están bloqueados en tarjetas', () => {
   assert.match(runtime, /window\.getSelection\(\)\?\.removeAllRanges\(\)/)
 })
 
-test('cancelación y pérdida de captura limpian el gesto', () => {
-  assert.match(runtime, /pointercancel/)
-  assert.match(runtime, /lostpointercapture/)
+test('cancelación de touch y salida de ventana limpian clon y placeholder', () => {
+  assert.match(runtime, /touchcancel/)
   assert.match(runtime, /visibilitychange/)
   assert.match(runtime, /window\.addEventListener\('blur'/)
-  assert.match(runtime, /cleanupVisuals/)
+  assert.match(runtime, /gesture\.clone\?\.remove\(\)/)
+  assert.match(runtime, /gesture\.placeholder\?\.remove\(\)/)
 })
 
 test('controles interactivos y marcado múltiple no compiten con el drag', () => {
