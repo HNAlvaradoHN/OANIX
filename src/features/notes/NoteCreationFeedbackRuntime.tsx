@@ -96,18 +96,28 @@ export function NoteCreationFeedbackRuntime() {
     }
 
     document.addEventListener('click', onClick, true)
-    const observer = new MutationObserver(sync)
-    observer.observe(document.documentElement, {
+
+    const detailObserver = new MutationObserver(sync)
+    detailObserver.observe(document.documentElement, {
       attributes: true,
       attributeFilter: ['class'],
-      childList: true,
-      subtree: true,
-      characterData: true,
     })
+
+    const workspace = document.querySelector<HTMLElement>('.notes-shell')
+    const observedWorkspace = workspace ?? undefined
+    const workspaceObserver = observedWorkspace ? new MutationObserver(sync) : null
+    if (observedWorkspace && workspaceObserver) {
+      workspaceObserver.observe(observedWorkspace, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+      })
+    }
 
     return () => {
       document.removeEventListener('click', onClick, true)
-      observer.disconnect()
+      detailObserver.disconnect()
+      workspaceObserver?.disconnect()
       stop()
     }
   }, [])
