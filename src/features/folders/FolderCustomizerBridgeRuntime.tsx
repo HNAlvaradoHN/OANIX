@@ -1,5 +1,4 @@
 import { useEffect } from 'react'
-import './folderCustomizerBridge.css'
 
 function nextFrame(): Promise<void> {
   return new Promise((resolve) => {
