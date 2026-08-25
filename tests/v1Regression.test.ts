@@ -122,8 +122,9 @@ test('pinning and direct drag ordering reuse encrypted note records without anot
   assert.doesNotMatch(workspaceSource, /aria-label=\{`Mover \$\{note\.title\} arriba`\}/)
   assert.doesNotMatch(workspaceSource, /aria-label=\{`Mover \$\{note\.title\} abajo`\}/)
   assert.match(reorderRuntime, /persistNoteOrder/)
-  assert.match(reorderRuntime, /createGhost/)
-  assert.match(reorderRuntime, /previewOrderAtPoint/)
+  assert.match(reorderRuntime, /createClone/)
+  assert.match(reorderRuntime, /createPlaceholder/)
+  assert.match(reorderRuntime, /orderFromPlaceholder/)
 })
 
 test('PWA updates stay prompt-based and reuse the existing service worker cache', () => {
