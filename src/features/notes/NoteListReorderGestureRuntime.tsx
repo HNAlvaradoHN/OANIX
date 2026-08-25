@@ -72,7 +72,6 @@ export function NoteListReorderGestureRuntime() {
       scrollSpeed: 12,
       bubbleScroll: false,
       dataIdAttr: 'data-reorder-note-id',
-      supportPointer: false,
       onChoose: (event) => {
         event.item.setAttribute('data-oanix-note-dragging', 'true')
         window.getSelection()?.removeAllRanges()
