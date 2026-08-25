@@ -7,17 +7,23 @@ const css = readFileSync('src/features/notes/noteReorderGesture.css', 'utf8')
 const privacyRuntime = readFileSync('src/features/privacy/NoteBulkPrivacyRuntime.tsx', 'utf8')
 const app = readFileSync('src/app/App.tsx', 'utf8')
 
-test('la pulsación larga de orden usa la fila completa y el movimiento previo permite seguir desplazando', () => {
+test('la pulsación larga arma el orden sin robar el scroll previo', () => {
   assert.match(runtime, /target\.closest<HTMLElement>\('\.note-row__open'\)/)
   assert.match(runtime, /const NOTE_REORDER_LONG_PRESS_MS = 460/)
   assert.match(runtime, /const NOTE_REORDER_MOVE_TOLERANCE = 12/)
+  assert.match(runtime, /const NOTE_REORDER_DRAG_START_PX = 4/)
+  assert.match(runtime, /holdReady = true/)
   assert.match(runtime, /Math\.hypot\(event\.clientX - startX, event\.clientY - startY\)/)
   assert.match(runtime, /resetPress\(\)/)
-  assert.match(privacyRuntime, /const LONG_PRESS_MS = 520/)
 })
 
-test('en touch el gesto de ordenar evita competir con la selección múltiple', () => {
-  assert.match(runtime, /event\.pointerType !== 'mouse'/)
+test('arrastre y selección múltiple comparten la pulsación larga sin dispararse a la vez', () => {
+  assert.match(privacyRuntime, /const LONG_PRESS_MS = 760/)
+  assert.match(runtime, /NOTE_BULK_SELECTION_START_EVENT = 'oanix:note-bulk-selection-start'/)
+  assert.match(privacyRuntime, /NOTE_BULK_SELECTION_START_EVENT = 'oanix:note-bulk-selection-start'/)
+  assert.match(runtime, /data-oanix-note-drag-active/)
+  assert.match(privacyRuntime, /data-oanix-note-drag-active/)
+  assert.match(runtime, /handleBulkSelectionStart/)
   assert.match(runtime, /event\.stopImmediatePropagation\(\)/)
 })
 
