@@ -15,8 +15,20 @@ test('el gesto usa estados explícitos y separa scroll rápido de long press', (
   assert.match(runtime, /phase: 'pressing'/)
   assert.match(runtime, /gesture\.phase = 'dragging'/)
   assert.match(runtime, /Math\.hypot\(/)
-  assert.match(runtime, /if \(distance >= MOVE_CANCEL_PX\) cancelGesture\(event\)/)
+  assert.match(runtime, /if \(distance >= MOVE_CANCEL_PX\) cancelGesture\(\)/)
   assert.doesNotMatch(runtime, /PRESS_ARM_GRACE_MS|pressedAt/)
+})
+
+test('el drag táctil usa Touch Events completos y no depende de pointermove en Android', () => {
+  assert.match(runtime, /type GestureInput = 'touch' \| 'pointer'/)
+  assert.match(runtime, /document\.addEventListener\('touchstart', onTouchStart, \{ capture: true, passive: true \}\)/)
+  assert.match(runtime, /document\.addEventListener\('touchmove', onTouchMove, \{ capture: true, passive: false \}\)/)
+  assert.match(runtime, /document\.addEventListener\('touchend', onTouchEnd, \{ capture: true, passive: false \}\)/)
+  assert.match(runtime, /document\.addEventListener\('touchcancel', onTouchCancel, true\)/)
+  assert.match(runtime, /findTouch\(event\.touches, gesture\.touchId\)/)
+  assert.match(runtime, /updateDragPoint\(touch\.clientX, touch\.clientY, event\)/)
+  assert.match(runtime, /void finishGesture\(event\)/)
+  assert.match(runtime, /event\.pointerType === 'touch'/)
 })
 
 test('el drag usa ghost e indicador sin reordenar nodos React durante el gesto', () => {
@@ -50,12 +62,14 @@ test('Android no puede apropiarse del long press con selección o drag nativos',
   assert.match(runtime, /contextmenu/)
   assert.match(runtime, /dragstart/)
   assert.match(runtime, /window\.getSelection\(\)\?\.removeAllRanges\(\)/)
+  assert.match(runtime, /if \(event\?\.cancelable\) event\.preventDefault\(\)/)
 })
 
 test('captura cancelación y multitouch tienen salidas explícitas', () => {
-  assert.match(runtime, /!event\.isPrimary/)
+  assert.match(runtime, /event\.touches\.length !== 1/)
   assert.match(runtime, /setPointerCapture/)
   assert.match(runtime, /pointercancel/)
+  assert.match(runtime, /touchcancel/)
   assert.match(runtime, /lostpointercapture/)
   assert.match(runtime, /visibilitychange/)
   assert.match(runtime, /window\.addEventListener\('blur'/)
