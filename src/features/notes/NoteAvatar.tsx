@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type MouseEvent, type PointerEvent } from 'react'
+import { useCallback, useEffect, useState, type MouseEvent } from 'react'
 import { createPortal } from 'react-dom'
 import {
   chooseNoteAvatar,
@@ -168,10 +168,6 @@ export function NoteAvatar({ note, className }: NoteAvatarProps) {
     })
   }
 
-  function handlePointerDown(event: PointerEvent<HTMLSpanElement>) {
-    event.stopPropagation()
-  }
-
   function handleClick(event: MouseEvent<HTMLSpanElement>) {
     event.preventDefault()
     event.stopPropagation()
@@ -274,7 +270,6 @@ export function NoteAvatar({ note, className }: NoteAvatarProps) {
         data-oanix-avatar-picker="true"
         data-oanix-avatar-present={hasAvatar ? 'true' : 'false'}
         title={busy ? 'Procesando avatar…' : hasAvatar ? 'Opciones del avatar' : 'Elegir foto de avatar'}
-        onPointerDown={handlePointerDown}
         onClick={handleClick}
         style={{ cursor: busy ? 'wait' : 'pointer', opacity: busy ? 0.72 : undefined }}
       >
