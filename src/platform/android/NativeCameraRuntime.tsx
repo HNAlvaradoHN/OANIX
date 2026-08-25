@@ -47,8 +47,10 @@ export function NativeCameraRuntime() {
     }
 
     syncHosts()
+    const appRoot = document.getElementById('root')
+    if (!appRoot) return
     const observer = new MutationObserver(syncHosts)
-    observer.observe(document.body, { childList: true, subtree: true })
+    observer.observe(appRoot, { childList: true, subtree: true })
     return () => observer.disconnect()
   }, [])
 

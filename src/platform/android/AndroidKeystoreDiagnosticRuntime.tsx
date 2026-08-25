@@ -35,8 +35,10 @@ export function AndroidKeystoreDiagnosticRuntime() {
     }
 
     refresh()
+    const appRoot = document.getElementById('root')
+    if (!appRoot) return
     const observer = new MutationObserver(refresh)
-    observer.observe(document.body, { childList: true, subtree: true })
+    observer.observe(appRoot, { childList: true, subtree: true })
     return () => observer.disconnect()
   }, [])
 
