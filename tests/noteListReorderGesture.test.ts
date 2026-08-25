@@ -8,18 +8,20 @@ const workspace = readFileSync('src/features/notes/NotesWorkspace.tsx', 'utf8')
 const privacyRuntime = readFileSync('src/features/privacy/NoteBulkPrivacyRuntime.tsx', 'utf8')
 const app = readFileSync('src/app/App.tsx', 'utf8')
 
-test('scroll nativo queda libre hasta que el long press activa el drag', () => {
+test('el gesto touch se reserva desde pointerdown y conserva scroll manual antes del long press', () => {
   assert.match(runtime, /const LONG_PRESS_MS = 280/)
   assert.match(runtime, /const MOVE_CANCEL_PX = 10/)
-  assert.match(css, /touch-action: pan-y !important/)
-  assert.match(runtime, /document\.addEventListener\('touchstart', onTouchStart, \{ capture: true, passive: true \}\)/)
-  assert.match(runtime, /document\.addEventListener\('touchmove', onTouchMove, \{ capture: true, passive: false \}\)/)
-  assert.match(runtime, /if \(distance >= MOVE_CANCEL_PX\)/)
-  assert.match(runtime, /if \(event\.cancelable\) event\.preventDefault\(\)/)
-  assert.doesNotMatch(runtime, /setPointerCapture|pointermove|pointercancel|touch-action: none/)
+  assert.match(css, /touch-action: none !important/)
+  assert.match(runtime, /event\.pointerType !== 'touch'/)
+  assert.match(runtime, /list\.setPointerCapture\(event\.pointerId\)/)
+  assert.match(runtime, /gesture\.list\.scrollTop -= event\.clientY - previousY/)
+  assert.match(runtime, /if \(!gesture\.scrolling && distance >= MOVE_CANCEL_PX\)/)
+  assert.match(runtime, /gesture\.scrolling = true/)
+  assert.match(runtime, /document\.addEventListener\('pointermove', onPointerMove, \{ capture: true, passive: false \}\)/)
 })
 
-test('el drag usa clon fixed y placeholder real sin mover filas React', () => {
+test('el drag usa el mismo pointerId, clon fixed y placeholder real sin mover filas React', () => {
+  assert.match(runtime, /event\.pointerId !== gesture\.pointerId/)
   assert.match(runtime, /createClone/)
   assert.match(runtime, /createPlaceholder/)
   assert.match(runtime, /positionClone/)
@@ -31,6 +33,17 @@ test('el drag usa clon fixed y placeholder real sin mover filas React', () => {
   assert.match(css, /oanix-mobile-note-drag-ghost/)
   assert.match(runtime, /persistNoteOrder\(nextOrder\)/)
   assert.match(runtime, /oanix:workspace-refresh/)
+})
+
+test('pointer capture se libera y pointercancel limpia el gesto', () => {
+  assert.match(runtime, /hasPointerCapture\(gesture\.pointerId\)/)
+  assert.match(runtime, /releasePointerCapture\(gesture\.pointerId\)/)
+  assert.match(runtime, /pointercancel/)
+  assert.match(runtime, /lostpointercapture/)
+  assert.match(runtime, /visibilitychange/)
+  assert.match(runtime, /window\.addEventListener\('blur'/)
+  assert.match(runtime, /gesture\.clone\?\.remove\(\)/)
+  assert.match(runtime, /gesture\.placeholder\?\.remove\(\)/)
 })
 
 test('el clon queda dentro de notes-list y el auto-scroll usa sus bordes', () => {
@@ -46,7 +59,7 @@ test('notas fijadas y no fijadas no se mezclan al mover placeholder', () => {
   assert.match(runtime, /rowPinned\(row\) === pinned/)
 })
 
-test('selección contexto y drag nativos están bloqueados sin secuestrar scroll', () => {
+test('selección contexto y drag nativos están bloqueados', () => {
   assert.match(css, /-webkit-user-select: none !important/)
   assert.match(css, /user-select: none !important/)
   assert.match(css, /-webkit-touch-callout: none !important/)
@@ -54,14 +67,6 @@ test('selección contexto y drag nativos están bloqueados sin secuestrar scroll
   assert.match(runtime, /selectstart/)
   assert.match(runtime, /dragstart/)
   assert.match(runtime, /window\.getSelection\(\)\?\.removeAllRanges\(\)/)
-})
-
-test('cancelación de touch y salida de ventana limpian clon y placeholder', () => {
-  assert.match(runtime, /touchcancel/)
-  assert.match(runtime, /visibilitychange/)
-  assert.match(runtime, /window\.addEventListener\('blur'/)
-  assert.match(runtime, /gesture\.clone\?\.remove\(\)/)
-  assert.match(runtime, /gesture\.placeholder\?\.remove\(\)/)
 })
 
 test('controles interactivos y marcado múltiple no compiten con el drag', () => {
