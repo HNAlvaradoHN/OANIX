@@ -328,6 +328,7 @@ export function NoteListReorderGestureRuntime() {
     const onVisibilityChange = () => {
       if (document.hidden) cancelGesture()
     }
+    const onBlur = () => cancelGesture()
 
     document.addEventListener('pointerdown', onPointerDown, true)
     document.addEventListener('pointermove', onPointerMove, { capture: true, passive: false })
@@ -336,7 +337,7 @@ export function NoteListReorderGestureRuntime() {
     document.addEventListener('click', onClick, true)
     document.addEventListener('contextmenu', onContextMenu, true)
     document.addEventListener('visibilitychange', onVisibilityChange)
-    window.addEventListener('blur', () => cancelGesture())
+    window.addEventListener('blur', onBlur)
 
     return () => {
       cancelGesture()
@@ -347,6 +348,7 @@ export function NoteListReorderGestureRuntime() {
       document.removeEventListener('click', onClick, true)
       document.removeEventListener('contextmenu', onContextMenu, true)
       document.removeEventListener('visibilitychange', onVisibilityChange)
+      window.removeEventListener('blur', onBlur)
       document.documentElement.classList.remove('oanix-mobile-note-dragging')
       document.body.classList.remove('oanix-mobile-note-dragging')
     }
