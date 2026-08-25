@@ -94,6 +94,18 @@ html.oanix-note-bulk-selecting .note-row {
   font-size: 1rem;
 }
 
+.oanix-note-action-sheet__notice {
+  margin: 0;
+  padding: .58rem .65rem;
+  border: 1px solid rgba(251,113,133,.24);
+  border-radius: .72rem;
+  background: rgba(190,24,93,.14);
+  color: #fecdd3;
+  font-size: .72rem;
+  font-weight: 750;
+  line-height: 1.4;
+}
+
 .oanix-note-action-sheet > button:not(.oanix-note-action-sheet__cancel) {
   width: 100%;
   min-height: 4.15rem;
