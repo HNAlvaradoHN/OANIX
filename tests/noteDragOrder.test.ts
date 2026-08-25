@@ -2,16 +2,17 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
-test('note ordering is owned by the direct long-press drag runtime', () => {
+test('note ordering is owned by the direct long-press touch runtime', () => {
   const workspace = readFileSync('src/features/notes/NotesWorkspace.tsx', 'utf8')
   const runtime = readFileSync('src/features/notes/NoteListReorderGestureRuntime.tsx', 'utf8')
 
   assert.match(workspace, /data-reorder-note-id=\{note\.id\}/)
   assert.doesNotMatch(workspace, /handleReorderPointerDown|handleReorderPointerMove|handleReorderPointerEnd|handleReorderPointerCancel/)
   assert.doesNotMatch(workspace, /setPointerCapture|document\.elementFromPoint|touchAction: 'none'|⠿/)
-  assert.match(runtime, /setPointerCapture\(event\.pointerId\)/)
-  assert.match(runtime, /createGhost/)
-  assert.match(runtime, /previewOrderAtPoint/)
+  assert.match(runtime, /document\.addEventListener\('touchstart'/)
+  assert.match(runtime, /document\.addEventListener\('touchmove'/)
+  assert.match(runtime, /createClone/)
+  assert.match(runtime, /createPlaceholder/)
   assert.match(runtime, /persistNoteOrder\(nextOrder\)/)
   assert.doesNotMatch(workspace, /aria-label=\{`Mover \$\{note\.title\} arriba`\}/)
   assert.doesNotMatch(workspace, /aria-label=\{`Mover \$\{note\.title\} abajo`\}/)
