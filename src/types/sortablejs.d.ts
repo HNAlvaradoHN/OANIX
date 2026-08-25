@@ -26,7 +26,7 @@ declare module 'sortablejs' {
     ghostClass?: string
     dragClass?: string
     draggable?: string
-    filter?: string
+    filter?: string | ((event: Event, target: HTMLElement, sortable: Sortable) => boolean)
     preventOnFilter?: boolean
     direction?: 'vertical' | 'horizontal'
     swapThreshold?: number
