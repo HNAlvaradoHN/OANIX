@@ -5,9 +5,10 @@ import test from 'node:test'
 const reorderRuntime = readFileSync('src/features/notes/NoteListReorderGestureRuntime.tsx', 'utf8')
 const historyRuntime = readFileSync('src/features/versionHistory/VersionHistoryCenter.tsx', 'utf8')
 
-test('note reorder observer stays inside the React app root', () => {
-  assert.match(reorderRuntime, /const appRoot = document\.getElementById\('root'\)/)
-  assert.match(reorderRuntime, /observer\.observe\(appRoot, \{ childList: true, subtree: true, attributes: true, attributeFilter: \['aria-label'\] \}\)/)
+test('note reorder stays scoped to the notes list without a global DOM observer', () => {
+  assert.match(reorderRuntime, /list\?\.classList\.contains\('notes-list'\)/)
+  assert.match(reorderRuntime, /:scope > \.note-row\[data-reorder-note-id\]/)
+  assert.doesNotMatch(reorderRuntime, /new MutationObserver/)
   assert.doesNotMatch(reorderRuntime, /observer\.observe\(document\.body/)
 })
 

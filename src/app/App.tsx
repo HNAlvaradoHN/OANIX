@@ -79,6 +79,12 @@ function UnlockedApp({ lockVault }: { lockVault: () => void }) {
     return () => window.removeEventListener(NOTE_PRIVACY_REFRESH_EVENT, refreshPrivacy)
   }, [])
 
+  useEffect(() => {
+    const refreshWorkspace = () => setWorkspaceRevision((value) => value + 1)
+    window.addEventListener('oanix:workspace-refresh', refreshWorkspace)
+    return () => window.removeEventListener('oanix:workspace-refresh', refreshWorkspace)
+  }, [])
+
   return (
     <>
       <AutoSyncRuntime onRemoteApplied={() => setWorkspaceRevision((value) => value + 1)} />

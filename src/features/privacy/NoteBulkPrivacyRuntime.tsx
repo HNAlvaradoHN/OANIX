@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { deleteEncryptedImage } from '../images/imageService'
+import { deleteNote } from '../notes/noteService'
 import {
   createNotePrivacyLock,
   listNotePrivacy,
@@ -9,19 +11,6 @@ import {
 import './noteBulkPrivacy.css'
 
 export const NOTE_PRIVACY_REFRESH_EVENT = 'oanix:note-privacy-refresh'
-
-const LONG_PRESS_MS = 760
-const LONG_PRESS_MOVE_TOLERANCE = 12
-const NOTE_BULK_SELECTION_START_EVENT = 'oanix:note-bulk-selection-start'
-
-interface ActivePress {
-  pointerId: number
-  noteId: string
-  startX: number
-  startY: number
-  timer: number
-  triggered: boolean
-}
 
 function noteRows(): HTMLElement[] {
   return Array.from(document.querySelectorAll<HTMLElement>('.note-row[data-reorder-note-id]'))
@@ -35,8 +24,15 @@ function dispatchPrivacyRefresh() {
   window.dispatchEvent(new Event(NOTE_PRIVACY_REFRESH_EVENT))
 }
 
+function dispatchLocalNoteChange() {
+  window.dispatchEvent(new CustomEvent('oanix:local-data-changed', { detail: { recordType: 'note' } }))
+}
+
 export function NoteBulkPrivacyRuntime() {
+  const [selectionMode, setSelectionMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set())
+  const [launcherOpen, setLauncherOpen] = useState(false)
+  const [finishMenuOpen, setFinishMenuOpen] = useState(false)
   const [protectedIds, setProtectedIds] = useState<Set<string>>(() => new Set())
   const [dialogOpen, setDialogOpen] = useState(false)
   const [code, setCode] = useState('')
@@ -45,69 +41,33 @@ export function NoteBulkPrivacyRuntime() {
   const [error, setError] = useState('')
   const [status, setStatus] = useState('')
   const selectedIdsRef = useRef(selectedIds)
-  const activePressRef = useRef<ActivePress | null>(null)
-  const suppressNextClickRef = useRef<string | null>(null)
+  const selectionModeRef = useRef(selectionMode)
+  const bypassCreateClickRef = useRef(false)
   const knownRowIdsRef = useRef<Set<string>>(new Set())
 
   useEffect(() => {
     selectedIdsRef.current = selectedIds
   }, [selectedIds])
 
-  async function refreshProtectedIds() {
-    try {
-      const records = await listNotePrivacy()
-      setProtectedIds(new Set(records.filter((record) => !!record.lock).map((record) => record.noteId)))
-    } catch {
-      // The normal privacy runtime remains authoritative if this optional helper cannot refresh.
-    }
-  }
-
-  function clearSelection() {
-    setSelectedIds(new Set())
-    setDialogOpen(false)
-    setCode('')
-    setConfirmCode('')
-    setError('')
-    setStatus('')
-  }
-
-  function toggleSelection(noteId: string) {
-    setSelectedIds((current) => {
-      const next = new Set(current)
-      if (next.has(noteId)) next.delete(noteId)
-      else next.add(noteId)
-      return next
-    })
-  }
+  useEffect(() => {
+    selectionModeRef.current = selectionMode
+  }, [selectionMode])
 
   useEffect(() => {
-    const initialIds = noteRows().flatMap((row) => row.dataset.reorderNoteId ? [row.dataset.reorderNoteId] : [])
-    knownRowIdsRef.current = new Set(initialIds)
-
+    knownRowIdsRef.current = new Set(
+      noteRows().flatMap((row) => row.dataset.reorderNoteId ? [row.dataset.reorderNoteId] : []),
+    )
     let frame = 0
     const scanRows = () => {
       window.cancelAnimationFrame(frame)
       frame = window.requestAnimationFrame(() => {
-        const rows = noteRows()
-        const visibleIds = new Set<string>()
         let foundNewNote = false
-
-        for (const row of rows) {
+        for (const row of noteRows()) {
           const noteId = row.dataset.reorderNoteId
-          if (!noteId) continue
-          visibleIds.add(noteId)
-          if (!knownRowIdsRef.current.has(noteId)) {
-            knownRowIdsRef.current.add(noteId)
-            foundNewNote = true
-          }
+          if (!noteId || knownRowIdsRef.current.has(noteId)) continue
+          knownRowIdsRef.current.add(noteId)
+          foundNewNote = true
         }
-
-        setSelectedIds((current) => {
-          if (current.size === 0) return current
-          const next = new Set([...current].filter((noteId) => visibleIds.has(noteId)))
-          return next.size === current.size ? current : next
-        })
-
         if (foundNewNote) dispatchPrivacyRefresh()
       })
     }
@@ -122,134 +82,153 @@ export function NoteBulkPrivacyRuntime() {
     }
   }, [])
 
+  async function refreshProtectedIds() {
+    try {
+      const records = await listNotePrivacy()
+      setProtectedIds(new Set(records.filter((record) => !!record.lock).map((record) => record.noteId)))
+    } catch {
+      setProtectedIds(new Set())
+    }
+  }
+
+  function clearSelection() {
+    setSelectionMode(false)
+    setSelectedIds(new Set())
+    setLauncherOpen(false)
+    setFinishMenuOpen(false)
+    setDialogOpen(false)
+    setCode('')
+    setConfirmCode('')
+    setError('')
+    setStatus('')
+  }
+
+  function beginSelection() {
+    setLauncherOpen(false)
+    setFinishMenuOpen(false)
+    setSelectedIds(new Set())
+    setError('')
+    setStatus('')
+    setSelectionMode(true)
+    navigator.vibrate?.(12)
+  }
+
+  function toggleSelection(noteId: string) {
+    setSelectedIds((current) => {
+      const next = new Set(current)
+      if (next.has(noteId)) next.delete(noteId)
+      else next.add(noteId)
+      return next
+    })
+    navigator.vibrate?.(8)
+  }
+
   useEffect(() => {
     for (const row of noteRows()) {
       const noteId = row.dataset.reorderNoteId
       row.dataset.oanixBulkSelected = noteId && selectedIds.has(noteId) ? 'true' : 'false'
     }
 
-    document.documentElement.classList.toggle('oanix-note-bulk-selecting', selectedIds.size > 0)
-    return () => {
-      document.documentElement.classList.remove('oanix-note-bulk-selecting')
+    document.documentElement.classList.toggle('oanix-note-bulk-selecting', selectionMode)
+    const fab = document.querySelector<HTMLButtonElement>('.notes-create-fab')
+    if (fab) {
+      fab.toggleAttribute('data-oanix-bulk-mode', selectionMode)
+      if (selectionMode) {
+        fab.setAttribute('aria-label', selectedIds.size > 0 ? `Terminar de marcar ${selectedIds.size} notas` : 'Terminar de marcar notas')
+        fab.setAttribute('title', selectedIds.size > 0 ? `${selectedIds.size} seleccionada${selectedIds.size === 1 ? '' : 's'} · terminar` : 'Terminar de marcar')
+      } else {
+        fab.setAttribute('aria-label', 'Crear nueva nota')
+        fab.setAttribute('title', 'Nueva nota')
+      }
     }
-  }, [selectedIds])
+
+    return () => {
+      if (!selectionMode) return
+      document.documentElement.classList.remove('oanix-note-bulk-selecting')
+      for (const row of noteRows()) row.removeAttribute('data-oanix-bulk-selected')
+      const activeFab = document.querySelector<HTMLButtonElement>('.notes-create-fab')
+      activeFab?.removeAttribute('data-oanix-bulk-mode')
+    }
+  }, [selectedIds, selectionMode])
 
   useEffect(() => {
-    function clearActivePress() {
-      const active = activePressRef.current
-      if (!active) return
-      window.clearTimeout(active.timer)
-      activePressRef.current = null
-    }
-
-    function handlePointerDown(event: PointerEvent) {
-      const target = event.target
-      if (!(target instanceof Element)) return
-      const openButton = target.closest<HTMLButtonElement>('.note-row__open')
-      if (!openButton || openButton.getAttribute('aria-disabled') === 'true') return
-      if (event.pointerType === 'mouse' && event.button !== 0) return
-      const noteId = noteIdFromElement(openButton)
-      if (!noteId) return
-
-      clearActivePress()
-      const active: ActivePress = {
-        pointerId: event.pointerId,
-        noteId,
-        startX: event.clientX,
-        startY: event.clientY,
-        timer: 0,
-        triggered: false,
-      }
-      active.timer = window.setTimeout(() => {
-        if (document.body.hasAttribute('data-oanix-note-drag-active')) {
-          activePressRef.current = null
-          return
-        }
-        active.triggered = true
-        suppressNextClickRef.current = noteId
-        window.dispatchEvent(new CustomEvent(NOTE_BULK_SELECTION_START_EVENT, { detail: { noteId } }))
-        setSelectedIds((current) => new Set(current).add(noteId))
-        void refreshProtectedIds()
-      }, LONG_PRESS_MS)
-      activePressRef.current = active
-    }
-
-    function handlePointerMove(event: PointerEvent) {
-      const active = activePressRef.current
-      if (!active || active.pointerId !== event.pointerId || active.triggered) return
-      const moved = Math.hypot(event.clientX - active.startX, event.clientY - active.startY)
-      if (moved > LONG_PRESS_MOVE_TOLERANCE) clearActivePress()
-    }
-
-    function handlePointerEnd(event: PointerEvent) {
-      const active = activePressRef.current
-      if (!active || active.pointerId !== event.pointerId) return
-      window.clearTimeout(active.timer)
-      activePressRef.current = null
-    }
-
     function handleClick(event: MouseEvent) {
       const target = event.target
       if (!(target instanceof Element)) return
-      const row = target.closest<HTMLElement>('.note-row[data-reorder-note-id]')
-      const noteId = row?.dataset.reorderNoteId
-      if (!row || !noteId) return
 
-      if (suppressNextClickRef.current === noteId) {
-        suppressNextClickRef.current = null
+      const fab = target.closest<HTMLButtonElement>('.notes-create-fab')
+      if (fab) {
+        if (bypassCreateClickRef.current) {
+          bypassCreateClickRef.current = false
+          return
+        }
+
         event.preventDefault()
         event.stopImmediatePropagation()
+        if (selectionModeRef.current) {
+          if (selectedIdsRef.current.size === 0) clearSelection()
+          else {
+            setError('')
+            setStatus('')
+            setFinishMenuOpen(true)
+          }
+        } else {
+          setLauncherOpen(true)
+        }
         return
       }
 
-      if (selectedIdsRef.current.size > 0) {
-        event.preventDefault()
-        event.stopImmediatePropagation()
-        toggleSelection(noteId)
-      }
-    }
-
-    function handleContextMenu(event: MouseEvent) {
-      const target = event.target
-      if (!(target instanceof Element)) return
-      if (!target.closest('.note-row[data-reorder-note-id]')) return
-      if (selectedIdsRef.current.size > 0 || suppressNextClickRef.current) event.preventDefault()
+      if (!selectionModeRef.current) return
+      const noteId = noteIdFromElement(target)
+      if (!noteId) return
+      event.preventDefault()
+      event.stopImmediatePropagation()
+      toggleSelection(noteId)
     }
 
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape' && selectedIdsRef.current.size > 0 && !dialogOpen) clearSelection()
+      if (event.key !== 'Escape') return
+      if (dialogOpen) return
+      if (launcherOpen) {
+        setLauncherOpen(false)
+        return
+      }
+      if (finishMenuOpen) {
+        setFinishMenuOpen(false)
+        setError('')
+        return
+      }
+      if (selectionModeRef.current) clearSelection()
     }
 
-    document.addEventListener('pointerdown', handlePointerDown, true)
-    document.addEventListener('pointermove', handlePointerMove, true)
-    document.addEventListener('pointerup', handlePointerEnd, true)
-    document.addEventListener('pointercancel', handlePointerEnd, true)
     document.addEventListener('click', handleClick, true)
-    document.addEventListener('contextmenu', handleContextMenu, true)
     document.addEventListener('keydown', handleKeyDown)
     return () => {
-      clearActivePress()
-      document.removeEventListener('pointerdown', handlePointerDown, true)
-      document.removeEventListener('pointermove', handlePointerMove, true)
-      document.removeEventListener('pointerup', handlePointerEnd, true)
-      document.removeEventListener('pointercancel', handlePointerEnd, true)
       document.removeEventListener('click', handleClick, true)
-      document.removeEventListener('contextmenu', handleContextMenu, true)
       document.removeEventListener('keydown', handleKeyDown)
     }
-  }, [dialogOpen])
+  }, [dialogOpen, finishMenuOpen, launcherOpen])
 
   const protectableIds = useMemo(
     () => [...selectedIds].filter((noteId) => !protectedIds.has(noteId)),
     [protectedIds, selectedIds],
   )
 
+  function createNoteFromLauncher() {
+    setLauncherOpen(false)
+    const fab = document.querySelector<HTMLButtonElement>('.notes-create-fab')
+    if (!fab || fab.disabled) return
+    bypassCreateClickRef.current = true
+    fab.click()
+  }
+
   async function openBulkDialog() {
-    await refreshProtectedIds()
+    setFinishMenuOpen(false)
     setError('')
     setStatus('')
     setCode('')
     setConfirmCode('')
+    await refreshProtectedIds()
     setDialogOpen(true)
   }
 
@@ -292,24 +271,98 @@ export function NoteBulkPrivacyRuntime() {
     }
   }
 
+  async function handleDeleteSelected() {
+    const ids = [...selectedIdsRef.current]
+    if (ids.length === 0 || busy) return
+
+    const lockedIds = ids.filter((noteId) => {
+      const row = noteRows().find((candidate) => candidate.dataset.reorderNoteId === noteId)
+      return row?.dataset.oanixNoteLocked === 'true'
+    })
+    if (lockedIds.length > 0) {
+      setError(
+        lockedIds.length === 1
+          ? 'Hay una nota todavía bloqueada. Desbloquéala con su código antes de borrarla.'
+          : `Hay ${lockedIds.length} notas todavía bloqueadas. Desbloquéalas con sus códigos antes de borrarlas.`,
+      )
+      setStatus('')
+      return
+    }
+
+    const confirmed = window.confirm(
+      `¿Eliminar ${ids.length} nota${ids.length === 1 ? '' : 's'} de forma permanente?\n\nSe eliminarán de este dispositivo junto con sus imágenes asociadas. Esta acción no se puede deshacer.`,
+    )
+    if (!confirmed) return
+
+    setBusy(true)
+    setFinishMenuOpen(false)
+    setError('')
+    try {
+      const imageIds: string[] = []
+      for (let index = 0; index < ids.length; index += 1) {
+        setStatus(`Eliminando ${index + 1} de ${ids.length}…`)
+        const deleted = await deleteNote(ids[index])
+        for (const block of deleted.content.blocks) {
+          if (block.type === 'image') imageIds.push(block.imageId)
+        }
+      }
+      await Promise.allSettled(imageIds.map((imageId) => deleteEncryptedImage(imageId)))
+      dispatchLocalNoteChange()
+      dispatchPrivacyRefresh()
+      clearSelection()
+      window.dispatchEvent(new Event('oanix:workspace-refresh'))
+      navigator.vibrate?.(14)
+    } catch {
+      setError('No se pudieron eliminar todas las notas seleccionadas. OANIX refrescará la lista para mostrar el estado real.')
+      window.dispatchEvent(new Event('oanix:workspace-refresh'))
+    } finally {
+      setBusy(false)
+      setStatus('')
+    }
+  }
+
   return (
     <>
-      {selectedIds.size > 0 && createPortal(
-        <aside className="oanix-note-bulk-bar" aria-label="Notas seleccionadas">
-          <button className="oanix-note-bulk-bar__close" type="button" onClick={clearSelection} aria-label="Cancelar selección">×</button>
-          <div>
-            <strong>{selectedIds.size} seleccionada{selectedIds.size === 1 ? '' : 's'}</strong>
-            <small>Toca otras notas para marcarlas o desmarcarlas.</small>
+      {launcherOpen && createPortal(
+        <div className="oanix-note-action-backdrop" role="presentation" onClick={() => setLauncherOpen(false)}>
+          <div className="oanix-note-action-sheet" role="menu" aria-label="Crear o marcar notas" onClick={(event) => event.stopPropagation()}>
+            <span className="oanix-note-action-sheet__eyebrow">NOTAS</span>
+            <strong>¿Qué quieres hacer?</strong>
+            <button type="button" role="menuitem" onClick={createNoteFromLauncher}>
+              <span className="oanix-note-action-sheet__icon" aria-hidden="true">＋</span>
+              <span><b>Agregar nota</b><small>Crear una nota nueva y abrirla</small></span>
+            </button>
+            <button type="button" role="menuitem" onClick={beginSelection}>
+              <span className="oanix-note-action-sheet__icon" aria-hidden="true">✓</span>
+              <span><b>Marcar notas</b><small>Seleccionar varias para aplicar acciones</small></span>
+            </button>
           </div>
-          <button
-            className="oanix-note-bulk-bar__protect"
-            type="button"
-            onClick={() => void openBulkDialog()}
-            disabled={protectableIds.length === 0}
-          >
-            🔒 {protectableIds.length > 0 ? `Proteger ${protectableIds.length}` : 'Ya protegidas'}
-          </button>
-        </aside>,
+        </div>,
+        document.body,
+      )}
+
+      {finishMenuOpen && createPortal(
+        <div className="oanix-note-action-backdrop" role="presentation" onClick={() => {
+          setFinishMenuOpen(false)
+          setError('')
+        }}>
+          <div className="oanix-note-action-sheet oanix-note-action-sheet--finish" role="menu" aria-label="Acciones para notas seleccionadas" onClick={(event) => event.stopPropagation()}>
+            <span className="oanix-note-action-sheet__eyebrow">{selectedIds.size} SELECCIONADA{selectedIds.size === 1 ? '' : 'S'}</span>
+            <strong>Terminar selección</strong>
+            {error && <p className="oanix-note-action-sheet__notice" role="alert">{error}</p>}
+            <button type="button" role="menuitem" onClick={() => void openBulkDialog()}>
+              <span className="oanix-note-action-sheet__icon" aria-hidden="true">🔒</span>
+              <span><b>Aplicar código</b><small>Proteger las que todavía no tengan código</small></span>
+            </button>
+            <button className="oanix-note-action-sheet__danger" type="button" role="menuitem" onClick={() => void handleDeleteSelected()}>
+              <span className="oanix-note-action-sheet__icon" aria-hidden="true">🗑</span>
+              <span><b>Borrar</b><small>Eliminar permanentemente las seleccionadas</small></span>
+            </button>
+            <button className="oanix-note-action-sheet__cancel" type="button" role="menuitem" onClick={clearSelection}>
+              Cancelar selección
+            </button>
+          </div>
+        </div>,
         document.body,
       )}
 
