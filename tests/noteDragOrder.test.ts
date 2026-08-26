@@ -11,7 +11,8 @@ test('note ordering is owned by the SortableJS long-press runtime', () => {
   assert.doesNotMatch(workspace, /setPointerCapture|document\.elementFromPoint|touchAction: 'none'|⠿/)
   assert.match(runtime, /import Sortable from 'sortablejs'/)
   assert.match(runtime, /Sortable\.create\(list/)
-  assert.match(runtime, /handle:\s*'\.note-row__avatar'/)
+  assert.match(runtime, /handle:\s*'\.note-row\[data-reorder-note-id\]'/)
+  assert.match(runtime, /button:not\(\.note-row__open\)/)
   assert.match(runtime, /forceFallback: true/)
   assert.match(runtime, /delayOnTouchOnly: true/)
   assert.match(runtime, /persistNoteOrder\(nextOrder\)/)
@@ -19,7 +20,7 @@ test('note ordering is owned by the SortableJS long-press runtime', () => {
   assert.doesNotMatch(workspace, /aria-label=\{`Mover \$\{note\.title\} abajo`\}/)
 })
 
-test('the visual note avatar remains a real coarse-pointer drag handle', () => {
+test('the visual note avatar remains passive and touch-safe inside full-row dragging', () => {
   const gestureCss = readFileSync('src/features/notes/noteReorderGesture.css', 'utf8')
   const workspace = readFileSync('src/features/notes/NotesWorkspace.tsx', 'utf8')
   const avatar = readFileSync('src/features/notes/NoteAvatar.tsx', 'utf8')
