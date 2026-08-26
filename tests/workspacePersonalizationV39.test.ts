@@ -60,9 +60,10 @@ test('el engranaje abre directamente el único personalizador de carpeta', () =>
   assert.match(runtime, /applyOanixTheme\(current === 'classic-day' \? 'classic-night' : 'classic-day'\)/)
 })
 
-test('las acciones de carpeta viven en el personalizador real y no en un menú CRUD duplicado', () => {
-  assert.match(appearanceRuntime, /Abrir carpeta/)
+test('las acciones de carpeta viven en el personalizador real y no conservan abrir carpeta redundante', () => {
+  assert.doesNotMatch(appearanceRuntime, /Abrir carpeta/)
   assert.match(appearanceRuntime, /Cambiar color \/ Icono/)
+  assert.match(appearanceRuntime, /Guardar/)
   assert.match(appearanceRuntime, /Administrar nombre \/ eliminar/)
   assert.doesNotMatch(runtime, /openFolderManagerAction|openFolderCustomizer|toggleFolderFlag/)
   assert.doesNotMatch(runtime, /saveFolderPinned|saveFolderFavorite/)
