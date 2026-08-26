@@ -78,6 +78,12 @@
   pointer-events: none;
 }
 
+/* The base folder stylesheet forces this block to display:grid; make the semantic
+   hidden attribute authoritative while the color/icon picker owns the modal. */
+.oanix-folder-customizer__actions[hidden] {
+  display: none !important;
+}
+
 html[data-oanix-theme='classic-day'] .oanix-folder-customizer[data-oanix-operation-status]::after {
   border-color: rgba(37,99,235,.22);
   background: rgba(241,245,249,.96);
