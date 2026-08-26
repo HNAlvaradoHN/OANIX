@@ -25,6 +25,7 @@ test('coarse touch note drag owns vertical movement after long press without ste
   assert.match(noteDragRuntime, /if \(nativeTouchEvents && event\.pointerType === 'touch'\) return/)
   assert.match(noteDragRuntime, /advanceGesture\(touch\.clientX, touch\.clientY, \(\) => event\.preventDefault\(\)\)/)
   assert.match(noteDragRuntime, /completeGesture\(\(\) => event\.preventDefault\(\)\)/)
+  assert.match(noteDragCss, /touch-action:\s*pan-y\s*!important/)
 })
 
 test('folder gear uses an optically centered pseudo glyph', () => {
