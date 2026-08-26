@@ -83,12 +83,6 @@ function activeTagNameFromWorkspace(): string | null {
   return !label || label === 'Todas las etiquetas' ? null : label
 }
 
-function activeFolderIdFromDock(): string | null {
-  return document.querySelector<HTMLElement>(
-    '.oanix-folder-rail__item.is-selected[data-oanix-folder-id]',
-  )?.dataset.oanixFolderId ?? null
-}
-
 function openWorkspaceTag(tagName: string | null) {
   const filterButton = document.querySelector<HTMLButtonElement>('.tag-filter-button')
   if (!filterButton) return
@@ -104,16 +98,6 @@ function openWorkspaceTag(tagName: string | null) {
       target?.click()
     })
   })
-}
-
-function selectWorkspaceFolderFromDock(item: HTMLElement) {
-  window.setTimeout(() => {
-    const folderTabs = Array.from(document.querySelectorAll<HTMLButtonElement>('.notes-tab:not(.notes-tab--add)'))
-    const target = item.classList.contains('oanix-folder-rail__item--all')
-      ? folderTabs[0]
-      : folderTabs.find((button) => button.textContent?.trim() === item.title.trim())
-    if (target && target.getAttribute('aria-current') !== 'page') target.click()
-  }, 0)
 }
 
 export function OrganicWorkspaceRuntime() {
@@ -166,10 +150,6 @@ export function OrganicWorkspaceRuntime() {
 
     setActiveTagName((current) => {
       const next = activeTagNameFromWorkspace()
-      return current === next ? current : next
-    })
-    setActiveFolderId((current) => {
-      const next = activeFolderIdFromDock()
       return current === next ? current : next
     })
   }
@@ -270,16 +250,17 @@ export function OrganicWorkspaceRuntime() {
       scheduleReload()
     }
     const handleConflictResolved = () => scheduleReload()
+    const handleCommittedFolder = (event: Event) => {
+      const detail = event instanceof CustomEvent
+        ? event.detail as { folderId?: unknown } | null
+        : null
+      if (typeof detail?.folderId !== 'string') return
+      setActiveFolderId(detail.folderId === 'all' ? null : detail.folderId)
+    }
+
     window.addEventListener('oanix:local-data-changed', handleLocalChange)
     window.addEventListener('oanix:conflict-resolved', handleConflictResolved)
-
-    function handleDockClick(event: MouseEvent) {
-      const target = event.target
-      if (!(target instanceof Element)) return
-      const item = target.closest<HTMLElement>('.oanix-folder-rail__item')
-      if (!item || item.classList.contains('oanix-folder-rail__item--add')) return
-      selectWorkspaceFolderFromDock(item)
-    }
+    window.addEventListener('oanix:workspace-folder-committed', handleCommittedFolder)
 
     function finishFolderReorder() {
       if (!document.querySelector('.oanix-folder-grid--reordering')) return
@@ -299,7 +280,6 @@ export function OrganicWorkspaceRuntime() {
       window.setTimeout(finish, 0)
     }
 
-    document.addEventListener('click', handleDockClick)
     document.addEventListener('pointerup', finishFolderReorder)
     document.addEventListener('pointercancel', finishFolderReorder)
 
@@ -307,7 +287,7 @@ export function OrganicWorkspaceRuntime() {
       observer.disconnect()
       window.removeEventListener('oanix:local-data-changed', handleLocalChange)
       window.removeEventListener('oanix:conflict-resolved', handleConflictResolved)
-      document.removeEventListener('click', handleDockClick)
+      window.removeEventListener('oanix:workspace-folder-committed', handleCommittedFolder)
       document.removeEventListener('pointerup', finishFolderReorder)
       document.removeEventListener('pointercancel', finishFolderReorder)
       if (reloadTimerRef.current !== null) window.clearTimeout(reloadTimerRef.current)

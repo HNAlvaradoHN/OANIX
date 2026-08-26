@@ -263,6 +263,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
   const activeSaveRef = useRef<Promise<boolean> | null>(null)
   const saveTimerRef = useRef<number | null>(null)
   const selectedIdRef = useRef<string | null>(null)
+  const activeFolderIdRef = useRef<string | 'all'>('all')
   const notesRef = useRef<NoteRecord[]>([])
   const historyBackAlreadySavedRef = useRef(false)
   const pendingImageDeletesRef = useRef(new Set<string>())
@@ -315,8 +316,31 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
   }, [selectedId])
 
   useEffect(() => {
+    activeFolderIdRef.current = activeFolderId
+  }, [activeFolderId])
+
+  useEffect(() => {
     notesRef.current = notes
   }, [notes])
+
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('oanix:workspace-count-changed', {
+      detail: { count: organizedNotes.length },
+    }))
+  }, [organizedNotes.length])
+
+  useEffect(() => {
+    const handleWorkspaceFolderSelection = (event: Event) => {
+      const detail = event instanceof CustomEvent
+        ? event.detail as { folderId?: unknown } | null
+        : null
+      if (typeof detail?.folderId !== 'string') return
+      handleSelectFolder(detail.folderId)
+    }
+
+    window.addEventListener('oanix:select-workspace-folder', handleWorkspaceFolderSelection)
+    return () => window.removeEventListener('oanix:select-workspace-folder', handleWorkspaceFolderSelection)
+  }, [])
 
   useEffect(() => {
     function handlePersistedNoteOrder(event: Event) {
@@ -670,10 +694,12 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     )
   }
 
-  async function handleSelectFolder(folderId: string | 'all') {
-    if (folderId === activeFolderId) return
-    if (!(await flushPendingContent())) return
-    await finalizeRemovedImages()
+  function handleSelectFolder(folderId: string | 'all') {
+    if (folderId === activeFolderIdRef.current) return
+
+    activeFolderIdRef.current = folderId
+    void flushPendingContent()
+    void finalizeRemovedImages()
 
     setActiveFolderId(folderId)
     selectedIdRef.current = null
@@ -686,6 +712,10 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     if (mobileSinglePane()) {
       window.history.replaceState({ ...currentHistoryState(), oanixView: 'list' }, '')
     }
+
+    window.dispatchEvent(new CustomEvent('oanix:workspace-folder-committed', {
+      detail: { folderId },
+    }))
   }
 
   async function handleSelectTag(tagId: string | 'all') {
@@ -758,7 +788,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
       const folder = await createFolder(name)
       setFolders((current) => [...current, folder])
       setNewFolderName('')
-      await handleSelectFolder(folder.id)
+      handleSelectFolder(folder.id)
     } catch (folderError) {
       setError(folderError instanceof Error ? folderError.message : 'No se pudo crear la carpeta cifrada.')
     } finally {
@@ -861,7 +891,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
       }
       await deleteFolder(folder.id)
       setFolders((current) => current.filter((item) => item.id !== folder.id))
-      if (activeFolderId === folder.id) await handleSelectFolder('all')
+      if (activeFolderId === folder.id) handleSelectFolder('all')
       if (editingFolderId === folder.id) {
         setEditingFolderId(null)
         setEditingFolderName('')
@@ -1096,7 +1126,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
         ? notesRef.current.find((note) => note.id === selectedIdRef.current) ?? null
         : null
       if (openNote) {
-        setActiveFolderId(openNote.folderId ?? 'all')
+        handleSelectFolder(openNote.folderId ?? 'all')
         if (activeTagId !== 'all' && !(openNote.tagIds ?? []).includes(activeTagId)) {
           setActiveTagId('all')
         }
@@ -1315,7 +1345,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
               className={`notes-tab${activeFolderId === 'all' ? ' notes-tab--active' : ''}`}
               type="button"
               aria-current={activeFolderId === 'all' ? 'page' : undefined}
-              onClick={() => void handleSelectFolder('all')}
+              onClick={() => handleSelectFolder('all')}
             >
               Todas
             </button>
@@ -1326,7 +1356,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
                 key={folder.id}
                 aria-current={activeFolderId === folder.id ? 'page' : undefined}
                 title={folder.name}
-                onClick={() => void handleSelectFolder(folder.id)}
+                onClick={() => handleSelectFolder(folder.id)}
               >
                 {folder.name}
               </button>

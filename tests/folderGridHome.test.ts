@@ -32,7 +32,9 @@ test('la referencia vigente convierte el rail real en dock inferior dentro del m
   assert.match(organicCss, /\.oanix-folder-rail[\s\S]*flex-direction: row !important/)
   assert.match(organicCss, /\.oanix-folder-rail__scroll[\s\S]*overflow-x: auto !important/)
   assert.match(organicCss, /\.oanix-folder-focus \{ display: none !important; \}/)
-  assert.match(organicRuntime, /selectWorkspaceFolderFromDock/)
+  assert.match(runtime, /oanix:select-workspace-folder/)
+  assert.match(organicRuntime, /oanix:workspace-folder-committed/)
+  assert.doesNotMatch(organicRuntime, /selectWorkspaceFolderFromDock/)
 })
 
 test('portada y color reales alimentan el fondo del workspace sin imágenes externas', () => {
