@@ -46,7 +46,10 @@ test('folders, tags and notes finish reordering automatically after release', ()
   assert.doesNotMatch(noteGesture, /supportPointer:\s*false/)
   assert.match(noteGesture, /persistNoteOrder\(nextOrder\)/)
   assert.match(noteCss, /touch-action: pan-y !important/)
-  assert.doesNotMatch(noteGesture, /setPointerCapture|releasePointerCapture|PRESS_ARM_GRACE_MS|finishAutomaticMode|dispatchDragStart|new PointerEvent|elementFromPoint/)
+  // Keep guarding against the retired synthetic/manual drag machinery. The
+  // coarse-pointer route may use a short press-arm grace window without
+  // reintroducing pointer capture or fabricated drag events.
+  assert.doesNotMatch(noteGesture, /setPointerCapture|releasePointerCapture|finishAutomaticMode|dispatchDragStart|new PointerEvent|elementFromPoint/)
   assert.doesNotMatch(noteCss, /oanix-note-jiggle|data-oanix-note-reorder-mode/)
 })
 
