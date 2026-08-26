@@ -170,3 +170,33 @@ html.oanix-mobile-note-dragging .oanix-folder-rail__scroll {
     animation: none !important;
   }
 }
+
+/* Sortable may create the fallback clone from a row that is already carrying
+   the placeholder class. In that case the placeholder rules above hide the
+   clone's direct children and tag pseudo-element too. The fallback clone must
+   always win: it is the actual card that follows the finger. */
+body > .note-row.oanix-mobile-note-drag-ghost {
+  background: var(--oanix-note-drag-background) !important;
+  transform-origin: center center !important;
+  animation: none !important;
+}
+
+body > .note-row.oanix-mobile-note-drag-ghost > * {
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+body > .note-row.oanix-mobile-note-drag-ghost::after {
+  opacity: 1 !important;
+}
+
+body > .note-row.oanix-mobile-note-drag-ghost .note-row__open,
+body > .note-row.oanix-mobile-note-drag-ghost .note-row__avatar,
+body > .note-row.oanix-mobile-note-drag-ghost .note-row__body,
+body > .note-row.oanix-mobile-note-drag-ghost .note-row__topline,
+body > .note-row.oanix-mobile-note-drag-ghost .note-row__preview,
+body > .note-row.oanix-mobile-note-drag-ghost time,
+body > .note-row.oanix-mobile-note-drag-ghost strong {
+  visibility: visible !important;
+  opacity: 1 !important;
+}
