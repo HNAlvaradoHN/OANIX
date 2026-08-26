@@ -14,7 +14,7 @@ test('reorder móvil usa SortableJS y conserva scroll nativo antes del long pres
   assert.match(pkg, /"sortablejs": "1\.15\.7"/)
   assert.match(runtime, /import Sortable from 'sortablejs'/)
   assert.match(runtime, /Sortable\.create\(list/)
-  assert.match(runtime, /const LONG_PRESS_MS = 300/)
+  assert.match(runtime, /const LONG_PRESS_MS = 220/)
   assert.match(runtime, /const TOUCH_START_THRESHOLD_PX = 7/)
   assert.match(runtime, /delay: LONG_PRESS_MS/)
   assert.match(runtime, /delayOnTouchOnly: true/)
