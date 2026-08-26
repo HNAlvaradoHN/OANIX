@@ -319,6 +319,34 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
   }, [notes])
 
   useEffect(() => {
+    function handlePersistedNoteOrder(event: Event) {
+      const detail = event instanceof CustomEvent
+        ? event.detail as { notes?: unknown } | null
+        : null
+      if (!Array.isArray(detail?.notes)) return
+
+      const manualOrderById = new Map<string, number>()
+      for (const entry of detail.notes) {
+        if (!entry || typeof entry !== 'object') continue
+        const candidate = entry as { id?: unknown; manualOrder?: unknown }
+        if (typeof candidate.id !== 'string' || !Number.isSafeInteger(candidate.manualOrder)) continue
+        manualOrderById.set(candidate.id, candidate.manualOrder as number)
+      }
+      if (manualOrderById.size === 0) return
+
+      setNotes((current) => current
+        .map((note) => {
+          const manualOrder = manualOrderById.get(note.id)
+          return manualOrder === undefined ? note : { ...note, manualOrder }
+        })
+        .sort(compareNotesForList))
+    }
+
+    window.addEventListener('oanix:note-order-persisted', handlePersistedNoteOrder)
+    return () => window.removeEventListener('oanix:note-order-persisted', handlePersistedNoteOrder)
+  }, [])
+
+  useEffect(() => {
     if (!mobileSinglePane()) return
 
     const state = currentHistoryState() as OanixHistoryState
