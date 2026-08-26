@@ -25,12 +25,10 @@ function interactionBlocked(): boolean {
     || Boolean(document.querySelector('.notes-shell--searching'))
 }
 
-function isInteractiveTarget(target: HTMLElement): boolean {
-  return Boolean(target.closest('.note-row__menu-wrap, button, a, input, textarea, select, [contenteditable="true"]'))
-}
-
-function isDragHandle(target: HTMLElement): boolean {
-  return Boolean(target.closest('.note-row__avatar'))
+function isExcludedInteractiveTarget(target: HTMLElement): boolean {
+  return Boolean(target.closest(
+    '.note-row__menu-wrap, button:not(.note-row__open), a, input, textarea, select, [contenteditable="true"]',
+  ))
 }
 
 export function NoteListReorderGestureRuntime() {
@@ -50,8 +48,8 @@ export function NoteListReorderGestureRuntime() {
 
     const sortableOptions: SortableOptionsWithHandle = {
       draggable: '.note-row[data-reorder-note-id]',
-      handle: '.note-row__avatar',
-      filter: (_event, target) => interactionBlocked() || (!isDragHandle(target) && isInteractiveTarget(target)),
+      handle: '.note-row[data-reorder-note-id]',
+      filter: (_event, target) => interactionBlocked() || isExcludedInteractiveTarget(target),
       preventOnFilter: false,
       direction: 'vertical',
       animation: 165,
