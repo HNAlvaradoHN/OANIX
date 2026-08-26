@@ -31,29 +31,45 @@ html.oanix-v383-visual .note-row[data-reorder-note-id] .note-row__avatar {
 }
 
 .note-row.oanix-mobile-note-chosen {
-  border-color: rgba(147,197,253,.82) !important;
-  box-shadow: 0 10px 28px rgba(2,6,23,.28), 0 0 0 2px rgba(96,165,250,.28) !important;
-  filter: brightness(1.04) saturate(1.04);
+  border-color: rgba(147,197,253,.9) !important;
+  box-shadow: 0 12px 34px rgba(2,6,23,.34), 0 0 0 2px rgba(96,165,250,.32) !important;
+  filter: brightness(1.06) saturate(1.06);
   transition: box-shadow 120ms ease, border-color 120ms ease, filter 120ms ease, opacity 120ms ease;
 }
 
 .note-row.oanix-mobile-note-placeholder {
-  opacity: .18 !important;
-  border: 2px dashed rgba(96,165,250,.9) !important;
-  background: rgba(59,130,246,.08) !important;
-  box-shadow: none !important;
-  filter: saturate(.9);
+  opacity: 1 !important;
+  border: 2px dashed rgba(96,165,250,.96) !important;
+  border-radius: var(--oanix-note-drag-border-radius, .9rem) !important;
+  background: rgba(59,130,246,.12) !important;
+  box-shadow: inset 0 0 0 1px rgba(147,197,253,.12) !important;
+  filter: none !important;
+  overflow: hidden;
+  animation: oanix-note-drop-slot-pulse 760ms ease-in-out infinite alternate;
+}
+
+.note-row.oanix-mobile-note-placeholder > * {
+  visibility: hidden !important;
 }
 
 .note-row.oanix-mobile-note-drag-ghost {
   z-index: 9800 !important;
+  width: var(--oanix-note-drag-width) !important;
+  min-width: var(--oanix-note-drag-width) !important;
+  max-width: var(--oanix-note-drag-width) !important;
+  height: var(--oanix-note-drag-height) !important;
+  min-height: var(--oanix-note-drag-height) !important;
   margin: 0 !important;
   pointer-events: none !important;
-  opacity: .97 !important;
-  border-color: rgba(147,197,253,.95) !important;
-  box-shadow: 0 28px 60px rgba(2,6,23,.54), 0 0 0 2px rgba(96,165,250,.38), inset 0 1px 1px rgba(255,255,255,.2) !important;
-  filter: brightness(1.08) saturate(1.07);
+  opacity: .99 !important;
+  overflow: hidden !important;
+  background: var(--oanix-note-drag-background) !important;
+  border-color: rgba(147,197,253,.98) !important;
+  border-radius: var(--oanix-note-drag-border-radius, .9rem) !important;
+  box-shadow: 0 30px 66px rgba(2,6,23,.62), 0 0 0 2px rgba(96,165,250,.46), inset 0 1px 1px rgba(255,255,255,.22) !important;
+  filter: brightness(1.09) saturate(1.08);
   transition: box-shadow 120ms ease, border-color 120ms ease, filter 120ms ease, opacity 120ms ease;
+  animation: oanix-note-floating-active 620ms ease-in-out infinite alternate;
   will-change: transform;
 }
 
@@ -61,8 +77,12 @@ html.oanix-v383-visual .note-row[data-reorder-note-id] .note-row__avatar {
   display: none !important;
 }
 
-body.oanix-mobile-note-dragging .note-row[data-reorder-note-id]:not(.oanix-mobile-note-drag-ghost) {
+body.oanix-mobile-note-dragging .note-row[data-reorder-note-id]:not(.oanix-mobile-note-drag-ghost):not(.oanix-mobile-note-placeholder) {
   transition: box-shadow 140ms ease, opacity 140ms ease, border-color 140ms ease, filter 140ms ease;
+}
+
+body.oanix-mobile-note-dragging .notes-list {
+  box-shadow: inset 0 0 0 1px rgba(96,165,250,.18);
 }
 
 html.oanix-mobile-note-dragging,
@@ -89,6 +109,30 @@ html.oanix-mobile-note-dragging .note-row[data-reorder-note-id] .note-row__menu-
   cursor: default;
 }
 
+@keyframes oanix-note-drop-slot-pulse {
+  from {
+    border-color: rgba(96,165,250,.7);
+    background: rgba(59,130,246,.08);
+    box-shadow: inset 0 0 0 1px rgba(147,197,253,.08);
+  }
+  to {
+    border-color: rgba(147,197,253,1);
+    background: rgba(59,130,246,.18);
+    box-shadow: inset 0 0 0 1px rgba(147,197,253,.22), 0 0 24px rgba(59,130,246,.14);
+  }
+}
+
+@keyframes oanix-note-floating-active {
+  from {
+    box-shadow: 0 26px 58px rgba(2,6,23,.54), 0 0 0 2px rgba(96,165,250,.38), inset 0 1px 1px rgba(255,255,255,.18);
+    filter: brightness(1.06) saturate(1.05);
+  }
+  to {
+    box-shadow: 0 34px 72px rgba(2,6,23,.68), 0 0 0 3px rgba(147,197,253,.56), inset 0 1px 1px rgba(255,255,255,.24);
+    filter: brightness(1.11) saturate(1.1);
+  }
+}
+
 /* The bottom folder dock is a separate fixed interaction surface. While a note
    is being reordered it must stay visually anchored and must not react to the
    pointer crossing it near the auto-scroll edge. */
@@ -107,7 +151,10 @@ html.oanix-mobile-note-dragging .oanix-folder-rail__scroll {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .note-row[data-reorder-note-id] {
+  .note-row[data-reorder-note-id],
+  .note-row.oanix-mobile-note-placeholder,
+  .note-row.oanix-mobile-note-drag-ghost {
     transition: none !important;
+    animation: none !important;
   }
 }
