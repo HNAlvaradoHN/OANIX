@@ -231,3 +231,33 @@ body > .note-row.oanix-mobile-note-drag-overlay::after {
 body > .note-row.oanix-mobile-note-drag-overlay .note-row__menu-wrap {
   display: none !important;
 }
+
+/* Drag cards are appended directly to <body>. Give both visual paths a fully
+   autonomous surface so they never depend on .notes-shell/.notes-list theme
+   selectors after leaving the workspace DOM tree. */
+body > .note-row.oanix-mobile-note-drag-ghost,
+body > .note-row.oanix-mobile-note-drag-overlay {
+  position: fixed !important;
+  margin: 0 !important;
+  background: rgba(18,18,35,.96) !important;
+  border: 1px solid rgba(255,255,255,.20) !important;
+  border-radius: 1rem !important;
+  color: #fff !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  box-shadow: 0 22px 46px rgba(2,6,23,.46), 0 0 0 2px rgba(96,165,250,.30) !important;
+  visibility: visible !important;
+  opacity: .99 !important;
+}
+
+body > .note-row.oanix-mobile-note-drag-ghost .note-row__topline strong,
+body > .note-row.oanix-mobile-note-drag-overlay .note-row__topline strong {
+  color: #fff !important;
+}
+
+body > .note-row.oanix-mobile-note-drag-ghost .note-row__preview,
+body > .note-row.oanix-mobile-note-drag-ghost .note-row__topline time,
+body > .note-row.oanix-mobile-note-drag-overlay .note-row__preview,
+body > .note-row.oanix-mobile-note-drag-overlay .note-row__topline time {
+  color: rgba(255,255,255,.60) !important;
+}
