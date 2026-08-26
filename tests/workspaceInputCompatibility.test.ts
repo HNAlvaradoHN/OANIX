@@ -6,7 +6,7 @@ const runtime = readFileSync('src/features/notes/WorkspaceInputCompatibilityRunt
 const main = readFileSync('src/main.tsx', 'utf8')
 
 test('mouse reactiva el Sortable existente sin crear una segunda implementacion de drag', () => {
-  assert.match(runtime, /Sortable\.get\(list\)/)
+  assert.match(runtime, /sortableApi\.get\(list\)/)
   assert.match(runtime, /event\.pointerType === 'mouse'/)
   assert.match(runtime, /sortable\.option\('disabled', false\)/)
   assert.match(runtime, /event\.pointerType === 'touch'/)
