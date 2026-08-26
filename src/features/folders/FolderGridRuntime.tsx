@@ -172,6 +172,19 @@ export function FolderGridRuntime() {
     gridOpenRef.current = gridOpen
   }, [gridOpen])
 
+  useEffect(() => {
+    const handleCommittedFolder = (event: Event) => {
+      const detail = event instanceof CustomEvent
+        ? event.detail as { folderId?: unknown } | null
+        : null
+      if (typeof detail?.folderId !== 'string') return
+      setSelectedFolderId(detail.folderId)
+    }
+
+    window.addEventListener('oanix:workspace-folder-committed', handleCommittedFolder)
+    return () => window.removeEventListener('oanix:workspace-folder-committed', handleCommittedFolder)
+  }, [])
+
   async function refreshData() {
     const request = ++refreshRequestRef.current
     setLoading(true)
@@ -351,6 +364,7 @@ export function FolderGridRuntime() {
     if (reorderMode) return
     setSelectedFolderId('all')
     setPanelSearch('')
+    window.dispatchEvent(new CustomEvent('oanix:select-workspace-folder', { detail: { folderId: 'all' } }))
   }
 
   function selectFolder(folder: FolderRecord) {
@@ -360,6 +374,7 @@ export function FolderGridRuntime() {
     }
     setSelectedFolderId(folder.id)
     setPanelSearch('')
+    window.dispatchEvent(new CustomEvent('oanix:select-workspace-folder', { detail: { folderId: folder.id } }))
   }
 
   function openAllNotes() {
