@@ -186,9 +186,16 @@ export function NoteListReorderGestureRuntime() {
 
         void (async () => {
           try {
-            await persistNoteOrder(nextOrder)
+            const updatedNotes = await persistNoteOrder(nextOrder)
+            window.dispatchEvent(new CustomEvent('oanix:note-order-persisted', {
+              detail: {
+                notes: updatedNotes.map((note) => ({
+                  id: note.id,
+                  manualOrder: note.manualOrder,
+                })),
+              },
+            }))
             window.dispatchEvent(new CustomEvent('oanix:local-data-changed', { detail: { recordType: 'note' } }))
-            window.dispatchEvent(new Event('oanix:workspace-refresh'))
             navigator.vibrate?.(12)
           } catch {
             window.dispatchEvent(new Event('oanix:workspace-refresh'))
