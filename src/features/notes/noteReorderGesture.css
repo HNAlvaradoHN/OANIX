@@ -37,6 +37,11 @@ html.oanix-v383-visual .note-row[data-reorder-note-id] .note-row__avatar {
   transition: box-shadow 120ms ease, border-color 120ms ease, filter 120ms ease, opacity 120ms ease;
 }
 
+body.oanix-mobile-note-dragging .note-row[data-reorder-note-id] {
+  --oanix-note-card-color: var(--oanix-note-drag-stable-color) !important;
+  --oanix-note-tab-color: var(--oanix-note-drag-stable-color) !important;
+}
+
 .note-row.oanix-mobile-note-placeholder {
   opacity: 1 !important;
   border: 2px dashed rgba(96,165,250,.96) !important;
@@ -52,18 +57,25 @@ html.oanix-v383-visual .note-row[data-reorder-note-id] .note-row__avatar {
   visibility: hidden !important;
 }
 
+/* Sortable keeps this clone for its internal fallback geometry. The visible
+   card is the independent overlay below, so the engine clone must stay hidden. */
 .note-row.oanix-mobile-note-drag-ghost {
-  z-index: 9800 !important;
-  width: var(--oanix-note-drag-width) !important;
-  min-width: var(--oanix-note-drag-width) !important;
-  max-width: var(--oanix-note-drag-width) !important;
-  height: var(--oanix-note-drag-height) !important;
-  min-height: var(--oanix-note-drag-height) !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  box-shadow: none !important;
+  filter: none !important;
+}
+
+.oanix-note-drag-overlay {
+  position: fixed !important;
+  z-index: 9900 !important;
+  left: 0 !important;
+  top: 0 !important;
+  min-width: 0 !important;
   margin: 0 !important;
   pointer-events: none !important;
   opacity: .99 !important;
-  overflow: hidden !important;
-  background: var(--oanix-note-drag-background) !important;
+  overflow: visible !important;
   border-color: rgba(147,197,253,.98) !important;
   border-radius: var(--oanix-note-drag-border-radius, .9rem) !important;
   box-shadow: 0 30px 66px rgba(2,6,23,.62), 0 0 0 2px rgba(96,165,250,.46), inset 0 1px 1px rgba(255,255,255,.22) !important;
@@ -73,8 +85,12 @@ html.oanix-v383-visual .note-row[data-reorder-note-id] .note-row__avatar {
   will-change: transform;
 }
 
-.note-row.oanix-mobile-note-drag-ghost .note-row__menu-wrap {
+.oanix-note-drag-overlay .note-row__menu-wrap {
   display: none !important;
+}
+
+.oanix-note-drag-overlay .note-row__open {
+  pointer-events: none !important;
 }
 
 body.oanix-mobile-note-dragging .note-row[data-reorder-note-id]:not(.oanix-mobile-note-drag-ghost):not(.oanix-mobile-note-placeholder) {
@@ -153,7 +169,7 @@ html.oanix-mobile-note-dragging .oanix-folder-rail__scroll {
 @media (prefers-reduced-motion: reduce) {
   .note-row[data-reorder-note-id],
   .note-row.oanix-mobile-note-placeholder,
-  .note-row.oanix-mobile-note-drag-ghost {
+  .oanix-note-drag-overlay {
     transition: none !important;
     animation: none !important;
   }
