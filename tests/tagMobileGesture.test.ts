@@ -23,6 +23,25 @@ test('el gesto móvil evita selección de texto y conserva swipe horizontal cort
   assert.match(runtime, /event\.preventDefault\(\)/)
 })
 
+test('reorder muestra un clon fijo bajo el dedo y oculta el chip que salta en el layout', () => {
+  assert.match(runtime, /cloneNode\(true\)/)
+  assert.match(runtime, /oanix-tag-drag-overlay/)
+  assert.match(runtime, /dragOverlay\.style\.left = `\$\{event\.clientX - dragOffsetX\}px`/)
+  assert.match(runtime, /dragOverlay\.style\.top = `\$\{event\.clientY - dragOffsetY\}px`/)
+  assert.match(css, /\.oanix-organic-tags\.is-reordering \.oanix-organic-tag-chip\.is-dragging[\s\S]*?opacity:\s*\.08 !important/)
+  assert.match(css, /\.oanix-tag-drag-overlay[\s\S]*?position:\s*fixed !important/)
+  assert.match(css, /\.oanix-tag-drag-overlay[\s\S]*?pointer-events:\s*none !important/)
+})
+
+test('reorder puede desplazar la tira al acercarse a los bordes sin tocar persistencia', () => {
+  assert.match(runtime, /REORDER_EDGE_PX = 44/)
+  assert.match(runtime, /REORDER_SCROLL_STEP_PX = 12/)
+  assert.match(runtime, /autoScrollDuringReorder/)
+  assert.match(runtime, /scroller\.scrollLeft -= REORDER_SCROLL_STEP_PX/)
+  assert.match(runtime, /scroller\.scrollLeft \+= REORDER_SCROLL_STEP_PX/)
+  assert.doesNotMatch(runtime, /persistTagOrder/)
+})
+
 test('un swipe no abre accidentalmente la etiqueta y el runtime se monta desbloqueado', () => {
   assert.match(runtime, /suppressClickForId/)
   assert.match(runtime, /event\.stopImmediatePropagation\(\)/)
