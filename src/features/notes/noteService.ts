@@ -205,16 +205,14 @@ export function deleteNote(noteId: string): Promise<NoteRecord> {
 
       await assertAttachmentsAllowNoteDeletion(noteId)
       await deleteNoteRecord(noteId)
-      try {
-        await deleteNoteVersionHistory(noteId)
-      } catch (error) {
+
+      void deleteNoteVersionHistory(noteId).catch((error) => {
         reportHistoryWarning(noteId, error)
-      }
-      try {
-        await deleteNoteAvatar(noteId)
-      } catch {
+      })
+      void deleteNoteAvatar(noteId).catch(() => {
         // Avatar cleanup is best-effort after the authoritative note record is gone.
-      }
+      })
+
       return existing
     })
 
