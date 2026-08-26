@@ -45,28 +45,30 @@ test('instrumentación temporal de drag fue retirada después del diagnóstico',
   assert.doesNotMatch(runtime, /onPointerMoveDiagnostic|onTouchMoveDiagnostic/)
 })
 
-test('la tarjeta visible es el fallback de Sortable y sigue directamente el dedo', () => {
+test('la tarjeta visible usa un overlay independiente y sigue directamente el dedo', () => {
   assert.match(runtime, /forceFallback: true/)
   assert.match(runtime, /fallbackOnBody: true/)
   assert.match(runtime, /fallbackTolerance: 4/)
   assert.match(runtime, /fallbackClass: 'oanix-mobile-note-drag-ghost'/)
   assert.match(runtime, /ghostClass: 'oanix-mobile-note-placeholder'/)
-  assert.doesNotMatch(runtime, /cloneNode\(true\)|dragOverlay|latestDragPoint|requestAnimationFrame\(positionDragOverlay\)/)
-  assert.doesNotMatch(runtime, /document\.addEventListener\('pointermove'|document\.addEventListener\('touchmove'/)
-  assert.match(css, /\.note-row\.oanix-mobile-note-drag-ghost[\s\S]*?z-index:\s*9900 !important/)
-  assert.match(css, /\.note-row\.oanix-mobile-note-drag-ghost[\s\S]*?opacity:\s*\.99 !important/)
-  assert.match(css, /\.note-row\.oanix-mobile-note-drag-ghost[\s\S]*?will-change:\s*transform/)
-  assert.doesNotMatch(css, /\.oanix-note-drag-overlay|oanix-note-floating-active/)
+  assert.match(runtime, /cloneNode\(true\)/)
+  assert.match(runtime, /dragOverlay/)
+  assert.match(runtime, /createDragOverlay\(event\.item/)
+  assert.match(runtime, /document\.addEventListener\('pointermove'/)
+  assert.match(runtime, /document\.addEventListener\('touchmove'/)
+  assert.match(css, /body > \.note-row\.oanix-mobile-note-drag-overlay[\s\S]*?position:\s*fixed !important/)
+  assert.match(css, /body > \.note-row\.oanix-mobile-note-drag-overlay[\s\S]*?z-index:\s*10050 !important/)
+  assert.match(css, /body > \.note-row\.oanix-mobile-note-drag-overlay[\s\S]*?pointer-events:\s*none !important/)
   assert.match(css, /\.note-row\.oanix-mobile-note-placeholder[\s\S]*?border:\s*2px dashed/)
   assert.match(css, /\.note-row\.oanix-mobile-note-placeholder > \*[\s\S]*?visibility:\s*hidden !important/)
   assert.match(css, /@keyframes oanix-note-drop-slot-pulse/)
 })
 
-test('el fallback que sigue el dedo gana al placeholder y mantiene visible todo el contenido', () => {
-  assert.match(css, /body > \.note-row\.oanix-mobile-note-drag-ghost\s*\{[\s\S]*background:\s*var\(--oanix-note-drag-background\) !important/)
-  assert.match(css, /body > \.note-row\.oanix-mobile-note-drag-ghost > \*\s*\{[\s\S]*visibility:\s*visible !important[\s\S]*opacity:\s*1 !important/)
-  assert.match(css, /body > \.note-row\.oanix-mobile-note-drag-ghost::after\s*\{[\s\S]*opacity:\s*1 !important/)
-  assert.match(css, /body > \.note-row\.oanix-mobile-note-drag-ghost \.note-row__avatar[\s\S]*visibility:\s*visible !important/)
+test('overlay independiente mantiene visible todo el contenido de la nota', () => {
+  assert.match(css, /body > \.note-row\.oanix-mobile-note-drag-overlay > \*[\s\S]*visibility:\s*visible !important[\s\S]*opacity:\s*1 !important/)
+  assert.match(css, /body > \.note-row\.oanix-mobile-note-drag-overlay::after\s*\{[\s\S]*opacity:\s*1 !important/)
+  assert.match(css, /body > \.note-row\.oanix-mobile-note-drag-overlay \.note-row__avatar[\s\S]*visibility:\s*visible !important/)
+  assert.match(runtime, /removeDragOverlay\(\)/)
 })
 
 test('identidad visual se congela por note id durante el drag y se restaura antes de persistir', () => {
