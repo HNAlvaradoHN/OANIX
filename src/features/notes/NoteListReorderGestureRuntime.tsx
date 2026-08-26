@@ -15,6 +15,12 @@ type DragPoint = {
   y: number
 }
 
+type DragIdentity = {
+  cardColor: string
+  tabColor: string
+  icon: string | null
+}
+
 function rowPinned(row: HTMLElement): boolean {
   const title = row.querySelector<HTMLElement>('.note-row__topline > strong')
   return Boolean(title?.textContent?.trim().startsWith('📌'))
@@ -65,6 +71,7 @@ export function NoteListReorderGestureRuntime() {
     let dragOverlayFrame: number | null = null
     let dragOffsetX = 0
     let dragOffsetY = 0
+    const dragIdentityById = new Map<string, DragIdentity>()
 
     const list = document.querySelector<HTMLElement>('.notes-list')
     if (!list?.classList.contains('notes-list')) return
@@ -73,25 +80,52 @@ export function NoteListReorderGestureRuntime() {
       list.querySelectorAll<HTMLElement>(':scope > .note-row[data-reorder-note-id]'),
     )
 
-    const freezeDragColors = () => {
+    const freezeDragIdentity = () => {
+      dragIdentityById.clear()
       noteRows().forEach((row) => {
+        const noteId = row.dataset.reorderNoteId
+        if (!noteId) return
         const style = window.getComputedStyle(row)
-        const color = row.style.getPropertyValue('--oanix-note-card-color').trim()
+        const cardColor = row.style.getPropertyValue('--oanix-note-card-color').trim()
           || style.getPropertyValue('--oanix-note-card-color').trim()
-        if (color) row.style.setProperty('--oanix-note-drag-stable-color', color)
+        const tabColor = row.style.getPropertyValue('--oanix-note-tab-color').trim()
+          || style.getPropertyValue('--oanix-note-tab-color').trim()
+        const avatar = row.querySelector<HTMLElement>('.note-row__avatar')
+        dragIdentityById.set(noteId, {
+          cardColor,
+          tabColor,
+          icon: avatar?.dataset.oanixNoteIcon ?? null,
+        })
+        if (cardColor) row.style.setProperty('--oanix-note-drag-stable-card-color', cardColor)
+        if (tabColor) row.style.setProperty('--oanix-note-drag-stable-tab-color', tabColor)
       })
     }
 
-    const clearFrozenDragColors = () => {
-      noteRows().forEach((row) => row.style.removeProperty('--oanix-note-drag-stable-color'))
+    const restoreDragIdentity = () => {
+      noteRows().forEach((row) => {
+        const noteId = row.dataset.reorderNoteId
+        const identity = noteId ? dragIdentityById.get(noteId) : null
+        if (!identity) return
+        if (identity.cardColor) row.style.setProperty('--oanix-note-card-color', identity.cardColor)
+        if (identity.tabColor) row.style.setProperty('--oanix-note-tab-color', identity.tabColor)
+        const avatar = row.querySelector<HTMLElement>('.note-row__avatar')
+        if (avatar && identity.icon) avatar.dataset.oanixNoteIcon = identity.icon
+      })
+    }
+
+    const clearFrozenDragIdentity = () => {
+      noteRows().forEach((row) => {
+        row.style.removeProperty('--oanix-note-drag-stable-card-color')
+        row.style.removeProperty('--oanix-note-drag-stable-tab-color')
+      })
+      dragIdentityById.clear()
     }
 
     const positionDragOverlay = () => {
       dragOverlayFrame = null
       if (!dragOverlay || !latestDragPoint) return
-      const left = latestDragPoint.x - dragOffsetX
-      const top = latestDragPoint.y - dragOffsetY
-      dragOverlay.style.transform = `translate3d(${left}px, ${top}px, 0)`
+      dragOverlay.style.left = `${latestDragPoint.x - dragOffsetX}px`
+      dragOverlay.style.top = `${latestDragPoint.y - dragOffsetY}px`
     }
 
     const scheduleOverlayPosition = () => {
@@ -120,6 +154,7 @@ export function NoteListReorderGestureRuntime() {
         x: rect.left + rect.width / 2,
         y: rect.top + rect.height / 2,
       }
+      const style = window.getComputedStyle(row)
 
       dragOffsetX = Math.min(Math.max(point.x - rect.left, 0), rect.width)
       dragOffsetY = Math.min(Math.max(point.y - rect.top, 0), rect.height)
@@ -138,18 +173,29 @@ export function NoteListReorderGestureRuntime() {
       overlay.querySelectorAll<HTMLElement>('[id]').forEach((element) => element.removeAttribute('id'))
       overlay.style.width = `${rect.width}px`
       overlay.style.height = `${rect.height}px`
+      overlay.style.left = `${rect.left}px`
+      overlay.style.top = `${rect.top}px`
+      overlay.style.setProperty('background', style.background, 'important')
+      overlay.style.setProperty('border-color', style.borderColor, 'important')
+      overlay.style.setProperty('border-radius', style.borderRadius, 'important')
+      const cardColor = style.getPropertyValue('--oanix-note-card-color').trim()
+      const tabColor = style.getPropertyValue('--oanix-note-tab-color').trim()
+      if (cardColor) overlay.style.setProperty('--oanix-note-card-color', cardColor)
+      if (tabColor) overlay.style.setProperty('--oanix-note-tab-color', tabColor)
+
       dragOverlay = overlay
       document.body.appendChild(overlay)
       positionDragOverlay()
     }
 
     const clearDragVisuals = () => {
+      restoreDragIdentity()
       document.body.classList.remove('oanix-mobile-note-dragging')
       document.documentElement.classList.remove('oanix-mobile-note-dragging')
       list.querySelectorAll<HTMLElement>('[data-oanix-note-dragging="true"]')
         .forEach((row) => row.removeAttribute('data-oanix-note-dragging'))
       removeDragOverlay()
-      clearFrozenDragColors()
+      clearFrozenDragIdentity()
       clearDraggedRowSurface()
       window.getSelection()?.removeAllRanges()
     }
@@ -180,7 +226,7 @@ export function NoteListReorderGestureRuntime() {
       bubbleScroll: false,
       dataIdAttr: 'data-reorder-note-id',
       onChoose: (event) => {
-        freezeDragColors()
+        freezeDragIdentity()
         event.item.setAttribute('data-oanix-note-dragging', 'true')
         exposeDraggedRowSurface(event.item)
         window.getSelection()?.removeAllRanges()
@@ -198,8 +244,8 @@ export function NoteListReorderGestureRuntime() {
       },
       onEnd: (event) => {
         suppressClickUntil = performance.now() + 520
-        clearDragVisuals()
         const nextOrder = noteOrder(event.to)
+        clearDragVisuals()
 
         if (event.oldIndex === event.newIndex || nextOrder.length === 0) return
 
