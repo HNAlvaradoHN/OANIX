@@ -37,7 +37,7 @@ test('launcher click does not show creating feedback until creation really becom
   assert.match(noteFeedback, /const busy = buttons\.some\(\(button\) => button\.disabled && \/creando\/i\.test/)
   assert.match(noteFeedback, /if \(busy && !document\.getElementById\(FEEDBACK_ID\)\)/)
   assert.match(noteFeedback, /event\.target instanceof Element[\s\S]*EMPTY_CREATE_BUTTON_SELECTOR/)
-  assert.doesNotMatch(noteFeedback, /event\.target instanceof Element[\s\S]{0,160}CREATE_BUTTON_SELECTOR\)/)
+  assert.doesNotMatch(noteFeedback, /closest<HTMLButtonElement>\(CREATE_BUTTON_SELECTOR\)/)
 })
 
 test('bulk selection finish control is a green check without overflowing text', () => {
