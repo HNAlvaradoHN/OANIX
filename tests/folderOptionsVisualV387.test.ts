@@ -5,6 +5,7 @@ import test from 'node:test'
 const main = readFileSync('src/main.tsx', 'utf8')
 const gate = readFileSync('src/app/WorkspaceRuntimeGate.tsx', 'utf8')
 const bridge = readFileSync('src/features/folders/FolderCustomizerBridgeRuntime.tsx', 'utf8')
+const creation = readFileSync('src/features/folders/FolderCreationRuntime.tsx', 'utf8')
 const personalization = readFileSync('src/features/notes/WorkspacePersonalizationRuntime.tsx', 'utf8')
 const appearance = readFileSync('src/features/folders/FolderAppearanceRuntime.tsx', 'utf8')
 
@@ -31,11 +32,20 @@ test('the remaining folder customizer contains the professional action surface i
     assert.match(appearance, new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
   }
 
-  // Runtime constructs the final visual order with prepend: Open is inserted last
-  // so it appears first, followed by Appearance and the existing image/name actions.
   assert.match(appearance, /actions\.prepend\(appearanceButton\)[\s\S]*actions\.prepend\(openButton\)/)
   assert.match(appearance, /const imageButton = existingActions\[0\]/)
   assert.match(appearance, /const cancelButton = existingActions\[existingActions\.length - 1\]/)
+})
+
+test('administrar una carpeta queda aislado a esa carpeta y no abre el creador nuevo', () => {
+  assert.match(bridge, /data-oanix-manage-folder-id/)
+  assert.match(bridge, /\.folder-create-row/)
+  assert.match(bridge, /row\.hidden = row !== target/)
+  assert.match(bridge, /Administrar nombre o eliminar esta carpeta/)
+  assert.match(creation, /folderManagementActive\(\)/)
+  assert.match(creation, /if \(folderManagementActive\(\)\) return/)
+  assert.match(creation, /createRequestedRef/)
+  assert.match(creation, /\.notes-tab--add, \.oanix-folder-rail__item--add, \.oanix-organic-folder-control--add/)
 })
 
 test('folder bridge mounts before workspace personalization after unlock', () => {

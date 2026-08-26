@@ -26,3 +26,11 @@ test('edge auto-scroll continues reordering while the dragged card is held', () 
   assert.match(runtime, /scrollLeft \+= speed/)
   assert.match(runtime, /reorderDomAtPoint\(gesture\)/)
 })
+
+test('desktop mouse wheel scrolls the horizontal folder dock', () => {
+  assert.match(runtime, /const onWheel = \(event: WheelEvent\)/)
+  assert.match(runtime, /target\.closest<HTMLElement>\('\.oanix-folder-rail__scroll'\)/)
+  assert.match(runtime, /rail\.scrollLeft \+= delta/)
+  assert.match(runtime, /document\.addEventListener\('wheel', onWheel, \{ capture: true, passive: false \}\)/)
+  assert.match(runtime, /if \(rail\.scrollLeft !== before\) event\.preventDefault\(\)/)
+})
