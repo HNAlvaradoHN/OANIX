@@ -1,0 +1,98 @@
+name: Qwen Independent PR Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: qwen-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    name: Independent Qwen review
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
+
+    steps:
+      - name: Checkout PR head with history
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Fetch current main
+        run: git fetch origin main --force
+
+      - name: Review independently with Qwen Code
+        id: qwen
+        if: env.QWEN_API_KEY != ''
+        uses: QwenLM/qwen-code-action@v1
+        with:
+          openai_api_key: ${{ env.QWEN_API_KEY }}
+          prompt: |-
+            You are the independent technical reviewer for OANIX.
+
+            Read QWEN.md completely before doing anything else.
+
+            This is PR #${{ github.event.pull_request.number }}.
+            PR head SHA: ${{ github.event.pull_request.head.sha }}
+            GitHub reported base SHA: ${{ github.event.pull_request.base.sha }}
+
+            Do not modify files, commit, push, merge, close the PR, or call GitHub write operations.
+            Your only task is analysis and review.
+
+            Freshness protocol:
+            1. Resolve the current origin/main SHA from the fetched repository and print it as MAIN ANALIZADO.
+            2. Print the checked-out HEAD as PR HEAD.
+            3. Read the full diff between origin/main and HEAD.
+            4. Read full related source files and tests, including files outside the diff when they can affect the same behavior.
+            5. Do not trust previous Qwen sessions, old snippets, PR descriptions, or another AI's conclusions over current code.
+
+            Independence protocol:
+            - Reason from the repository yourself.
+            - Do not mirror ChatGPT's proposed solution merely because it exists.
+            - Do not reject it merely to be different.
+            - Find root causes, competing runtimes, state/DOM races, hidden CSS dependencies, regressions and simpler alternatives.
+            - Preserve behavior that is already working.
+            - Call out stale assumptions in QWEN.md if current code disproves them.
+
+            Review the PR for correctness, architecture, regression risk, mobile/PWA/desktop/Android effects, persistence/sync implications, and test quality.
+
+            Write the final review in Spanish with this structure:
+            MAIN ANALIZADO: <sha>
+            PR HEAD: <sha>
+            ## Resumen
+            ## Hallazgos críticos
+            ## Riesgos y regresiones
+            ## Alternativas o mejoras
+            ## Veredicto
+
+            Use one of these verdicts: APROBAR, APROBAR CON OBSERVACIONES, SOLICITAR CAMBIOS.
+            Cite repository paths/functions/selectors for every important finding.
+
+      - name: Publish Qwen review as PR comment
+        if: steps.qwen.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          QWEN_REVIEW: ${{ steps.qwen.outputs.summary }}
+        run: |
+          printf '%s\n' "$QWEN_REVIEW" > /tmp/qwen-review.md
+          {
+            printf '<!-- oanix-qwen-independent-review -->\n'
+            printf '### Qwen — revisión técnica independiente\n\n'
+            cat /tmp/qwen-review.md
+          } > /tmp/qwen-comment.md
+          gh pr comment "${{ github.event.pull_request.number }}" --body-file /tmp/qwen-comment.md
+
+      - name: Integration not activated yet
+        if: env.QWEN_API_KEY == ''
+        run: |
+          echo "Qwen review is configured but QWEN_API_KEY is not present yet."
