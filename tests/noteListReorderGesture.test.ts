@@ -83,11 +83,17 @@ test('controles interactivos y selección múltiple no compiten con reorder', ()
   assert.match(privacyRuntime, /data-oanix-bulk-mode/)
 })
 
-test('orden se persiste una sola vez al finalizar', () => {
+test('orden persiste y sincroniza React sin remonte completo en el camino exitoso', () => {
   assert.match(runtime, /onEnd:/)
   assert.match(runtime, /const nextOrder = noteOrder\(event\.to\)/)
-  assert.match(runtime, /persistNoteOrder\(nextOrder\)/)
-  assert.match(runtime, /oanix:workspace-refresh/)
+  assert.match(runtime, /const updatedNotes = await persistNoteOrder\(nextOrder\)/)
+  assert.match(runtime, /oanix:note-order-persisted/)
+  assert.match(runtime, /manualOrder: note\.manualOrder/)
+  assert.match(workspace, /oanix:note-order-persisted/)
+  assert.match(workspace, /manualOrderById/)
+  assert.match(workspace, /\.sort\(compareNotesForList\)/)
+  assert.doesNotMatch(runtime, /persistNoteOrder\(nextOrder\)[\s\S]{0,500}oanix:workspace-refresh/)
+  assert.match(runtime, /catch \{[\s\S]{0,160}oanix:workspace-refresh/)
   assert.doesNotMatch(runtime, /persistNoteOrder[\s\S]{0,120}onMove/)
 })
 
