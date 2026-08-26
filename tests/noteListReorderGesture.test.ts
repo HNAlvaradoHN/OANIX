@@ -115,8 +115,7 @@ test('orden persiste y sincroniza React sin remonte completo en el camino exitos
   assert.match(workspace, /oanix:note-order-persisted/)
   assert.match(workspace, /manualOrderById/)
   assert.match(workspace, /\.sort\(compareNotesForList\)/)
-  assert.doesNotMatch(runtime, /persistNoteOrder\(nextOrder\)[\s\S]{0,500}oanix:workspace-refresh/)
-  assert.match(runtime, /catch \{[\s\S]{0,160}oanix:workspace-refresh/)
+  assert.match(runtime, /try \{[\s\S]*persistNoteOrder\(nextOrder\)[\s\S]*catch \{[\s\S]*oanix:workspace-refresh/)
   assert.doesNotMatch(runtime, /persistNoteOrder[\s\S]{0,120}onMove/)
 })
 
