@@ -67,9 +67,6 @@ body.oanix-mobile-note-dragging .note-row[data-reorder-note-id] {
   opacity: 0 !important;
 }
 
-/* Sortable's own fallback clone is the visible lifted card. Letting Sortable
-   own its transform keeps the card physically attached to the active pointer
-   instead of mirroring the gesture through a second event/animation loop. */
 .note-row.oanix-mobile-note-drag-ghost {
   z-index: 9900 !important;
   pointer-events: none !important;
@@ -146,9 +143,6 @@ html.oanix-mobile-note-dragging .note-row[data-reorder-note-id] .note-row__menu-
   }
 }
 
-/* The bottom folder dock is a separate fixed interaction surface. While a note
-   is being reordered it must stay visually anchored and must not react to the
-   pointer crossing it near the auto-scroll edge. */
 html.oanix-mobile-note-dragging .oanix-folder-grid {
   position: fixed !important;
   inset: auto 0 0 !important;
@@ -171,10 +165,6 @@ html.oanix-mobile-note-dragging .oanix-folder-rail__scroll {
   }
 }
 
-/* Sortable may create the fallback clone from a row that is already carrying
-   the placeholder class. In that case the placeholder rules above hide the
-   clone's direct children and tag pseudo-element too. The fallback clone must
-   always win: it is the actual card that follows the finger. */
 body > .note-row.oanix-mobile-note-drag-ghost {
   background: var(--oanix-note-drag-background) !important;
   transform-origin: center center !important;
@@ -199,4 +189,45 @@ body > .note-row.oanix-mobile-note-drag-ghost time,
 body > .note-row.oanix-mobile-note-drag-ghost strong {
   visibility: visible !important;
   opacity: 1 !important;
+}
+
+/* Independent visual card used during touch reorder. It does not depend on
+   Sortable's fallback clone, which some mobile PWA/WebView combinations fail
+   to paint even though the placeholder continues moving correctly. */
+body > .note-row.oanix-mobile-note-drag-overlay {
+  position: fixed !important;
+  z-index: 10050 !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+  pointer-events: none !important;
+  visibility: visible !important;
+  opacity: .99 !important;
+  transform: scale(1.015) !important;
+  transform-origin: center center !important;
+  background: var(--oanix-note-drag-background) !important;
+  border-color: rgba(147,197,253,.98) !important;
+  border-radius: var(--oanix-note-drag-border-radius, .9rem) !important;
+  box-shadow: 0 30px 66px rgba(2,6,23,.62), 0 0 0 2px rgba(96,165,250,.46), inset 0 1px 1px rgba(255,255,255,.22) !important;
+  filter: brightness(1.09) saturate(1.08);
+  will-change: left, top;
+}
+
+body > .note-row.oanix-mobile-note-drag-overlay > *,
+body > .note-row.oanix-mobile-note-drag-overlay .note-row__open,
+body > .note-row.oanix-mobile-note-drag-overlay .note-row__avatar,
+body > .note-row.oanix-mobile-note-drag-overlay .note-row__body,
+body > .note-row.oanix-mobile-note-drag-overlay .note-row__topline,
+body > .note-row.oanix-mobile-note-drag-overlay .note-row__preview,
+body > .note-row.oanix-mobile-note-drag-overlay time,
+body > .note-row.oanix-mobile-note-drag-overlay strong {
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+body > .note-row.oanix-mobile-note-drag-overlay::after {
+  opacity: 1 !important;
+}
+
+body > .note-row.oanix-mobile-note-drag-overlay .note-row__menu-wrap {
+  display: none !important;
 }
