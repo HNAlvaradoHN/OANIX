@@ -9,6 +9,10 @@ import {
 
 const RELOAD_DELAY_MS = 40
 
+interface NoteVisualChangedDetail {
+  note?: NoteRecord
+}
+
 function fallbackColorForNote(noteId: string): string {
   let hash = 2166136261
   for (let index = 0; index < noteId.length; index += 1) {
@@ -93,10 +97,21 @@ export function NoteVisualIdentityRuntime() {
       if (!detail?.recordType || detail.recordType === 'note') scheduleReload()
     }
 
+    const handleVisualChanged = (event: Event) => {
+      const detail = event instanceof CustomEvent
+        ? event.detail as NoteVisualChangedDetail | null
+        : null
+      const note = detail?.note
+      if (!note?.id) return
+      notesById.set(note.id, note)
+      scheduleApply()
+    }
+
     const handleOrderPersisted = () => scheduleApply()
     const handleConflictResolved = () => scheduleReload()
 
     window.addEventListener('oanix:local-data-changed', handleLocalChange)
+    window.addEventListener('oanix:note-visual-changed', handleVisualChanged)
     window.addEventListener('oanix:note-order-persisted', handleOrderPersisted)
     window.addEventListener('oanix:conflict-resolved', handleConflictResolved)
 
@@ -106,6 +121,7 @@ export function NoteVisualIdentityRuntime() {
       disposed = true
       observer.disconnect()
       window.removeEventListener('oanix:local-data-changed', handleLocalChange)
+      window.removeEventListener('oanix:note-visual-changed', handleVisualChanged)
       window.removeEventListener('oanix:note-order-persisted', handleOrderPersisted)
       window.removeEventListener('oanix:conflict-resolved', handleConflictResolved)
       if (applyFrame !== null) window.cancelAnimationFrame(applyFrame)
