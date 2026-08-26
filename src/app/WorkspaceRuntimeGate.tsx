@@ -5,6 +5,7 @@ import { FolderCreationRuntime } from '../features/folders/FolderCreationRuntime
 import { FolderCustomizerBridgeRuntime } from '../features/folders/FolderCustomizerBridgeRuntime'
 import { FolderMobileDragRuntime } from '../features/folders/FolderMobileDragRuntime'
 import { FolderOperationFeedbackRuntime } from '../features/folders/FolderOperationFeedbackRuntime'
+import { FolderScopedManagerRuntime } from '../features/folders/FolderScopedManagerRuntime'
 import '../features/notes/folderDockContract.css'
 import { NoteCreationFeedbackRuntime } from '../features/notes/NoteCreationFeedbackRuntime'
 import { NoteVisualIdentityRuntime } from '../features/notes/NoteVisualIdentityRuntime'
@@ -20,6 +21,7 @@ export function WorkspaceRuntimeGate() {
     <>
       <EditorOperationRuntime />
       <NoteCreationFeedbackRuntime />
+      <FolderScopedManagerRuntime />
       <FolderCustomizerBridgeRuntime />
       <OrganicWorkspaceRuntime />
       <WorkspacePersonalizationRuntime />
