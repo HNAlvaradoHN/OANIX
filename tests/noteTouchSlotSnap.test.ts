@@ -15,6 +15,14 @@ test('touch coarse usa una ruta propia y no compite con Sortable', () => {
   assert.match(runtime, /document\.addEventListener\('touchend', finishNativeTouchGesture/)
 })
 
+test('el drag tactil se arma y reacomoda con tiempos cortos sin eliminar la proteccion de scroll', () => {
+  assert.match(runtime, /const LONG_PRESS_MS = 220/)
+  assert.match(runtime, /const TOUCH_MOVE_CANCEL_PX = 12/)
+  assert.match(runtime, /const PRESS_ARM_GRACE_MS = 35/)
+  assert.match(runtime, /const REFLOW_MS = 120/)
+  assert.match(runtime, /animation: 140/)
+})
+
 test('la fila real se convierte en slot y se mueve por el punto medio de las notas', () => {
   assert.match(runtime, /classList\.add\('oanix-mobile-note-chosen', 'oanix-mobile-note-placeholder'\)/)
   assert.match(runtime, /function snapshotRects/)
