@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import './noteCreationFeedback.css'
 
 const CREATE_BUTTON_SELECTOR = '.notes-create-fab, .notes-empty .empty-action'
+const EMPTY_CREATE_BUTTON_SELECTOR = '.notes-empty .empty-action'
 const FEEDBACK_ID = 'oanix-note-create-feedback'
 
 function isCreateButton(button: HTMLButtonElement): boolean {
@@ -57,21 +58,29 @@ export function NoteCreationFeedbackRuntime() {
 
     const scheduleSafetyTimeout = () => {
       window.clearTimeout(timeout)
-      timeout = window.setTimeout(stop, 15000)
+      timeout = window.setTimeout(stop, 10000)
     }
 
     const sync = () => {
+      const buttons = Array.from(document.querySelectorAll<HTMLButtonElement>(CREATE_BUTTON_SELECTOR))
+        .filter(isCreateButton)
+      const busy = buttons.some((button) => button.disabled && /creando/i.test(button.textContent ?? ''))
+
+      if (busy && !document.getElementById(FEEDBACK_ID)) {
+        startedAt = Date.now()
+        sawBusyState = true
+        createFeedback()
+        scheduleSafetyTimeout()
+      } else if (busy) {
+        sawBusyState = true
+      }
+
       if (!document.getElementById(FEEDBACK_ID)) return
 
       if (document.documentElement.classList.contains('oanix-note-detail-open')) {
         stop()
         return
       }
-
-      const buttons = Array.from(document.querySelectorAll<HTMLButtonElement>(CREATE_BUTTON_SELECTOR))
-        .filter(isCreateButton)
-      const busy = buttons.some((button) => button.disabled && /creando/i.test(button.textContent ?? ''))
-      if (busy) sawBusyState = true
 
       const hasError = document.querySelector('.notes-error, .note-save-error') !== null
       if (hasError && Date.now() - startedAt > 250) {
@@ -84,7 +93,7 @@ export function NoteCreationFeedbackRuntime() {
 
     const onClick = (event: MouseEvent) => {
       const target = event.target instanceof Element
-        ? event.target.closest<HTMLButtonElement>(CREATE_BUTTON_SELECTOR)
+        ? event.target.closest<HTMLButtonElement>(EMPTY_CREATE_BUTTON_SELECTOR)
         : null
       if (!target || target.disabled || !isCreateButton(target)) return
 
@@ -111,6 +120,8 @@ export function NoteCreationFeedbackRuntime() {
         childList: true,
         subtree: true,
         characterData: true,
+        attributes: true,
+        attributeFilter: ['disabled', 'aria-label'],
       })
     }
 
