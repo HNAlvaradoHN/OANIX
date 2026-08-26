@@ -24,32 +24,27 @@ test('reorder móvil usa SortableJS y conserva scroll nativo fuera del handle', 
   assert.doesNotMatch(runtime, /setPointerCapture|scrollTop -=/)
 })
 
-test('avatar es el handle táctil y el contrato funcional gobierna su interacción', () => {
+test('avatar es el handle funcional en táctil y escritorio', () => {
   assert.match(runtime, /handle: '\.note-row__avatar'/)
   assert.match(runtime, /function isDragHandle/)
   assert.match(runtime, /target\.closest\('\.note-row__avatar'\)/)
   assert.match(runtime, /!isDragHandle\(target\) && isInteractiveTarget\(target\)/)
   assert.match(workspace, /NoteAvatar[\s\S]*?className="note-row__avatar"/)
   assert.match(avatar, /className=\{className\}/)
-  assert.match(css, /\.note-row\[data-reorder-note-id\] \.note-row__avatar,[\s\S]*?html\.oanix-v383-visual \.note-row\[data-reorder-note-id\] \.note-row__avatar\s*\{[\s\S]*?pointer-events:\s*auto !important;[\s\S]*?touch-action:\s*none !important/)
-  assert.doesNotMatch(css, /data-oanix-note-icon/)
+  assert.match(css, /html\.oanix-v383-visual \.note-row\[data-reorder-note-id\] \.note-row__avatar\s*\{[\s\S]*?pointer-events:\s*auto !important;[\s\S]*?cursor:\s*grab/)
+  assert.match(css, /@media \(pointer: coarse\)[\s\S]*?touch-action:\s*none !important/)
   assert.doesNotMatch(runtime, /touchArmTimer|touchArmed|function onTouchMove/)
 })
 
-test('diagnóstico temporal de drag observa eventos sin convertirse en otro motor', () => {
-  assert.match(runtime, /document\.addEventListener\('pointermove', onPointerMoveDiagnostic, true\)/)
-  assert.match(runtime, /document\.addEventListener\('pointercancel', onPointerCancelDiagnostic, true\)/)
-  assert.match(runtime, /document\.addEventListener\('touchmove', onTouchMoveDiagnostic, true\)/)
-  assert.match(runtime, /document\.addEventListener\('touchcancel', onTouchCancelDiagnostic, true\)/)
-  assert.match(runtime, /document\.removeEventListener\('pointermove', onPointerMoveDiagnostic, true\)/)
-  assert.match(runtime, /document\.removeEventListener\('pointercancel', onPointerCancelDiagnostic, true\)/)
-  assert.match(runtime, /document\.removeEventListener\('touchmove', onTouchMoveDiagnostic, true\)/)
-  assert.match(runtime, /document\.removeEventListener\('touchcancel', onTouchCancelDiagnostic, true\)/)
-  assert.match(runtime, /if \(!dragDiagnosticActive\) return/)
-  assert.doesNotMatch(runtime, /setPointerCapture|releasePointerCapture|elementFromPoint|scrollTop -=/)
+test('instrumentación temporal de drag fue retirada después del diagnóstico', () => {
+  assert.doesNotMatch(runtime, /__OANIX_NOTE_DRAG_TRACE__/)
+  assert.doesNotMatch(runtime, /Drag logs/)
+  assert.doesNotMatch(runtime, /onPointerMoveDiagnostic|onTouchMoveDiagnostic/)
+  assert.doesNotMatch(runtime, /document\.addEventListener\('pointermove'/)
+  assert.doesNotMatch(runtime, /document\.addEventListener\('touchmove'/)
 })
 
-test('fallback táctil crea ghost y placeholder sin CSS que pise transform', () => {
+test('fallback crea ghost y placeholder sin CSS que pise transform', () => {
   assert.match(runtime, /forceFallback: true/)
   assert.match(runtime, /fallbackOnBody: true/)
   assert.match(runtime, /fallbackTolerance: 4/)
@@ -95,6 +90,15 @@ test('orden persiste y sincroniza React sin remonte completo en el camino exitos
   assert.doesNotMatch(runtime, /persistNoteOrder\(nextOrder\)[\s\S]{0,500}oanix:workspace-refresh/)
   assert.match(runtime, /catch \{[\s\S]{0,160}oanix:workspace-refresh/)
   assert.doesNotMatch(runtime, /persistNoteOrder[\s\S]{0,120}onMove/)
+})
+
+test('dock de carpetas queda inmóvil e inerte mientras se arrastra una nota', () => {
+  assert.match(css, /html\.oanix-mobile-note-dragging \.oanix-folder-grid/)
+  assert.match(css, /position:\s*fixed !important/)
+  assert.match(css, /inset:\s*auto 0 0 !important/)
+  assert.match(css, /pointer-events:\s*none !important/)
+  assert.match(css, /html\.oanix-mobile-note-dragging \.oanix-folder-rail/)
+  assert.match(css, /transition:\s*none !important/)
 })
 
 test('selección y menú contextual nativos siguen bloqueados', () => {
