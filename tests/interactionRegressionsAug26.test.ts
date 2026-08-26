@@ -48,13 +48,15 @@ test('bulk selection finish control is a green check without overflowing text', 
   assert.doesNotMatch(bulkOverride, /Terminar/)
 })
 
-test('note drag overlay keeps the note card selectors and never copies a transparent computed background', () => {
-  assert.match(noteReorder, /const overlay = row\.cloneNode\(true\) as HTMLElement/)
-  assert.doesNotMatch(noteReorder, /overlay\.removeAttribute\('data-reorder-note-id'\)/)
-  assert.doesNotMatch(noteReorder, /overlay\.style\.setProperty\('background', style\.background/)
-  assert.match(noteReorder, /overlay\.style\.left = `\$\{rect\.left\}px`/)
-  assert.match(noteReorder, /overlay\.style\.top = `\$\{rect\.top\}px`/)
-  assert.match(noteReorderCss, /\.oanix-note-drag-overlay[\s\S]*position:\s*fixed !important/)
+test('note drag uses Sortable fallback directly instead of a second transparent overlay', () => {
+  assert.match(noteReorder, /forceFallback: true/)
+  assert.match(noteReorder, /fallbackOnBody: true/)
+  assert.match(noteReorder, /fallbackClass: 'oanix-mobile-note-drag-ghost'/)
+  assert.doesNotMatch(noteReorder, /cloneNode\(true\)/)
+  assert.doesNotMatch(noteReorder, /const overlay =/)
+  assert.match(noteReorderCss, /\.note-row\.oanix-mobile-note-drag-ghost[\s\S]*opacity:\s*\.99 !important/)
+  assert.match(noteReorderCss, /\.note-row\.oanix-mobile-note-drag-ghost[\s\S]*will-change:\s*transform/)
+  assert.doesNotMatch(noteReorderCss, /\.oanix-note-drag-overlay/)
 })
 
 test('note color becomes authoritative only after identity is resolved by note id', () => {
