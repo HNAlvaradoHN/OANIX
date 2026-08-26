@@ -10,8 +10,6 @@ import {
 import {
   loadFolderColors,
   loadFolderIcons,
-  removeFolderColor,
-  removeFolderIcon,
   saveFolderColor,
   saveFolderIcon,
 } from './folderAppearanceService'
@@ -46,8 +44,8 @@ function applyIcon(folderId: string, icon: string) {
   })
 }
 
-function defaultIconForIndex(index: number): FolderIcon | string {
-  return FOLDER_DEFAULT_ICONS[index % FOLDER_DEFAULT_ICONS.length] ?? DEFAULT_FOLDER_ICON
+function defaultIconForIndex(index: number): FolderIcon {
+  return (FOLDER_DEFAULT_ICONS[index % FOLDER_DEFAULT_ICONS.length] ?? DEFAULT_FOLDER_ICON) as FolderIcon
 }
 
 function directActionButtons(actions: HTMLElement): HTMLButtonElement[] {
@@ -99,6 +97,13 @@ export function FolderAppearanceRuntime() {
       const actions = modal.querySelector<HTMLElement>('.oanix-folder-customizer__actions')
       if (!actions) return
 
+      const railItems = Array.from(document.querySelectorAll<HTMLElement>(
+        '.oanix-folder-rail__item[data-oanix-folder-id]',
+      ))
+      const railIndex = Math.max(0, railItems.findIndex((item) => item.dataset.oanixFolderId === lastFolderId))
+      let draftColor = colors.get(lastFolderId) ?? DEFAULT_FOLDER_COLOR
+      let draftIcon = icons.get(lastFolderId) ?? defaultIconForIndex(railIndex)
+
       const appearance = document.createElement('div')
       appearance.className = 'oanix-folder-appearance-picker'
       appearance.hidden = true
@@ -108,15 +113,15 @@ export function FolderAppearanceRuntime() {
 
       const colorHeading = document.createElement('div')
       colorHeading.className = 'oanix-folder-appearance-picker__heading'
-      colorHeading.innerHTML = '<strong>Color de carpeta</strong><small>Elige un tono o usa un color personalizado.</small>'
+      colorHeading.innerHTML = '<strong>Color de carpeta</strong><small>Previsualiza el tono y guarda una sola vez al terminar.</small>'
 
       const colorRow = document.createElement('div')
       colorRow.className = 'oanix-folder-appearance-picker__row'
       const colorButtons: Array<{ button: HTMLButtonElement; color: string }> = []
 
-      const syncColorSelection = (selectedColor: string | undefined) => {
+      const syncColorSelection = (selectedColor: string) => {
         colorButtons.forEach(({ button, color }) => {
-          if (selectedColor?.toLowerCase() === color.toLowerCase()) button.dataset.selected = 'true'
+          if (selectedColor.toLowerCase() === color.toLowerCase()) button.dataset.selected = 'true'
           else delete button.dataset.selected
         })
       }
@@ -130,12 +135,10 @@ export function FolderAppearanceRuntime() {
         button.setAttribute('aria-label', `Usar color ${color}`)
         button.title = color
         button.addEventListener('click', () => {
-          void saveFolderColor(lastFolderId, color).then(() => {
-            colors.set(lastFolderId, color)
-            applyColor(lastFolderId, color)
-            customColor.value = color
-            syncColorSelection(color)
-          })
+          draftColor = color
+          applyColor(lastFolderId, draftColor)
+          customColor.value = draftColor
+          syncColorSelection(draftColor)
         })
         colorButtons.push({ button, color })
         colorRow.appendChild(button)
@@ -144,89 +147,79 @@ export function FolderAppearanceRuntime() {
       const customColor = document.createElement('input')
       customColor.type = 'color'
       customColor.className = 'oanix-folder-appearance-picker__custom'
-      customColor.value = colors.get(lastFolderId) ?? DEFAULT_FOLDER_COLOR
+      customColor.value = draftColor
       customColor.setAttribute('aria-label', 'Elegir color personalizado')
       customColor.addEventListener('input', () => {
-        applyColor(lastFolderId, customColor.value)
-        syncColorSelection(customColor.value)
-      })
-      customColor.addEventListener('change', () => {
-        const value = customColor.value.toLowerCase()
-        void saveFolderColor(lastFolderId, value).then(() => {
-          colors.set(lastFolderId, value)
-          applyColor(lastFolderId, value)
-          syncColorSelection(value)
-        })
+        draftColor = customColor.value.toLowerCase()
+        applyColor(lastFolderId, draftColor)
+        syncColorSelection(draftColor)
       })
       colorRow.appendChild(customColor)
-      syncColorSelection(colors.get(lastFolderId) ?? DEFAULT_FOLDER_COLOR)
-
-      const resetColor = document.createElement('button')
-      resetColor.type = 'button'
-      resetColor.className = 'oanix-folder-appearance-picker__reset'
-      resetColor.textContent = 'Restablecer color'
-      resetColor.addEventListener('click', () => {
-        void removeFolderColor(lastFolderId).then(() => {
-          colors.delete(lastFolderId)
-          applyColor(lastFolderId, DEFAULT_FOLDER_COLOR)
-          customColor.value = DEFAULT_FOLDER_COLOR
-          syncColorSelection(DEFAULT_FOLDER_COLOR)
-        })
-      })
-
-      colorSection.append(colorHeading, colorRow, resetColor)
+      syncColorSelection(draftColor)
+      colorSection.append(colorHeading, colorRow)
 
       const iconSection = document.createElement('section')
       iconSection.className = 'oanix-folder-appearance-section oanix-folder-appearance-section--icons'
 
       const iconHeading = document.createElement('div')
       iconHeading.className = 'oanix-folder-appearance-picker__heading'
-      iconHeading.innerHTML = '<strong>Icono de carpeta</strong><small>Iconos compatibles con web y Android, sin espacios vacíos.</small>'
+      iconHeading.innerHTML = '<strong>Icono de carpeta</strong><small>Elige el icono y confirma junto con el color.</small>'
 
       const iconGrid = document.createElement('div')
       iconGrid.className = 'oanix-folder-appearance-picker__icons'
+      const syncIconSelection = () => {
+        iconGrid.querySelectorAll<HTMLButtonElement>('.oanix-folder-appearance-picker__icon').forEach((button) => {
+          if (button.dataset.oanixFolderIcon === draftIcon) button.dataset.selected = 'true'
+          else delete button.dataset.selected
+        })
+      }
 
       FOLDER_ICON_OPTIONS.forEach((icon) => {
         const button = document.createElement('button')
         button.type = 'button'
         button.className = 'oanix-folder-appearance-picker__icon'
         button.textContent = icon
+        button.dataset.oanixFolderIcon = icon
         button.setAttribute('aria-label', `Usar icono ${icon}`)
         button.title = `Icono ${icon}`
-        if (icons.get(lastFolderId) === icon) button.dataset.selected = 'true'
         button.addEventListener('click', () => {
-          void saveFolderIcon(lastFolderId, icon).then(() => {
-            icons.set(lastFolderId, icon)
-            applyIcon(lastFolderId, icon)
-            iconGrid.querySelectorAll<HTMLElement>('[data-selected]').forEach((item) => {
-              delete item.dataset.selected
-            })
-            button.dataset.selected = 'true'
-          })
+          draftIcon = icon
+          applyIcon(lastFolderId, draftIcon)
+          syncIconSelection()
         })
         iconGrid.appendChild(button)
       })
+      syncIconSelection()
+      iconSection.append(iconHeading, iconGrid)
 
-      const resetIcon = document.createElement('button')
-      resetIcon.type = 'button'
-      resetIcon.className = 'oanix-folder-appearance-picker__reset'
-      resetIcon.textContent = 'Restablecer icono'
-      resetIcon.addEventListener('click', () => {
-        void removeFolderIcon(lastFolderId).then(() => {
-          icons.delete(lastFolderId)
-          const railItems = Array.from(document.querySelectorAll<HTMLElement>(
-            '.oanix-folder-rail__item[data-oanix-folder-id]',
-          ))
-          const index = Math.max(0, railItems.findIndex((item) => item.dataset.oanixFolderId === lastFolderId))
-          applyIcon(lastFolderId, defaultIconForIndex(index))
-          iconGrid.querySelectorAll<HTMLElement>('[data-selected]').forEach((item) => {
-            delete item.dataset.selected
-          })
+      const saveAppearance = document.createElement('button')
+      saveAppearance.type = 'button'
+      saveAppearance.className = 'oanix-folder-appearance-picker__save'
+      saveAppearance.textContent = 'Guardar'
+      saveAppearance.addEventListener('click', () => {
+        if (saveAppearance.disabled) return
+        saveAppearance.disabled = true
+        saveAppearance.textContent = 'Guardando…'
+        void Promise.all([
+          saveFolderColor(lastFolderId, draftColor),
+          saveFolderIcon(lastFolderId, draftIcon),
+        ]).then(() => {
+          colors.set(lastFolderId, draftColor)
+          icons.set(lastFolderId, draftIcon)
+          applyColor(lastFolderId, draftColor)
+          applyIcon(lastFolderId, draftIcon)
+          appearance.hidden = true
+          appearanceButton.setAttribute('aria-expanded', 'false')
+          appearanceButton.textContent = '🎨 Cambiar color / Icono'
+          saveAppearance.textContent = 'Guardar'
+          saveAppearance.disabled = false
+        }).catch(() => {
+          saveAppearance.textContent = 'Reintentar guardar'
+          saveAppearance.disabled = false
         })
       })
 
-      iconSection.append(iconHeading, iconGrid, resetIcon)
-      appearance.append(colorSection, iconSection)
+      appearance.append(colorSection, iconSection, saveAppearance)
       actions.before(appearance)
 
       const existingActions = directActionButtons(actions)
@@ -246,22 +239,23 @@ export function FolderAppearanceRuntime() {
       if (cancelButton) {
         cancelButton.textContent = 'Cancelar'
         cancelButton.classList.add('oanix-folder-customizer__cancel-action')
+        cancelButton.addEventListener('click', () => {
+          applyColor(lastFolderId, colors.get(lastFolderId) ?? DEFAULT_FOLDER_COLOR)
+          applyIcon(lastFolderId, icons.get(lastFolderId) ?? defaultIconForIndex(railIndex))
+        })
       }
 
-      const openButton = document.createElement('button')
-      openButton.type = 'button'
-      openButton.className = 'oanix-folder-customizer__open-action'
-      openButton.textContent = '📂 Abrir carpeta'
-      openButton.addEventListener('click', () => {
-        const folderId = lastFolderId
-        cancelButton?.click()
-        window.requestAnimationFrame(() => {
-          document
-            .querySelector<HTMLElement>(`.oanix-folder-focus[data-oanix-folder-id="${CSS.escape(folderId)}"]`)
-            ?.querySelector<HTMLButtonElement>('.oanix-folder-focus__open')
-            ?.click()
-        })
-      })
+      const resetDraftFromSaved = () => {
+        draftColor = colors.get(lastFolderId) ?? DEFAULT_FOLDER_COLOR
+        draftIcon = icons.get(lastFolderId) ?? defaultIconForIndex(railIndex)
+        customColor.value = draftColor
+        syncColorSelection(draftColor)
+        syncIconSelection()
+        applyColor(lastFolderId, draftColor)
+        applyIcon(lastFolderId, draftIcon)
+        saveAppearance.textContent = 'Guardar'
+        saveAppearance.disabled = false
+      }
 
       const appearanceButton = document.createElement('button')
       appearanceButton.type = 'button'
@@ -269,14 +263,22 @@ export function FolderAppearanceRuntime() {
       appearanceButton.textContent = '🎨 Cambiar color / Icono'
       appearanceButton.setAttribute('aria-expanded', 'false')
       appearanceButton.addEventListener('click', () => {
-        appearance.hidden = !appearance.hidden
-        appearanceButton.setAttribute('aria-expanded', appearance.hidden ? 'false' : 'true')
-        appearanceButton.textContent = appearance.hidden ? '🎨 Cambiar color / Icono' : '✓ Cerrar color / Icono'
-        if (!appearance.hidden) appearance.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+        if (appearance.hidden) {
+          resetDraftFromSaved()
+          appearance.hidden = false
+          appearanceButton.setAttribute('aria-expanded', 'true')
+          appearanceButton.textContent = '✓ Cerrar color / Icono'
+          appearance.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+          return
+        }
+
+        resetDraftFromSaved()
+        appearance.hidden = true
+        appearanceButton.setAttribute('aria-expanded', 'false')
+        appearanceButton.textContent = '🎨 Cambiar color / Icono'
       })
 
       actions.prepend(appearanceButton)
-      actions.prepend(openButton)
       paintFolders()
     }
 
