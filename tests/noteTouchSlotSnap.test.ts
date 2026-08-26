@@ -11,7 +11,8 @@ test('touch coarse usa una ruta propia y no compite con Sortable', () => {
   assert.match(runtime, /type TouchGesture/)
   assert.match(runtime, /document\.addEventListener\('pointerdown', onTouchPointerDown/)
   assert.match(runtime, /document\.addEventListener\('pointermove', onTouchPointerMove/)
-  assert.match(runtime, /document\.addEventListener\('pointerup', finishTouchGesture/)
+  assert.match(runtime, /document\.addEventListener\('pointerup', finishPointerGesture/)
+  assert.match(runtime, /document\.addEventListener\('touchend', finishNativeTouchGesture/)
 })
 
 test('la fila real se convierte en slot y se mueve por el punto medio de las notas', () => {
