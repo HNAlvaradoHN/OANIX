@@ -7,6 +7,7 @@ import { applyOanixTheme, readSavedOanixTheme } from './features/personalization
 import { PwaImagePreviewRuntime } from './features/images/PwaImagePreviewRuntime'
 import { NoteMenuScrollDismiss } from './features/notes/NoteMenuScrollDismiss'
 import { NoteMenuViewportFit } from './features/notes/NoteMenuViewportFit'
+import { WorkspaceInputCompatibilityRuntime } from './features/notes/WorkspaceInputCompatibilityRuntime'
 import './features/folders/folderNavigationState.css'
 import './styles/global.css'
 import './styles/midnight-violet.css'
@@ -85,5 +86,6 @@ createRoot(document.getElementById('root')!).render(
     <PwaImagePreviewRuntime />
     <NoteMenuScrollDismiss />
     <NoteMenuViewportFit />
+    <WorkspaceInputCompatibilityRuntime />
   </StrictMode>,
 )
