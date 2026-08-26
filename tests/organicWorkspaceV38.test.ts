@@ -19,15 +19,18 @@ test('organic workspace uses real OANIX data and no external prototype dependenc
   assert.doesNotMatch(runtime + css + gate, /cdn\.tailwindcss|unpkg\.com|@phosphor-icons/)
 })
 
-test('folders become a bottom dock and old duplicate navigation stays only as a hidden handler', () => {
+test('folders become a bottom dock and deterministic selection replaces the old hidden click bridge', () => {
   const css = readFileSync('src/features/notes/organicWorkspace.css', 'utf8')
   const runtime = readFileSync('src/features/notes/OrganicWorkspaceRuntime.tsx', 'utf8')
+  const folderGrid = readFileSync('src/features/folders/FolderGridRuntime.tsx', 'utf8')
 
   assert.match(css, /\.notes-tabs-shell \{ display: none !important; \}/)
   assert.match(css, /\.oanix-folder-grid[\s\S]*inset: auto 0 0 !important/)
   assert.match(css, /\.oanix-folder-rail[\s\S]*flex-direction: row !important/)
-  assert.match(runtime, /selectWorkspaceFolderFromDock/)
-  assert.match(runtime, /\.notes-tab:not\(\.notes-tab--add\)/)
+  assert.match(folderGrid, /oanix:select-workspace-folder/)
+  assert.match(runtime, /oanix:workspace-folder-committed/)
+  assert.doesNotMatch(runtime, /selectWorkspaceFolderFromDock/)
+  assert.doesNotMatch(runtime, /\.notes-tab:not\(\.notes-tab--add\)/)
 })
 
 test('folders, tags and notes finish reordering automatically after release', () => {
