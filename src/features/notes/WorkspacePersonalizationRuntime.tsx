@@ -359,6 +359,7 @@ export function WorkspacePersonalizationRuntime() {
       const next = { ...dataRef.current, notes: nextNotes }
       dataRef.current = next
       setData(next)
+      window.dispatchEvent(new CustomEvent('oanix:note-visual-changed', { detail: { note: updated } }))
       setNoteCustomizerId(null)
       scheduleDecorate()
     } catch (error) {
