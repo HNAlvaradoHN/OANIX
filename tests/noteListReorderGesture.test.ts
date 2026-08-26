@@ -45,7 +45,7 @@ test('instrumentación temporal de drag fue retirada después del diagnóstico',
   assert.doesNotMatch(runtime, /onPointerMoveDiagnostic|onTouchMoveDiagnostic/)
 })
 
-test('overlay visible sigue el dedo sin sustituir la geometría ni el autoscroll de Sortable', () => {
+test('overlay visible usa el mismo patrón fixed left top de carpetas sin sustituir Sortable', () => {
   assert.match(runtime, /forceFallback: true/)
   assert.match(runtime, /fallbackOnBody: true/)
   assert.match(runtime, /fallbackTolerance: 4/)
@@ -53,14 +53,16 @@ test('overlay visible sigue el dedo sin sustituir la geometría ni el autoscroll
   assert.match(runtime, /ghostClass: 'oanix-mobile-note-placeholder'/)
   assert.match(runtime, /cloneNode\(true\)/)
   assert.match(runtime, /oanix-note-drag-overlay/)
-  assert.match(runtime, /translate3d\(\$\{left\}px, \$\{top\}px, 0\)/)
+  assert.match(runtime, /dragOverlay\.style\.left = `\$\{latestDragPoint\.x - dragOffsetX\}px`/)
+  assert.match(runtime, /dragOverlay\.style\.top = `\$\{latestDragPoint\.y - dragOffsetY\}px`/)
   assert.match(runtime, /requestAnimationFrame\(positionDragOverlay\)/)
   assert.match(runtime, /document\.addEventListener\('pointermove', onPointerMove, \{ capture: true, passive: true \}\)/)
   assert.match(runtime, /document\.addEventListener\('touchmove', onTouchMove, \{ capture: true, passive: true \}\)/)
   assert.doesNotMatch(runtime, /onPointerMove[\s\S]{0,300}preventDefault\(\)/)
   assert.doesNotMatch(runtime, /onTouchMove[\s\S]{0,300}preventDefault\(\)/)
   assert.match(css, /\.oanix-note-drag-overlay[\s\S]*?position:\s*fixed !important/)
-  assert.match(css, /\.oanix-note-drag-overlay[\s\S]*?z-index:\s*9900 !important/)
+  assert.match(css, /\.oanix-note-drag-overlay[\s\S]*?scale\(1\.045\) rotate\(-\.65deg\)/)
+  assert.match(css, /\.oanix-note-drag-overlay[\s\S]*?will-change:\s*left, top, transform/)
   assert.match(css, /\.note-row\.oanix-mobile-note-drag-ghost[\s\S]*?opacity:\s*0 !important/)
   assert.match(css, /\.note-row\.oanix-mobile-note-placeholder[\s\S]*?border:\s*2px dashed/)
   assert.match(css, /\.note-row\.oanix-mobile-note-placeholder > \*[\s\S]*?visibility:\s*hidden !important/)
@@ -68,12 +70,16 @@ test('overlay visible sigue el dedo sin sustituir la geometría ni el autoscroll
   assert.match(css, /@keyframes oanix-note-floating-active/)
 })
 
-test('el color visual queda congelado durante el drag y el overlay conserva la identidad de la nota', () => {
-  assert.match(runtime, /--oanix-note-drag-stable-color/)
-  assert.match(runtime, /freezeDragColors\(\)/)
+test('identidad visual se congela por note id durante el drag y se restaura antes de persistir', () => {
+  assert.match(runtime, /const dragIdentityById = new Map<string, DragIdentity>\(\)/)
+  assert.match(runtime, /freezeDragIdentity\(\)/)
+  assert.match(runtime, /restoreDragIdentity\(\)/)
+  assert.match(runtime, /--oanix-note-drag-stable-card-color/)
+  assert.match(runtime, /--oanix-note-drag-stable-tab-color/)
+  assert.match(runtime, /avatar\.dataset\.oanixNoteIcon = identity\.icon/)
   assert.match(runtime, /overlay\.removeAttribute\('data-reorder-note-id'\)/)
-  assert.match(css, /--oanix-note-card-color:\s*var\(--oanix-note-drag-stable-color\) !important/)
-  assert.match(css, /--oanix-note-tab-color:\s*var\(--oanix-note-drag-stable-color\) !important/)
+  assert.match(css, /--oanix-note-card-color:\s*var\(--oanix-note-drag-stable-card-color\) !important/)
+  assert.match(css, /--oanix-note-tab-color:\s*var\(--oanix-note-drag-stable-tab-color\) !important/)
 })
 
 test('auto-scroll y orden vertical pertenecen a SortableJS', () => {
