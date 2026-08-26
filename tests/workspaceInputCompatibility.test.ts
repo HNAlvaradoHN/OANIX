@@ -14,12 +14,20 @@ test('mouse reactiva el Sortable existente sin crear una segunda implementacion 
   assert.doesNotMatch(runtime, /Sortable\.create\(/)
 })
 
-test('el boton visible de carpetas abre directamente el administrador real', () => {
+test('los botones visibles de carpetas abren el creador por evento directo', () => {
   assert.match(runtime, /\.oanix-organic-folder-control--add/)
   assert.match(runtime, /\.oanix-folder-rail__item--add/)
   assert.match(runtime, /\.notes-tab--add/)
   assert.match(runtime, /event\.stopImmediatePropagation\(\)/)
-  assert.match(runtime, /managerButton\.click\(\)/)
+  assert.match(runtime, /oanix:open-folder-creator/)
+  assert.doesNotMatch(runtime, /managerButton\.click\(\)/)
+})
+
+test('el drop de carpeta con mouse persiste el orden visible sin forzar refresh exitoso', () => {
+  assert.match(runtime, /persistFolderOrder/)
+  assert.match(runtime, /visibleFolderOrder/)
+  assert.match(runtime, /\.oanix-folder-grid--reordering/)
+  assert.match(runtime, /document\.addEventListener\('pointerup', persistDesktopFolderDrop, true\)/)
 })
 
 test('el runtime de compatibilidad queda montado globalmente', () => {
