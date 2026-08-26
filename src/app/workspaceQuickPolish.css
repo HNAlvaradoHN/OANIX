@@ -23,6 +23,23 @@
   padding: 0 !important;
 }
 
+.oanix-folder-card__gear {
+  font-size: 0 !important;
+  text-align: center !important;
+}
+
+.oanix-folder-card__gear::before {
+  content: '⚙';
+  width: 1em;
+  height: 1em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  line-height: 1;
+  transform: translateY(-.02em);
+}
+
 .notes-header .icon-button > svg,
 .notes-header .account-header-action > svg,
 .note-row__menu-button > svg,
