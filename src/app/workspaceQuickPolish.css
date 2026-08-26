@@ -1,0 +1,18 @@
+.oanix-folder-card__gear,
+.oanix-folder-card__pin,
+.oanix-folder-card__favorite,
+.oanix-organic-folder-control,
+.oanix-folder-customizer__actions button,
+.note-row__menu-button,
+.note-view__menu-button {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  line-height: 1 !important;
+}
+
+.oanix-folder-card__gear,
+.oanix-folder-card__pin,
+.oanix-folder-card__favorite {
+  padding: 0 !important;
+}
