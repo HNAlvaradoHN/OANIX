@@ -1,3 +1,9 @@
+.note-row[data-reorder-note-id] .note-row__avatar,
+html.oanix-v383-visual .note-row[data-reorder-note-id] .note-row__avatar {
+  pointer-events: auto !important;
+  cursor: grab;
+}
+
 @media (pointer: coarse) {
   .note-row[data-reorder-note-id],
   .note-row[data-reorder-note-id] * {
@@ -10,11 +16,8 @@
     touch-action: pan-y !important;
   }
 
-  /* Functional reorder contract owns handle interaction. V383 may keep the
-     visual appearance, but it must not decide pointer/touch behavior. */
   .note-row[data-reorder-note-id] .note-row__avatar,
   html.oanix-v383-visual .note-row[data-reorder-note-id] .note-row__avatar {
-    pointer-events: auto !important;
     touch-action: none !important;
   }
 }
@@ -51,11 +54,34 @@ body.oanix-mobile-note-dragging .note-row[data-reorder-note-id]:not(.oanix-mobil
 html.oanix-mobile-note-dragging,
 body.oanix-mobile-note-dragging {
   overscroll-behavior: none;
+  -webkit-user-select: none !important;
+  user-select: none !important;
 }
 
 html.oanix-mobile-note-dragging .notes-list {
   scroll-behavior: auto !important;
   cursor: grabbing;
+}
+
+html.oanix-mobile-note-dragging .note-row[data-reorder-note-id] .note-row__avatar {
+  cursor: grabbing;
+}
+
+/* The bottom folder dock is a separate fixed interaction surface. While a note
+   is being reordered it must stay visually anchored and must not react to the
+   pointer crossing it near the auto-scroll edge. */
+html.oanix-mobile-note-dragging .oanix-folder-grid {
+  position: fixed !important;
+  inset: auto 0 0 !important;
+  transform: none !important;
+  transition: none !important;
+  pointer-events: none !important;
+}
+
+html.oanix-mobile-note-dragging .oanix-folder-rail,
+html.oanix-mobile-note-dragging .oanix-folder-rail__scroll {
+  transform: none !important;
+  transition: none !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
