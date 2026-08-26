@@ -41,8 +41,8 @@ test('legacy folder manager is visually replaced by the focused Nueva carpeta di
 })
 
 test('mobile folder long press stays armed at the threshold and uses live horizontal placement', () => {
-  assert.match(dragRuntime, /const LONG_PRESS_MS = 340/)
-  assert.match(dragRuntime, /const PRESS_ARM_GRACE_MS = 55/)
+  assert.match(dragRuntime, /const LONG_PRESS_MS = 220/)
+  assert.match(dragRuntime, /const PRESS_ARM_GRACE_MS = 35/)
   assert.match(dragRuntime, /const MOVE_CANCEL_PX = 14/)
   assert.match(dragRuntime, /heldFor >= LONG_PRESS_MS - PRESS_ARM_GRACE_MS/)
   assert.match(dragRuntime, /beginDrag\(\)[\s\S]*gesture\?\.dragging/)
@@ -54,7 +54,7 @@ test('mobile folder long press stays armed at the threshold and uses live horizo
 
 test('edge auto-scroll is continuous but does not launch heavy reflow animation every frame', () => {
   assert.match(dragRuntime, /const EDGE_SCROLL_PX = 72/)
-  assert.match(dragRuntime, /const MAX_SCROLL_PER_FRAME = 9/)
+  assert.match(dragRuntime, /const MAX_SCROLL_PER_FRAME = 10/)
   assert.match(dragRuntime, /requestAnimationFrame\(tick\)/)
   assert.match(dragRuntime, /scrollLeft \+= speed/)
   assert.match(dragRuntime, /reorderDomAtPoint\(gesture, false\)/)
