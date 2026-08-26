@@ -6,6 +6,11 @@ html.oanix-v383-visual .note-row[data-reorder-note-id] .note-row__avatar {
   cursor: grab;
 }
 
+.note-row[data-oanix-note-stable-visual='true'] {
+  --oanix-note-card-color: var(--oanix-note-stable-color) !important;
+  --oanix-note-tab-color: var(--oanix-note-stable-color) !important;
+}
+
 .note-row[data-reorder-note-id] .note-row__menu-wrap,
 .note-row[data-reorder-note-id] .note-row__menu-wrap * {
   cursor: default;

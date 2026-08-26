@@ -160,7 +160,6 @@ export function NoteListReorderGestureRuntime() {
       dragOffsetY = Math.min(Math.max(point.y - rect.top, 0), rect.height)
 
       const overlay = row.cloneNode(true) as HTMLElement
-      overlay.removeAttribute('data-reorder-note-id')
       overlay.removeAttribute('data-oanix-note-dragging')
       overlay.classList.remove(
         'oanix-mobile-note-chosen',
@@ -175,11 +174,12 @@ export function NoteListReorderGestureRuntime() {
       overlay.style.height = `${rect.height}px`
       overlay.style.left = `${rect.left}px`
       overlay.style.top = `${rect.top}px`
-      overlay.style.setProperty('background', style.background, 'important')
       overlay.style.setProperty('border-color', style.borderColor, 'important')
       overlay.style.setProperty('border-radius', style.borderRadius, 'important')
+      const stableColor = style.getPropertyValue('--oanix-note-stable-color').trim()
       const cardColor = style.getPropertyValue('--oanix-note-card-color').trim()
       const tabColor = style.getPropertyValue('--oanix-note-tab-color').trim()
+      if (stableColor) overlay.style.setProperty('--oanix-note-stable-color', stableColor)
       if (cardColor) overlay.style.setProperty('--oanix-note-card-color', cardColor)
       if (tabColor) overlay.style.setProperty('--oanix-note-tab-color', tabColor)
 
