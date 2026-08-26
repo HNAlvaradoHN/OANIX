@@ -3,22 +3,27 @@ import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
 const folderAppearance = readFileSync('src/features/folders/FolderAppearanceRuntime.tsx', 'utf8')
+const folderFeedback = readFileSync('src/features/folders/FolderOperationFeedbackRuntime.tsx', 'utf8')
+const folderFeedbackCss = readFileSync('src/features/folders/folderOperationFeedback.css', 'utf8')
 const polishRuntime = readFileSync('src/app/WorkspaceQuickPolishRuntime.tsx', 'utf8')
 const polishCss = readFileSync('src/app/workspaceQuickPolish.css', 'utf8')
 const noteDragRuntime = readFileSync('src/features/notes/NoteListReorderGestureRuntime.tsx', 'utf8')
 const noteDragCss = readFileSync('src/features/notes/noteReorderGesture.css', 'utf8')
 
-test('folder appearance stays save-only and closes the whole customizer after save', () => {
+test('folder appearance stays preview-only until save and closes the whole customizer', () => {
   assert.match(folderAppearance, /oanix-folder-customizer__appearance-toggle/)
   assert.match(folderAppearance, /appearance\.hidden = false/)
   assert.match(folderAppearance, /actions\.hidden = true/)
   assert.match(folderAppearance, /Promise\.all\(\[/)
-  assert.match(folderAppearance, /closeCustomizerFromBackdrop\(\)/)
-  assert.equal(
-    folderAppearance.includes("backdrop.dispatchEvent(new PointerEvent('pointerdown'"),
-    true,
-  )
-  assert.doesNotMatch(folderAppearance, /actions\.hidden = false/)
+  assert.match(folderAppearance, /saveAppearance\.textContent = '✓ Guardado'/)
+  assert.match(folderAppearance, /oanix:folder-appearance-saved/)
+  assert.match(folderAppearance, /cancelButton\?\.click\(\)/)
+  assert.doesNotMatch(folderAppearance, /closeCustomizerFromBackdrop/)
+  assert.doesNotMatch(folderFeedback, /collapseAppearancePicker\(/)
+  assert.doesNotMatch(folderFeedback, /✓ Color guardado|✓ Icono guardado/)
+  assert.match(folderFeedback, /Vista previa aplicada/)
+  assert.match(folderFeedback, /oanix:folder-appearance-saved/)
+  assert.match(folderFeedbackCss, /\.oanix-folder-customizer__actions\[hidden\]\s*\{[\s\S]*display:\s*none\s*!important/)
   assert.doesNotMatch(polishRuntime, /MutationObserver|oanix-folder-customizer__appearance-toggle/)
 })
 

@@ -18,12 +18,16 @@ test('compact note rows reserve separate icon, text and metadata zones', () => {
   assert.ok(!main.includes('compactNotePolish.css'))
 })
 
-test('folder customization shows progress and closes the icon picker after confirmation', () => {
-  assert.match(feedbackRuntime, /Guardando icono/)
+test('folder customization reports preview separately and confirms only the real save', () => {
+  assert.match(feedbackRuntime, /Vista previa aplicada/)
   assert.match(feedbackRuntime, /Procesando y cifrando imagen/)
   assert.match(feedbackRuntime, /previewFolderIcon/)
-  assert.match(feedbackRuntime, /collapseAppearancePicker/)
+  assert.match(feedbackRuntime, /oanix:folder-appearance-saved/)
+  assert.match(feedbackRuntime, /✓ Guardado/)
+  assert.doesNotMatch(feedbackRuntime, /collapseAppearancePicker/)
+  assert.doesNotMatch(feedbackRuntime, /✓ Color guardado|✓ Icono guardado/)
   assert.match(feedbackRuntime, /button\.dataset\.selected === 'true'/)
   assert.match(feedbackCss, /data-oanix-operation-state='busy'/)
+  assert.match(feedbackCss, /\.oanix-folder-customizer__actions\[hidden\]\s*\{[\s\S]*display:\s*none\s*!important/)
   assert.ok(gate.includes('<FolderOperationFeedbackRuntime />'))
 })

@@ -29,16 +29,6 @@ function clearStatus(modal: HTMLElement) {
   delete modal.dataset.oanixOperationSource
 }
 
-function collapseAppearancePicker(modal: HTMLElement) {
-  const picker = modal.querySelector<HTMLElement>('.oanix-folder-appearance-picker')
-  const toggle = modal.querySelector<HTMLButtonElement>('.oanix-folder-customizer__appearance-toggle')
-  if (!picker || !toggle) return
-  picker.hidden = true
-  toggle.setAttribute('aria-expanded', 'false')
-  toggle.textContent = '🎨 Cambiar color / Icono'
-  toggle.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
-}
-
 function previewFolderIcon(folderId: string, icon: string): IconPreviewSnapshot[] {
   const snapshot: IconPreviewSnapshot[] = []
   document
@@ -77,13 +67,7 @@ export function FolderOperationFeedbackRuntime() {
       if (!pending) return
       window.clearTimeout(pending.timeoutId)
       pending.button.removeAttribute('aria-busy')
-      setStatus(
-        pending.modal,
-        pending.kind === 'icon' ? '✓ Icono guardado' : '✓ Color guardado',
-        'success',
-        'appearance',
-      )
-      if (pending.kind === 'icon') collapseAppearancePicker(pending.modal)
+      setStatus(pending.modal, 'Vista previa aplicada', 'success', 'appearance')
       clearLater(pending.modal)
       pendingSelection = null
     }
@@ -165,8 +149,7 @@ export function FolderOperationFeedbackRuntime() {
         if (selectionButton.dataset.selected === 'true') {
           event.preventDefault()
           event.stopPropagation()
-          setStatus(modal, '✓ Ese ajuste ya está aplicado', 'success', 'appearance')
-          if (iconButton) collapseAppearancePicker(modal)
+          setStatus(modal, 'Vista previa aplicada', 'success', 'appearance')
           clearLater(modal, 700)
           return
         }
@@ -179,12 +162,7 @@ export function FolderOperationFeedbackRuntime() {
           if (folderId && icon) iconSnapshot = previewFolderIcon(folderId, icon)
         }
 
-        setStatus(
-          modal,
-          kind === 'icon' ? '⏳ Guardando icono…' : '⏳ Guardando color…',
-          'busy',
-          'appearance',
-        )
+        setStatus(modal, 'Vista previa aplicada', 'success', 'appearance')
         selectionButton.setAttribute('aria-busy', 'true')
 
         const timeoutId = window.setTimeout(() => {
@@ -230,8 +208,16 @@ export function FolderOperationFeedbackRuntime() {
       setStatus(modal, '⏳ Procesando y cifrando imagen…', 'busy', 'react')
     }
 
+    const handleAppearanceSaved = () => {
+      const modal = document.querySelector<HTMLElement>('.oanix-folder-customizer')
+      if (!modal) return
+      setStatus(modal, '✓ Guardado', 'success', 'appearance')
+      clearLater(modal, 700)
+    }
+
     document.addEventListener('click', handleClickCapture, true)
     document.addEventListener('change', handleChangeCapture, true)
+    window.addEventListener('oanix:folder-appearance-saved', handleAppearanceSaved)
     bindModalObserver()
     portalObserver.observe(document.body, { childList: true })
     syncReactBusyState()
@@ -239,6 +225,7 @@ export function FolderOperationFeedbackRuntime() {
     return () => {
       document.removeEventListener('click', handleClickCapture, true)
       document.removeEventListener('change', handleChangeCapture, true)
+      window.removeEventListener('oanix:folder-appearance-saved', handleAppearanceSaved)
       portalObserver.disconnect()
       modalObserver?.disconnect()
       if (pendingSelection) window.clearTimeout(pendingSelection.timeoutId)
