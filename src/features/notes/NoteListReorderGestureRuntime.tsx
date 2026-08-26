@@ -3,13 +3,13 @@ import Sortable from 'sortablejs'
 import { persistNoteOrder } from './noteService'
 import './noteReorderGesture.css'
 
-const LONG_PRESS_MS = 300
+const LONG_PRESS_MS = 220
 const TOUCH_START_THRESHOLD_PX = 7
 const TOUCH_MOVE_CANCEL_PX = 12
-const PRESS_ARM_GRACE_MS = 55
+const PRESS_ARM_GRACE_MS = 35
 const EDGE_SCROLL_PX = 76
 const MAX_SCROLL_PER_FRAME = 10
-const REFLOW_MS = 180
+const REFLOW_MS = 120
 
 type SortableOptionsWithHandle = NonNullable<Parameters<typeof Sortable.create>[1]> & { handle: string }
 type DragIdentity = { cardColor: string; tabColor: string; icon: string | null }
@@ -465,7 +465,7 @@ export function NoteListReorderGestureRuntime() {
       preventOnFilter: false,
       disabled: coarsePointer,
       direction: 'vertical',
-      animation: 210,
+      animation: 140,
       easing: 'cubic-bezier(.2,.8,.2,1)',
       delay: LONG_PRESS_MS,
       delayOnTouchOnly: true,
