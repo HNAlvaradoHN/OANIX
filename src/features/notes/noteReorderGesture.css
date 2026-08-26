@@ -53,6 +53,7 @@ body.oanix-mobile-note-dragging .note-row[data-reorder-note-id]:not(.oanix-mobil
 
 html.oanix-mobile-note-dragging,
 body.oanix-mobile-note-dragging {
+  overflow: hidden !important;
   overscroll-behavior: none;
   -webkit-user-select: none !important;
   user-select: none !important;

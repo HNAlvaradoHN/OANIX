@@ -93,6 +93,7 @@ test('orden persiste y sincroniza React sin remonte completo en el camino exitos
 })
 
 test('dock de carpetas queda inmóvil e inerte mientras se arrastra una nota', () => {
+  assert.match(css, /html\.oanix-mobile-note-dragging,\s*\nbody\.oanix-mobile-note-dragging\s*\{[\s\S]*?overflow:\s*hidden !important/)
   assert.match(css, /html\.oanix-mobile-note-dragging \.oanix-folder-grid/)
   assert.match(css, /position:\s*fixed !important/)
   assert.match(css, /inset:\s*auto 0 0 !important/)
