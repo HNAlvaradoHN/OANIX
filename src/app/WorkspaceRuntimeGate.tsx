@@ -12,6 +12,7 @@ import { NoteVisualIdentityRuntime } from '../features/notes/NoteVisualIdentityR
 import { OrganicWorkspaceRuntime } from '../features/notes/OrganicWorkspaceRuntime'
 import { V383WorkspaceVisualRuntime } from '../features/notes/V383WorkspaceVisualRuntime'
 import { WorkspacePersonalizationRuntime } from '../features/notes/WorkspacePersonalizationRuntime'
+import '../features/privacy/noteBulkPrivacyOverrides.css'
 import { PrivacyStatusHelp } from '../features/privacy/PrivacyStatusHelp'
 import { TagCreationRuntime } from '../features/tags/TagCreationRuntime'
 import { TagMobileGestureRuntime } from '../features/tags/TagMobileGestureRuntime'
