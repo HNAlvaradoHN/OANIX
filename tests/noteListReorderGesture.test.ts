@@ -10,7 +10,7 @@ const privacyRuntime = readFileSync('src/features/privacy/NoteBulkPrivacyRuntime
 const app = readFileSync('src/app/App.tsx', 'utf8')
 const pkg = readFileSync('package.json', 'utf8')
 
-test('reorder móvil usa SortableJS y conserva scroll nativo fuera del handle', () => {
+test('reorder móvil usa SortableJS y conserva scroll nativo antes del long press', () => {
   assert.match(pkg, /"sortablejs": "1\.15\.7"/)
   assert.match(runtime, /import Sortable from 'sortablejs'/)
   assert.match(runtime, /Sortable\.create\(list/)
@@ -24,15 +24,18 @@ test('reorder móvil usa SortableJS y conserva scroll nativo fuera del handle', 
   assert.doesNotMatch(runtime, /setPointerCapture|scrollTop -=/)
 })
 
-test('avatar es el handle funcional en táctil y escritorio', () => {
-  assert.match(runtime, /handle: '\.note-row__avatar'/)
-  assert.match(runtime, /function isDragHandle/)
-  assert.match(runtime, /target\.closest\('\.note-row__avatar'\)/)
-  assert.match(runtime, /!isDragHandle\(target\) && isInteractiveTarget\(target\)/)
+test('toda la fila es superficie de drag y los controles reales quedan excluidos', () => {
+  assert.match(runtime, /handle: '\.note-row\[data-reorder-note-id\]'/)
+  assert.match(runtime, /function isExcludedInteractiveTarget/)
+  assert.match(runtime, /\.note-row__menu-wrap/)
+  assert.match(runtime, /button:not\(\.note-row__open\)/)
+  assert.match(runtime, /interactionBlocked\(\) \|\| isExcludedInteractiveTarget\(target\)/)
+  assert.match(workspace, /className="note-row__open"/)
   assert.match(workspace, /NoteAvatar[\s\S]*?className="note-row__avatar"/)
   assert.match(avatar, /className=\{className\}/)
-  assert.match(css, /html\.oanix-v383-visual \.note-row\[data-reorder-note-id\] \.note-row__avatar\s*\{[\s\S]*?pointer-events:\s*auto !important;[\s\S]*?cursor:\s*grab/)
-  assert.match(css, /@media \(pointer: coarse\)[\s\S]*?touch-action:\s*none !important/)
+  assert.match(css, /\.note-row\[data-reorder-note-id\],\s*\n\.note-row\[data-reorder-note-id\] \.note-row__open/)
+  assert.match(css, /cursor:\s*grab/)
+  assert.match(css, /@media \(pointer: coarse\)[\s\S]*?touch-action:\s*pan-y !important/)
   assert.doesNotMatch(runtime, /touchArmTimer|touchArmed|function onTouchMove/)
 })
 
@@ -44,7 +47,7 @@ test('instrumentación temporal de drag fue retirada después del diagnóstico',
   assert.doesNotMatch(runtime, /document\.addEventListener\('touchmove'/)
 })
 
-test('fallback crea ghost y placeholder sin CSS que pise transform', () => {
+test('fallback crea ghost elevado y placeholder sin CSS que pise transform', () => {
   assert.match(runtime, /forceFallback: true/)
   assert.match(runtime, /fallbackOnBody: true/)
   assert.match(runtime, /fallbackTolerance: 4/)
@@ -52,7 +55,9 @@ test('fallback crea ghost y placeholder sin CSS que pise transform', () => {
   assert.match(runtime, /ghostClass: 'oanix-mobile-note-placeholder'/)
   assert.match(css, /oanix-mobile-note-drag-ghost/)
   assert.match(css, /oanix-mobile-note-placeholder/)
-  assert.doesNotMatch(css, /oanix-mobile-note-drag-ghost[\s\S]{0,500}transform:/)
+  assert.match(css, /box-shadow:\s*0 28px 60px/)
+  assert.match(css, /filter:\s*brightness\(1\.08\) saturate\(1\.07\)/)
+  assert.doesNotMatch(css, /oanix-mobile-note-drag-ghost[\s\S]{0,650}transform:/)
   assert.doesNotMatch(css, /@keyframes oanix-note-drag-pulse/)
 })
 
@@ -71,8 +76,8 @@ test('notas fijadas y no fijadas no se mezclan', () => {
 })
 
 test('controles interactivos y selección múltiple no compiten con reorder', () => {
-  assert.match(runtime, /function isInteractiveTarget/)
-  assert.match(runtime, /interactionBlocked\(\) \|\| \(!isDragHandle\(target\) && isInteractiveTarget\(target\)\)/)
+  assert.match(runtime, /function isExcludedInteractiveTarget/)
+  assert.match(runtime, /interactionBlocked\(\) \|\| isExcludedInteractiveTarget\(target\)/)
   assert.match(runtime, /preventOnFilter: false/)
   assert.match(runtime, /oanix-note-bulk-selecting/)
   assert.match(privacyRuntime, /data-oanix-bulk-mode/)
