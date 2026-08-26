@@ -50,11 +50,35 @@ function clearDraggedRowSurface() {
   root.style.removeProperty('--oanix-note-drag-border-color')
   root.style.removeProperty('--oanix-note-drag-border-radius')
 }
+function copyComputedStyleTree(source: HTMLElement, target: HTMLElement) {
+  const style = window.getComputedStyle(source)
+  for (let index = 0; index < style.length; index += 1) {
+    const property = style.item(index)
+    if (!property) continue
+    target.style.setProperty(property, style.getPropertyValue(property), 'important')
+  }
+  const sourceChildren = Array.from(source.children)
+  const targetChildren = Array.from(target.children)
+  sourceChildren.forEach((sourceChild, index) => {
+    const targetChild = targetChildren[index]
+    if (sourceChild instanceof HTMLElement && targetChild instanceof HTMLElement) copyComputedStyleTree(sourceChild, targetChild)
+  })
+}
+function prepareDragOverlayTemplate(row: HTMLElement): HTMLElement {
+  const clone = row.cloneNode(true) as HTMLElement
+  copyComputedStyleTree(row, clone)
+  clone.removeAttribute('data-oanix-note-dragging')
+  clone.classList.remove('oanix-mobile-note-placeholder', 'oanix-mobile-note-chosen', 'oanix-mobile-note-drag-source', 'oanix-mobile-note-drag-ghost')
+  clone.classList.add('oanix-mobile-note-drag-overlay')
+  clone.setAttribute('aria-hidden', 'true')
+  return clone
+}
 
 export function NoteListReorderGestureRuntime() {
   useEffect(() => {
     let suppressClickUntil = 0
     let dragOverlay: HTMLElement | null = null
+    let dragOverlayTemplate: HTMLElement | null = null
     let dragOverlayOffset: ClientPoint | null = null
     let lastPointer: ClientPoint | null = null
     const dragIdentityById = new Map<string, DragIdentity>()
@@ -101,21 +125,37 @@ export function NoteListReorderGestureRuntime() {
     }
     const positionDragOverlay = (point: ClientPoint) => {
       if (!dragOverlay || !dragOverlayOffset) return
-      dragOverlay.style.left = `${point.x - dragOverlayOffset.x}px`
-      dragOverlay.style.top = `${point.y - dragOverlayOffset.y}px`
+      dragOverlay.style.setProperty('left', `${point.x - dragOverlayOffset.x}px`, 'important')
+      dragOverlay.style.setProperty('top', `${point.y - dragOverlayOffset.y}px`, 'important')
     }
     const createDragOverlay = (row: HTMLElement, point: ClientPoint | null) => {
       removeDragOverlay()
       const rect = row.getBoundingClientRect()
-      const clone = row.cloneNode(true) as HTMLElement
-      clone.removeAttribute('data-oanix-note-dragging')
-      clone.classList.remove('oanix-mobile-note-placeholder', 'oanix-mobile-note-chosen', 'oanix-mobile-note-drag-source', 'oanix-mobile-note-drag-ghost')
-      clone.classList.add('oanix-mobile-note-drag-overlay')
-      clone.setAttribute('aria-hidden', 'true')
-      clone.style.width = `${rect.width}px`
-      clone.style.height = `${rect.height}px`
-      clone.style.left = `${rect.left}px`
-      clone.style.top = `${rect.top}px`
+      const clone = dragOverlayTemplate ?? prepareDragOverlayTemplate(row)
+      dragOverlayTemplate = null
+      clone.style.setProperty('position', 'fixed', 'important')
+      clone.style.setProperty('z-index', '2147483000', 'important')
+      clone.style.setProperty('margin', '0', 'important')
+      clone.style.setProperty('box-sizing', 'border-box', 'important')
+      clone.style.setProperty('pointer-events', 'none', 'important')
+      clone.style.setProperty('visibility', 'visible', 'important')
+      clone.style.setProperty('opacity', '.99', 'important')
+      clone.style.setProperty('display', window.getComputedStyle(row).display || 'grid', 'important')
+      clone.style.setProperty('width', `${rect.width}px`, 'important')
+      clone.style.setProperty('min-width', `${rect.width}px`, 'important')
+      clone.style.setProperty('max-width', `${rect.width}px`, 'important')
+      clone.style.setProperty('height', `${rect.height}px`, 'important')
+      clone.style.setProperty('min-height', `${rect.height}px`, 'important')
+      clone.style.setProperty('max-height', `${rect.height}px`, 'important')
+      clone.style.setProperty('left', `${rect.left}px`, 'important')
+      clone.style.setProperty('top', `${rect.top}px`, 'important')
+      clone.style.setProperty('transform', 'scale(1.015)', 'important')
+      clone.style.setProperty('transform-origin', 'center center', 'important')
+      clone.style.setProperty('overflow', 'hidden', 'important')
+      clone.style.setProperty('background', 'rgba(18,18,35,.96)', 'important')
+      clone.style.setProperty('border', '1px solid rgba(255,255,255,.20)', 'important')
+      clone.style.setProperty('border-radius', '1rem', 'important')
+      clone.style.setProperty('box-shadow', '0 22px 46px rgba(2,6,23,.46), 0 0 0 2px rgba(96,165,250,.30)', 'important')
       document.body.appendChild(clone)
       dragOverlay = clone
       const anchor = point ?? lastPointer ?? { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }
@@ -127,6 +167,7 @@ export function NoteListReorderGestureRuntime() {
     }
     const clearDragVisuals = () => {
       removeDragOverlay()
+      dragOverlayTemplate = null
       restoreDragIdentity()
       document.body.classList.remove('oanix-mobile-note-dragging')
       document.documentElement.classList.remove('oanix-mobile-note-dragging')
@@ -163,6 +204,7 @@ export function NoteListReorderGestureRuntime() {
       dataIdAttr: 'data-reorder-note-id',
       onChoose: (event) => {
         freezeDragIdentity()
+        dragOverlayTemplate = prepareDragOverlayTemplate(event.item)
         event.item.setAttribute('data-oanix-note-dragging', 'true')
         exposeDraggedRowSurface(event.item)
         window.getSelection()?.removeAllRanges()
