@@ -12,6 +12,7 @@ import './folderCreation.css'
 
 const CREATE_COLORS = ['#3b82f6', '#ec4899', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4'] as const
 const POLL_ATTEMPTS = 36
+const MANAGE_FOLDER_ATTR = 'data-oanix-manage-folder-id'
 
 function nextFrame(): Promise<void> {
   return new Promise((resolve) => window.requestAnimationFrame(() => resolve()))
@@ -39,6 +40,10 @@ function closeLegacyDialog() {
   legacyDialog()?.querySelector<HTMLButtonElement>('button[aria-label="Cerrar"]')?.click()
 }
 
+function folderManagementActive(): boolean {
+  return document.documentElement.hasAttribute(MANAGE_FOLDER_ATTR)
+}
+
 export function FolderCreationRuntime() {
   const [open, setOpen] = useState(false)
   const [name, setName] = useState('')
@@ -47,6 +52,7 @@ export function FolderCreationRuntime() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const suppressLegacyOpenRef = useRef(false)
+  const createRequestedRef = useRef(false)
 
   function resetDraft() {
     setName('')
@@ -57,6 +63,7 @@ export function FolderCreationRuntime() {
 
   function close() {
     suppressLegacyOpenRef.current = true
+    createRequestedRef.current = false
     setOpen(false)
     closeLegacyDialog()
     window.setTimeout(() => {
@@ -70,8 +77,22 @@ export function FolderCreationRuntime() {
     root.classList.add('oanix-folder-create-v2')
     body.classList.add('oanix-folder-create-v2')
 
+    const markCreateIntent = (event: Event) => {
+      const target = event.target
+      if (!(target instanceof Element)) return
+      if (!target.closest('.notes-tab--add, .oanix-folder-rail__item--add, .oanix-organic-folder-control--add')) return
+      if (folderManagementActive()) return
+      createRequestedRef.current = true
+    }
+
     const syncLegacyDialog = () => {
       if (!legacyDialog() || suppressLegacyOpenRef.current) return
+      if (folderManagementActive()) {
+        createRequestedRef.current = false
+        setOpen(false)
+        return
+      }
+      if (!createRequestedRef.current) return
       setError('')
       setOpen(true)
     }
@@ -86,6 +107,7 @@ export function FolderCreationRuntime() {
       if (!target.closest('.notes-create-fab, .empty-action')) return
       if (!legacyDialog()) return
       suppressLegacyOpenRef.current = true
+      createRequestedRef.current = false
       setOpen(false)
       closeLegacyDialog()
       window.setTimeout(() => {
@@ -93,9 +115,11 @@ export function FolderCreationRuntime() {
       }, 0)
     }
 
+    document.addEventListener('click', markCreateIntent, true)
     document.addEventListener('click', closeBeforeNoteCreation, true)
     return () => {
       observer.disconnect()
+      document.removeEventListener('click', markCreateIntent, true)
       document.removeEventListener('click', closeBeforeNoteCreation, true)
       root.classList.remove('oanix-folder-create-v2')
       body.classList.remove('oanix-folder-create-v2')
