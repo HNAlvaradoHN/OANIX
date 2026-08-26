@@ -73,12 +73,24 @@ body.oanix-mobile-note-dragging .note-row[data-reorder-note-id] {
 .note-row.oanix-mobile-note-drag-ghost {
   z-index: 9900 !important;
   pointer-events: none !important;
+  visibility: visible !important;
   opacity: .99 !important;
   border-color: rgba(147,197,253,.98) !important;
   border-radius: var(--oanix-note-drag-border-radius, .9rem) !important;
   box-shadow: 0 30px 66px rgba(2,6,23,.62), 0 0 0 2px rgba(96,165,250,.46), inset 0 1px 1px rgba(255,255,255,.22) !important;
   filter: brightness(1.09) saturate(1.08);
   will-change: transform;
+}
+
+body > .note-row.oanix-mobile-note-drag-ghost {
+  width: var(--oanix-note-drag-width) !important;
+  min-width: var(--oanix-note-drag-width) !important;
+  max-width: var(--oanix-note-drag-width) !important;
+  height: var(--oanix-note-drag-height) !important;
+  min-height: var(--oanix-note-drag-height) !important;
+  box-sizing: border-box !important;
+  visibility: visible !important;
+  opacity: .99 !important;
 }
 
 .note-row.oanix-mobile-note-drag-ghost .note-row__menu-wrap {
