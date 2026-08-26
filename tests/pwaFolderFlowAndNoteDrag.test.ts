@@ -2,16 +2,19 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
+const folderAppearance = readFileSync('src/features/folders/FolderAppearanceRuntime.tsx', 'utf8')
 const polishRuntime = readFileSync('src/app/WorkspaceQuickPolishRuntime.tsx', 'utf8')
 const polishCss = readFileSync('src/app/workspaceQuickPolish.css', 'utf8')
 const noteDragCss = readFileSync('src/features/notes/noteReorderGesture.css', 'utf8')
 
-test('folder appearance becomes a save-only flow and closes the customizer after successful save', () => {
-  assert.match(polishRuntime, /\.oanix-folder-customizer__appearance-toggle/)
-  assert.match(polishRuntime, /actions\.hidden = true/)
-  assert.match(polishRuntime, /observer\.observe\(appearance, \{ attributes: true, attributeFilter: \['hidden'\] \}\)/)
-  assert.match(polishRuntime, /\.oanix-folder-customizer__cancel-action/)
-  assert.match(polishRuntime, /cancel\?\.click\(\)/)
+test('folder appearance becomes a save-only flow owned by the folder runtime and closes after save', () => {
+  assert.match(folderAppearance, /\.oanix-folder-customizer__appearance-toggle/)
+  assert.match(folderAppearance, /appearance\.hidden = false/)
+  assert.match(folderAppearance, /actions\.hidden = true/)
+  assert.match(folderAppearance, /Promise\.all\(\[/)
+  assert.match(folderAppearance, /actions\.hidden = false/)
+  assert.match(folderAppearance, /cancelButton\?\.click\(\)/)
+  assert.doesNotMatch(polishRuntime, /MutationObserver|\.oanix-folder-customizer__appearance-toggle/)
 })
 
 test('folder gear uses an optically centered pseudo glyph', () => {
