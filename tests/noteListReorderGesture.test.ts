@@ -62,6 +62,13 @@ test('la tarjeta visible es el fallback de Sortable y sigue directamente el dedo
   assert.match(css, /@keyframes oanix-note-drop-slot-pulse/)
 })
 
+test('el fallback que sigue el dedo gana al placeholder y mantiene visible todo el contenido', () => {
+  assert.match(css, /body > \.note-row\.oanix-mobile-note-drag-ghost\s*\{[\s\S]*background:\s*var\(--oanix-note-drag-background\) !important/)
+  assert.match(css, /body > \.note-row\.oanix-mobile-note-drag-ghost > \*\s*\{[\s\S]*visibility:\s*visible !important[\s\S]*opacity:\s*1 !important/)
+  assert.match(css, /body > \.note-row\.oanix-mobile-note-drag-ghost::after\s*\{[\s\S]*opacity:\s*1 !important/)
+  assert.match(css, /body > \.note-row\.oanix-mobile-note-drag-ghost \.note-row__avatar[\s\S]*visibility:\s*visible !important/)
+})
+
 test('identidad visual se congela por note id durante el drag y se restaura antes de persistir', () => {
   assert.match(runtime, /const dragIdentityById = new Map<string, DragIdentity>\(\)/)
   assert.match(runtime, /freezeDragIdentity\(\)/)
