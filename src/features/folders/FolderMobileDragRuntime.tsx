@@ -308,6 +308,21 @@ export function FolderMobileDragRuntime() {
       gesture = null
     }
 
+    const onWheel = (event: WheelEvent) => {
+      const target = event.target
+      if (!(target instanceof Element)) return
+      const rail = target.closest<HTMLElement>('.oanix-folder-rail__scroll')
+      if (!rail || rail.scrollWidth <= rail.clientWidth) return
+
+      const horizontalIntent = Math.abs(event.deltaX) > Math.abs(event.deltaY)
+      const delta = horizontalIntent ? event.deltaX : event.deltaY
+      if (!delta) return
+
+      const before = rail.scrollLeft
+      rail.scrollLeft += delta
+      if (rail.scrollLeft !== before) event.preventDefault()
+    }
+
     const onClick = (event: MouseEvent) => {
       if (performance.now() >= suppressClickUntil) return
       if (!folderItem(event.target)) return
@@ -329,6 +344,7 @@ export function FolderMobileDragRuntime() {
     document.addEventListener('pointermove', onPointerMove, true)
     document.addEventListener('pointerup', persistAndFinish, true)
     document.addEventListener('pointercancel', cancelGesture, true)
+    document.addEventListener('wheel', onWheel, { capture: true, passive: false })
     document.addEventListener('click', onClick, true)
     document.addEventListener('contextmenu', onContextMenu, true)
     document.addEventListener('visibilitychange', onVisibilityChange)
@@ -340,6 +356,7 @@ export function FolderMobileDragRuntime() {
       document.removeEventListener('pointermove', onPointerMove, true)
       document.removeEventListener('pointerup', persistAndFinish, true)
       document.removeEventListener('pointercancel', cancelGesture, true)
+      document.removeEventListener('wheel', onWheel, true)
       document.removeEventListener('click', onClick, true)
       document.removeEventListener('contextmenu', onContextMenu, true)
       document.removeEventListener('visibilitychange', onVisibilityChange)
