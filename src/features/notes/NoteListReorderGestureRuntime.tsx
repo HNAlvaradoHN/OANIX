@@ -16,6 +16,8 @@ type DragIdentity = {
   icon: string | null
 }
 
+type ClientPoint = { x: number; y: number }
+
 function rowPinned(row: HTMLElement): boolean {
   const title = row.querySelector<HTMLElement>('.note-row__topline > strong')
   return Boolean(title?.textContent?.trim().startsWith('📌'))
@@ -35,6 +37,16 @@ function isExcludedInteractiveTarget(target: HTMLElement): boolean {
   return Boolean(target.closest(
     '.note-row__menu-wrap, button:not(.note-row__open), a, input, textarea, select, [contenteditable="true"]',
   ))
+}
+
+function eventClientPoint(event: Event | undefined): ClientPoint | null {
+  if (!event) return null
+  if (event instanceof TouchEvent) {
+    const touch = event.touches[0] ?? event.changedTouches[0]
+    return touch ? { x: touch.clientX, y: touch.clientY } : null
+  }
+  if (event instanceof MouseEvent) return { x: event.clientX, y: event.clientY }
+  return null
 }
 
 function exposeDraggedRowSurface(row: HTMLElement) {
@@ -61,6 +73,9 @@ function clearDraggedRowSurface() {
 export function NoteListReorderGestureRuntime() {
   useEffect(() => {
     let suppressClickUntil = 0
+    let dragOverlay: HTMLElement | null = null
+    let dragOverlayOffset: ClientPoint | null = null
+    let lastPointer: ClientPoint | null = null
     const dragIdentityById = new Map<string, DragIdentity>()
 
     const list = document.querySelector<HTMLElement>('.notes-list')
@@ -111,7 +126,48 @@ export function NoteListReorderGestureRuntime() {
       dragIdentityById.clear()
     }
 
+    const removeDragOverlay = () => {
+      dragOverlay?.remove()
+      dragOverlay = null
+      dragOverlayOffset = null
+    }
+
+    const positionDragOverlay = (point: ClientPoint) => {
+      if (!dragOverlay || !dragOverlayOffset) return
+      dragOverlay.style.left = `${point.x - dragOverlayOffset.x}px`
+      dragOverlay.style.top = `${point.y - dragOverlayOffset.y}px`
+    }
+
+    const createDragOverlay = (row: HTMLElement, point: ClientPoint | null) => {
+      removeDragOverlay()
+      const rect = row.getBoundingClientRect()
+      const clone = row.cloneNode(true) as HTMLElement
+      clone.removeAttribute('data-oanix-note-dragging')
+      clone.classList.remove(
+        'oanix-mobile-note-placeholder',
+        'oanix-mobile-note-chosen',
+        'oanix-mobile-note-drag-source',
+        'oanix-mobile-note-drag-ghost',
+      )
+      clone.classList.add('oanix-mobile-note-drag-overlay')
+      clone.setAttribute('aria-hidden', 'true')
+      clone.style.width = `${rect.width}px`
+      clone.style.height = `${rect.height}px`
+      clone.style.left = `${rect.left}px`
+      clone.style.top = `${rect.top}px`
+      document.body.appendChild(clone)
+      dragOverlay = clone
+
+      const anchor = point ?? lastPointer ?? { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }
+      dragOverlayOffset = {
+        x: Math.min(rect.width, Math.max(0, anchor.x - rect.left)),
+        y: Math.min(rect.height, Math.max(0, anchor.y - rect.top)),
+      }
+      positionDragOverlay(anchor)
+    }
+
     const clearDragVisuals = () => {
+      removeDragOverlay()
       restoreDragIdentity()
       document.body.classList.remove('oanix-mobile-note-dragging')
       document.documentElement.classList.remove('oanix-mobile-note-dragging')
@@ -157,6 +213,7 @@ export function NoteListReorderGestureRuntime() {
         exposeDraggedRowSurface(event.item)
         document.body.classList.add('oanix-mobile-note-dragging')
         document.documentElement.classList.add('oanix-mobile-note-dragging')
+        createDragOverlay(event.item, eventClientPoint(event.originalEvent))
         navigator.vibrate?.(30)
       },
       onMove: (event) => {
@@ -192,6 +249,13 @@ export function NoteListReorderGestureRuntime() {
 
     const sortable = Sortable.create(list, sortableOptions)
 
+    const rememberPointer = (event: TouchEvent | PointerEvent) => {
+      const point = eventClientPoint(event)
+      if (!point) return
+      lastPointer = point
+      positionDragOverlay(point)
+    }
+
     const onClick = (event: MouseEvent) => {
       if (performance.now() >= suppressClickUntil) return
       if (!(event.target instanceof Element) || !event.target.closest('.note-row[data-reorder-note-id]')) return
@@ -204,6 +268,10 @@ export function NoteListReorderGestureRuntime() {
       event.preventDefault()
     }
 
+    document.addEventListener('touchstart', rememberPointer, { capture: true, passive: true })
+    document.addEventListener('touchmove', rememberPointer, { capture: true, passive: true })
+    document.addEventListener('pointerdown', rememberPointer, { capture: true, passive: true })
+    document.addEventListener('pointermove', rememberPointer, { capture: true, passive: true })
     document.addEventListener('click', onClick, true)
     document.addEventListener('contextmenu', blockNativeLongPress, true)
     document.addEventListener('selectstart', blockNativeLongPress, true)
@@ -211,6 +279,10 @@ export function NoteListReorderGestureRuntime() {
     return () => {
       sortable.destroy()
       clearDragVisuals()
+      document.removeEventListener('touchstart', rememberPointer, true)
+      document.removeEventListener('touchmove', rememberPointer, true)
+      document.removeEventListener('pointerdown', rememberPointer, true)
+      document.removeEventListener('pointermove', rememberPointer, true)
       document.removeEventListener('click', onClick, true)
       document.removeEventListener('contextmenu', blockNativeLongPress, true)
       document.removeEventListener('selectstart', blockNativeLongPress, true)
