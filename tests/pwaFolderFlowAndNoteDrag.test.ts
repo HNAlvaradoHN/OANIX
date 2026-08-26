@@ -14,7 +14,10 @@ test('folder appearance stays save-only and closes the whole customizer after sa
   assert.match(folderAppearance, /actions\.hidden = true/)
   assert.match(folderAppearance, /Promise\.all\(\[/)
   assert.match(folderAppearance, /closeCustomizerFromBackdrop\(\)/)
-  assert.match(folderAppearance, /dispatchEvent\(new PointerEvent\('pointerdown'/)
+  assert.equal(
+    folderAppearance.includes("backdrop.dispatchEvent(new PointerEvent('pointerdown'"),
+    true,
+  )
   assert.doesNotMatch(folderAppearance, /actions\.hidden = false/)
   assert.doesNotMatch(polishRuntime, /MutationObserver|oanix-folder-customizer__appearance-toggle/)
 })
