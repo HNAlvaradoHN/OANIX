@@ -10,6 +10,11 @@ type SortableOptionsWithHandle = NonNullable<Parameters<typeof Sortable.create>[
   handle: string
 }
 
+type DragPoint = {
+  x: number
+  y: number
+}
+
 function rowPinned(row: HTMLElement): boolean {
   const title = row.querySelector<HTMLElement>('.note-row__topline > strong')
   return Boolean(title?.textContent?.trim().startsWith('📌'))
@@ -55,15 +60,96 @@ function clearDraggedRowSurface() {
 export function NoteListReorderGestureRuntime() {
   useEffect(() => {
     let suppressClickUntil = 0
+    let latestDragPoint: DragPoint | null = null
+    let dragOverlay: HTMLElement | null = null
+    let dragOverlayFrame: number | null = null
+    let dragOffsetX = 0
+    let dragOffsetY = 0
 
     const list = document.querySelector<HTMLElement>('.notes-list')
     if (!list?.classList.contains('notes-list')) return
+
+    const noteRows = () => Array.from(
+      list.querySelectorAll<HTMLElement>(':scope > .note-row[data-reorder-note-id]'),
+    )
+
+    const freezeDragColors = () => {
+      noteRows().forEach((row) => {
+        const style = window.getComputedStyle(row)
+        const color = row.style.getPropertyValue('--oanix-note-card-color').trim()
+          || style.getPropertyValue('--oanix-note-card-color').trim()
+        if (color) row.style.setProperty('--oanix-note-drag-stable-color', color)
+      })
+    }
+
+    const clearFrozenDragColors = () => {
+      noteRows().forEach((row) => row.style.removeProperty('--oanix-note-drag-stable-color'))
+    }
+
+    const positionDragOverlay = () => {
+      dragOverlayFrame = null
+      if (!dragOverlay || !latestDragPoint) return
+      const left = latestDragPoint.x - dragOffsetX
+      const top = latestDragPoint.y - dragOffsetY
+      dragOverlay.style.transform = `translate3d(${left}px, ${top}px, 0)`
+    }
+
+    const scheduleOverlayPosition = () => {
+      if (!dragOverlay || dragOverlayFrame !== null) return
+      dragOverlayFrame = window.requestAnimationFrame(positionDragOverlay)
+    }
+
+    const rememberDragPoint = (point: DragPoint) => {
+      latestDragPoint = point
+      scheduleOverlayPosition()
+    }
+
+    const removeDragOverlay = () => {
+      if (dragOverlayFrame !== null) {
+        window.cancelAnimationFrame(dragOverlayFrame)
+        dragOverlayFrame = null
+      }
+      dragOverlay?.remove()
+      dragOverlay = null
+    }
+
+    const createDragOverlay = (row: HTMLElement) => {
+      removeDragOverlay()
+      const rect = row.getBoundingClientRect()
+      const point = latestDragPoint ?? {
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2,
+      }
+
+      dragOffsetX = Math.min(Math.max(point.x - rect.left, 0), rect.width)
+      dragOffsetY = Math.min(Math.max(point.y - rect.top, 0), rect.height)
+
+      const overlay = row.cloneNode(true) as HTMLElement
+      overlay.removeAttribute('data-reorder-note-id')
+      overlay.removeAttribute('data-oanix-note-dragging')
+      overlay.classList.remove(
+        'oanix-mobile-note-chosen',
+        'oanix-mobile-note-placeholder',
+        'oanix-mobile-note-drag-source',
+        'oanix-mobile-note-drag-ghost',
+      )
+      overlay.classList.add('oanix-note-drag-overlay')
+      overlay.setAttribute('aria-hidden', 'true')
+      overlay.querySelectorAll<HTMLElement>('[id]').forEach((element) => element.removeAttribute('id'))
+      overlay.style.width = `${rect.width}px`
+      overlay.style.height = `${rect.height}px`
+      dragOverlay = overlay
+      document.body.appendChild(overlay)
+      positionDragOverlay()
+    }
 
     const clearDragVisuals = () => {
       document.body.classList.remove('oanix-mobile-note-dragging')
       document.documentElement.classList.remove('oanix-mobile-note-dragging')
       list.querySelectorAll<HTMLElement>('[data-oanix-note-dragging="true"]')
         .forEach((row) => row.removeAttribute('data-oanix-note-dragging'))
+      removeDragOverlay()
+      clearFrozenDragColors()
       clearDraggedRowSurface()
       window.getSelection()?.removeAllRanges()
     }
@@ -94,12 +180,14 @@ export function NoteListReorderGestureRuntime() {
       bubbleScroll: false,
       dataIdAttr: 'data-reorder-note-id',
       onChoose: (event) => {
+        freezeDragColors()
         event.item.setAttribute('data-oanix-note-dragging', 'true')
         exposeDraggedRowSurface(event.item)
         window.getSelection()?.removeAllRanges()
       },
       onStart: (event) => {
         exposeDraggedRowSurface(event.item)
+        createDragOverlay(event.item)
         document.body.classList.add('oanix-mobile-note-dragging')
         document.documentElement.classList.add('oanix-mobile-note-dragging')
         navigator.vibrate?.(30)
@@ -137,6 +225,30 @@ export function NoteListReorderGestureRuntime() {
 
     const sortable = Sortable.create(list, sortableOptions)
 
+    const onPointerDown = (event: PointerEvent) => {
+      if (!(event.target instanceof Element) || !event.target.closest('.note-row[data-reorder-note-id]')) return
+      rememberDragPoint({ x: event.clientX, y: event.clientY })
+    }
+
+    const onPointerMove = (event: PointerEvent) => {
+      if (!dragOverlay) return
+      rememberDragPoint({ x: event.clientX, y: event.clientY })
+    }
+
+    const onTouchStart = (event: TouchEvent) => {
+      if (!(event.target instanceof Element) || !event.target.closest('.note-row[data-reorder-note-id]')) return
+      const touch = event.touches[0]
+      if (!touch) return
+      rememberDragPoint({ x: touch.clientX, y: touch.clientY })
+    }
+
+    const onTouchMove = (event: TouchEvent) => {
+      if (!dragOverlay) return
+      const touch = event.touches[0]
+      if (!touch) return
+      rememberDragPoint({ x: touch.clientX, y: touch.clientY })
+    }
+
     const onClick = (event: MouseEvent) => {
       if (performance.now() >= suppressClickUntil) return
       if (!(event.target instanceof Element) || !event.target.closest('.note-row[data-reorder-note-id]')) return
@@ -149,6 +261,10 @@ export function NoteListReorderGestureRuntime() {
       event.preventDefault()
     }
 
+    document.addEventListener('pointerdown', onPointerDown, true)
+    document.addEventListener('pointermove', onPointerMove, { capture: true, passive: true })
+    document.addEventListener('touchstart', onTouchStart, { capture: true, passive: true })
+    document.addEventListener('touchmove', onTouchMove, { capture: true, passive: true })
     document.addEventListener('click', onClick, true)
     document.addEventListener('contextmenu', blockNativeLongPress, true)
     document.addEventListener('selectstart', blockNativeLongPress, true)
@@ -156,6 +272,10 @@ export function NoteListReorderGestureRuntime() {
     return () => {
       sortable.destroy()
       clearDragVisuals()
+      document.removeEventListener('pointerdown', onPointerDown, true)
+      document.removeEventListener('pointermove', onPointerMove, true)
+      document.removeEventListener('touchstart', onTouchStart, true)
+      document.removeEventListener('touchmove', onTouchMove, true)
       document.removeEventListener('click', onClick, true)
       document.removeEventListener('contextmenu', blockNativeLongPress, true)
       document.removeEventListener('selectstart', blockNativeLongPress, true)
