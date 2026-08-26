@@ -53,14 +53,6 @@ const EMPTY_NOTE_DRAFT: NoteCustomizerDraft = {
 
 const PERSONALIZATION_RELOAD_DEBOUNCE_MS = 48
 
-function activeFolderItem(): HTMLElement | null {
-  return document.querySelector<HTMLElement>('.oanix-folder-rail__item.is-selected')
-}
-
-function activeWorkspaceCount(): string {
-  return activeFolderItem()?.querySelector<HTMLElement>(':scope > small')?.textContent?.trim() || '0'
-}
-
 export function WorkspacePersonalizationRuntime() {
   const [data, setData] = useState<WorkspacePersonalizationData>(EMPTY_DATA)
   const [noteCustomizerId, setNoteCustomizerId] = useState<string | null>(null)
@@ -68,6 +60,7 @@ export function WorkspacePersonalizationRuntime() {
   const [noteSaving, setNoteSaving] = useState(false)
   const [noteError, setNoteError] = useState('')
   const dataRef = useRef(data)
+  const workspaceCountRef = useRef(0)
   const refreshTimerRef = useRef<number | null>(null)
   const decorateFrameRef = useRef<number | null>(null)
 
@@ -140,8 +133,8 @@ export function WorkspacePersonalizationRuntime() {
   function decorateHeader() {
     const subtitle = document.querySelector<HTMLElement>('.notes-brand > div:last-child > span')
     if (subtitle) {
-      const count = activeWorkspaceCount()
-      subtitle.textContent = `${count} Elemento${count === '1' ? '' : 's'}`
+      const count = workspaceCountRef.current
+      subtitle.textContent = `${count} Elemento${count === 1 ? '' : 's'}`
     }
   }
 
@@ -300,6 +293,14 @@ export function WorkspacePersonalizationRuntime() {
     }
     const handleConflictResolved = () => scheduleRefresh()
     const handleThemeChange = () => scheduleDecorate()
+    const handleWorkspaceCount = (event: Event) => {
+      const detail = event instanceof CustomEvent
+        ? event.detail as { count?: unknown } | null
+        : null
+      if (typeof detail?.count !== 'number' || !Number.isFinite(detail.count)) return
+      workspaceCountRef.current = Math.max(0, Math.trunc(detail.count))
+      scheduleDecorate()
+    }
 
     function handlePointerDownCapture(event: PointerEvent) {
       const target = event.target
@@ -326,6 +327,7 @@ export function WorkspacePersonalizationRuntime() {
     window.addEventListener('oanix:local-data-changed', handleLocalChange)
     window.addEventListener('oanix:conflict-resolved', handleConflictResolved)
     window.addEventListener('oanix:theme-change', handleThemeChange)
+    window.addEventListener('oanix:workspace-count-changed', handleWorkspaceCount)
 
     void refreshData()
     scheduleDecorate()
@@ -338,6 +340,7 @@ export function WorkspacePersonalizationRuntime() {
       window.removeEventListener('oanix:local-data-changed', handleLocalChange)
       window.removeEventListener('oanix:conflict-resolved', handleConflictResolved)
       window.removeEventListener('oanix:theme-change', handleThemeChange)
+      window.removeEventListener('oanix:workspace-count-changed', handleWorkspaceCount)
       if (refreshTimerRef.current !== null) window.clearTimeout(refreshTimerRef.current)
       if (decorateFrameRef.current !== null) window.cancelAnimationFrame(decorateFrameRef.current)
     }
