@@ -248,9 +248,16 @@ export function FolderAppearanceRuntime() {
           icons.set(lastFolderId, draftIcon)
           applyColor(lastFolderId, draftColor)
           applyIcon(lastFolderId, draftIcon)
-          saveAppearance.textContent = 'Guardar'
-          saveAppearance.disabled = false
-          if (!closeCustomizerFromBackdrop()) cancelButton?.click()
+          saveAppearance.textContent = '✓ Guardado'
+          saveAppearance.disabled = true
+          window.setTimeout(() => {
+            if (!closeCustomizerFromBackdrop()) cancelButton?.click()
+            window.setTimeout(() => {
+              if (document.querySelector<HTMLElement>('.oanix-folder-customizer')) {
+                cancelButton?.click()
+              }
+            }, 150)
+          }, 450)
         }).catch(() => {
           saveAppearance.textContent = 'Reintentar guardar'
           saveAppearance.disabled = false
