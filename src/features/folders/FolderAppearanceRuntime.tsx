@@ -52,13 +52,6 @@ function directActionButtons(actions: HTMLElement): HTMLButtonElement[] {
   return Array.from(actions.children).filter((child): child is HTMLButtonElement => child instanceof HTMLButtonElement)
 }
 
-function closeCustomizerFromBackdrop() {
-  const backdrop = document.querySelector<HTMLElement>('.oanix-folder-customizer-backdrop')
-  if (!backdrop) return false
-  backdrop.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, pointerType: 'mouse' }))
-  return true
-}
-
 export function FolderAppearanceRuntime() {
   useEffect(() => {
     let disposed = false
@@ -250,14 +243,10 @@ export function FolderAppearanceRuntime() {
           applyIcon(lastFolderId, draftIcon)
           saveAppearance.textContent = '✓ Guardado'
           saveAppearance.disabled = true
+          window.dispatchEvent(new CustomEvent('oanix:folder-appearance-saved'))
           window.setTimeout(() => {
-            if (!closeCustomizerFromBackdrop()) cancelButton?.click()
-            window.setTimeout(() => {
-              if (document.querySelector<HTMLElement>('.oanix-folder-customizer')) {
-                cancelButton?.click()
-              }
-            }, 150)
-          }, 450)
+            cancelButton?.click()
+          }, 400)
         }).catch(() => {
           saveAppearance.textContent = 'Reintentar guardar'
           saveAppearance.disabled = false
