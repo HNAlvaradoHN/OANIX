@@ -45,6 +45,7 @@ export function NoteVisualIdentityRuntime() {
         if (row.style.getPropertyValue('--oanix-note-stable-color').trim() !== color) {
           row.style.setProperty('--oanix-note-stable-color', color)
         }
+        row.dataset.oanixNoteStableVisual = 'true'
         if (row.style.getPropertyValue('--oanix-note-card-color').trim() !== color) {
           row.style.setProperty('--oanix-note-card-color', color)
         }
