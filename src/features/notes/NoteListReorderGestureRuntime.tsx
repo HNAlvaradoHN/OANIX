@@ -31,6 +31,27 @@ function isExcludedInteractiveTarget(target: HTMLElement): boolean {
   ))
 }
 
+function exposeDraggedRowSurface(row: HTMLElement) {
+  const root = document.documentElement
+  const rect = row.getBoundingClientRect()
+  const style = window.getComputedStyle(row)
+
+  root.style.setProperty('--oanix-note-drag-width', `${rect.width}px`)
+  root.style.setProperty('--oanix-note-drag-height', `${rect.height}px`)
+  root.style.setProperty('--oanix-note-drag-background', style.background)
+  root.style.setProperty('--oanix-note-drag-border-color', style.borderColor)
+  root.style.setProperty('--oanix-note-drag-border-radius', style.borderRadius)
+}
+
+function clearDraggedRowSurface() {
+  const root = document.documentElement
+  root.style.removeProperty('--oanix-note-drag-width')
+  root.style.removeProperty('--oanix-note-drag-height')
+  root.style.removeProperty('--oanix-note-drag-background')
+  root.style.removeProperty('--oanix-note-drag-border-color')
+  root.style.removeProperty('--oanix-note-drag-border-radius')
+}
+
 export function NoteListReorderGestureRuntime() {
   useEffect(() => {
     let suppressClickUntil = 0
@@ -43,6 +64,7 @@ export function NoteListReorderGestureRuntime() {
       document.documentElement.classList.remove('oanix-mobile-note-dragging')
       list.querySelectorAll<HTMLElement>('[data-oanix-note-dragging="true"]')
         .forEach((row) => row.removeAttribute('data-oanix-note-dragging'))
+      clearDraggedRowSurface()
       window.getSelection()?.removeAllRanges()
     }
 
@@ -52,7 +74,7 @@ export function NoteListReorderGestureRuntime() {
       filter: (_event, target) => interactionBlocked() || isExcludedInteractiveTarget(target),
       preventOnFilter: false,
       direction: 'vertical',
-      animation: 165,
+      animation: 210,
       easing: 'cubic-bezier(.2,.8,.2,1)',
       delay: LONG_PRESS_MS,
       delayOnTouchOnly: true,
@@ -73,9 +95,11 @@ export function NoteListReorderGestureRuntime() {
       dataIdAttr: 'data-reorder-note-id',
       onChoose: (event) => {
         event.item.setAttribute('data-oanix-note-dragging', 'true')
+        exposeDraggedRowSurface(event.item)
         window.getSelection()?.removeAllRanges()
       },
-      onStart: () => {
+      onStart: (event) => {
+        exposeDraggedRowSurface(event.item)
         document.body.classList.add('oanix-mobile-note-dragging')
         document.documentElement.classList.add('oanix-mobile-note-dragging')
         navigator.vibrate?.(30)
