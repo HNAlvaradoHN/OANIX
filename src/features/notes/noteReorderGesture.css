@@ -1,7 +1,14 @@
+.note-row[data-reorder-note-id],
+.note-row[data-reorder-note-id] .note-row__open,
 .note-row[data-reorder-note-id] .note-row__avatar,
 html.oanix-v383-visual .note-row[data-reorder-note-id] .note-row__avatar {
   pointer-events: auto !important;
   cursor: grab;
+}
+
+.note-row[data-reorder-note-id] .note-row__menu-wrap,
+.note-row[data-reorder-note-id] .note-row__menu-wrap * {
+  cursor: default;
 }
 
 @media (pointer: coarse) {
@@ -12,7 +19,8 @@ html.oanix-v383-visual .note-row[data-reorder-note-id] .note-row__avatar {
     -webkit-touch-callout: none !important;
   }
 
-  .note-row[data-reorder-note-id] {
+  .note-row[data-reorder-note-id],
+  .note-row[data-reorder-note-id] .note-row__open {
     touch-action: pan-y !important;
   }
 
@@ -23,23 +31,29 @@ html.oanix-v383-visual .note-row[data-reorder-note-id] .note-row__avatar {
 }
 
 .note-row.oanix-mobile-note-chosen {
-  box-shadow: 0 0 0 2px rgba(96,165,250,.26) !important;
+  border-color: rgba(147,197,253,.82) !important;
+  box-shadow: 0 10px 28px rgba(2,6,23,.28), 0 0 0 2px rgba(96,165,250,.28) !important;
+  filter: brightness(1.04) saturate(1.04);
+  transition: box-shadow 120ms ease, border-color 120ms ease, filter 120ms ease, opacity 120ms ease;
 }
 
 .note-row.oanix-mobile-note-placeholder {
-  opacity: .24 !important;
+  opacity: .18 !important;
   border: 2px dashed rgba(96,165,250,.9) !important;
   background: rgba(59,130,246,.08) !important;
   box-shadow: none !important;
+  filter: saturate(.9);
 }
 
 .note-row.oanix-mobile-note-drag-ghost {
   z-index: 9800 !important;
   margin: 0 !important;
   pointer-events: none !important;
-  opacity: .99 !important;
-  border-color: rgba(147,197,253,.9) !important;
-  box-shadow: 0 22px 46px rgba(2,6,23,.46), 0 0 0 2px rgba(96,165,250,.3), inset 0 1px 1px rgba(255,255,255,.18) !important;
+  opacity: .97 !important;
+  border-color: rgba(147,197,253,.95) !important;
+  box-shadow: 0 28px 60px rgba(2,6,23,.54), 0 0 0 2px rgba(96,165,250,.38), inset 0 1px 1px rgba(255,255,255,.2) !important;
+  filter: brightness(1.08) saturate(1.07);
+  transition: box-shadow 120ms ease, border-color 120ms ease, filter 120ms ease, opacity 120ms ease;
   will-change: transform;
 }
 
@@ -48,7 +62,7 @@ html.oanix-v383-visual .note-row[data-reorder-note-id] .note-row__avatar {
 }
 
 body.oanix-mobile-note-dragging .note-row[data-reorder-note-id]:not(.oanix-mobile-note-drag-ghost) {
-  transition: box-shadow 140ms ease, opacity 140ms ease;
+  transition: box-shadow 140ms ease, opacity 140ms ease, border-color 140ms ease, filter 140ms ease;
 }
 
 html.oanix-mobile-note-dragging,
@@ -64,8 +78,15 @@ html.oanix-mobile-note-dragging .notes-list {
   cursor: grabbing;
 }
 
+html.oanix-mobile-note-dragging .note-row[data-reorder-note-id],
+html.oanix-mobile-note-dragging .note-row[data-reorder-note-id] .note-row__open,
 html.oanix-mobile-note-dragging .note-row[data-reorder-note-id] .note-row__avatar {
   cursor: grabbing;
+}
+
+html.oanix-mobile-note-dragging .note-row[data-reorder-note-id] .note-row__menu-wrap,
+html.oanix-mobile-note-dragging .note-row[data-reorder-note-id] .note-row__menu-wrap * {
+  cursor: default;
 }
 
 /* The bottom folder dock is a separate fixed interaction surface. While a note
