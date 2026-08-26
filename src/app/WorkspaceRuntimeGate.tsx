@@ -7,6 +7,7 @@ import { FolderMobileDragRuntime } from '../features/folders/FolderMobileDragRun
 import { FolderOperationFeedbackRuntime } from '../features/folders/FolderOperationFeedbackRuntime'
 import '../features/notes/folderDockContract.css'
 import { NoteCreationFeedbackRuntime } from '../features/notes/NoteCreationFeedbackRuntime'
+import { NoteVisualIdentityRuntime } from '../features/notes/NoteVisualIdentityRuntime'
 import { OrganicWorkspaceRuntime } from '../features/notes/OrganicWorkspaceRuntime'
 import { V383WorkspaceVisualRuntime } from '../features/notes/V383WorkspaceVisualRuntime'
 import { WorkspacePersonalizationRuntime } from '../features/notes/WorkspacePersonalizationRuntime'
@@ -22,6 +23,7 @@ export function WorkspaceRuntimeGate() {
       <FolderCustomizerBridgeRuntime />
       <OrganicWorkspaceRuntime />
       <WorkspacePersonalizationRuntime />
+      <NoteVisualIdentityRuntime />
       <PrivacyStatusHelp />
       <FolderAppearanceRuntime />
       <FolderOperationFeedbackRuntime />
