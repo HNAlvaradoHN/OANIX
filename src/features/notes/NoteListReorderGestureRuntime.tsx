@@ -5,17 +5,49 @@ import './noteReorderGesture.css'
 
 const LONG_PRESS_MS = 300
 const TOUCH_START_THRESHOLD_PX = 7
+const TOUCH_MOVE_CANCEL_PX = 12
+const PRESS_ARM_GRACE_MS = 55
+const EDGE_SCROLL_PX = 76
+const MAX_SCROLL_PER_FRAME = 10
+const REFLOW_MS = 180
 
 type SortableOptionsWithHandle = NonNullable<Parameters<typeof Sortable.create>[1]> & { handle: string }
 type DragIdentity = { cardColor: string; tabColor: string; icon: string | null }
 type ClientPoint = { x: number; y: number }
+type TouchGesture = {
+  pointerId: number
+  item: HTMLElement
+  startX: number
+  startY: number
+  lastX: number
+  lastY: number
+  pressedAt: number
+  grabOffsetX: number
+  grabOffsetY: number
+  moved: boolean
+  dragging: boolean
+  orderBefore: string[]
+  timer: number | null
+  scrollFrame: number | null
+}
 
 function rowPinned(row: HTMLElement): boolean {
   const title = row.querySelector<HTMLElement>('.note-row__topline > strong')
   return Boolean(title?.textContent?.trim().startsWith('📌'))
 }
 function noteOrder(list: HTMLElement): string[] {
-  return Array.from(list.querySelectorAll<HTMLElement>(':scope > .note-row[data-reorder-note-id]')).flatMap((row) => row.dataset.reorderNoteId ? [row.dataset.reorderNoteId] : [])
+  return Array.from(list.querySelectorAll<HTMLElement>(':scope > .note-row[data-reorder-note-id]'))
+    .flatMap((row) => row.dataset.reorderNoteId ? [row.dataset.reorderNoteId] : [])
+}
+function restoreDomOrder(list: HTMLElement, ids: string[]) {
+  const byId = new Map(
+    Array.from(list.querySelectorAll<HTMLElement>(':scope > .note-row[data-reorder-note-id]'))
+      .flatMap((row) => row.dataset.reorderNoteId ? [[row.dataset.reorderNoteId, row] as const] : []),
+  )
+  ids.forEach((id) => {
+    const row = byId.get(id)
+    if (row) list.appendChild(row)
+  })
 }
 function interactionBlocked(): boolean {
   return document.documentElement.classList.contains('oanix-note-bulk-selecting') || Boolean(document.querySelector('.notes-shell--searching'))
@@ -68,10 +100,46 @@ function prepareDragOverlayTemplate(row: HTMLElement): HTMLElement {
   const clone = row.cloneNode(true) as HTMLElement
   copyComputedStyleTree(row, clone)
   clone.removeAttribute('data-oanix-note-dragging')
-  clone.classList.remove('oanix-mobile-note-placeholder', 'oanix-mobile-note-chosen', 'oanix-mobile-note-drag-source', 'oanix-mobile-note-drag-ghost')
-  clone.classList.add('oanix-mobile-note-drag-overlay')
+  clone.removeAttribute('data-reorder-note-id')
+  clone.className = 'oanix-mobile-note-drag-overlay'
+  clone.querySelector<HTMLElement>('.note-row__menu-wrap')?.remove()
   clone.setAttribute('aria-hidden', 'true')
   return clone
+}
+function snapshotRects(list: HTMLElement): Map<HTMLElement, DOMRect> {
+  return new Map(
+    Array.from(list.querySelectorAll<HTMLElement>(':scope > .note-row[data-reorder-note-id]'))
+      .map((row) => [row, row.getBoundingClientRect()] as const),
+  )
+}
+function animateReflow(list: HTMLElement, before: Map<HTMLElement, DOMRect>, dragged: HTMLElement) {
+  for (const row of Array.from(list.querySelectorAll<HTMLElement>(':scope > .note-row[data-reorder-note-id]'))) {
+    if (row === dragged) continue
+    const previous = before.get(row)
+    if (!previous) continue
+    const next = row.getBoundingClientRect()
+    const dx = previous.left - next.left
+    const dy = previous.top - next.top
+    if (Math.abs(dx) < 1 && Math.abs(dy) < 1) continue
+    row.animate(
+      [
+        { transform: `translate(${dx}px, ${dy}px)` },
+        { transform: 'translate(0, 0)' },
+      ],
+      { duration: REFLOW_MS, easing: 'cubic-bezier(.2,.8,.2,1)' },
+    )
+  }
+}
+function scrollSpeed(clientY: number): number {
+  if (clientY < EDGE_SCROLL_PX) {
+    const strength = Math.min(1, (EDGE_SCROLL_PX - clientY) / EDGE_SCROLL_PX)
+    return -Math.max(2, Math.round(MAX_SCROLL_PER_FRAME * strength))
+  }
+  if (clientY > window.innerHeight - EDGE_SCROLL_PX) {
+    const strength = Math.min(1, (clientY - (window.innerHeight - EDGE_SCROLL_PX)) / EDGE_SCROLL_PX)
+    return Math.max(2, Math.round(MAX_SCROLL_PER_FRAME * strength))
+  }
+  return 0
 }
 
 export function NoteListReorderGestureRuntime() {
@@ -81,9 +149,11 @@ export function NoteListReorderGestureRuntime() {
     let dragOverlayTemplate: HTMLElement | null = null
     let dragOverlayOffset: ClientPoint | null = null
     let lastPointer: ClientPoint | null = null
+    let touchGesture: TouchGesture | null = null
     const dragIdentityById = new Map<string, DragIdentity>()
     const list = document.querySelector<HTMLElement>('.notes-list')
     if (!list?.classList.contains('notes-list')) return
+    const coarsePointer = window.matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0
     const noteRows = () => Array.from(list.querySelectorAll<HTMLElement>(':scope > .note-row[data-reorder-note-id]'))
 
     const freezeDragIdentity = () => {
@@ -172,9 +242,179 @@ export function NoteListReorderGestureRuntime() {
       document.body.classList.remove('oanix-mobile-note-dragging')
       document.documentElement.classList.remove('oanix-mobile-note-dragging')
       list.querySelectorAll<HTMLElement>('[data-oanix-note-dragging="true"]').forEach((row) => row.removeAttribute('data-oanix-note-dragging'))
+      list.querySelectorAll<HTMLElement>('.oanix-mobile-note-placeholder').forEach((row) => row.classList.remove('oanix-mobile-note-placeholder'))
+      list.querySelectorAll<HTMLElement>('.oanix-mobile-note-chosen').forEach((row) => row.classList.remove('oanix-mobile-note-chosen'))
       clearFrozenDragIdentity()
       clearDraggedRowSurface()
       window.getSelection()?.removeAllRanges()
+    }
+    const persistCurrentOrder = async (nextOrder: string[]) => {
+      if (nextOrder.length === 0) return
+      try {
+        const updatedNotes = await persistNoteOrder(nextOrder)
+        window.dispatchEvent(new CustomEvent('oanix:note-order-persisted', { detail: { notes: updatedNotes.map((note) => ({ id: note.id, manualOrder: note.manualOrder })) } }))
+        window.dispatchEvent(new CustomEvent('oanix:local-data-changed', { detail: { recordType: 'note' } }))
+        navigator.vibrate?.(12)
+      } catch {
+        window.dispatchEvent(new Event('oanix:workspace-refresh'))
+      }
+    }
+
+    const reorderTouchDomAtPoint = (gesture: TouchGesture, animate = true) => {
+      const draggedPinned = rowPinned(gesture.item)
+      const all = noteRows().filter((row) => row !== gesture.item)
+      const eligible = all.filter((row) => rowPinned(row) === draggedPinned)
+      const beforeOrder = noteOrder(list).join('|')
+      const beforeRects = animate ? snapshotRects(list) : null
+      const insertionTarget = eligible.find((row) => {
+        const rect = row.getBoundingClientRect()
+        return gesture.lastY < rect.top + rect.height / 2
+      })
+
+      if (insertionTarget) {
+        list.insertBefore(gesture.item, insertionTarget)
+      } else if (draggedPinned) {
+        const firstUnpinned = all.find((row) => !rowPinned(row))
+        if (firstUnpinned) list.insertBefore(gesture.item, firstUnpinned)
+        else list.appendChild(gesture.item)
+      } else {
+        list.appendChild(gesture.item)
+      }
+
+      const changed = noteOrder(list).join('|') !== beforeOrder
+      if (!changed || !beforeRects) return
+      animateReflow(list, beforeRects, gesture.item)
+    }
+    const stopTouchAutoScroll = () => {
+      if (!touchGesture || touchGesture.scrollFrame === null) return
+      window.cancelAnimationFrame(touchGesture.scrollFrame)
+      touchGesture.scrollFrame = null
+    }
+    const startTouchAutoScroll = () => {
+      if (!touchGesture || !touchGesture.dragging || touchGesture.scrollFrame !== null) return
+      const tick = () => {
+        if (!touchGesture || !touchGesture.dragging) return
+        const speed = scrollSpeed(touchGesture.lastY)
+        if (speed !== 0) {
+          const before = list.scrollTop
+          list.scrollTop += speed
+          if (list.scrollTop !== before) {
+            reorderTouchDomAtPoint(touchGesture, false)
+          } else {
+            window.scrollBy(0, speed)
+            reorderTouchDomAtPoint(touchGesture, false)
+          }
+        }
+        touchGesture.scrollFrame = window.requestAnimationFrame(tick)
+      }
+      touchGesture.scrollFrame = window.requestAnimationFrame(tick)
+    }
+    const clearTouchTimer = () => {
+      if (!touchGesture || touchGesture.timer === null) return
+      window.clearTimeout(touchGesture.timer)
+      touchGesture.timer = null
+    }
+    const beginTouchDrag = () => {
+      if (!touchGesture || touchGesture.moved || touchGesture.dragging || interactionBlocked()) return
+      clearTouchTimer()
+      touchGesture.dragging = true
+      touchGesture.orderBefore = noteOrder(list)
+      freezeDragIdentity()
+      dragOverlayTemplate = prepareDragOverlayTemplate(touchGesture.item)
+      exposeDraggedRowSurface(touchGesture.item)
+      touchGesture.item.setAttribute('data-oanix-note-dragging', 'true')
+      document.body.classList.add('oanix-mobile-note-dragging')
+      document.documentElement.classList.add('oanix-mobile-note-dragging')
+      createDragOverlay(touchGesture.item, { x: touchGesture.lastX, y: touchGesture.lastY })
+      touchGesture.item.classList.add('oanix-mobile-note-chosen', 'oanix-mobile-note-placeholder')
+      positionDragOverlay({ x: touchGesture.lastX, y: touchGesture.lastY })
+      startTouchAutoScroll()
+      window.getSelection()?.removeAllRanges()
+      navigator.vibrate?.(30)
+    }
+    const cancelTouchGesture = (restoreOrder = true) => {
+      if (!touchGesture) return
+      clearTouchTimer()
+      stopTouchAutoScroll()
+      if (restoreOrder && touchGesture.dragging && touchGesture.orderBefore.length) restoreDomOrder(list, touchGesture.orderBefore)
+      touchGesture = null
+      clearDragVisuals()
+    }
+    const onTouchPointerDown = (event: PointerEvent) => {
+      if (!coarsePointer || event.pointerType === 'mouse' || event.button !== 0 || touchGesture || interactionBlocked()) return
+      if (!(event.target instanceof HTMLElement) || isExcludedInteractiveTarget(event.target)) return
+      const item = event.target.closest<HTMLElement>('.note-row[data-reorder-note-id]')
+      if (!item || item.parentElement !== list) return
+      const rect = item.getBoundingClientRect()
+      lastPointer = { x: event.clientX, y: event.clientY }
+      touchGesture = {
+        pointerId: event.pointerId,
+        item,
+        startX: event.clientX,
+        startY: event.clientY,
+        lastX: event.clientX,
+        lastY: event.clientY,
+        pressedAt: performance.now(),
+        grabOffsetX: event.clientX - rect.left,
+        grabOffsetY: event.clientY - rect.top,
+        moved: false,
+        dragging: false,
+        orderBefore: [],
+        timer: window.setTimeout(beginTouchDrag, LONG_PRESS_MS),
+        scrollFrame: null,
+      }
+    }
+    const onTouchPointerMove = (event: PointerEvent) => {
+      if (!touchGesture || event.pointerId !== touchGesture.pointerId) return
+      touchGesture.lastX = event.clientX
+      touchGesture.lastY = event.clientY
+      lastPointer = { x: event.clientX, y: event.clientY }
+
+      if (!touchGesture.dragging) {
+        const dx = event.clientX - touchGesture.startX
+        const dy = event.clientY - touchGesture.startY
+        const distance = Math.hypot(dx, dy)
+        if (distance < TOUCH_MOVE_CANCEL_PX) return
+
+        const heldFor = performance.now() - touchGesture.pressedAt
+        if (heldFor >= LONG_PRESS_MS - PRESS_ARM_GRACE_MS) {
+          beginTouchDrag()
+          if (touchGesture?.dragging) {
+            event.preventDefault()
+            positionDragOverlay(lastPointer)
+            reorderTouchDomAtPoint(touchGesture)
+            return
+          }
+        }
+
+        touchGesture.moved = true
+        clearTouchTimer()
+        return
+      }
+
+      event.preventDefault()
+      positionDragOverlay(lastPointer)
+      reorderTouchDomAtPoint(touchGesture)
+    }
+    const finishTouchGesture = (event: PointerEvent) => {
+      if (!touchGesture || event.pointerId !== touchGesture.pointerId) return
+      const finished = touchGesture
+      clearTouchTimer()
+      stopTouchAutoScroll()
+
+      if (!finished.dragging) {
+        if (finished.moved) suppressClickUntil = performance.now() + 380
+        touchGesture = null
+        return
+      }
+
+      event.preventDefault()
+      suppressClickUntil = performance.now() + 520
+      const nextOrder = noteOrder(list)
+      const changed = nextOrder.join('|') !== finished.orderBefore.join('|')
+      touchGesture = null
+      clearDragVisuals()
+      if (changed) void persistCurrentOrder(nextOrder)
     }
 
     const sortableOptions: SortableOptionsWithHandle = {
@@ -182,6 +422,7 @@ export function NoteListReorderGestureRuntime() {
       handle: '.note-row[data-reorder-note-id]',
       filter: (_event, target) => interactionBlocked() || isExcludedInteractiveTarget(target),
       preventOnFilter: false,
+      disabled: coarsePointer,
       direction: 'vertical',
       animation: 210,
       easing: 'cubic-bezier(.2,.8,.2,1)',
@@ -225,16 +466,7 @@ export function NoteListReorderGestureRuntime() {
         const nextOrder = noteOrder(event.to)
         clearDragVisuals()
         if (event.oldIndex === event.newIndex || nextOrder.length === 0) return
-        void (async () => {
-          try {
-            const updatedNotes = await persistNoteOrder(nextOrder)
-            window.dispatchEvent(new CustomEvent('oanix:note-order-persisted', { detail: { notes: updatedNotes.map((note) => ({ id: note.id, manualOrder: note.manualOrder })) } }))
-            window.dispatchEvent(new CustomEvent('oanix:local-data-changed', { detail: { recordType: 'note' } }))
-            navigator.vibrate?.(12)
-          } catch {
-            window.dispatchEvent(new Event('oanix:workspace-refresh'))
-          }
-        })()
+        void persistCurrentOrder(nextOrder)
       },
     }
 
@@ -243,7 +475,7 @@ export function NoteListReorderGestureRuntime() {
       const point = eventClientPoint(event)
       if (!point) return
       lastPointer = point
-      positionDragOverlay(point)
+      if (!touchGesture?.dragging) positionDragOverlay(point)
     }
     const onClick = (event: MouseEvent) => {
       if (performance.now() >= suppressClickUntil) return
@@ -255,24 +487,46 @@ export function NoteListReorderGestureRuntime() {
       if (!(event.target instanceof Element) || !event.target.closest('.note-row[data-reorder-note-id]')) return
       event.preventDefault()
     }
+    const onTouchPointerCancel = (event: PointerEvent) => {
+      if (!touchGesture || event.pointerId !== touchGesture.pointerId) return
+      cancelTouchGesture(true)
+    }
+    const onVisibilityChange = () => {
+      if (document.hidden) cancelTouchGesture(true)
+    }
+    const onBlur = () => cancelTouchGesture(true)
 
     document.addEventListener('touchstart', rememberPointer, { capture: true, passive: true })
     document.addEventListener('touchmove', rememberPointer, { capture: true, passive: true })
     document.addEventListener('pointerdown', rememberPointer, { capture: true, passive: true })
     document.addEventListener('pointermove', rememberPointer, { capture: true, passive: true })
+    document.addEventListener('pointerdown', onTouchPointerDown, true)
+    document.addEventListener('pointermove', onTouchPointerMove, { capture: true, passive: false })
+    document.addEventListener('pointerup', finishTouchGesture, true)
+    document.addEventListener('pointercancel', onTouchPointerCancel, true)
     document.addEventListener('click', onClick, true)
     document.addEventListener('contextmenu', blockNativeLongPress, true)
     document.addEventListener('selectstart', blockNativeLongPress, true)
+    document.addEventListener('visibilitychange', onVisibilityChange)
+    window.addEventListener('blur', onBlur)
+
     return () => {
       sortable.destroy()
+      cancelTouchGesture(true)
       clearDragVisuals()
       document.removeEventListener('touchstart', rememberPointer, true)
       document.removeEventListener('touchmove', rememberPointer, true)
       document.removeEventListener('pointerdown', rememberPointer, true)
       document.removeEventListener('pointermove', rememberPointer, true)
+      document.removeEventListener('pointerdown', onTouchPointerDown, true)
+      document.removeEventListener('pointermove', onTouchPointerMove, true)
+      document.removeEventListener('pointerup', finishTouchGesture, true)
+      document.removeEventListener('pointercancel', onTouchPointerCancel, true)
       document.removeEventListener('click', onClick, true)
       document.removeEventListener('contextmenu', blockNativeLongPress, true)
       document.removeEventListener('selectstart', blockNativeLongPress, true)
+      document.removeEventListener('visibilitychange', onVisibilityChange)
+      window.removeEventListener('blur', onBlur)
     }
   }, [])
   return null
