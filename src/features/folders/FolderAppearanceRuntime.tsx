@@ -192,36 +192,6 @@ export function FolderAppearanceRuntime() {
       syncIconSelection()
       iconSection.append(iconHeading, iconGrid)
 
-      const saveAppearance = document.createElement('button')
-      saveAppearance.type = 'button'
-      saveAppearance.className = 'oanix-folder-appearance-picker__save'
-      saveAppearance.textContent = 'Guardar'
-      saveAppearance.addEventListener('click', () => {
-        if (saveAppearance.disabled) return
-        saveAppearance.disabled = true
-        saveAppearance.textContent = 'Guardando…'
-        void Promise.all([
-          saveFolderColor(lastFolderId, draftColor),
-          saveFolderIcon(lastFolderId, draftIcon),
-        ]).then(() => {
-          colors.set(lastFolderId, draftColor)
-          icons.set(lastFolderId, draftIcon)
-          applyColor(lastFolderId, draftColor)
-          applyIcon(lastFolderId, draftIcon)
-          appearance.hidden = true
-          appearanceButton.setAttribute('aria-expanded', 'false')
-          appearanceButton.textContent = '🎨 Cambiar color / Icono'
-          saveAppearance.textContent = 'Guardar'
-          saveAppearance.disabled = false
-        }).catch(() => {
-          saveAppearance.textContent = 'Reintentar guardar'
-          saveAppearance.disabled = false
-        })
-      })
-
-      appearance.append(colorSection, iconSection, saveAppearance)
-      actions.before(appearance)
-
       const existingActions = directActionButtons(actions)
       const imageButton = existingActions[0]
       const removeImageButton = existingActions.find((button) => button.classList.contains('oanix-folder-customizer__remove'))
@@ -253,9 +223,37 @@ export function FolderAppearanceRuntime() {
         syncIconSelection()
         applyColor(lastFolderId, draftColor)
         applyIcon(lastFolderId, draftIcon)
-        saveAppearance.textContent = 'Guardar'
-        saveAppearance.disabled = false
       }
+
+      const saveAppearance = document.createElement('button')
+      saveAppearance.type = 'button'
+      saveAppearance.className = 'oanix-folder-appearance-picker__save'
+      saveAppearance.textContent = 'Guardar'
+      saveAppearance.addEventListener('click', () => {
+        if (saveAppearance.disabled) return
+        saveAppearance.disabled = true
+        saveAppearance.textContent = 'Guardando…'
+        void Promise.all([
+          saveFolderColor(lastFolderId, draftColor),
+          saveFolderIcon(lastFolderId, draftIcon),
+        ]).then(() => {
+          colors.set(lastFolderId, draftColor)
+          icons.set(lastFolderId, draftIcon)
+          applyColor(lastFolderId, draftColor)
+          applyIcon(lastFolderId, draftIcon)
+          saveAppearance.textContent = 'Guardar'
+          saveAppearance.disabled = false
+          actions.hidden = false
+          delete modal.dataset.oanixAppearanceOnly
+          cancelButton?.click()
+        }).catch(() => {
+          saveAppearance.textContent = 'Reintentar guardar'
+          saveAppearance.disabled = false
+        })
+      })
+
+      appearance.append(colorSection, iconSection, saveAppearance)
+      actions.before(appearance)
 
       const appearanceButton = document.createElement('button')
       appearanceButton.type = 'button'
@@ -263,19 +261,12 @@ export function FolderAppearanceRuntime() {
       appearanceButton.textContent = '🎨 Cambiar color / Icono'
       appearanceButton.setAttribute('aria-expanded', 'false')
       appearanceButton.addEventListener('click', () => {
-        if (appearance.hidden) {
-          resetDraftFromSaved()
-          appearance.hidden = false
-          appearanceButton.setAttribute('aria-expanded', 'true')
-          appearanceButton.textContent = '✓ Cerrar color / Icono'
-          appearance.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
-          return
-        }
-
         resetDraftFromSaved()
-        appearance.hidden = true
-        appearanceButton.setAttribute('aria-expanded', 'false')
-        appearanceButton.textContent = '🎨 Cambiar color / Icono'
+        appearance.hidden = false
+        actions.hidden = true
+        modal.dataset.oanixAppearanceOnly = 'true'
+        appearanceButton.setAttribute('aria-expanded', 'true')
+        appearance.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
       })
 
       actions.prepend(appearanceButton)
