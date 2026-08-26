@@ -6,6 +6,7 @@ const main = readFileSync('src/main.tsx', 'utf8')
 const gate = readFileSync('src/app/WorkspaceRuntimeGate.tsx', 'utf8')
 const bridge = readFileSync('src/features/folders/FolderCustomizerBridgeRuntime.tsx', 'utf8')
 const creation = readFileSync('src/features/folders/FolderCreationRuntime.tsx', 'utf8')
+const grid = readFileSync('src/features/folders/FolderGridRuntime.tsx', 'utf8')
 const personalization = readFileSync('src/features/notes/WorkspacePersonalizationRuntime.tsx', 'utf8')
 const appearance = readFileSync('src/features/folders/FolderAppearanceRuntime.tsx', 'utf8')
 
@@ -20,10 +21,10 @@ test('folder gear opens the unified customizer directly without the retired inte
   assert.doesNotMatch(main, /folderOptionsVisual\.css/)
 })
 
-test('the remaining folder customizer contains the professional action surface in its DOM flow', () => {
+test('folder appearance is a draft with one explicit save action', () => {
   for (const label of [
-    'Abrir carpeta',
     'Cambiar color / Icono',
+    'Guardar',
     'Cambiar imagen de mi dispositivo',
     'Quitar imagen',
     'Administrar nombre / eliminar',
@@ -32,9 +33,20 @@ test('the remaining folder customizer contains the professional action surface i
     assert.match(appearance, new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
   }
 
-  assert.match(appearance, /actions\.prepend\(appearanceButton\)[\s\S]*actions\.prepend\(openButton\)/)
-  assert.match(appearance, /const imageButton = existingActions\[0\]/)
-  assert.match(appearance, /const cancelButton = existingActions\[existingActions\.length - 1\]/)
+  assert.doesNotMatch(appearance, /Abrir carpeta|Restablecer color|Restablecer icono/)
+  assert.match(appearance, /let draftColor =/)
+  assert.match(appearance, /let draftIcon =/)
+  assert.match(appearance, /void Promise\.all\(\[[\s\S]*saveFolderColor\(lastFolderId, draftColor\)[\s\S]*saveFolderIcon\(lastFolderId, draftIcon\)/)
+  assert.equal((appearance.match(/saveFolderColor\(/g) ?? []).length, 1)
+  assert.equal((appearance.match(/saveFolderIcon\(/g) ?? []).length, 1)
+  assert.match(appearance, /resetDraftFromSaved/)
+})
+
+test('image action opens the existing local image picker directly', () => {
+  assert.match(grid, /onClick=\{\(\) => coverInputRef\.current\?\.click\(\)\}/)
+  assert.match(grid, /type="file"/)
+  assert.match(grid, /accept="image\/\*"/)
+  assert.doesNotMatch(grid, /capture="camera"|capture=\{'camera'\}/)
 })
 
 test('administrar una carpeta queda aislado a esa carpeta y no abre el creador nuevo', () => {
