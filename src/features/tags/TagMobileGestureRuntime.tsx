@@ -32,6 +32,11 @@ export function TagMobileGestureRuntime() {
       document.documentElement.classList.remove('oanix-tag-drag-overlay-active')
     }
 
+    function resetActiveGesture() {
+      active = null
+      removeDragOverlay()
+    }
+
     function ensureDragOverlay(event: PointerEvent) {
       const source = document.querySelector<HTMLElement>(
         '.oanix-organic-tags.is-reordering .oanix-organic-tag-chip.is-dragging[data-oanix-organic-tag-id]',
@@ -70,7 +75,9 @@ export function TagMobileGestureRuntime() {
     }
 
     function handlePointerDown(event: PointerEvent) {
-      if (event.pointerType === 'mouse' && event.button !== 0) return
+      // Desktop mouse reordering is owned by OrganicWorkspaceRuntime. This runtime
+      // only augments coarse/touch-style input so both implementations never fight.
+      if (event.pointerType === 'mouse') return
       const target = event.target
       if (!(target instanceof Element)) return
       const chip = target.closest<HTMLElement>('.oanix-organic-tag-chip[data-oanix-organic-tag-id]')
@@ -89,15 +96,15 @@ export function TagMobileGestureRuntime() {
     }
 
     function handlePointerMove(event: PointerEvent) {
+      if (event.pointerType === 'mouse') return
       if (!active || active.pointerId !== event.pointerId) return
-      const target = event.target
-      if (!(target instanceof Element)) return
       const scroller = document.querySelector<HTMLElement>('.oanix-organic-tags__scroll')
       if (!scroller) return
 
       if (document.querySelector('.oanix-organic-tags.is-reordering')) {
         active.scrolling = false
         suppressClickForId = active.tagId
+        event.preventDefault()
         ensureDragOverlay(event)
         autoScrollDuringReorder(scroller, event.clientX)
         return
@@ -119,8 +126,7 @@ export function TagMobileGestureRuntime() {
 
     function clearPointer(event: PointerEvent) {
       if (!active || active.pointerId !== event.pointerId) return
-      active = null
-      removeDragOverlay()
+      resetActiveGesture()
     }
 
     function handleClick(event: MouseEvent) {
@@ -134,20 +140,28 @@ export function TagMobileGestureRuntime() {
       suppressClickForId = ''
     }
 
+    const handleVisibilityChange = () => {
+      if (document.hidden) resetActiveGesture()
+    }
+    const handleBlur = () => resetActiveGesture()
+
     document.addEventListener('pointerdown', handlePointerDown, true)
     document.addEventListener('pointermove', handlePointerMove, { capture: true, passive: false })
     document.addEventListener('pointerup', clearPointer, true)
     document.addEventListener('pointercancel', clearPointer, true)
     document.addEventListener('click', handleClick, true)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('blur', handleBlur)
 
     return () => {
-      active = null
-      removeDragOverlay()
+      resetActiveGesture()
       document.removeEventListener('pointerdown', handlePointerDown, true)
       document.removeEventListener('pointermove', handlePointerMove, true)
       document.removeEventListener('pointerup', clearPointer, true)
       document.removeEventListener('pointercancel', clearPointer, true)
       document.removeEventListener('click', handleClick, true)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('blur', handleBlur)
     }
   }, [])
 
