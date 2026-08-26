@@ -4,7 +4,10 @@
 .oanix-organic-folder-control,
 .oanix-folder-customizer__actions button,
 .note-row__menu-button,
-.note-view__menu-button {
+.note-view__menu-button,
+.notes-header .icon-button,
+.notes-header .account-header-action,
+.oanix-note-customizer__header button {
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -13,6 +16,18 @@
 
 .oanix-folder-card__gear,
 .oanix-folder-card__pin,
-.oanix-folder-card__favorite {
+.oanix-folder-card__favorite,
+.notes-header .icon-button,
+.notes-header .account-header-action,
+.oanix-note-customizer__header button {
   padding: 0 !important;
+}
+
+.notes-header .icon-button > svg,
+.notes-header .account-header-action > svg,
+.note-row__menu-button > svg,
+.note-view__menu-button > svg,
+.oanix-note-customizer__header button > svg {
+  display: block;
+  margin: auto;
 }
