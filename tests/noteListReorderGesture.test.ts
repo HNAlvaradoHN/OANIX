@@ -47,18 +47,22 @@ test('instrumentación temporal de drag fue retirada después del diagnóstico',
   assert.doesNotMatch(runtime, /document\.addEventListener\('touchmove'/)
 })
 
-test('fallback crea ghost elevado y placeholder sin CSS que pise transform', () => {
+test('fallback muestra tarjeta flotante y hueco animado sin pisar el transform de Sortable', () => {
   assert.match(runtime, /forceFallback: true/)
   assert.match(runtime, /fallbackOnBody: true/)
   assert.match(runtime, /fallbackTolerance: 4/)
   assert.match(runtime, /fallbackClass: 'oanix-mobile-note-drag-ghost'/)
   assert.match(runtime, /ghostClass: 'oanix-mobile-note-placeholder'/)
-  assert.match(css, /oanix-mobile-note-drag-ghost/)
-  assert.match(css, /oanix-mobile-note-placeholder/)
-  assert.match(css, /box-shadow:\s*0 28px 60px/)
-  assert.match(css, /filter:\s*brightness\(1\.08\) saturate\(1\.07\)/)
-  assert.doesNotMatch(css, /oanix-mobile-note-drag-ghost[\s\S]{0,650}transform:/)
-  assert.doesNotMatch(css, /@keyframes oanix-note-drag-pulse/)
+  assert.match(runtime, /--oanix-note-drag-width/)
+  assert.match(runtime, /--oanix-note-drag-height/)
+  assert.match(runtime, /--oanix-note-drag-background/)
+  assert.match(css, /\.note-row\.oanix-mobile-note-drag-ghost[\s\S]*?width:\s*var\(--oanix-note-drag-width\)/)
+  assert.match(css, /\.note-row\.oanix-mobile-note-drag-ghost[\s\S]*?background:\s*var\(--oanix-note-drag-background\)/)
+  assert.match(css, /\.note-row\.oanix-mobile-note-placeholder[\s\S]*?border:\s*2px dashed/)
+  assert.match(css, /\.note-row\.oanix-mobile-note-placeholder > \*[\s\S]*?visibility:\s*hidden !important/)
+  assert.match(css, /@keyframes oanix-note-drop-slot-pulse/)
+  assert.match(css, /@keyframes oanix-note-floating-active/)
+  assert.doesNotMatch(css, /\.note-row\.oanix-mobile-note-drag-ghost\s*\{[^}]*\btransform\s*:/)
 })
 
 test('auto-scroll y orden vertical pertenecen a SortableJS', () => {
