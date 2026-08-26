@@ -48,15 +48,16 @@ test('bulk selection finish control is a green check without overflowing text', 
   assert.doesNotMatch(bulkOverride, /Terminar/)
 })
 
-test('note drag uses Sortable fallback directly instead of a second transparent overlay', () => {
+test('note drag keeps Sortable ordering but renders an independent visible overlay', () => {
   assert.match(noteReorder, /forceFallback: true/)
   assert.match(noteReorder, /fallbackOnBody: true/)
   assert.match(noteReorder, /fallbackClass: 'oanix-mobile-note-drag-ghost'/)
-  assert.doesNotMatch(noteReorder, /cloneNode\(true\)/)
-  assert.doesNotMatch(noteReorder, /const overlay =/)
+  assert.match(noteReorder, /cloneNode\(true\)/)
+  assert.match(noteReorder, /oanix-mobile-note-drag-overlay/)
+  assert.match(noteReorder, /document\.addEventListener\('touchmove'/)
   assert.match(noteReorderCss, /\.note-row\.oanix-mobile-note-drag-ghost[\s\S]*opacity:\s*\.99 !important/)
-  assert.match(noteReorderCss, /\.note-row\.oanix-mobile-note-drag-ghost[\s\S]*will-change:\s*transform/)
-  assert.doesNotMatch(noteReorderCss, /\.oanix-note-drag-overlay/)
+  assert.match(noteReorderCss, /body > \.note-row\.oanix-mobile-note-drag-overlay[\s\S]*position:\s*fixed !important/)
+  assert.match(noteReorderCss, /body > \.note-row\.oanix-mobile-note-drag-overlay[\s\S]*z-index:\s*10050 !important/)
 })
 
 test('note color becomes authoritative only after identity is resolved by note id', () => {
