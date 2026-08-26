@@ -2,12 +2,12 @@ import { useEffect } from 'react'
 import { persistFolderOrder } from './folderService'
 import './folderMobileDrag.css'
 
-const LONG_PRESS_MS = 340
-const PRESS_ARM_GRACE_MS = 55
+const LONG_PRESS_MS = 220
+const PRESS_ARM_GRACE_MS = 35
 const MOVE_CANCEL_PX = 14
 const EDGE_SCROLL_PX = 72
-const MAX_SCROLL_PER_FRAME = 9
-const REFLOW_MS = 180
+const MAX_SCROLL_PER_FRAME = 10
+const REFLOW_MS = 120
 
 interface TouchGesture {
   pointerId: number
