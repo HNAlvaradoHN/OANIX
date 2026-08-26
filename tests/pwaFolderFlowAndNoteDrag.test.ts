@@ -8,13 +8,13 @@ const polishCss = readFileSync('src/app/workspaceQuickPolish.css', 'utf8')
 const noteDragCss = readFileSync('src/features/notes/noteReorderGesture.css', 'utf8')
 
 test('folder appearance becomes a save-only flow owned by the folder runtime and closes after save', () => {
-  assert.match(folderAppearance, /\.oanix-folder-customizer__appearance-toggle/)
+  assert.match(folderAppearance, /oanix-folder-customizer__appearance-toggle/)
   assert.match(folderAppearance, /appearance\.hidden = false/)
   assert.match(folderAppearance, /actions\.hidden = true/)
   assert.match(folderAppearance, /Promise\.all\(\[/)
   assert.match(folderAppearance, /actions\.hidden = false/)
   assert.match(folderAppearance, /cancelButton\?\.click\(\)/)
-  assert.doesNotMatch(polishRuntime, /MutationObserver|\.oanix-folder-customizer__appearance-toggle/)
+  assert.doesNotMatch(polishRuntime, /MutationObserver|oanix-folder-customizer__appearance-toggle/)
 })
 
 test('folder gear uses an optically centered pseudo glyph', () => {
