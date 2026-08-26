@@ -5,12 +5,18 @@ const NOTE_LIST_SELECTOR = '.notes-list'
 const FOLDER_ADD_TRIGGER_SELECTOR = '.oanix-organic-folder-control--add, .oanix-folder-rail__item--add'
 const FOLDER_MANAGER_BUTTON_SELECTOR = '.notes-tab--add'
 
+type SortableStaticWithGet = typeof Sortable & {
+  get(element: HTMLElement): ReturnType<typeof Sortable.create> | undefined
+}
+
+const sortableApi = Sortable as SortableStaticWithGet
+
 export function WorkspaceInputCompatibilityRuntime() {
   useEffect(() => {
     const syncNoteSortableWithPointer = (event: PointerEvent) => {
       const list = document.querySelector<HTMLElement>(NOTE_LIST_SELECTOR)
-      if (!list) return
-      const sortable = Sortable.get(list)
+      if (!list || typeof sortableApi.get !== 'function') return
+      const sortable = sortableApi.get(list)
       if (!sortable) return
 
       if (event.pointerType === 'mouse') {
