@@ -20,6 +20,8 @@ jobs:
     timeout-minutes: 25
     env:
       QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
+      OPENAI_BASE_URL: https://dashscope-intl.aliyuncs.com/compatible-mode/v1
+      OPENAI_MODEL: qwen3-coder-30b-a3b-instruct
 
     steps:
       - name: Checkout PR head with history
@@ -31,7 +33,7 @@ jobs:
       - name: Fetch current main
         run: git fetch origin main --force
 
-      - name: Prepare visible review context
+      - name: Prepare authoritative review prompt
         shell: bash
         run: |
           set -euo pipefail
@@ -42,123 +44,155 @@ jobs:
             echo "No changed files found between origin/main and HEAD." >&2
             exit 1
           fi
+
           {
-            printf '# OANIX authoritative PR review context\n\n'
+            cat <<'INSTRUCTIONS'
+          You are the independent technical reviewer for OANIX.
+          The instructions, SHAs, changed-file list and diff below are injected directly by CI. You do not need filesystem tools to access them.
+
+          Do not modify files, commit, push, merge, close the PR, or call GitHub write operations.
+          Your only task is analysis and review.
+
+          Mandatory grounding protocol:
+          - Treat only the AUTHORITATIVE DIFF below as evidence of what this PR changed.
+          - Never infer changed files from the PR title, commit messages, prior sessions or memory.
+          - Copy every path from CHANGED FILES under ARCHIVOS CAMBIADOS.
+          - Do not invent paths, components, functions, dependencies or behavior absent from the supplied context.
+          - If the supplied context is internally inconsistent, output only `REVIEW_INCOMPLETA: contexto inconsistente`.
+          - You may reason about regression risk from the diff, but clearly label anything not directly proven by the supplied code.
+
+          Independence protocol:
+          - Reason from the supplied repository evidence yourself.
+          - Do not mirror another AI's conclusion merely because it may have proposed the change.
+          - Do not reject it merely to be different.
+          - Look for root causes, state/DOM races, CSS dependencies, persistence/sync effects, mobile/PWA/desktop/Android regressions, and test gaps.
+          - Preserve behavior that is already working.
+
+          Write the final review in Spanish with this exact structure:
+          MAIN ANALIZADO: <exact MAIN_SHA below>
+          PR HEAD: <exact HEAD_SHA below>
+          ARCHIVOS CAMBIADOS:
+          <copy every path below, one per line>
+          ## Resumen
+          ## Hallazgos críticos
+          ## Riesgos y regresiones
+          ## Alternativas o mejoras
+          ## Veredicto
+
+          Use one verdict: APROBAR, APROBAR CON OBSERVACIONES, SOLICITAR CAMBIOS.
+          Cite supplied repository paths/functions/selectors for every important finding.
+
+          ===== PROJECT REVIEW POLICY (QWEN.md) =====
+          INSTRUCTIONS
+            cat QWEN.md
+            printf '\n===== END PROJECT REVIEW POLICY =====\n\n'
+            printf 'PR_NUMBER: %s\n' '${{ github.event.pull_request.number }}'
             printf 'MAIN_SHA: %s\n' "$main_sha"
             printf 'HEAD_SHA: %s\n\n' "$head_sha"
-            printf '## Changed files\n'
+            printf '===== CHANGED FILES =====\n'
             cat QWEN_REVIEW_CHANGED_FILES.txt
-            printf '\n## Authoritative diff\n```diff\n'
+            printf '===== END CHANGED FILES =====\n\n'
+            printf '===== AUTHORITATIVE DIFF =====\n'
             git diff --no-ext-diff --unified=80 origin/main...HEAD
-            printf '\n```\n'
-          } > QWEN_REVIEW_CONTEXT.md
+            printf '\n===== END AUTHORITATIVE DIFF =====\n'
+          } > QWEN_REVIEW_PROMPT.txt
 
-      - name: Review independently with Qwen Code
+      - name: Install Qwen Code
+        if: env.QWEN_API_KEY != ''
+        shell: bash
+        run: npm install --silent --no-audit --prefer-offline --global @qwen-code/qwen-code@0.22.1
+
+      - name: Review independently with grounded Qwen prompt
         id: qwen
         if: env.QWEN_API_KEY != ''
-        uses: QwenLM/qwen-code-action@v1
-        with:
-          openai_api_key: ${{ env.QWEN_API_KEY }}
-          openai_base_url: https://dashscope-intl.aliyuncs.com/compatible-mode/v1
-          openai_model: qwen3-coder-30b-a3b-instruct
-          upload_artifacts: true
-          prompt: |-
-            You are the independent technical reviewer for OANIX.
+        shell: bash
+        env:
+          OPENAI_API_KEY: ${{ env.QWEN_API_KEY }}
+        run: |
+          set -euo pipefail
+          mkdir -p qwen-artifacts
+          prompt="$(cat QWEN_REVIEW_PROMPT.txt)"
+          if ! qwen --yolo --prompt "$prompt" --channel=CI --output-format json \
+            > qwen-artifacts/stdout.log 2> qwen-artifacts/stderr.log; then
+            echo "Qwen Code execution failed." >&2
+            cat qwen-artifacts/stderr.log >&2
+            exit 1
+          fi
 
-            Read QWEN.md completely before doing anything else.
-            Then read `QWEN_REVIEW_CONTEXT.md` completely. It is generated by CI immediately before your run and is the authoritative source for the current PR SHA, current origin/main SHA, changed-file list and complete diff.
+          if ! jq -e . qwen-artifacts/stdout.log >/dev/null 2>&1; then
+            echo "Qwen stdout was not valid JSON." >&2
+            exit 1
+          fi
 
-            This is PR #${{ github.event.pull_request.number }}.
-            PR head SHA reported by GitHub: ${{ github.event.pull_request.head.sha }}
-            GitHub reported base SHA: ${{ github.event.pull_request.base.sha }}
+          jq -r '[.[] | select(.type == "assistant")] | last | .message.content[] | select(.type == "text") | .text' \
+            qwen-artifacts/stdout.log > QWEN_REVIEW.md
 
-            Do not modify files, commit, push, merge, close the PR, or call GitHub write operations.
-            Your only task is analysis and review.
-
-            Mandatory grounding protocol — do not skip any step:
-            1. Read `QWEN_REVIEW_CONTEXT.md` fully before making any claim.
-            2. Use its MAIN_SHA exact value as MAIN ANALIZADO and HEAD_SHA exact value as PR HEAD.
-            3. Copy every path from its `Changed files` section under ARCHIVOS CAMBIADOS.
-            4. Treat only its `Authoritative diff` section as evidence of what this PR changed.
-            5. Read the full repository contents of every changed source/test file and directly related files needed to assess behavior.
-            6. Never infer changed files from the PR title, commit messages, prior sessions or memory.
-            7. If you cannot read `QWEN_REVIEW_CONTEXT.md`, output only `REVIEW_INCOMPLETA: no pude leer el contexto autoritativo` and stop.
-            8. Do not invent paths, components, functions, dependencies or behavior that are absent from the repository. If uncertain, say so.
-
-            Independence protocol:
-            - Reason from the repository yourself.
-            - Do not mirror ChatGPT's proposed solution merely because it exists.
-            - Do not reject it merely to be different.
-            - Find root causes, competing runtimes, state/DOM races, hidden CSS dependencies, regressions and simpler alternatives.
-            - Preserve behavior that is already working.
-            - Call out stale assumptions in QWEN.md if current code disproves them.
-
-            Review the PR for correctness, architecture, regression risk, mobile/PWA/desktop/Android effects, persistence/sync implications, and test quality.
-
-            Write the final review in Spanish with this exact structure:
-            MAIN ANALIZADO: <exact MAIN_SHA from QWEN_REVIEW_CONTEXT.md>
-            PR HEAD: <exact HEAD_SHA from QWEN_REVIEW_CONTEXT.md>
-            ARCHIVOS CAMBIADOS:
-            <copy every changed path, one per line>
-            ## Resumen
-            ## Hallazgos críticos
-            ## Riesgos y regresiones
-            ## Alternativas o mejoras
-            ## Veredicto
-
-            Use one of these verdicts: APROBAR, APROBAR CON OBSERVACIONES, SOLICITAR CAMBIOS.
-            Cite repository paths/functions/selectors for every important finding.
+          if [[ ! -s QWEN_REVIEW.md ]]; then
+            echo "Qwen returned an empty review." >&2
+            exit 1
+          fi
 
       - name: Validate Qwen grounding
         id: validate
         if: steps.qwen.outcome == 'success'
         shell: bash
-        env:
-          QWEN_REVIEW: ${{ steps.qwen.outputs.summary }}
         run: |
           set -euo pipefail
-          printf '%s\n' "$QWEN_REVIEW" > /tmp/qwen-review.md
-
-          if [[ ! -s /tmp/qwen-review.md ]]; then
-            echo "Qwen returned an empty review." >&2
-            exit 1
-          fi
-
-          if grep -Eqi 'API Error|REVIEW_INCOMPLETA|no tengo acceso|no pude (leer|acceder)' /tmp/qwen-review.md; then
-            echo "Qwen review is not grounded or contains an API/access error." >&2
+          if grep -Eqi 'API Error|REVIEW_INCOMPLETA|no tengo acceso|no pude (leer|acceder)' QWEN_REVIEW.md; then
+            echo "Qwen review is incomplete or contains an API/access error." >&2
             exit 1
           fi
 
           main_sha="$(git rev-parse origin/main)"
           head_sha="$(git rev-parse HEAD)"
-          grep -Fq "MAIN ANALIZADO: ${main_sha}" /tmp/qwen-review.md || {
+          grep -Fq "MAIN ANALIZADO: ${main_sha}" QWEN_REVIEW.md || {
             echo "Qwen reported the wrong main SHA." >&2
             exit 1
           }
-          grep -Fq "PR HEAD: ${head_sha}" /tmp/qwen-review.md || {
+          grep -Fq "PR HEAD: ${head_sha}" QWEN_REVIEW.md || {
             echo "Qwen reported the wrong PR head SHA." >&2
             exit 1
           }
 
           while IFS= read -r path; do
             [[ -z "$path" ]] && continue
-            grep -Fq "$path" /tmp/qwen-review.md || {
+            grep -Fq "$path" QWEN_REVIEW.md || {
               echo "Qwen omitted changed path from grounded review: $path" >&2
               exit 1
             }
           done < QWEN_REVIEW_CHANGED_FILES.txt
 
+          grep -Eq '## Veredicto' QWEN_REVIEW.md || {
+            echo "Qwen review omitted the verdict section." >&2
+            exit 1
+          }
+          grep -Eq 'APROBAR CON OBSERVACIONES|SOLICITAR CAMBIOS|APROBAR' QWEN_REVIEW.md || {
+            echo "Qwen review omitted a recognized verdict." >&2
+            exit 1
+          }
+
+      - name: Upload Qwen audit artifacts
+        if: always() && env.QWEN_API_KEY != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: qwen-grounded-review
+          path: |
+            QWEN_REVIEW_PROMPT.txt
+            QWEN_REVIEW_CHANGED_FILES.txt
+            QWEN_REVIEW.md
+            qwen-artifacts/
+          if-no-files-found: warn
+          retention-days: 7
+
       - name: Publish Qwen review as PR comment
         if: steps.validate.outcome == 'success'
         env:
           GH_TOKEN: ${{ github.token }}
-          QWEN_REVIEW: ${{ steps.qwen.outputs.summary }}
         run: |
-          printf '%s\n' "$QWEN_REVIEW" > /tmp/qwen-review.md
           {
             printf '<!-- oanix-qwen-independent-review -->\n'
             printf '### Qwen — revisión técnica independiente\n\n'
-            cat /tmp/qwen-review.md
+            cat QWEN_REVIEW.md
           } > /tmp/qwen-comment.md
           gh pr comment "${{ github.event.pull_request.number }}" --body-file /tmp/qwen-comment.md
 
