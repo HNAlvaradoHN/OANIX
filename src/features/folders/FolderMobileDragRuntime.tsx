@@ -172,8 +172,6 @@ export function FolderMobileDragRuntime() {
         if (speed !== 0) {
           const before = gesture.rail.scrollLeft
           gesture.rail.scrollLeft += speed
-          // Scrolling the edge already moves every visible card. Reordering still
-          // follows the pointer, but without launching a FLIP animation every frame.
           if (gesture.rail.scrollLeft !== before) reorderDomAtPoint(gesture, false)
         }
         gesture.scrollFrame = window.requestAnimationFrame(tick)
@@ -243,9 +241,6 @@ export function FolderMobileDragRuntime() {
         const distance = Math.hypot(dx, dy)
         if (distance < MOVE_CANCEL_PX) return
 
-        // A fast movement right as the long press becomes armed must start the
-        // drag instead of cancelling it because the timeout callback lost a race
-        // with this pointermove event.
         const heldFor = performance.now() - gesture.pressedAt
         if (heldFor >= LONG_PRESS_MS - PRESS_ARM_GRACE_MS) {
           beginDrag()
@@ -312,15 +307,26 @@ export function FolderMobileDragRuntime() {
       const target = event.target
       if (!(target instanceof Element)) return
       const rail = target.closest<HTMLElement>('.oanix-folder-rail__scroll')
-      if (!rail || rail.scrollWidth <= rail.clientWidth) return
+      if (!rail) return
 
-      const horizontalIntent = Math.abs(event.deltaX) > Math.abs(event.deltaY)
-      const delta = horizontalIntent ? event.deltaX : event.deltaY
-      if (!delta) return
+      const canScrollVertically = rail.scrollHeight > rail.clientHeight + 1
+      const canScrollHorizontally = rail.scrollWidth > rail.clientWidth + 1
+      if (!canScrollVertically && !canScrollHorizontally) return
 
-      const before = rail.scrollLeft
-      rail.scrollLeft += delta
-      if (rail.scrollLeft !== before) event.preventDefault()
+      if (canScrollVertically && Math.abs(event.deltaY) >= Math.abs(event.deltaX)) {
+        const before = rail.scrollTop
+        rail.scrollTop += event.deltaY
+        if (rail.scrollTop !== before) event.preventDefault()
+        return
+      }
+
+      if (canScrollHorizontally) {
+        const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY
+        if (!delta) return
+        const before = rail.scrollLeft
+        rail.scrollLeft += delta
+        if (rail.scrollLeft !== before) event.preventDefault()
+      }
     }
 
     const onClick = (event: MouseEvent) => {
