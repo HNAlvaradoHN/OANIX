@@ -38,7 +38,7 @@ jobs:
         with:
           openai_api_key: ${{ env.QWEN_API_KEY }}
           openai_base_url: https://dashscope-intl.aliyuncs.com/compatible-mode/v1
-          openai_model: qwen3-coder-next
+          openai_model: qwen3-coder-30b-a3b-instruct
           prompt: |-
             You are the independent technical reviewer for OANIX.
 
