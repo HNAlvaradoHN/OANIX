@@ -2,17 +2,19 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
+const indexSource = readFileSync('index.html', 'utf8')
 const mainSource = readFileSync('src/main.tsx', 'utf8')
 const pagesWorkflow = readFileSync('.github/workflows/pages.yml', 'utf8')
 
-test('PWA retries a missing hashed stylesheet and only then clears OANIX precache', () => {
-  assert.match(mainSource, /STYLESHEET_RECOVERY_KEY/)
-  assert.match(mainSource, /link\[rel="stylesheet"\]\[href\*="\/OANIX\/assets\/"\]/)
-  assert.match(mainSource, /__oanix_retry/)
-  assert.match(mainSource, /navigator\.serviceWorker\.getRegistrations\(\)/)
-  assert.match(mainSource, /registration\.scope\.includes\('\/OANIX\/'\)/)
-  assert.match(mainSource, /cacheKey\.startsWith\('workbox-precache'\)/)
-  assert.match(mainSource, /window\.addEventListener\('load', \(\) => void recoverMissingPwaStylesheet\(\), \{ once: true \}\)/)
+test('PWA retries a missing hashed stylesheet from the HTML bootstrap before clearing OANIX precache', () => {
+  assert.match(indexSource, /oanix:stylesheet-recovery-attempt/)
+  assert.match(indexSource, /link\[rel="stylesheet"\]\[href\*="\/OANIX\/assets\/"\]/)
+  assert.match(indexSource, /__oanix_retry/)
+  assert.match(indexSource, /navigator\.serviceWorker\.getRegistrations\(\)/)
+  assert.match(indexSource, /registration\.scope\.includes\('\/OANIX\/'\)/)
+  assert.match(indexSource, /cacheKey\.startsWith\('workbox-precache'\)/)
+  assert.match(indexSource, /window\.addEventListener\('load', recoverStylesheet, \{ once: true \}\)/)
+  assert.doesNotMatch(mainSource, /oanix:stylesheet-recovery-attempt/)
 })
 
 test('Pages deploy verifies the live HTML, CSS and JS shell', () => {
