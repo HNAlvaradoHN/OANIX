@@ -9,6 +9,7 @@ const creation = readFileSync('src/features/folders/FolderCreationRuntime.tsx', 
 const grid = readFileSync('src/features/folders/FolderGridRuntime.tsx', 'utf8')
 const personalization = readFileSync('src/features/notes/WorkspacePersonalizationRuntime.tsx', 'utf8')
 const appearance = readFileSync('src/features/folders/FolderAppearanceRuntime.tsx', 'utf8')
+const scopedManager = readFileSync('src/features/folders/FolderScopedManagerRuntime.tsx', 'utf8')
 
 test('folder gear opens the unified customizer directly without the retired intermediary visual layer', () => {
   assert.match(bridge, /\.oanix-folder-card__gear/)
@@ -49,13 +50,12 @@ test('image action opens the existing local image picker directly', () => {
   assert.doesNotMatch(grid, /capture="camera"|capture=\{'camera'\}/)
 })
 
-test('administrar una carpeta queda aislado a esa carpeta y no abre el creador nuevo', () => {
-  assert.match(bridge, /data-oanix-manage-folder-id/)
-  assert.match(bridge, /\.folder-create-row/)
-  assert.match(bridge, /row\.hidden = row !== target/)
-  assert.match(bridge, /Administrar nombre o eliminar esta carpeta/)
-  assert.match(creation, /folderManagementActive\(\)/)
-  assert.match(creation, /if \(folderManagementActive\(\)\) return/)
+test('administrar una carpeta pertenece al manager directo y el bridge no observa el dialogo legado', () => {
+  assert.match(scopedManager, /renameFolder/)
+  assert.match(scopedManager, /deleteFolder/)
+  assert.match(scopedManager, /event\.stopImmediatePropagation\(\)/)
+  assert.doesNotMatch(bridge, /MutationObserver|data-oanix-manage-folder-id|folder-dialog__panel|folder-list__row/)
+  assert.doesNotMatch(creation, /folderManagementActive|data-oanix-manage-folder-id/)
   assert.doesNotMatch(creation, /createRequestedRef/)
   assert.match(creation, /CREATE_TRIGGER_SELECTOR/)
   assert.match(creation, /oanix:open-folder-creator/)
