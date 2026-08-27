@@ -120,11 +120,13 @@ function mutationTouchesFolderGridTargets(record: MutationRecord): boolean {
     return record.target.parentElement?.closest('.notes-tab') !== null
   }
 
-  if (record.type !== 'attributes' || !(record.target instanceof Element)) return false
-  if (record.attributeName === 'aria-current') return record.target.matches('.notes-tab')
+  if (record.type !== 'attributes') return false
+  const target = record.target
+  if (!(target instanceof Element)) return false
+  if (record.attributeName === 'aria-current') return target.matches('.notes-tab')
   if (record.attributeName !== 'class') return false
 
-  if (FOLDER_GRID_TARGET_CLASS_NAMES.some((className) => record.target.classList.contains(className))) {
+  if (FOLDER_GRID_TARGET_CLASS_NAMES.some((className) => target.classList.contains(className))) {
     return true
   }
 
