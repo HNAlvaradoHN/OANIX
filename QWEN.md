@@ -94,33 +94,37 @@ El usuario reportó que color/icono podían adoptar la apariencia de la posició
 
 ### Carpetas
 
-El clic en una carpeta ya abre su lista de notas. En los engranajes de carpeta, `Abrir carpeta` es redundante y está pendiente de eliminarse.
+El clic en una carpeta abre su lista de notas. La acción redundante `Abrir carpeta` fue retirada en origen por PR #346; no debe reaparecer en el engranaje.
 
-El administrador de cada carpeta debe afectar solo a esa carpeta. El botón `+` de la barra de carpetas es el flujo para crear carpetas nuevas.
-
-En escritorio, el rail puede tener orientación distinta a móvil. Determina el eje real del layout antes de proponer `scrollLeft` o `scrollTop`.
+El administrador directo queda limitado a la carpeta seleccionada y el botón `+` es el flujo para crear carpetas nuevas. PR #367 restauró la creación directa y dejó `FolderGridRuntime` como único dueño de la persistencia del reorder de escritorio, usando el eje horizontal real del dock. Si el layout vuelve a cambiar, inspecciona el eje real antes de proponer `scrollLeft` o `scrollTop`.
 
 ### Personalización de carpetas
 
-Objetivo pendiente del usuario:
+El flujo solicitado ya está integrado por PR #346 y PR #361:
 
-- al cambiar icono/color, el panel debe quedar con una acción clara `Guardar`;
-- al guardar, debe cerrarse y volver a estado normal;
-- `Cambiar imagen de mi dispositivo` debe abrir directamente el selector/galería, no encadenar otro menú innecesario.
+- color/icono son borrador hasta pulsar `Guardar`;
+- al guardar aparece confirmación `✓ Guardado` y el panel se cierra;
+- `Cambiar imagen de mi dispositivo` abre directamente el selector local `image/*`.
+
+Trátalo como comportamiento implementado; solo propón cambios si existe una regresión nueva reproducible.
 
 ### Etiquetas
 
-El reorder actual de etiquetas es parcialmente funcional: se desplazan una por una y pueden vibrar. El objetivo es un drag fluido con tarjeta visible, espacio de caída y estabilidad similar al patrón deseado para notas/carpetas.
+PR #344 añadió drag móvil fluido con clon visible, reflow y auto-scroll horizontal; PR #367 retiró la competencia del helper táctil con el mouse en PC. `persistTagOrder` sigue siendo la autoridad de persistencia.
 
-### Notas — UI pendiente
+La validación física continua de mantener → arrastrar → soltar sigue siendo deuda de campo del workspace, pero no describas el reorder como “parcialmente funcional” sin una reproducción nueva que lo demuestre.
 
-- eliminar una nota se percibe demasiado lento;
-- después de personalizar una nota y guardar, el menú `⋮` debe cerrarse;
-- en modo selección, el control de terminar debe permanecer compacto, verde y con `✓` si ese sigue siendo el contrato actual.
+### Notas — pulido ya integrado
+
+- PR #345 redujo la latencia de eliminación sacando historial/avatar del camino crítico después de borrar el registro autoritativo;
+- PR #341/#347 garantizan que el menú `⋮` cierre después de guardar la personalización;
+- PR #339 conserva el control de terminar selección compacto, verde y con `✓`.
+
+Estos puntos dejaron de ser pendientes de implementación. Si reaparece un síntoma, revisa el código actual y demuestra la regresión antes de reabrirlo.
 
 ### Alineación visual
 
-Está pendiente una revisión de alineación global: iconos, engranajes y botones pequeños deben quedar centrados visual y geométricamente dentro de sus hit-areas, especialmente en carpetas.
+PR #347 centró explícitamente iconos, engranajes y controles compactos y retiró compatibilidad visual obsoleta. La alineación global se considera implementada; cualquier ajuste adicional debe partir de una diferencia visual real observada en la PWA/APK actual.
 
 ## Cómo revisar PRs automáticamente
 
