@@ -12,8 +12,12 @@ test('note reorder stays scoped to the notes list without a global DOM observer'
   assert.doesNotMatch(reorderRuntime, /observer\.observe\(document\.body/)
 })
 
-test('version history host observer stays inside the React app root', () => {
+test('version history host observer filters unrelated app mutations', () => {
+  assert.match(historyRuntime, /const VERSION_HISTORY_HOST_SELECTOR = '\.notes-header__actions'/)
   assert.match(historyRuntime, /const appRoot = document\.getElementById\('root'\)/)
+  assert.match(historyRuntime, /new MutationObserver\(\(records\) =>/)
+  assert.match(historyRuntime, /records\.some\(mutationTouchesVersionHistoryHost\)/)
   assert.match(historyRuntime, /observer\.observe\(appRoot, \{ childList: true, subtree: true \}\)/)
+  assert.doesNotMatch(historyRuntime, /new MutationObserver\(refreshHost\)/)
   assert.doesNotMatch(historyRuntime, /observer\.observe\(document\.body/)
 })
