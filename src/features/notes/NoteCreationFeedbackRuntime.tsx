@@ -3,11 +3,24 @@ import './noteCreationFeedback.css'
 
 const CREATE_BUTTON_SELECTOR = '.notes-create-fab, .notes-empty .empty-action'
 const EMPTY_CREATE_BUTTON_SELECTOR = '.notes-empty .empty-action'
+const FEEDBACK_SURFACE_SELECTOR = `${CREATE_BUTTON_SELECTOR}, .notes-error, .note-save-error`
 const FEEDBACK_ID = 'oanix-note-create-feedback'
 
 function isCreateButton(button: HTMLButtonElement): boolean {
   const label = `${button.getAttribute('aria-label') ?? ''} ${button.textContent ?? ''}`.toLocaleLowerCase()
   return label.includes('crear') || label.includes('nueva nota') || label.includes('creando')
+}
+
+function mutationTouchesFeedbackSurface(record: MutationRecord): boolean {
+  if (record.type === 'attributes') {
+    return record.target instanceof Element && record.target.matches(CREATE_BUTTON_SELECTOR)
+  }
+
+  const nodes = [...Array.from(record.addedNodes), ...Array.from(record.removedNodes)]
+  return nodes.some((node) => {
+    if (!(node instanceof Element)) return false
+    return node.matches(FEEDBACK_SURFACE_SELECTOR) || node.querySelector(FEEDBACK_SURFACE_SELECTOR) !== null
+  })
 }
 
 function createFeedback() {
@@ -114,7 +127,11 @@ export function NoteCreationFeedbackRuntime() {
 
     const workspace = document.querySelector<HTMLElement>('.notes-shell')
     const observedWorkspace = workspace ?? undefined
-    const workspaceObserver = observedWorkspace ? new MutationObserver(sync) : null
+    const workspaceObserver = observedWorkspace
+      ? new MutationObserver((records) => {
+          if (records.some(mutationTouchesFeedbackSurface)) sync()
+        })
+      : null
     if (observedWorkspace && workspaceObserver) {
       workspaceObserver.observe(observedWorkspace, {
         childList: true,
