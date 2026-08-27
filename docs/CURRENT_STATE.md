@@ -1,6 +1,6 @@
 # OANIX — Estado actual para continuidad
 
-**Última actualización:** 2026-08-23
+**Última actualización:** 2026-08-27
 
 Checkpoint operativo corto. Antes de trabajar, verificar siempre el `main` real y PR recientes; GitHub es la fuente de verdad del código.
 
@@ -17,6 +17,7 @@ Checkpoint operativo corto. Antes de trabajar, verificar siempre el `main` real 
 
 - Cambios pequeños y aislados; una función importante = rama + PR.
 - Ejecutar OANIX CI y OANIX Android. No fusionar si alguno falla; si ambos pasan y el cambio ya está autorizado, puede fusionarse automáticamente.
+- El workflow automático de Qwen en GitHub no es gate de merge; su revisión se consulta manualmente por chat cuando sea útil. Un fallo de cuota/API de ese workflow no invalida CI/Android.
 - No hacer refactorizaciones generales para resolver problemas pequeños.
 - No tocar cifrado, notas, sync, bóveda o almacenamiento existente sin necesidad real.
 
@@ -84,6 +85,12 @@ Persistencia:
 - carpetas reutilizan `folder-order` cifrado;
 - notas reutilizan `manualOrder`/`persistNoteOrder` existente;
 - etiquetas reutilizan la infraestructura cifrada con un registro `tag-order`, sin crear un store paralelo ni cambiar el formato v1 de cada etiqueta.
+
+Implementación vigente de notas desde PR #368:
+- ratón/escritorio conserva SortableJS;
+- coarse/mobile usa un único motor Pointer Events propio, con `touch-action: none`, scroll vertical manual antes del long press y pointer capture best-effort;
+- la antigua ruta paralela `TouchEvent` quedó retirada porque podía dejar el gesto vertical bajo control del navegador/WebView;
+- CI, Android y Pages de `main` pasaron tras la integración. La validación física del gesto continuo en dispositivo real sigue siendo **VALIDATION_DEBT** hasta que el usuario la ejecute.
 
 ## Archivos grandes — motor actual
 
