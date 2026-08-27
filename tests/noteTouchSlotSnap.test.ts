@@ -41,7 +41,7 @@ test('el flotante conserva note-row para que coincidan sus estilos y elimina est
   assert.match(runtime, /clone\.querySelector<HTMLElement>\('\.note-row__menu-wrap'\)\?\.remove\(\)/)
   assert.match(runtime, /clone\.style\.setProperty\('position', 'fixed', 'important'\)/)
   assert.match(runtime, /clone\.style\.setProperty\('z-index', '2147483000', 'important'\)/)
-  assert.match(css, /body > \.note-row\.oanix-mobile-note-drag-overlay/)
+  assert.match(css, /.notes-shell > \.note-row\.oanix-mobile-note-drag-overlay/)
 })
 
 test('al soltar conserva el DOM final y persiste exactamente ese orden', () => {

@@ -191,10 +191,10 @@ body > .note-row.oanix-mobile-note-drag-ghost strong {
   opacity: 1 !important;
 }
 
-/* Independent visual card used during touch reorder. It does not depend on
-   Sortable's fallback clone, which some mobile PWA/WebView combinations fail
-   to paint even though the placeholder continues moving correctly. */
-body > .note-row.oanix-mobile-note-drag-overlay {
+/* Independent visual card used during touch reorder. It stays inside
+   .notes-shell so the current compact-note contract and its pseudo-elements
+   remain identical to the source row while the placeholder moves. */
+.notes-shell > .note-row.oanix-mobile-note-drag-overlay {
   position: fixed !important;
   z-index: 10050 !important;
   margin: 0 !important;
@@ -212,29 +212,29 @@ body > .note-row.oanix-mobile-note-drag-overlay {
   will-change: left, top;
 }
 
-body > .note-row.oanix-mobile-note-drag-overlay > *,
-body > .note-row.oanix-mobile-note-drag-overlay .note-row__open,
-body > .note-row.oanix-mobile-note-drag-overlay .note-row__avatar,
-body > .note-row.oanix-mobile-note-drag-overlay .note-row__body,
-body > .note-row.oanix-mobile-note-drag-overlay .note-row__topline,
-body > .note-row.oanix-mobile-note-drag-overlay .note-row__preview,
-body > .note-row.oanix-mobile-note-drag-overlay time,
-body > .note-row.oanix-mobile-note-drag-overlay strong {
+.notes-shell > .note-row.oanix-mobile-note-drag-overlay > *,
+.notes-shell > .note-row.oanix-mobile-note-drag-overlay .note-row__open,
+.notes-shell > .note-row.oanix-mobile-note-drag-overlay .note-row__avatar,
+.notes-shell > .note-row.oanix-mobile-note-drag-overlay .note-row__body,
+.notes-shell > .note-row.oanix-mobile-note-drag-overlay .note-row__topline,
+.notes-shell > .note-row.oanix-mobile-note-drag-overlay .note-row__preview,
+.notes-shell > .note-row.oanix-mobile-note-drag-overlay time,
+.notes-shell > .note-row.oanix-mobile-note-drag-overlay strong {
   visibility: visible !important;
   opacity: 1 !important;
 }
 
-body > .note-row.oanix-mobile-note-drag-overlay::after {
+.notes-shell > .note-row.oanix-mobile-note-drag-overlay::after {
   opacity: 1 !important;
 }
 
-body > .note-row.oanix-mobile-note-drag-overlay .note-row__menu-wrap {
+.notes-shell > .note-row.oanix-mobile-note-drag-overlay .note-row__menu-wrap {
   display: none !important;
 }
 
 /* The Sortable fallback ghost needs an autonomous fallback surface because it
-   can be detached from the workspace. The independent touch overlay already
-   carries the computed styles of the real note and must keep them intact. */
+   can be detached from the workspace. The touch overlay remains in .notes-shell
+   and therefore keeps the active compact-note contract intact. */
 body > .note-row.oanix-mobile-note-drag-ghost {
   position: fixed !important;
   margin: 0 !important;
@@ -258,6 +258,6 @@ body > .note-row.oanix-mobile-note-drag-ghost .note-row__topline time {
   color: rgba(255,255,255,.60) !important;
 }
 
-body > .note-row.oanix-mobile-note-drag-overlay {
+.notes-shell > .note-row.oanix-mobile-note-drag-overlay {
   overflow: visible !important;
 }
