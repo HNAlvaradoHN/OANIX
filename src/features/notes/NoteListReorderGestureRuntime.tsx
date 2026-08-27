@@ -540,7 +540,6 @@ export function NoteListReorderGestureRuntime() {
       forceFallback: false,
       fallbackOnBody: false,
       fallbackTolerance: 4,
-      fallbackClass: 'oanix-mobile-note-drag-ghost',
       chosenClass: 'oanix-mobile-note-chosen',
       ghostClass: 'oanix-mobile-note-placeholder',
       dragClass: 'oanix-mobile-note-drag-source',
