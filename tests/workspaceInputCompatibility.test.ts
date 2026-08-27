@@ -23,11 +23,10 @@ test('los botones visibles de carpetas abren el creador por evento directo', () 
   assert.doesNotMatch(runtime, /managerButton\.click\(\)/)
 })
 
-test('el drop de carpeta con mouse persiste el orden visible sin forzar refresh exitoso', () => {
-  assert.match(runtime, /persistFolderOrder/)
-  assert.match(runtime, /visibleFolderOrder/)
-  assert.match(runtime, /\.oanix-folder-grid--reordering/)
-  assert.match(runtime, /document\.addEventListener\('pointerup', persistDesktopFolderDrop, true\)/)
+test('el runtime global deja la persistencia del drag al runtime de carpetas', () => {
+  assert.doesNotMatch(runtime, /persistFolderOrder/)
+  assert.doesNotMatch(runtime, /visibleFolderOrder/)
+  assert.doesNotMatch(runtime, /persistDesktopFolderDrop/)
 })
 
 test('el runtime de compatibilidad queda montado globalmente', () => {
