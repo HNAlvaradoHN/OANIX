@@ -67,38 +67,7 @@ body.oanix-mobile-note-dragging .note-row[data-reorder-note-id] {
   opacity: 0 !important;
 }
 
-.note-row.oanix-mobile-note-drag-ghost {
-  z-index: 9900 !important;
-  pointer-events: none !important;
-  visibility: visible !important;
-  opacity: .99 !important;
-  border-color: rgba(147,197,253,.98) !important;
-  border-radius: var(--oanix-note-drag-border-radius, .9rem) !important;
-  box-shadow: 0 30px 66px rgba(2,6,23,.62), 0 0 0 2px rgba(96,165,250,.46), inset 0 1px 1px rgba(255,255,255,.22) !important;
-  filter: brightness(1.09) saturate(1.08);
-  will-change: transform;
-}
-
-body > .note-row.oanix-mobile-note-drag-ghost {
-  width: var(--oanix-note-drag-width) !important;
-  min-width: var(--oanix-note-drag-width) !important;
-  max-width: var(--oanix-note-drag-width) !important;
-  height: var(--oanix-note-drag-height) !important;
-  min-height: var(--oanix-note-drag-height) !important;
-  box-sizing: border-box !important;
-  visibility: visible !important;
-  opacity: .99 !important;
-}
-
-.note-row.oanix-mobile-note-drag-ghost .note-row__menu-wrap {
-  display: none !important;
-}
-
-.note-row.oanix-mobile-note-drag-ghost .note-row__open {
-  pointer-events: none !important;
-}
-
-body.oanix-mobile-note-dragging .note-row[data-reorder-note-id]:not(.oanix-mobile-note-drag-ghost):not(.oanix-mobile-note-placeholder) {
+body.oanix-mobile-note-dragging .note-row[data-reorder-note-id]:not(.oanix-mobile-note-placeholder) {
   transition: box-shadow 140ms ease, opacity 140ms ease, border-color 140ms ease, filter 140ms ease, transform 180ms cubic-bezier(.2,.8,.2,1);
 }
 
@@ -165,32 +134,6 @@ html.oanix-mobile-note-dragging .oanix-folder-rail__scroll {
   }
 }
 
-body > .note-row.oanix-mobile-note-drag-ghost {
-  background: var(--oanix-note-drag-background) !important;
-  transform-origin: center center !important;
-  animation: none !important;
-}
-
-body > .note-row.oanix-mobile-note-drag-ghost > * {
-  visibility: visible !important;
-  opacity: 1 !important;
-}
-
-body > .note-row.oanix-mobile-note-drag-ghost::after {
-  opacity: 1 !important;
-}
-
-body > .note-row.oanix-mobile-note-drag-ghost .note-row__open,
-body > .note-row.oanix-mobile-note-drag-ghost .note-row__avatar,
-body > .note-row.oanix-mobile-note-drag-ghost .note-row__body,
-body > .note-row.oanix-mobile-note-drag-ghost .note-row__topline,
-body > .note-row.oanix-mobile-note-drag-ghost .note-row__preview,
-body > .note-row.oanix-mobile-note-drag-ghost time,
-body > .note-row.oanix-mobile-note-drag-ghost strong {
-  visibility: visible !important;
-  opacity: 1 !important;
-}
-
 /* Independent visual card used during touch reorder. It stays inside
    .notes-shell so the current compact-note contract and its pseudo-elements
    remain identical to the source row while the placeholder moves. */
@@ -230,32 +173,6 @@ body > .note-row.oanix-mobile-note-drag-ghost strong {
 
 .notes-shell > .note-row.oanix-mobile-note-drag-overlay .note-row__menu-wrap {
   display: none !important;
-}
-
-/* The Sortable fallback ghost needs an autonomous fallback surface because it
-   can be detached from the workspace. The touch overlay remains in .notes-shell
-   and therefore keeps the active compact-note contract intact. */
-body > .note-row.oanix-mobile-note-drag-ghost {
-  position: fixed !important;
-  margin: 0 !important;
-  background: rgba(18,18,35,.96) !important;
-  border: 1px solid rgba(255,255,255,.20) !important;
-  border-radius: 1rem !important;
-  color: #fff !important;
-  backdrop-filter: blur(16px) !important;
-  -webkit-backdrop-filter: blur(16px) !important;
-  box-shadow: 0 22px 46px rgba(2,6,23,.46), 0 0 0 2px rgba(96,165,250,.30) !important;
-  visibility: visible !important;
-  opacity: .99 !important;
-}
-
-body > .note-row.oanix-mobile-note-drag-ghost .note-row__topline strong {
-  color: #fff !important;
-}
-
-body > .note-row.oanix-mobile-note-drag-ghost .note-row__preview,
-body > .note-row.oanix-mobile-note-drag-ghost .note-row__topline time {
-  color: rgba(255,255,255,.60) !important;
 }
 
 .notes-shell > .note-row.oanix-mobile-note-drag-overlay {
