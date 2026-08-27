@@ -11,12 +11,8 @@ import { createFolder, loadFolders } from './folderService'
 import './folderCreation.css'
 
 const CREATE_COLORS = ['#3b82f6', '#ec4899', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4'] as const
-const MANAGE_FOLDER_ATTR = 'data-oanix-manage-folder-id'
 const CREATE_TRIGGER_SELECTOR = '.notes-tab--add, .oanix-folder-rail__item--add, .oanix-organic-folder-control--add'
 
-function folderManagementActive(): boolean {
-  return document.documentElement.hasAttribute(MANAGE_FOLDER_ATTR)
-}
 
 export function FolderCreationRuntime() {
   const [open, setOpen] = useState(false)
@@ -34,7 +30,6 @@ export function FolderCreationRuntime() {
   }
 
   function openCreator() {
-    if (folderManagementActive()) return
     setError('')
     setOpen(true)
   }
@@ -55,7 +50,6 @@ export function FolderCreationRuntime() {
     const handleVisibleTrigger = (event: MouseEvent) => {
       const target = event.target
       if (!(target instanceof Element) || !target.closest(CREATE_TRIGGER_SELECTOR)) return
-      if (folderManagementActive()) return
       event.preventDefault()
       openCreator()
     }
