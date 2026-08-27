@@ -33,8 +33,13 @@ export function NoteVisualIdentityRuntime() {
     let applyFrame: number | null = null
     let reloadTimer: number | null = null
     let notesById = new Map<string, NoteRecord>()
+    const noteDragActive = () => document.documentElement.classList.contains('oanix-mobile-note-dragging')
 
     const applyIdentity = () => {
+      if (noteDragActive()) {
+        applyFrame = null
+        return
+      }
       applyFrame = null
       document.querySelectorAll<HTMLElement>('.note-row[data-reorder-note-id]').forEach((row) => {
         const noteId = row.dataset.reorderNoteId
@@ -58,8 +63,6 @@ export function NoteVisualIdentityRuntime() {
         if (avatar && avatar.dataset.oanixNoteIcon !== icon) avatar.dataset.oanixNoteIcon = icon
       })
     }
-
-    const noteDragActive = () => document.documentElement.classList.contains('oanix-mobile-note-dragging')
 
     const scheduleApply = () => {
       if (noteDragActive() || applyFrame !== null) return
