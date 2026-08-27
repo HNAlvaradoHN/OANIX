@@ -14,6 +14,7 @@ const MIN_FLING_VELOCITY_PX_MS = 0.045
 const FLING_FRICTION_PER_FRAME = 0.92
 const MAX_SCROLL_PER_FRAME = 10
 const REFLOW_MS = 120
+const noteReflowAnimations = new WeakMap<HTMLElement, Animation>()
 
 type SortableOptionsWithHandle = NonNullable<Parameters<typeof Sortable.create>[1]> & { handle: string }
 type DragIdentity = { cardColor: string; tabColor: string; icon: string | null }
@@ -117,17 +118,24 @@ function animateReflow(list: HTMLElement, before: Map<HTMLElement, DOMRect>, dra
     if (row === dragged) continue
     const previous = before.get(row)
     if (!previous) continue
+    noteReflowAnimations.get(row)?.cancel()
+    noteReflowAnimations.delete(row)
     const next = row.getBoundingClientRect()
     const dx = previous.left - next.left
     const dy = previous.top - next.top
     if (Math.abs(dx) < 1 && Math.abs(dy) < 1) continue
-    row.animate(
+    const animation = row.animate(
       [
         { transform: `translate(${dx}px, ${dy}px)` },
         { transform: 'translate(0, 0)' },
       ],
       { duration: REFLOW_MS, easing: 'cubic-bezier(.2,.8,.2,1)' },
     )
+    noteReflowAnimations.set(row, animation)
+    animation.onfinish = () => {
+      if (noteReflowAnimations.get(row) === animation) noteReflowAnimations.delete(row)
+    }
+    animation.oncancel = animation.onfinish
   }
 }
 function scrollSpeed(clientY: number): number {
