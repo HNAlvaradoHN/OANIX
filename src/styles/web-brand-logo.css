@@ -59,8 +59,8 @@ html.oanix-brand-final .notes-brand__mark::after {
   animation: none !important;
 }
 
-/* Inside the PWA the mark has a very small living motion: a gentle float plus a slow light sweep.
- * It is intentionally subtle so the logo feels alive without becoming distracting while writing.
+/* Inside the PWA the mark has a very small living motion on fine-pointer devices.
+ * Touch devices keep the same appearance without paying for continuous transforms.
  */
 html.oanix-brand-final.oanix-brand-pwa-preview .vault-logo,
 html.oanix-brand-final.oanix-brand-pwa-preview .notes-brand__mark {
@@ -136,6 +136,20 @@ html.oanix-brand-pwa-preview.oanix-classic-day .notes-brand__mark {
   html.oanix-brand-final .notes-brand__mark {
     width: 2.7rem !important;
     height: 2.7rem !important;
+  }
+}
+
+@media (pointer: coarse) {
+  html.oanix-brand-final.oanix-brand-pwa-preview .vault-logo,
+  html.oanix-brand-final.oanix-brand-pwa-preview .notes-brand__mark {
+    animation: none !important;
+    will-change: auto;
+  }
+
+  html.oanix-brand-final.oanix-brand-pwa-preview .vault-logo::after,
+  html.oanix-brand-final.oanix-brand-pwa-preview .notes-brand__mark::after {
+    animation: none !important;
+    display: none !important;
   }
 }
 
