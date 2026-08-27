@@ -20,6 +20,7 @@ import './styles/classic-theme-surfaces.css'
 import './styles/privacy-status-polish.css'
 import './styles/note-menu-viewport-fit.css'
 import './styles/web-brand-logo.css'
+import './styles/vault-touch-motion-guard.css'
 import './styles/vaultCloudProgress.css'
 import './features/images/pwa-image-no-name.css'
 
