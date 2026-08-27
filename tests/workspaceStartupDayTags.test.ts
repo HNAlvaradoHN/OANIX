@@ -11,9 +11,11 @@ const tagService = readFileSync('src/features/tags/tagService.ts', 'utf8')
 const tagTypes = readFileSync('src/features/tags/tagTypes.ts', 'utf8')
 const refinements = readFileSync('src/features/notes/workspaceRefinements.css', 'utf8')
 
-test('folder creation only intercepts the real folder manager dialog', () => {
-  assert.match(folderCreator, /aria-label=\\?"Administrar carpetas\\?"/)
-  assert.doesNotMatch(folderCreator, /querySelector<HTMLElement>\('\.folder-dialog'\)/)
+test('folder creation no longer depends on the legacy folder manager dialog', () => {
+  assert.doesNotMatch(folderCreator, /MutationObserver/)
+  assert.doesNotMatch(folderCreator, /Administrar carpetas/)
+  assert.match(folderCreator, /createFolder\(normalizedName\)/)
+  assert.match(folderCreator, /CREATE_TRIGGER_SELECTOR/)
 })
 
 test('workspace no longer blocks behind a fake boot screen and reserves the tag rail from first frame', () => {

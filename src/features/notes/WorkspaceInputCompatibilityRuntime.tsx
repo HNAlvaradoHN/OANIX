@@ -2,8 +2,7 @@ import { useEffect } from 'react'
 import Sortable from 'sortablejs'
 
 const NOTE_LIST_SELECTOR = '.notes-list'
-const FOLDER_ADD_TRIGGER_SELECTOR = '.oanix-organic-folder-control--add, .oanix-folder-rail__item--add'
-const FOLDER_MANAGER_BUTTON_SELECTOR = '.notes-tab--add'
+const FOLDER_ADD_TRIGGER_SELECTOR = '.oanix-organic-folder-control--add, .oanix-folder-rail__item--add, .notes-tab--add'
 
 type SortableStaticWithGet = typeof Sortable & {
   get(element: HTMLElement): ReturnType<typeof Sortable.create> | undefined
@@ -29,25 +28,22 @@ export function WorkspaceInputCompatibilityRuntime() {
       }
     }
 
-    const openFolderManagerFromVisibleControl = (event: MouseEvent) => {
+    const openFolderCreatorFromVisibleControl = (event: MouseEvent) => {
       if (!(event.target instanceof Element)) return
       const trigger = event.target.closest<HTMLElement>(FOLDER_ADD_TRIGGER_SELECTOR)
       if (!trigger) return
 
-      const managerButton = document.querySelector<HTMLButtonElement>(FOLDER_MANAGER_BUTTON_SELECTOR)
-      if (!managerButton || managerButton === trigger || managerButton.disabled) return
-
       event.preventDefault()
       event.stopImmediatePropagation()
-      managerButton.click()
+      window.dispatchEvent(new CustomEvent('oanix:open-folder-creator'))
     }
 
     document.addEventListener('pointerdown', syncNoteSortableWithPointer, true)
-    document.addEventListener('click', openFolderManagerFromVisibleControl, true)
+    document.addEventListener('click', openFolderCreatorFromVisibleControl, true)
 
     return () => {
       document.removeEventListener('pointerdown', syncNoteSortableWithPointer, true)
-      document.removeEventListener('click', openFolderManagerFromVisibleControl, true)
+      document.removeEventListener('click', openFolderCreatorFromVisibleControl, true)
     }
   }, [])
 

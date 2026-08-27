@@ -43,7 +43,7 @@ test('folder appearance is a draft with one explicit save action', () => {
 })
 
 test('image action opens the existing local image picker directly', () => {
-  assert.match(grid, /onClick=\{\(\) => coverInputRef\.current\?\.click\(\)\}/)
+  assert.match(grid, /coverInputRef\.current\?\.click\(\)/)
   assert.match(grid, /type="file"/)
   assert.match(grid, /accept="image\/\*"/)
   assert.doesNotMatch(grid, /capture="camera"|capture=\{'camera'\}/)
@@ -56,7 +56,9 @@ test('administrar una carpeta queda aislado a esa carpeta y no abre el creador n
   assert.match(bridge, /Administrar nombre o eliminar esta carpeta/)
   assert.match(creation, /folderManagementActive\(\)/)
   assert.match(creation, /if \(folderManagementActive\(\)\) return/)
-  assert.match(creation, /createRequestedRef/)
+  assert.doesNotMatch(creation, /createRequestedRef/)
+  assert.match(creation, /CREATE_TRIGGER_SELECTOR/)
+  assert.match(creation, /oanix:open-folder-creator/)
   assert.match(creation, /\.notes-tab--add, \.oanix-folder-rail__item--add, \.oanix-organic-folder-control--add/)
 })
 

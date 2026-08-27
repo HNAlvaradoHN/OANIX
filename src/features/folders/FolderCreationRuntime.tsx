@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
 import {
   DEFAULT_FOLDER_COLOR,
@@ -7,38 +7,12 @@ import {
   type FolderIcon,
 } from './folderAppearanceCatalog'
 import { saveFolderColor, saveFolderIcon } from './folderAppearanceService'
-import { loadFolders } from './folderService'
+import { createFolder, loadFolders } from './folderService'
 import './folderCreation.css'
 
 const CREATE_COLORS = ['#3b82f6', '#ec4899', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4'] as const
-const POLL_ATTEMPTS = 36
 const MANAGE_FOLDER_ATTR = 'data-oanix-manage-folder-id'
-
-function nextFrame(): Promise<void> {
-  return new Promise((resolve) => window.requestAnimationFrame(() => resolve()))
-}
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => window.setTimeout(resolve, ms))
-}
-
-function setReactInputValue(input: HTMLInputElement, value: string) {
-  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set
-  if (setter) setter.call(input, value)
-  else input.value = value
-  input.dispatchEvent(new Event('input', { bubbles: true }))
-  input.dispatchEvent(new Event('change', { bubbles: true }))
-}
-
-function legacyDialog(): HTMLElement | null {
-  return document
-    .querySelector<HTMLElement>('.folder-dialog__panel[aria-label="Administrar carpetas"]')
-    ?.closest<HTMLElement>('.folder-dialog') ?? null
-}
-
-function closeLegacyDialog() {
-  legacyDialog()?.querySelector<HTMLButtonElement>('button[aria-label="Cerrar"]')?.click()
-}
+const CREATE_TRIGGER_SELECTOR = '.notes-tab--add, .oanix-folder-rail__item--add, .oanix-organic-folder-control--add'
 
 function folderManagementActive(): boolean {
   return document.documentElement.hasAttribute(MANAGE_FOLDER_ATTR)
@@ -51,8 +25,6 @@ export function FolderCreationRuntime() {
   const [icon, setIcon] = useState<FolderIcon>(DEFAULT_FOLDER_ICON)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  const suppressLegacyOpenRef = useRef(false)
-  const createRequestedRef = useRef(false)
 
   function resetDraft() {
     setName('')
@@ -61,14 +33,16 @@ export function FolderCreationRuntime() {
     setError('')
   }
 
+  function openCreator() {
+    if (folderManagementActive()) return
+    setError('')
+    setOpen(true)
+  }
+
   function close() {
-    suppressLegacyOpenRef.current = true
-    createRequestedRef.current = false
+    if (busy) return
     setOpen(false)
-    closeLegacyDialog()
-    window.setTimeout(() => {
-      suppressLegacyOpenRef.current = false
-    }, 0)
+    resetDraft()
   }
 
   useEffect(() => {
@@ -77,56 +51,26 @@ export function FolderCreationRuntime() {
     root.classList.add('oanix-folder-create-v2')
     body.classList.add('oanix-folder-create-v2')
 
-    const markCreateIntent = (event: Event) => {
+    const handleOpenRequest = () => openCreator()
+    const handleVisibleTrigger = (event: MouseEvent) => {
       const target = event.target
-      if (!(target instanceof Element)) return
-      if (!target.closest('.notes-tab--add, .oanix-folder-rail__item--add, .oanix-organic-folder-control--add')) return
+      if (!(target instanceof Element) || !target.closest(CREATE_TRIGGER_SELECTOR)) return
       if (folderManagementActive()) return
-      createRequestedRef.current = true
+      event.preventDefault()
+      openCreator()
     }
 
-    const syncLegacyDialog = () => {
-      if (!legacyDialog() || suppressLegacyOpenRef.current) return
-      if (folderManagementActive()) {
-        createRequestedRef.current = false
-        setOpen(false)
-        return
-      }
-      if (!createRequestedRef.current) return
-      setError('')
-      setOpen(true)
-    }
-
-    const observer = new MutationObserver(syncLegacyDialog)
-    observer.observe(document.body, { childList: true })
-    syncLegacyDialog()
-
-    const closeBeforeNoteCreation = (event: Event) => {
-      const target = event.target
-      if (!(target instanceof Element)) return
-      if (!target.closest('.notes-create-fab, .empty-action')) return
-      if (!legacyDialog()) return
-      suppressLegacyOpenRef.current = true
-      createRequestedRef.current = false
-      setOpen(false)
-      closeLegacyDialog()
-      window.setTimeout(() => {
-        suppressLegacyOpenRef.current = false
-      }, 0)
-    }
-
-    document.addEventListener('click', markCreateIntent, true)
-    document.addEventListener('click', closeBeforeNoteCreation, true)
+    window.addEventListener('oanix:open-folder-creator', handleOpenRequest)
+    document.addEventListener('click', handleVisibleTrigger, true)
     return () => {
-      observer.disconnect()
-      document.removeEventListener('click', markCreateIntent, true)
-      document.removeEventListener('click', closeBeforeNoteCreation, true)
+      window.removeEventListener('oanix:open-folder-creator', handleOpenRequest)
+      document.removeEventListener('click', handleVisibleTrigger, true)
       root.classList.remove('oanix-folder-create-v2')
       body.classList.remove('oanix-folder-create-v2')
     }
   }, [])
 
-  async function createFromLegacyHandler() {
+  async function createDirectly() {
     const normalizedName = name.trim().replace(/\s+/g, ' ')
     if (!normalizedName) {
       setError('Escribe un nombre para la carpeta.')
@@ -143,33 +87,17 @@ export function FolderCreationRuntime() {
         return
       }
 
-      const dialog = legacyDialog()
-      const input = dialog?.querySelector<HTMLInputElement>('.folder-create-row input')
-      const createButton = dialog?.querySelector<HTMLButtonElement>('.folder-create-row button')
-      if (!dialog || !input || !createButton) {
-        throw new Error('No se encontró el creador de carpetas de OANIX.')
-      }
-
-      const beforeIds = new Set(before.map((folder) => folder.id))
-      setReactInputValue(input, normalizedName)
-      await nextFrame()
-      createButton.click()
-
-      let created: Awaited<ReturnType<typeof loadFolders>>[number] | null = null
-      for (let attempt = 0; attempt < POLL_ATTEMPTS; attempt += 1) {
-        const current = await loadFolders()
-        created = current.find((folder) => !beforeIds.has(folder.id)) ?? null
-        if (created) break
-        await delay(55)
-      }
-      if (!created) throw new Error('La carpeta no terminó de crearse a tiempo.')
-
+      const created = await createFolder(normalizedName)
       await Promise.all([
         saveFolderColor(created.id, color),
         saveFolderIcon(created.id, icon),
       ])
+
+      setOpen(false)
       resetDraft()
-      close()
+      window.dispatchEvent(new CustomEvent('oanix:local-data-changed', {
+        detail: { recordType: 'folder', recordId: created.id },
+      }))
     } catch (createError) {
       setError(createError instanceof Error ? createError.message : 'No se pudo crear la carpeta.')
     } finally {
@@ -193,7 +121,7 @@ export function FolderCreationRuntime() {
             value={name}
             onChange={(event) => setName(event.target.value)}
             onKeyDown={(event) => {
-              if (event.key === 'Enter' && !busy) void createFromLegacyHandler()
+              if (event.key === 'Enter' && !busy) void createDirectly()
             }}
             maxLength={60}
             placeholder="Ej. Proyectos 2026..."
@@ -237,7 +165,7 @@ export function FolderCreationRuntime() {
 
         <footer>
           <button type="button" className="is-cancel" onClick={close} disabled={busy}>Cancelar</button>
-          <button type="button" className="is-primary" onClick={() => void createFromLegacyHandler()} disabled={busy}>
+          <button type="button" className="is-primary" onClick={() => void createDirectly()} disabled={busy}>
             {busy ? 'Creando…' : 'Crear'}
           </button>
         </footer>

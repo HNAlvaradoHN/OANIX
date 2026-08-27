@@ -13,6 +13,11 @@ test('las etiquetas conservan el reordenamiento persistente existente', () => {
   assert.match(organic, /setPointerCapture/)
 })
 
+test('el helper tactil no compite con el reorder de mouse en PC', () => {
+  assert.match(runtime, /if \(event\.pointerType === 'mouse'\) return/)
+  assert.match(runtime, /Desktop mouse reordering is owned by OrganicWorkspaceRuntime/)
+})
+
 test('el gesto móvil evita selección de texto y conserva swipe horizontal corto', () => {
   assert.match(css, /touch-action: none !important/)
   assert.match(css, /user-select: none !important/)
@@ -40,6 +45,12 @@ test('reorder puede desplazar la tira al acercarse a los bordes sin tocar persis
   assert.match(runtime, /scroller\.scrollLeft -= REORDER_SCROLL_STEP_PX/)
   assert.match(runtime, /scroller\.scrollLeft \+= REORDER_SCROLL_STEP_PX/)
   assert.doesNotMatch(runtime, /persistTagOrder/)
+})
+
+test('el helper limpia overlays si la app pierde foco durante un gesto', () => {
+  assert.match(runtime, /visibilitychange/)
+  assert.match(runtime, /window\.addEventListener\('blur', handleBlur\)/)
+  assert.match(runtime, /resetActiveGesture/)
 })
 
 test('un swipe no abre accidentalmente la etiqueta y el runtime se monta desbloqueado', () => {
