@@ -4,3 +4,13 @@
  */
 @import './midnight-violet-foundation.css';
 @import './midnight-violet-surfaces.css';
+
+/* Decorative brand-orbit motion is useful feedback only on fine pointers.
+ * Touch workspaces keep the same mark without a permanent compositor loop. */
+@media (pointer: coarse) {
+  .vault-logo::before,
+  .notes-brand__mark::before,
+  .note-view__empty-mark::before {
+    animation: none !important;
+  }
+}
