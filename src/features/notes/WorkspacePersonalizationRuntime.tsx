@@ -207,16 +207,6 @@ export function WorkspacePersonalizationRuntime() {
       if (!folderId) return
       const flags = dataRef.current.folderFlags.get(folderId)
 
-      let gear = item.querySelector<HTMLElement>('.oanix-folder-card__gear')
-      if (!gear) {
-        gear = document.createElement('span')
-        gear.className = 'oanix-folder-card__gear'
-        gear.textContent = '⚙'
-        gear.title = 'Opciones de carpeta'
-        gear.setAttribute('aria-hidden', 'true')
-        item.appendChild(gear)
-      }
-
       item.classList.toggle('is-oanix-pinned', flags?.pinned === true)
       item.classList.toggle('is-oanix-favorite', flags?.favorite === true)
 
