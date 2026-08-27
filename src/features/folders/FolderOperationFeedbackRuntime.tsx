@@ -3,6 +3,16 @@ import './folderOperationFeedback.css'
 
 type OperationState = 'busy' | 'success' | 'error' | 'hint'
 
+const FOLDER_CUSTOMIZER_SELECTOR = '.oanix-folder-customizer'
+
+function mutationTouchesFolderCustomizer(record: MutationRecord): boolean {
+  const nodes = [...Array.from(record.addedNodes), ...Array.from(record.removedNodes)]
+  return nodes.some((node) => {
+    if (!(node instanceof Element)) return false
+    return node.matches(FOLDER_CUSTOMIZER_SELECTOR) || node.querySelector(FOLDER_CUSTOMIZER_SELECTOR) !== null
+  })
+}
+
 function setStatus(modal: HTMLElement, message: string, state: OperationState, source: string) {
   modal.dataset.oanixOperationStatus = message
   modal.dataset.oanixOperationState = state
@@ -29,7 +39,7 @@ export function FolderOperationFeedbackRuntime() {
     }
 
     const syncReactBusyState = () => {
-      const modal = document.querySelector<HTMLElement>('.oanix-folder-customizer')
+      const modal = document.querySelector<HTMLElement>(FOLDER_CUSTOMIZER_SELECTOR)
       if (!modal) return
       const actionButtons = Array.from(
         modal.querySelectorAll<HTMLButtonElement>('.oanix-folder-customizer__actions > button'),
@@ -59,7 +69,7 @@ export function FolderOperationFeedbackRuntime() {
     let observedModal: HTMLElement | null = null
 
     const bindModalObserver = () => {
-      const nextModal = document.querySelector<HTMLElement>('.oanix-folder-customizer')
+      const nextModal = document.querySelector<HTMLElement>(FOLDER_CUSTOMIZER_SELECTOR)
       if (nextModal === observedModal) return
 
       modalObserver?.disconnect()
@@ -79,12 +89,14 @@ export function FolderOperationFeedbackRuntime() {
       syncReactBusyState()
     }
 
-    const portalObserver = new MutationObserver(bindModalObserver)
+    const portalObserver = new MutationObserver((records) => {
+      if (records.some(mutationTouchesFolderCustomizer)) bindModalObserver()
+    })
 
     const handleClickCapture = (event: MouseEvent) => {
       const target = event.target
       if (!(target instanceof Element)) return
-      const modal = target.closest<HTMLElement>('.oanix-folder-customizer')
+      const modal = target.closest<HTMLElement>(FOLDER_CUSTOMIZER_SELECTOR)
       if (!modal) return
 
       const selectionButton = target.closest<HTMLButtonElement>(
@@ -112,7 +124,7 @@ export function FolderOperationFeedbackRuntime() {
     const handleChangeCapture = (event: Event) => {
       const target = event.target
       if (!(target instanceof HTMLInputElement) || target.type !== 'file') return
-      const modal = target.closest<HTMLElement>('.oanix-folder-customizer')
+      const modal = target.closest<HTMLElement>(FOLDER_CUSTOMIZER_SELECTOR)
       if (!modal || !target.files?.length) return
       if (hintTimer !== null) {
         window.clearTimeout(hintTimer)
@@ -122,7 +134,7 @@ export function FolderOperationFeedbackRuntime() {
     }
 
     const handleAppearanceSaved = () => {
-      const modal = document.querySelector<HTMLElement>('.oanix-folder-customizer')
+      const modal = document.querySelector<HTMLElement>(FOLDER_CUSTOMIZER_SELECTOR)
       if (!modal) return
       setStatus(modal, '✓ Guardado', 'success', 'appearance')
       clearLater(modal, 700)
