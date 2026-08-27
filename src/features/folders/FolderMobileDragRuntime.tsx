@@ -7,6 +7,7 @@ const MOVE_CANCEL_PX = 14
 const EDGE_SCROLL_PX = 72
 const MAX_SCROLL_PER_FRAME = 10
 const REFLOW_MS = 120
+const folderReflowAnimations = new WeakMap<HTMLElement, Animation>()
 
 interface TouchGesture {
   pointerId: number
@@ -92,13 +93,19 @@ function animateReflow(rail: HTMLElement, before: Map<HTMLElement, DOMRect>, sou
     const dx = previous.left - next.left
     const dy = previous.top - next.top
     if (Math.abs(dx) < 1 && Math.abs(dy) < 1) continue
-    item.animate(
+    folderReflowAnimations.get(item)?.cancel()
+    const animation = item.animate(
       [
         { transform: `translate(${dx}px, ${dy}px)` },
         { transform: 'translate(0, 0)' },
       ],
       { duration: REFLOW_MS, easing: 'cubic-bezier(.2,.8,.2,1)' },
     )
+    folderReflowAnimations.set(item, animation)
+    animation.onfinish = () => {
+      if (folderReflowAnimations.get(item) === animation) folderReflowAnimations.delete(item)
+    }
+    animation.oncancel = animation.onfinish
   }
 }
 
