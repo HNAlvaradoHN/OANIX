@@ -280,8 +280,15 @@ export function OrganicWorkspaceRuntime() {
     ensureHost()
     void reloadPrivateUiData()
 
+    const workspaceReorderActive = () => (
+      document.documentElement.classList.contains('oanix-mobile-note-dragging')
+      || document.documentElement.classList.contains('oanix-mobile-folder-dragging')
+      || Boolean(document.querySelector('.oanix-folder-grid--drag-active, .oanix-organic-tags.is-reordering'))
+    )
+
     const workspace = document.querySelector<HTMLElement>('.notes-shell')
     const observer = new MutationObserver(() => {
+      if (workspaceReorderActive()) return
       ensureHost()
       window.requestAnimationFrame(decorateWorkspace)
     })
