@@ -27,6 +27,42 @@ interface AttachmentTargets {
   insertGrid: HTMLElement | null
 }
 
+const ATTACHMENT_TARGET_SELECTOR = [
+  '.image-note-editor-root',
+  '.editor-toolbar',
+  '.editor-command-grid--insert',
+  '.note-row--selected[data-reorder-note-id]',
+].join(', ')
+
+const ATTACHMENT_TARGET_CLASS_NAMES = [
+  'image-note-editor-root',
+  'editor-toolbar',
+  'editor-command-grid--insert',
+  'note-row--selected',
+]
+
+function nodeTouchesAttachmentTargets(node: Node): boolean {
+  if (!(node instanceof Element)) return false
+  return node.matches(ATTACHMENT_TARGET_SELECTOR) || node.querySelector(ATTACHMENT_TARGET_SELECTOR) !== null
+}
+
+function mutationTouchesAttachmentTargets(record: MutationRecord): boolean {
+  if (record.type === 'childList') {
+    return [...record.addedNodes, ...record.removedNodes].some(nodeTouchesAttachmentTargets)
+  }
+
+  if (record.type !== 'attributes' || record.attributeName !== 'class' || !(record.target instanceof Element)) {
+    return false
+  }
+
+  if (ATTACHMENT_TARGET_CLASS_NAMES.some((className) => record.target.classList.contains(className))) {
+    return true
+  }
+
+  const oldClasses = new Set((record.oldValue ?? '').split(/\s+/).filter(Boolean))
+  return ATTACHMENT_TARGET_CLASS_NAMES.some((className) => oldClasses.has(className))
+}
+
 function wait(milliseconds: number): Promise<void> {
   return new Promise((resolve) => window.setTimeout(resolve, milliseconds))
 }
@@ -181,13 +217,16 @@ export function NoteAttachmentsRuntime() {
 
     refresh()
     const workspace = document.querySelector<HTMLElement>('.notes-shell')
-    const observer = new MutationObserver(refresh)
+    const observer = new MutationObserver((records) => {
+      if (records.some(mutationTouchesAttachmentTargets)) refresh()
+    })
     if (workspace) {
       observer.observe(workspace, {
         childList: true,
         subtree: true,
         attributes: true,
         attributeFilter: ['class'],
+        attributeOldValue: true,
       })
     }
     window.addEventListener('popstate', refresh)
