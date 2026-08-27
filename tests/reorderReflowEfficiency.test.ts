@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
 const notes = readFileSync('src/features/notes/NoteListReorderGestureRuntime.tsx', 'utf8')
+const noteReorderCss = readFileSync('src/features/notes/noteReorderGesture.css', 'utf8')
 const folders = readFileSync('src/features/folders/FolderMobileDragRuntime.tsx', 'utf8')
 const organic = readFileSync('src/features/notes/OrganicWorkspaceRuntime.tsx', 'utf8')
 
@@ -28,6 +29,18 @@ test('note touch reflow cancels the previous FLIP animation before starting anot
   assert.match(notes, /const noteReflowAnimations = new WeakMap<HTMLElement, Animation>\(\)/)
   assert.match(block, /noteReflowAnimations\.set\(row, animation\)/)
   assert.match(block, /animation\.oncancel = animation\.onfinish/)
+})
+
+test('note touch placeholder keeps static slot feedback without an infinite repaint loop', () => {
+  const start = noteReorderCss.indexOf('.note-row.oanix-mobile-note-placeholder {')
+  const end = noteReorderCss.indexOf('.note-row.oanix-mobile-note-placeholder > *', start)
+  assert.ok(start >= 0 && end > start)
+  const block = noteReorderCss.slice(start, end)
+  assert.match(block, /border: 2px dashed/)
+  assert.match(block, /background:/)
+  assert.match(block, /box-shadow:/)
+  assert.doesNotMatch(block, /animation:/)
+  assert.doesNotMatch(noteReorderCss, /@keyframes oanix-note-drop-slot-pulse/)
 })
 
 test('folder touch reorder snapshots cards only after leaving the current slot', () => {

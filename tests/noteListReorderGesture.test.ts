@@ -70,7 +70,7 @@ test('la tarjeta visible usa un overlay independiente y sigue directamente el de
   assert.match(css, /\.note-row\.oanix-mobile-note-placeholder[\s\S]*?border:\s*2px dashed/)
   assert.match(css, /\.note-row\.oanix-mobile-note-placeholder > \*[\s\S]*?visibility:\s*hidden !important/)
   assert.doesNotMatch(css, /body > \.note-row\.oanix-mobile-note-drag-ghost/)
-  assert.match(css, /@keyframes oanix-note-drop-slot-pulse/)
+  assert.doesNotMatch(css, /@keyframes oanix-note-drop-slot-pulse/)
 })
 
 test('overlay independiente mantiene visible todo el contenido y la superficie real de la nota', () => {
