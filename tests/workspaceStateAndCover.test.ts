@@ -4,6 +4,7 @@ import test from 'node:test'
 
 const main = readFileSync('src/main.tsx', 'utf8')
 const visualRuntime = readFileSync('src/features/notes/V383WorkspaceVisualRuntime.tsx', 'utf8')
+const organicRuntime = readFileSync('src/features/notes/OrganicWorkspaceRuntime.tsx', 'utf8')
 const stateCss = readFileSync('src/features/notes/workspaceStateContract.css', 'utf8')
 const coverService = readFileSync('src/features/folders/folderCoverService.ts', 'utf8')
 const appearanceService = readFileSync('src/features/folders/folderAppearanceService.ts', 'utf8')
@@ -18,16 +19,17 @@ test('opening a note marks an exclusive detail state and hides workspace-only ch
   assert.match(stateCss, /\.notes-shell\.notes-shell--open > \.note-view[\s\S]*width: 100% !important/)
 })
 
-test('visual runtime observes only the nodes whose state it mirrors', () => {
+test('visual runtime observes only note detail state', () => {
   assert.match(visualRuntime, /shellObserver\.observe\((?:observedShell|shell)/)
-  assert.match(visualRuntime, /backgroundObserver\.observe\((?:observedBackground|background)/)
+  assert.doesNotMatch(visualRuntime, /backgroundObserver|syncCoveredBackground|bindBackgroundObserver/)
   assert.doesNotMatch(visualRuntime, /observe\(body/)
   assert.doesNotMatch(visualRuntime, /subtree:\s*true/)
 })
 
-test('covered workspace uses a sharp contained foreground over a soft fill instead of stretching a thumbnail', () => {
-  assert.match(visualRuntime, /--oanix-organic-cover-image/)
-  assert.match(visualRuntime, /removeProperty\('background-image'\)/)
+test('covered workspace writes the cover variable directly without a rewrite frame', () => {
+  assert.match(organicRuntime, /'--oanix-organic-cover-image'/)
+  assert.doesNotMatch(organicRuntime, /backgroundImage:/)
+  assert.doesNotMatch(visualRuntime, /removeProperty\('background-image'\)|setProperty\('--oanix-organic-cover-image'/)
   assert.match(stateCss, /\.oanix-organic-background\.oanix-organic-background--covered::before[\s\S]*background-size: cover !important[\s\S]*blur\(18px\)/)
   assert.match(stateCss, /\.oanix-organic-background\.oanix-organic-background--covered::after[\s\S]*background-size: cover, contain !important/)
   assert.match(stateCss, /var\(--oanix-organic-cover-image\)/)
