@@ -130,7 +130,6 @@
   transition: transform .14s ease, border-color .14s ease, background .14s ease, box-shadow .14s ease;
 }
 
-.oanix-tag-create__icons button:hover,
 .oanix-tag-create__icons button:focus-visible {
   outline: none;
   transform: translateY(-1px);
@@ -165,7 +164,6 @@
   transition: transform .15s ease, box-shadow .15s ease;
 }
 
-.oanix-tag-create__colors button:hover,
 .oanix-tag-create__colors button:focus-visible {
   outline: none;
   transform: scale(1.05);
@@ -175,6 +173,17 @@
   transform: scale(1.07);
   border-color: #8bb7ff;
   box-shadow: 0 0 0 3px rgba(59,130,246,.20), 0 7px 16px rgba(2,6,23,.25), inset 0 1px 2px rgba(255,255,255,.30);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .oanix-tag-create__icons button:hover {
+    transform: translateY(-1px);
+    border-color: rgba(96,165,250,.55);
+  }
+
+  .oanix-tag-create__colors button:hover {
+    transform: scale(1.05);
+  }
 }
 
 .oanix-tag-create__error {
