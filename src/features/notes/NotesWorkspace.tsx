@@ -264,6 +264,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
   const saveTimerRef = useRef<number | null>(null)
   const selectedIdRef = useRef<string | null>(null)
   const activeFolderIdRef = useRef<string | 'all'>('all')
+  const activeTagIdRef = useRef<string | 'all'>('all')
   const notesRef = useRef<NoteRecord[]>([])
   const historyBackAlreadySavedRef = useRef(false)
   const pendingImageDeletesRef = useRef(new Set<string>())
@@ -320,6 +321,10 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
   }, [activeFolderId])
 
   useEffect(() => {
+    activeTagIdRef.current = activeTagId
+  }, [activeTagId])
+
+  useEffect(() => {
     notesRef.current = notes
   }, [notes])
 
@@ -340,6 +345,23 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
 
     window.addEventListener('oanix:select-workspace-folder', handleWorkspaceFolderSelection)
     return () => window.removeEventListener('oanix:select-workspace-folder', handleWorkspaceFolderSelection)
+  }, [])
+
+  useEffect(() => {
+    const handleWorkspaceTagSelection = (event: Event) => {
+      const detail = event instanceof CustomEvent
+        ? event.detail as { tagId?: unknown } | null
+        : null
+      if (detail?.tagId === null) {
+        void handleSelectTag('all')
+        return
+      }
+      if (typeof detail?.tagId !== 'string') return
+      void handleSelectTag(detail.tagId)
+    }
+
+    window.addEventListener('oanix:select-workspace-tag', handleWorkspaceTagSelection)
+    return () => window.removeEventListener('oanix:select-workspace-tag', handleWorkspaceTagSelection)
   }, [])
 
   useEffect(() => {
@@ -719,13 +741,14 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
   }
 
   async function handleSelectTag(tagId: string | 'all') {
-    if (tagId === activeTagId) {
+    if (tagId === activeTagIdRef.current) {
       setTagFilterOpen(false)
       return
     }
     if (!(await flushPendingContent())) return
     await finalizeRemovedImages()
 
+    activeTagIdRef.current = tagId
     setActiveTagId(tagId)
     selectedIdRef.current = null
     setSelectedId(null)
@@ -1024,6 +1047,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
       setTags((current) => current.filter((item) => item.id !== tag.id))
       setTagDraftIds((current) => current.filter((id) => id !== tag.id))
       if (activeTagId === tag.id) {
+        activeTagIdRef.current = 'all'
         setActiveTagId('all')
         selectedIdRef.current = null
         setSelectedId(null)
@@ -1128,6 +1152,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
       if (openNote) {
         handleSelectFolder(openNote.folderId ?? 'all')
         if (activeTagId !== 'all' && !(openNote.tagIds ?? []).includes(activeTagId)) {
+          activeTagIdRef.current = 'all'
           setActiveTagId('all')
         }
       }

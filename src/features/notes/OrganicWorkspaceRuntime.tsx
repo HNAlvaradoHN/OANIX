@@ -83,21 +83,10 @@ function activeTagNameFromWorkspace(): string | null {
   return !label || label === 'Todas las etiquetas' ? null : label
 }
 
-function openWorkspaceTag(tagName: string | null) {
-  const filterButton = document.querySelector<HTMLButtonElement>('.tag-filter-button')
-  if (!filterButton) return
-  filterButton.click()
-
-  window.requestAnimationFrame(() => {
-    window.requestAnimationFrame(() => {
-      const panel = document.querySelector<HTMLElement>('.folder-dialog__panel[aria-label="Filtrar por etiqueta"]')
-      const options = Array.from(panel?.querySelectorAll<HTMLButtonElement>('.folder-move-option') ?? [])
-      const target = tagName === null
-        ? options[0]
-        : options.find((button) => button.querySelector('strong')?.textContent?.trim() === tagName)
-      target?.click()
-    })
-  })
+function selectWorkspaceTag(tagId: string | null) {
+  window.dispatchEvent(new CustomEvent('oanix:select-workspace-tag', {
+    detail: { tagId },
+  }))
 }
 
 export function OrganicWorkspaceRuntime() {
@@ -402,7 +391,7 @@ export function OrganicWorkspaceRuntime() {
       suppressTagClickRef.current = null
       return
     }
-    if (!tagReorderMode) openWorkspaceTag(tag.name)
+    if (!tagReorderMode) selectWorkspaceTag(tag.id)
   }
 
   const backgroundStyle = {
@@ -452,7 +441,7 @@ export function OrganicWorkspaceRuntime() {
             <button
               className={`oanix-organic-tag-chip${activeTagName === null ? ' is-active' : ''}`}
               type="button"
-              onClick={() => openWorkspaceTag(null)}
+              onClick={() => selectWorkspaceTag(null)}
               disabled={tagReorderMode}
             >
               Todas
