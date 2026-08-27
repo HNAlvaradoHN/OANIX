@@ -19,7 +19,7 @@ test('note creation feedback ignores unrelated sidebar mutations', () => {
   assert.match(runtime, /node\.matches\(FEEDBACK_SURFACE_SELECTOR\) \|\| node\.querySelector\(FEEDBACK_SURFACE_SELECTOR\) !== null/)
   assert.match(runtime, /records\.some\(mutationTouchesFeedbackSurface\)/)
 
-  const sidebarObserverBlock = runtime.match(/sidebarObserver\.observe\(observedSidebar, \{([\s\S]*?)\n\s*\}\)/)?.[1] ?? ''
+  const sidebarObserverBlock = runtime.match(/sidebarObserver\.observe\(sidebar, \{([\s\S]*?)\n\s*\}\)/)?.[1] ?? ''
   assert.match(sidebarObserverBlock, /childList: true/)
   assert.match(sidebarObserverBlock, /subtree: true/)
   assert.match(sidebarObserverBlock, /attributes: true/)
