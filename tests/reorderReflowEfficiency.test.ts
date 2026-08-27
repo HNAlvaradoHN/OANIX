@@ -28,6 +28,16 @@ test('folder touch reorder snapshots cards only after leaving the current slot',
   assert.doesNotMatch(block, /const beforeOrder = folderOrder/)
 })
 
+test('folder touch reorder no crea una animacion extra sobre la tarjeta sostenida por cada hueco', () => {
+  const start = folders.indexOf('function reorderDomAtPoint')
+  const end = folders.indexOf('function scrollSpeed', start)
+  assert.ok(start >= 0 && end > start)
+  const block = folders.slice(start, end)
+  assert.match(block, /if \(animate && beforeRects\) animateReflow\(gesture\.rail, beforeRects, gesture\.item\)/)
+  assert.doesNotMatch(block, /gesture\.item\.animate\(/)
+  assert.doesNotMatch(block, /boxShadow/)
+})
+
 test('tag reorder computes a real slot change before capturing FLIP rectangles', () => {
   const start = organic.indexOf('function advanceTagDragAtX')
   const end = organic.indexOf('function handleTagPointerMove', start)
