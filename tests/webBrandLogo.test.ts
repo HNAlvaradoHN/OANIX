@@ -36,6 +36,12 @@ test('PWA uses the selected logo while Capacitor keeps the current icon', () => 
   assert.match(brandCss, /background-image: var\(--oanix-brand-logo-url\) !important/)
 })
 
+test('PWA brand keeps continuous motion off coarse pointer devices', () => {
+  assert.match(brandCss, /@media \(pointer: coarse\)/)
+  assert.match(brandCss, /@media \(pointer: coarse\)[\s\S]*oanix-brand-pwa-preview \.notes-brand__mark[\s\S]*animation: none !important[\s\S]*will-change: auto/)
+  assert.match(brandCss, /@media \(pointer: coarse\)[\s\S]*oanix-brand-pwa-preview \.notes-brand__mark::after[\s\S]*animation: none !important[\s\S]*display: none !important/)
+})
+
 test('PWA manifest uses the selected logo without changing Android resources', () => {
   assert.match(viteConfig, /includeAssets: \['oanix-icon\.svg', 'oanix-logo\.webp'\]/)
   assert.match(viteConfig, /src: '\/OANIX\/oanix-logo\.webp'/)
