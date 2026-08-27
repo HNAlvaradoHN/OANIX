@@ -42,14 +42,13 @@ test('note organizer sheets keep the body-level dock below the workspace modal s
   assert.match(folderCreationCss, /\.oanix-organic-folder-controls\s*\{\s*z-index:\s*5 !important;\s*pointer-events:\s*none !important;/)
 })
 
-test('single note changes refresh visual runtimes without decrypting the whole note list again', () => {
+test('single note changes refresh only the note visual owner without decrypting the whole list again', () => {
   assert.match(noteService, /export function loadNote\(noteId: string\): Promise<NoteRecord \| null>/)
   assert.match(noteService, /return readNote\(noteId\)/)
 
   assert.match(organic, /PRIVATE_UI_RELOAD_DEBOUNCE_MS = 48/)
-  assert.match(organic, /async function refreshChangedNote\(noteId: string\)/)
-  assert.match(organic, /detail\?\.recordType === 'note'/)
-  assert.match(organic, /void refreshChangedNote\(detail\.recordId\)/)
+  assert.match(organic, /detail\?\.recordType === 'note'\) return/)
+  assert.doesNotMatch(organic, /refreshChangedNote|loadNotes|loadNote\(/)
   assert.match(organic, /ensureHost\(\)\s*\n\s*void reloadPrivateUiData\(\)/)
 
   assert.match(personalization, /PERSONALIZATION_RELOAD_DEBOUNCE_MS = 48/)

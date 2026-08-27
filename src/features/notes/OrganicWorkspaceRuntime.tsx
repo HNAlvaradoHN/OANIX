@@ -13,14 +13,11 @@ import { loadFolders } from '../folders/folderService'
 import type { FolderRecord } from '../folders/folderTypes'
 import { loadTags, persistTagOrder } from '../tags/tagService'
 import type { TagRecord } from '../tags/tagTypes'
-import { loadNote, loadNotes } from './noteService'
-import type { NoteRecord } from './noteTypes'
 import './organicWorkspace.css'
 
 const TAG_LONG_PRESS_MS = 460
 const TAG_MOVE_TOLERANCE = 12
 const PRIVATE_UI_RELOAD_DEBOUNCE_MS = 48
-const NOTE_TAB_COLORS = ['#f59e0b', '#3b82f6', '#10b981', '#8b5cf6', '#ec4899', '#06b6d4']
 
 interface FolderVisualState {
   covers: Map<string, string>
@@ -162,7 +159,6 @@ export function OrganicWorkspaceRuntime() {
   const tagHostRef = useRef<HTMLElement | null>(null)
   const draggingTagIdRef = useRef<string | null>(null)
   const foldersRef = useRef<FolderRecord[]>([])
-  const notesRef = useRef<NoteRecord[]>([])
   const pressTimerRef = useRef<number | null>(null)
   const pressPointerRef = useRef({ pointerId: -1, startX: 0, startY: 0, tagId: '', button: null as HTMLButtonElement | null })
   const dragStartOrderRef = useRef<string[]>([])
@@ -186,21 +182,6 @@ export function OrganicWorkspaceRuntime() {
       } else if (item.dataset.oanixFolderId) {
         item.dataset.oanixOrganicFolderName = item.title.trim()
       }
-    })
-
-    const folderNames = new Map(foldersRef.current.map((folder) => [folder.id, folder.name]))
-    const tagNames = new Map(tagsRef.current.map((tag) => [tag.id, tag.name]))
-    const noteById = new Map(notesRef.current.map((note) => [note.id, note]))
-
-    document.querySelectorAll<HTMLElement>('.note-row[data-reorder-note-id]').forEach((row, index) => {
-      const noteId = row.dataset.reorderNoteId
-      if (!noteId) return
-      const note = noteById.get(noteId)
-      if (!note) return
-      const firstTag = (note.tagIds ?? []).map((id) => tagNames.get(id)).find(Boolean)
-      const category = firstTag ? `#${firstTag}` : (note.folderId ? folderNames.get(note.folderId) ?? 'NOTA' : 'NOTA')
-      row.dataset.oanixNoteCategory = category
-      row.style.setProperty('--oanix-note-tab-color', NOTE_TAB_COLORS[index % NOTE_TAB_COLORS.length])
     })
 
     setActiveTagName((current) => {
@@ -227,40 +208,20 @@ export function OrganicWorkspaceRuntime() {
   async function reloadPrivateUiData() {
     if (!document.querySelector('.notes-sidebar')) return
     try {
-      const [nextTags, folders, notes, covers, colors] = await Promise.all([
+      const [nextTags, folders, covers, colors] = await Promise.all([
         loadTags(),
         loadFolders(),
-        loadNotes(),
         loadFolderCovers(),
         loadFolderColors(),
       ])
       tagsRef.current = nextTags
       foldersRef.current = folders
-      notesRef.current = notes
       setTags(nextTags)
       setFolderVisuals({ covers, colors })
       setTagOrderError('')
       scheduleWorkspaceDecorate()
     } catch {
       // The runtime only paints private UI while an unlocked workspace exists.
-    }
-  }
-
-  async function refreshChangedNote(noteId: string) {
-    if (!document.querySelector('.notes-sidebar')) return
-    try {
-      const note = await loadNote(noteId)
-      const current = notesRef.current
-      const existingIndex = current.findIndex((item) => item.id === noteId)
-      const next = note
-        ? existingIndex >= 0
-          ? current.map((item) => item.id === noteId ? note : item)
-          : [...current, note]
-        : current.filter((item) => item.id !== noteId)
-      notesRef.current = next
-      scheduleWorkspaceDecorate()
-    } catch {
-      // A later full refresh or sync event can recover a transient read failure.
     }
   }
 
@@ -312,12 +273,9 @@ export function OrganicWorkspaceRuntime() {
 
     const handleLocalChange = (event: Event) => {
       const detail = event instanceof CustomEvent
-        ? event.detail as { recordType?: unknown; recordId?: unknown } | null
+        ? event.detail as { recordType?: unknown } | null
         : null
-      if (detail?.recordType === 'note' && typeof detail.recordId === 'string') {
-        void refreshChangedNote(detail.recordId)
-        return
-      }
+      if (detail?.recordType === 'note') return
       scheduleReload()
     }
     const handleConflictResolved = () => scheduleReload()

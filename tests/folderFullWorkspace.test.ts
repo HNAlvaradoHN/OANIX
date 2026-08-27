@@ -8,10 +8,11 @@ const organicCss = readFileSync('src/features/notes/organicWorkspace.css', 'utf8
 const appearanceService = readFileSync('src/features/folders/folderAppearanceService.ts', 'utf8')
 const interactiveCss = readFileSync('src/features/folders/folderInteractive.css', 'utf8')
 const notesWorkspace = readFileSync('src/features/notes/NotesWorkspace.tsx', 'utf8')
+const personalizationRuntime = readFileSync('src/features/notes/WorkspacePersonalizationRuntime.tsx', 'utf8')
 
 test('la superficie principal combina cabecera etiquetas notas y dock sin crear otra app', () => {
   assert.match(organicRuntime, /loadFolders/)
-  assert.match(organicRuntime, /loadNotes/)
+  assert.doesNotMatch(organicRuntime, /loadNotes|loadNote\(/)
   assert.match(organicRuntime, /loadTags/)
   assert.match(organicCss, /\.notes-header[\s\S]*backdrop-filter: blur\(15px\)/)
   assert.match(organicCss, /\.oanix-organic-tags/)
@@ -26,7 +27,9 @@ test('las tarjetas de notas conservan datos y acciones reales con la geometría 
   assert.match(organicCss, /\.note-row[\s\S]*min-height: 95px !important/)
   assert.match(organicCss, /margin: -15px 0 0 !important/)
   assert.match(organicCss, /clip-path: polygon\(15% 0%,85% 0%,100% 100%,0% 100%\)/)
-  assert.match(organicRuntime, /row\.dataset\.oanixNoteCategory = category/)
+  assert.match(personalizationRuntime, /row\.dataset\.oanixNoteCategory = category/)
+  assert.match(personalizationRuntime, /row\.style\.setProperty\('--oanix-note-tab-color', color\)/)
+  assert.doesNotMatch(organicRuntime, /row\.dataset\.oanixNoteCategory|--oanix-note-tab-color/)
 })
 
 test('el dock inferior usa nombres contadores portadas colores y acciones existentes', () => {
