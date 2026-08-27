@@ -4,10 +4,28 @@ import test from 'node:test'
 
 const privacyRuntime = readFileSync('src/features/privacy/NotePrivacyRuntime.tsx', 'utf8')
 
-test('note privacy observes only the unlocked notes workspace', () => {
+test('note privacy filters workspace mutations before bumping DOM revision', () => {
   assert.match(privacyRuntime, /querySelector<HTMLElement>\('\.notes-shell'\)/)
-  assert.match(privacyRuntime, /observer\.observe\(workspace,\s*\{[\s\S]*subtree:\s*true/)
+  assert.match(privacyRuntime, /function mutationTouchesPrivacySurface\(record: MutationRecord\)/)
+  assert.match(privacyRuntime, /records\.some\(mutationTouchesPrivacySurface\)/)
+  assert.match(privacyRuntime, /attributeFilter: \['class', 'aria-expanded'\]/)
+  assert.match(privacyRuntime, /attributeOldValue: true/)
+  assert.doesNotMatch(privacyRuntime, /new MutationObserver\(bump\)/)
   assert.doesNotMatch(privacyRuntime, /observer\.observe\(document\.body/)
   assert.doesNotMatch(privacyRuntime, /observer\.observe\(document\.documentElement/)
   assert.match(privacyRuntime, /window\.addEventListener\('input', bump, true\)/)
+})
+
+test('note privacy mutation filter covers only privacy-relevant surfaces', () => {
+  for (const selector of [
+    '.note-row',
+    '.note-row__menu',
+    '.note-view',
+    '.note-view__menu',
+    '.workspace-menu',
+    '.note-canvas',
+    '.notes-search',
+  ]) {
+    assert.ok(privacyRuntime.includes(selector), `missing ${selector} from privacy surface contract`)
+  }
 })
