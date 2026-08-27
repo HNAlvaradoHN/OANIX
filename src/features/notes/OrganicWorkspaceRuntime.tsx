@@ -440,14 +440,15 @@ export function OrganicWorkspaceRuntime() {
     const host = tagHostRef.current
     const dropTarget = tagDropTargetAtX(host, draggedId, clampTagDragX(host, clientX))
     if (!dropTarget) return
+
+    const current = tagsRef.current
+    const next = moveTagOneStepTowardTarget(current, draggedId, dropTarget.targetId, dropTarget.placeAfter)
+    if (next === current) return
+
     const before = captureTagRects(host)
-    setTags((current) => {
-      const next = moveTagOneStepTowardTarget(current, draggedId, dropTarget.targetId, dropTarget.placeAfter)
-      if (next === current) return current
-      tagsRef.current = next
-      animateTagReflow(host, before, draggedId)
-      return next
-    })
+    tagsRef.current = next
+    setTags(next)
+    animateTagReflow(host, before, draggedId)
   }
 
   function handleTagPointerMove(tag: TagRecord, event: ReactPointerEvent<HTMLButtonElement>) {
