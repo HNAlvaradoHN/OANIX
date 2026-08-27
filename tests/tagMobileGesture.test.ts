@@ -31,7 +31,7 @@ test('el gesto móvil evita selección de texto y conserva swipe horizontal cort
 test('reorder muestra un clon fijo bajo el dedo y oculta el chip que salta en el layout', () => {
   assert.match(runtime, /cloneNode\(true\)/)
   assert.match(runtime, /oanix-tag-drag-overlay/)
-  assert.match(runtime, /const clampedLeft = Math\.min\(event\.clientX - dragOffsetX, controlsLeft - overlayWidth\)/)
+  assert.match(runtime, /controlsLeft - REORDER_RIGHT_GUARD_PX - overlayWidth/)
   assert.match(runtime, /dragOverlay\.style\.left = `\$\{clampedLeft\}px`/)
   assert.match(runtime, /dragOverlay\.style\.top = `\$\{event\.clientY - dragOffsetY\}px`/)
   assert.match(css, /\.oanix-organic-tags\.is-reordering \.oanix-organic-tag-chip\.is-dragging[\s\S]*?opacity:\s*\.08 !important/)
@@ -55,7 +55,7 @@ test('un gesto rápido cruza etiquetas de un hueco por actualización', () => {
   assert.match(organic, /const desired = moveTagAroundTarget/)
   assert.match(organic, /const direction = desiredIndex > currentIndex \? 1 : -1/)
   assert.match(organic, /currentIndex \+ direction/)
-  assert.match(organic, /moveTagOneStepTowardTarget\(current, tag\.id, dropTarget\.targetId, dropTarget\.placeAfter\)/)
+  assert.match(organic, /moveTagOneStepTowardTarget\(current, draggedId, dropTarget\.targetId, dropTarget\.placeAfter\)/)
 })
 
 test('reflow de etiquetas cancela la animación anterior antes de abrir el siguiente hueco', () => {
@@ -66,15 +66,25 @@ test('reflow de etiquetas cancela la animación anterior antes de abrir el sigui
 
 test('reorder desplaza la tira de forma pautada al acercarse a los bordes', () => {
   assert.match(runtime, /REORDER_EDGE_PX = 64/)
-  assert.match(runtime, /REORDER_MAX_SCROLL_PX = 4/)
+  assert.match(runtime, /REORDER_MAX_SCROLL_PX = 3/)
+  assert.match(runtime, /REORDER_RIGHT_GUARD_PX = 8/)
+  assert.match(runtime, /REORDER_SLOT_TICK_MS = 85/)
   assert.match(runtime, /scheduleAutoScrollDuringReorder/)
-  assert.match(runtime, /window\.requestAnimationFrame/)
-  assert.match(runtime, /latestReorderPointerX/)
-  assert.match(runtime, /latestReorderPointerX = Math\.min\(pointerX, controlsLeft - 1\)/)
-  assert.match(runtime, /Math\.round\(REORDER_MAX_SCROLL_PX \* strength\)/)
-  assert.match(runtime, /if \(delta !== 0\) scroller\.scrollLeft \+= delta/)
+  assert.match(runtime, /const tick = \(now: number\)/)
+  assert.match(runtime, /autoScrollFrame = window\.requestAnimationFrame\(tick\)/)
+  assert.match(runtime, /latestReorderPointerX = Math\.min\(pointerX, controlsLeft - REORDER_RIGHT_GUARD_PX\)/)
+  assert.match(runtime, /window\.dispatchEvent\(new CustomEvent\('oanix:tag-reorder-edge-tick'/)
+  assert.match(runtime, /lastEdgeSlotTickAt/)
   assert.doesNotMatch(runtime, /REORDER_SCROLL_STEP_PX = 12/)
   assert.doesNotMatch(runtime, /persistTagOrder/)
+})
+
+test('el borde derecho sigue avanzando huecos aunque el dedo quede quieto', () => {
+  assert.match(runtime, /if \(delta === 0\) return/)
+  assert.match(runtime, /window\.dispatchEvent\(new CustomEvent\('oanix:tag-reorder-edge-tick'/)
+  assert.match(runtime, /autoScrollFrame = window\.requestAnimationFrame\(tick\)/)
+  assert.match(organic, /window\.addEventListener\('oanix:tag-reorder-edge-tick'/)
+  assert.match(organic, /advanceTagDragAtX\(draggedId, detail\.clientX\)/)
 })
 
 test('el helper limpia overlays si la app pierde foco durante un gesto', () => {
