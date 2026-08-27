@@ -6,6 +6,30 @@ const DESCRIPTION_LIMIT = 56
 const MIN_ZOOM = 1
 const MAX_ZOOM = 4
 const HISTORY_KEY = '__oanixPwaImageOverlay'
+const LIGHTBOX_SELECTOR = '.image-lightbox'
+
+function mutationTouchesImagePreview(record: MutationRecord): boolean {
+  const target = record.target
+  if (target instanceof Element) {
+    if (
+      target.matches(IMAGE_CARD_SELECTOR)
+      || target.closest(IMAGE_CARD_SELECTOR)
+      || target.matches(LIGHTBOX_SELECTOR)
+      || target.closest(LIGHTBOX_SELECTOR)
+    ) return true
+  }
+
+  const nodes = [...Array.from(record.addedNodes), ...Array.from(record.removedNodes)]
+  return nodes.some((node) => {
+    if (!(node instanceof Element)) return false
+    return (
+      node.matches(IMAGE_CARD_SELECTOR)
+      || node.querySelector(IMAGE_CARD_SELECTOR) !== null
+      || node.matches(LIGHTBOX_SELECTOR)
+      || node.querySelector(LIGHTBOX_SELECTOR) !== null
+    )
+  })
+}
 
 type TouchPoint = { x: number; y: number }
 
@@ -414,7 +438,9 @@ export function PwaImagePreviewRuntime() {
       }
     }
 
-    const observer = new MutationObserver(queueNormalize)
+    const observer = new MutationObserver((records) => {
+      if (records.some(mutationTouchesImagePreview)) queueNormalize()
+    })
     observer.observe(appRoot, { childList: true, subtree: true })
 
     normalizeAllFigures()

@@ -65,3 +65,13 @@ test('lightbox supports pinch zoom and one-finger pan after zoom', () => {
   assert.match(runtime, /viewport\.scrollTop/)
   assert.match(css, /image-lightbox__viewport[\s\S]*touch-action: none/)
 })
+
+test('image preview observer ignores unrelated workspace DOM churn', () => {
+  assert.match(runtime, /const LIGHTBOX_SELECTOR = '\.image-lightbox'/)
+  assert.match(runtime, /function mutationTouchesImagePreview\(record: MutationRecord\)/)
+  assert.match(runtime, /target\.closest\(IMAGE_CARD_SELECTOR\)/)
+  assert.match(runtime, /target\.closest\(LIGHTBOX_SELECTOR\)/)
+  assert.match(runtime, /new MutationObserver\(\(records\) =>/)
+  assert.match(runtime, /records\.some\(mutationTouchesImagePreview\)/)
+  assert.doesNotMatch(runtime, /new MutationObserver\(queueNormalize\)/)
+})
