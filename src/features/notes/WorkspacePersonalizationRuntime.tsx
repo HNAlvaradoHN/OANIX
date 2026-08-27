@@ -154,7 +154,7 @@ export function WorkspacePersonalizationRuntime() {
     const noteById = new Map(dataRef.current.notes.map((note) => [note.id, note]))
     const searching = document.querySelector('.notes-shell')?.classList.contains('notes-shell--searching') === true
 
-    document.querySelectorAll<HTMLElement>('.note-row[data-reorder-note-id]').forEach((row, index) => {
+    document.querySelectorAll<HTMLElement>('.note-row[data-reorder-note-id]').forEach((row) => {
       const noteId = row.dataset.reorderNoteId
       if (!noteId) return
       const note = noteById.get(noteId)
@@ -166,13 +166,7 @@ export function WorkspacePersonalizationRuntime() {
         : note.folderId
           ? folderNames.get(note.folderId) ?? 'NOTA'
           : 'NOTA'
-      const color = note.visualColor ?? NOTE_VISUAL_COLORS[index % NOTE_VISUAL_COLORS.length] ?? DEFAULT_NOTE_VISUAL_COLOR
       row.dataset.oanixNoteCategory = category
-      row.style.setProperty('--oanix-note-tab-color', color)
-      row.style.setProperty('--oanix-note-card-color', color)
-
-      const avatar = row.querySelector<HTMLElement>('.note-row__avatar')
-      if (avatar) avatar.dataset.oanixNoteIcon = note.visualIcon ?? DEFAULT_NOTE_VISUAL_ICON
 
       const preview = row.querySelector<HTMLElement>('.note-row__preview')
       if (preview) {
