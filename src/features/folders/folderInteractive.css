@@ -1,14 +1,9 @@
 /* Interaction-only styles for the exact folder-home reference.
    Business/data behavior remains in FolderGridRuntime and FolderAppearanceRuntime. */
 
-@keyframes oanix-folder-jiggle {
-  0% { transform: rotate(-2deg) scale(1.04); }
-  50% { transform: rotate(2deg) scale(1.04); }
-  100% { transform: rotate(-2deg) scale(1.04); }
-}
-
 .oanix-folder-grid--reordering .oanix-folder-rail__item[data-oanix-folder-id] {
-  animation: oanix-folder-jiggle .15s ease-in-out infinite alternate;
+  outline: 1px solid rgba(96,165,250,.22);
+  outline-offset: 1px;
   cursor: grab;
 }
 
