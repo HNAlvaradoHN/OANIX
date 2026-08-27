@@ -8,11 +8,21 @@ interface HelpAnchor {
   topic: HelpTopic
 }
 
+const PRIVACY_ACTIONS_SELECTOR = '.oanix-privacy-actions'
+
 function actionTopic(button: HTMLButtonElement): HelpTopic | null {
   const text = button.textContent ?? ''
   if (/Proteger nota|Desbloquear temporalmente|Quitar protección/.test(text)) return 'lock'
   if (/Caja privada/.test(text)) return 'box'
   return null
+}
+
+function mutationTouchesPrivacyActions(record: MutationRecord): boolean {
+  const nodes = [...Array.from(record.addedNodes), ...Array.from(record.removedNodes)]
+  return nodes.some((node) => {
+    if (!(node instanceof Element)) return false
+    return node.matches(PRIVACY_ACTIONS_SELECTOR) || node.querySelector(PRIVACY_ACTIONS_SELECTOR) !== null
+  })
 }
 
 export function PrivacyStatusHelp() {
@@ -26,7 +36,7 @@ export function PrivacyStatusHelp() {
     let resizeObserver: ResizeObserver | null = null
 
     function inspect() {
-      const nextHost = document.querySelector<HTMLElement>('.oanix-privacy-actions')
+      const nextHost = document.querySelector<HTMLElement>(PRIVACY_ACTIONS_SELECTOR)
       setActionsHost((current) => current === nextHost ? current : nextHost)
 
       actionsObserver?.disconnect()
@@ -75,7 +85,9 @@ export function PrivacyStatusHelp() {
     }
 
     inspect()
-    const portalObserver = new MutationObserver(scheduleInspect)
+    const portalObserver = new MutationObserver((records) => {
+      if (records.some(mutationTouchesPrivacyActions)) scheduleInspect()
+    })
     portalObserver.observe(document.body, { childList: true })
     window.addEventListener('resize', scheduleInspect)
 
