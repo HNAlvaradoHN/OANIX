@@ -2,8 +2,8 @@ import { useEffect } from 'react'
 import './tagMobileGesture.css'
 
 const SWIPE_START_PX = 7
-const REORDER_EDGE_PX = 44
-const REORDER_SCROLL_STEP_PX = 12
+const REORDER_EDGE_PX = 64
+const REORDER_MAX_SCROLL_PX = 4
 
 interface ActiveSwipe {
   pointerId: number
@@ -25,6 +25,8 @@ export function TagMobileGestureRuntime() {
     let dragOverlay: HTMLElement | null = null
     let dragOffsetX = 0
     let dragOffsetY = 0
+    let autoScrollFrame: number | null = null
+    let latestReorderPointerX = 0
 
     function removeDragOverlay() {
       dragOverlay?.remove()
@@ -34,6 +36,10 @@ export function TagMobileGestureRuntime() {
 
     function resetActiveGesture() {
       active = null
+      if (autoScrollFrame !== null) {
+        window.cancelAnimationFrame(autoScrollFrame)
+        autoScrollFrame = null
+      }
       removeDragOverlay()
     }
 
@@ -65,13 +71,25 @@ export function TagMobileGestureRuntime() {
       dragOverlay.style.top = `${event.clientY - dragOffsetY}px`
     }
 
-    function autoScrollDuringReorder(scroller: HTMLElement, pointerX: number) {
-      const rect = scroller.getBoundingClientRect()
-      if (pointerX < rect.left + REORDER_EDGE_PX) {
-        scroller.scrollLeft -= REORDER_SCROLL_STEP_PX
-      } else if (pointerX > rect.right - REORDER_EDGE_PX) {
-        scroller.scrollLeft += REORDER_SCROLL_STEP_PX
-      }
+    function scheduleAutoScrollDuringReorder(scroller: HTMLElement, pointerX: number) {
+      latestReorderPointerX = pointerX
+      if (autoScrollFrame !== null) return
+
+      autoScrollFrame = window.requestAnimationFrame(() => {
+        autoScrollFrame = null
+        const rect = scroller.getBoundingClientRect()
+        let delta = 0
+
+        if (latestReorderPointerX < rect.left + REORDER_EDGE_PX) {
+          const strength = Math.min(1, (rect.left + REORDER_EDGE_PX - latestReorderPointerX) / REORDER_EDGE_PX)
+          delta = -Math.max(1, Math.round(REORDER_MAX_SCROLL_PX * strength))
+        } else if (latestReorderPointerX > rect.right - REORDER_EDGE_PX) {
+          const strength = Math.min(1, (latestReorderPointerX - (rect.right - REORDER_EDGE_PX)) / REORDER_EDGE_PX)
+          delta = Math.max(1, Math.round(REORDER_MAX_SCROLL_PX * strength))
+        }
+
+        if (delta !== 0) scroller.scrollLeft += delta
+      })
     }
 
     function handlePointerDown(event: PointerEvent) {
@@ -106,7 +124,7 @@ export function TagMobileGestureRuntime() {
         suppressClickForId = active.tagId
         event.preventDefault()
         ensureDragOverlay(event)
-        autoScrollDuringReorder(scroller, event.clientX)
+        scheduleAutoScrollDuringReorder(scroller, event.clientX)
         return
       }
 
