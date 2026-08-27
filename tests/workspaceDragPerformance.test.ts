@@ -6,7 +6,7 @@ const noteDrag = readFileSync('src/features/notes/NoteListReorderGestureRuntime.
 const identity = readFileSync('src/features/notes/NoteVisualIdentityRuntime.tsx', 'utf8')
 const personalization = readFileSync('src/features/notes/WorkspacePersonalizationRuntime.tsx', 'utf8')
 const organic = readFileSync('src/features/notes/OrganicWorkspaceRuntime.tsx', 'utf8')
-const folderAppearance = readFileSync('src/features/folders/FolderAppearanceRuntime.tsx', 'utf8')
+const folderGrid = readFileSync('src/features/folders/FolderGridRuntime.tsx', 'utf8')
 
 test('note pointermove no longer rewrites Sortable options on every frame', () => {
   assert.match(noteDrag, /const syncSortableWithPointer = \(event: PointerEvent\)/)
@@ -36,10 +36,9 @@ test('workspace decorators do not repaint while any reorder is active', () => {
   assert.match(organic, /function scheduleWorkspaceDecorate\(\)[\s\S]*if \(workspaceReorderActive\(\)\) return/)
 })
 
-test('folder appearance observers skip repaint work during folder drag', () => {
-  assert.match(folderAppearance, /const folderReorderActive = \(\) =>/)
-  assert.match(folderAppearance, /oanix-mobile-folder-dragging/)
-  assert.match(folderAppearance, /oanix-folder-grid--drag-active/)
-  assert.match(folderAppearance, /const paintFolders = \(\) => \{[\s\S]*if \(folderReorderActive\(\)\) return/)
-  assert.match(folderAppearance, /new MutationObserver\(\(\) => \{[\s\S]*if \(!folderReorderActive\(\)\) paintFolders\(\)/)
+test('folder appearance is direct React state instead of observer repaint work', () => {
+  assert.match(folderGrid, /customDraftColor/)
+  assert.match(folderGrid, /customDraftIcon/)
+  assert.match(folderGrid, /--oanix-folder-color/)
+  assert.doesNotMatch(folderGrid, /paintFolders|decorateCustomizer/)
 })

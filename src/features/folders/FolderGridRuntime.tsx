@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { loadNotes } from '../notes/noteService'
-import { noteBlocksToPlainText, type NoteRecord } from '../notes/noteTypes'
 import { listNotePrivacy } from '../privacy/notePrivacyService'
 import {
   loadFolderCovers,
@@ -9,7 +8,20 @@ import {
   removeFolderCover,
   saveFolderCover,
 } from './folderCoverService'
-import { loadFolderColors } from './folderAppearanceService'
+import {
+  DEFAULT_FOLDER_COLOR,
+  DEFAULT_FOLDER_ICON,
+  FOLDER_COLOR_PRESETS,
+  FOLDER_DEFAULT_ICONS,
+  FOLDER_ICON_OPTIONS,
+  type FolderIcon,
+} from './folderAppearanceCatalog'
+import {
+  loadFolderColors,
+  loadFolderIcons,
+  saveFolderColor,
+  saveFolderIcon,
+} from './folderAppearanceService'
 import { loadFolders, persistFolderOrder } from './folderService'
 import type { FolderRecord } from './folderTypes'
 import './folderGrid.css'
@@ -25,11 +37,11 @@ interface FolderGridTargets {
 
 interface FolderGridData {
   folders: FolderRecord[]
-  notes: NoteRecord[]
   allCount: number
   counts: Map<string, number>
   covers: Map<string, string>
   colors: Map<string, string>
+  icons: Map<string, FolderIcon>
 }
 
 interface FolderDragGhost {
@@ -37,6 +49,7 @@ interface FolderDragGhost {
   name: string
   noteCount: number
   cover: string
+  icon: FolderIcon
   left: number
   top: number
   width: number
@@ -47,15 +60,19 @@ interface FolderDragGhost {
 
 const EMPTY_DATA: FolderGridData = {
   folders: [],
-  notes: [],
   allCount: 0,
   counts: new Map(),
   covers: new Map(),
   colors: new Map(),
+  icons: new Map(),
 }
 
 const FOLDER_LONG_PRESS_MS = 460
 const FOLDER_SHAPES = ['blob-a', 'circle', 'squircle', 'blob-b', 'diamond', 'hexagon'] as const
+
+function defaultIconForIndex(index: number): FolderIcon {
+  return (FOLDER_DEFAULT_ICONS[index % FOLDER_DEFAULT_ICONS.length] ?? DEFAULT_FOLDER_ICON) as FolderIcon
+}
 
 function currentTargets(): FolderGridTargets {
   const sidebar = document.querySelector<HTMLElement>('.notes-sidebar')
@@ -79,11 +96,6 @@ function sameTargets(left: FolderGridTargets, right: FolderGridTargets): boolean
     && left.searchOpen === right.searchOpen
     && left.activeLabel === right.activeLabel
   )
-}
-
-function visibleFolderTabButtons(tabsShell: HTMLElement | null): HTMLButtonElement[] {
-  if (!tabsShell) return []
-  return Array.from(tabsShell.querySelectorAll<HTMLButtonElement>('.notes-tab:not(.notes-tab--add)'))
 }
 
 function moveFolderAroundTarget(
@@ -138,24 +150,19 @@ function animateFolderReflow(before: Map<string, DOMRect>, draggingFolderId: str
   })
 }
 
-function scheduleNoteOpen(noteId: string) {
-  window.setTimeout(() => {
-    const selector = `[data-reorder-note-id="${CSS.escape(noteId)}"] .note-row__open`
-    document.querySelector<HTMLButtonElement>(selector)?.click()
-  }, 80)
-}
-
 export function FolderGridRuntime() {
   const [targets, setTargets] = useState<FolderGridTargets>(() => currentTargets())
   const [gridOpen, setGridOpen] = useState(true)
   const [data, setData] = useState<FolderGridData>(EMPTY_DATA)
   const [selectedFolderId, setSelectedFolderId] = useState<string | 'all'>('all')
-  const [panelSearch, setPanelSearch] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [customFolder, setCustomFolder] = useState<FolderRecord | null>(null)
   const [customBusy, setCustomBusy] = useState(false)
   const [customError, setCustomError] = useState('')
+  const [customAppearanceOpen, setCustomAppearanceOpen] = useState(false)
+  const [customDraftColor, setCustomDraftColor] = useState(DEFAULT_FOLDER_COLOR)
+  const [customDraftIcon, setCustomDraftIcon] = useState<FolderIcon>(DEFAULT_FOLDER_ICON)
   const [reorderMode, setReorderMode] = useState(false)
   const [draggingFolderId, setDraggingFolderId] = useState<string | null>(null)
   const [dragGhost, setDragGhost] = useState<FolderDragGhost | null>(null)
@@ -170,6 +177,7 @@ export function FolderGridRuntime() {
   const pendingFolderOrderRef = useRef<string[] | null>(null)
   const folderOrderPersistingRef = useRef(false)
   const foldersRef = useRef<FolderRecord[]>([])
+  const dataRef = useRef(data)
 
   useEffect(() => {
     gridOpenRef.current = gridOpen
@@ -177,7 +185,8 @@ export function FolderGridRuntime() {
 
   useEffect(() => {
     foldersRef.current = data.folders
-  }, [data.folders])
+    dataRef.current = data
+  }, [data])
 
   useEffect(() => {
     const handleMobileOrderPreview = (event: Event) => {
@@ -216,18 +225,40 @@ export function FolderGridRuntime() {
     return () => window.removeEventListener('oanix:workspace-folder-committed', handleCommittedFolder)
   }, [])
 
+  useEffect(() => {
+    const handleOpenCustomizer = (event: Event) => {
+      const detail = event instanceof CustomEvent
+        ? event.detail as { folderId?: unknown } | null
+        : null
+      if (typeof detail?.folderId !== 'string') return
+      const folder = foldersRef.current.find((candidate) => candidate.id === detail.folderId)
+      if (!folder) return
+      const current = dataRef.current
+      const folderIndex = Math.max(0, current.folders.findIndex((candidate) => candidate.id === folder.id))
+      setCustomDraftColor(current.colors.get(folder.id) ?? DEFAULT_FOLDER_COLOR)
+      setCustomDraftIcon(current.icons.get(folder.id) ?? defaultIconForIndex(folderIndex))
+      setCustomAppearanceOpen(false)
+      setCustomError('')
+      setCustomFolder(folder)
+    }
+
+    window.addEventListener('oanix:open-folder-customizer', handleOpenCustomizer)
+    return () => window.removeEventListener('oanix:open-folder-customizer', handleOpenCustomizer)
+  }, [])
+
   async function refreshData() {
     const request = ++refreshRequestRef.current
     setLoading(true)
     setError('')
 
     try {
-      const [folders, notes, privacy, covers, colors] = await Promise.all([
+      const [folders, notes, privacy, covers, colors, icons] = await Promise.all([
         loadFolders(),
         loadNotes(),
         listNotePrivacy(),
         loadFolderCovers(),
         loadFolderColors(),
+        loadFolderIcons(),
       ])
       if (request !== refreshRequestRef.current) return
 
@@ -241,7 +272,7 @@ export function FolderGridRuntime() {
         counts.set(note.folderId, (counts.get(note.folderId) ?? 0) + 1)
       }
 
-      setData({ folders, notes: visibleNotes, allCount: visibleNotes.length, counts, covers, colors })
+      setData({ folders, allCount: visibleNotes.length, counts, covers, colors, icons })
       setSelectedFolderId((current) => (
         current === 'all' || folders.some((folder) => folder.id === current) ? current : 'all'
       ))
@@ -364,37 +395,15 @@ export function FolderGridRuntime() {
       noteCount: data.counts.get(folder.id) ?? 0,
       cover: data.covers.get(folder.id) ?? '',
       shape: FOLDER_SHAPES[index % FOLDER_SHAPES.length],
-      color: data.colors.get(folder.id) ?? '#111b31',
+      color: data.colors.get(folder.id) ?? DEFAULT_FOLDER_COLOR,
+      icon: data.icons.get(folder.id) ?? defaultIconForIndex(index),
     })),
-    [data.colors, data.counts, data.covers, data.folders],
+    [data.colors, data.counts, data.covers, data.folders, data.icons],
   )
-
-  const selectedFolder = useMemo(
-    () => selectedFolderId === 'all'
-      ? null
-      : folderCards.find((folder) => folder.id === selectedFolderId) ?? null,
-    [folderCards, selectedFolderId],
-  )
-
-  const panelSearchResults = useMemo(() => {
-    const query = panelSearch.trim().toLocaleLowerCase()
-    if (!query) return []
-    return data.notes
-      .filter((note) => selectedFolderId === 'all' || note.folderId === selectedFolderId)
-      .filter((note) => {
-        const haystack = `${note.title}\n${noteBlocksToPlainText(note.content.blocks)}`.toLocaleLowerCase()
-        return haystack.includes(query)
-      })
-      .slice(0, 6)
-  }, [data.notes, panelSearch, selectedFolderId])
-
-  const selectedCount = selectedFolder ? selectedFolder.noteCount : data.allCount
-  const selectedCover = selectedFolder?.cover ?? ''
 
   function selectAllNotes() {
     if (reorderMode) return
     setSelectedFolderId('all')
-    setPanelSearch('')
     window.dispatchEvent(new CustomEvent('oanix:select-workspace-folder', { detail: { folderId: 'all' } }))
   }
 
@@ -404,40 +413,7 @@ export function FolderGridRuntime() {
       return
     }
     setSelectedFolderId(folder.id)
-    setPanelSearch('')
     window.dispatchEvent(new CustomEvent('oanix:select-workspace-folder', { detail: { folderId: folder.id } }))
-  }
-
-  function openAllNotes() {
-    if (reorderMode) return
-    const button = visibleFolderTabButtons(targets.tabsShell)[0]
-    if (!button) return
-    setGridOpen(false)
-    button.click()
-  }
-
-  function openFolder(folder: FolderRecord) {
-    if (reorderMode) return
-    const button = visibleFolderTabButtons(targets.tabsShell)
-      .find((candidate) => candidate.textContent?.trim() === folder.name)
-    if (!button) {
-      setError('No se pudo abrir esta carpeta. Inténtalo de nuevo.')
-      return
-    }
-
-    setGridOpen(false)
-    button.click()
-  }
-
-  function openSelected() {
-    if (selectedFolder) openFolder(selectedFolder)
-    else openAllNotes()
-  }
-
-  function openSearchResult(note: NoteRecord) {
-    if (selectedFolder) openFolder(selectedFolder)
-    else openAllNotes()
-    scheduleNoteOpen(note.id)
   }
 
   function openFolderManager() {
@@ -467,6 +443,7 @@ export function FolderGridRuntime() {
       name: folder.name,
       noteCount: data.counts.get(folder.id) ?? 0,
       cover: data.covers.get(folder.id) ?? '',
+      icon: data.icons.get(folder.id) ?? defaultIconForIndex(Math.max(0, data.folders.findIndex((item) => item.id === folder.id))),
       left: rect.left,
       top: rect.top,
       width: rect.width,
@@ -612,8 +589,53 @@ export function FolderGridRuntime() {
 
   function openCustomizer(folder: FolderRecord) {
     if (reorderMode || customBusy) return
+    const current = dataRef.current
+    const folderIndex = Math.max(0, current.folders.findIndex((candidate) => candidate.id === folder.id))
+    setCustomDraftColor(current.colors.get(folder.id) ?? DEFAULT_FOLDER_COLOR)
+    setCustomDraftIcon(current.icons.get(folder.id) ?? defaultIconForIndex(folderIndex))
+    setCustomAppearanceOpen(false)
     setCustomError('')
     setCustomFolder(folder)
+  }
+
+  async function handleSaveAppearance() {
+    if (!customFolder || customBusy) return
+    const folderId = customFolder.id
+    const color = customDraftColor
+    const icon = customDraftIcon
+    setCustomBusy(true)
+    setCustomError('')
+    try {
+      await Promise.all([
+        saveFolderColor(folderId, color),
+        saveFolderIcon(folderId, icon),
+      ])
+      setData((current) => {
+        const colors = new Map(current.colors)
+        const icons = new Map(current.icons)
+        colors.set(folderId, color)
+        icons.set(folderId, icon)
+        return { ...current, colors, icons }
+      })
+      window.dispatchEvent(new CustomEvent('oanix:folder-appearance-saved'))
+      window.dispatchEvent(new CustomEvent('oanix:local-data-changed', {
+        detail: { recordType: 'folder-appearance', recordId: folderId },
+      }))
+      setCustomFolder(null)
+    } catch (appearanceError) {
+      setCustomError(appearanceError instanceof Error ? appearanceError.message : 'No se pudo guardar el color o icono.')
+    } finally {
+      setCustomBusy(false)
+    }
+  }
+
+  function openScopedManager() {
+    if (!customFolder || customBusy) return
+    const folder = customFolder
+    setCustomFolder(null)
+    window.dispatchEvent(new CustomEvent('oanix:open-folder-manager', {
+      detail: { folderId: folder.id, folderName: folder.name },
+    }))
   }
 
   async function handleCoverFile(file: File | null) {
@@ -704,9 +726,27 @@ export function FolderGridRuntime() {
                       <span className="oanix-folder-rail__shape">
                         {folder.cover
                           ? <img src={folder.cover} alt="" draggable={false} />
-                          : <span className="oanix-folder-rail__folder-mark">⌑</span>}
+                          : <span className="oanix-folder-rail__folder-mark">{folder.icon}</span>}
                       </span>
                       {folder.noteCount > 0 && <small>{folder.noteCount}</small>}
+                      {!reorderMode && (
+                        <span
+                          className="oanix-folder-card__gear"
+                          aria-hidden="true"
+                          title="Opciones de carpeta"
+                          onPointerDown={(event) => {
+                            event.preventDefault()
+                            event.stopPropagation()
+                          }}
+                          onClick={(event) => {
+                            event.preventDefault()
+                            event.stopPropagation()
+                            openCustomizer(folder)
+                          }}
+                        >
+                          ⚙
+                        </span>
+                      )}
                     </button>
                   ))}
 
@@ -729,113 +769,6 @@ export function FolderGridRuntime() {
                 )}
               </aside>
 
-              <section
-                className={`oanix-folder-focus${selectedCover ? ' oanix-folder-focus--covered' : ''}`}
-                data-oanix-folder-id={selectedFolder?.id}
-                style={{ '--oanix-folder-color': selectedFolder?.color ?? '#182849' } as CSSProperties}
-                aria-label={selectedFolder ? `Vista de ${selectedFolder.name}` : 'Vista de Todas las notas'}
-              >
-                {selectedCover && (
-                  <div
-                    className="oanix-folder-focus__cover"
-                    style={{ backgroundImage: `url("${selectedCover.replace(/"/g, '\\"')}")` }}
-                    aria-hidden="true"
-                  />
-                )}
-                <div className="oanix-folder-focus__color" aria-hidden="true" />
-                <div className="oanix-folder-focus__ornament" aria-hidden="true">
-                  <span />
-                  <span />
-                  <span />
-                </div>
-
-                <div className="oanix-folder-focus__topbar">
-                  <label className="oanix-folder-focus__search">
-                    <span aria-hidden="true">⌕</span>
-                    <input
-                      type="search"
-                      value={panelSearch}
-                      onChange={(event) => setPanelSearch(event.target.value)}
-                      placeholder={selectedFolder ? `Buscar en ${selectedFolder.name}` : 'Buscar en todas las notas'}
-                      aria-label={selectedFolder ? `Buscar notas dentro de ${selectedFolder.name}` : 'Buscar en todas las notas'}
-                      autoComplete="off"
-                      spellCheck={false}
-                    />
-                    {panelSearch && (
-                      <button type="button" onClick={() => setPanelSearch('')} aria-label="Limpiar búsqueda">×</button>
-                    )}
-                  </label>
-                  {selectedFolder && (
-                    <button
-                      className="oanix-folder-focus__menu"
-                      type="button"
-                      onClick={() => openCustomizer(selectedFolder)}
-                      aria-label={`Personalizar ${selectedFolder.name}`}
-                      title="Personalizar carpeta"
-                    >
-                      ⋮
-                    </button>
-                  )}
-                </div>
-
-                {panelSearch.trim() && (
-                  <div className="oanix-folder-focus__results" role="listbox" aria-label="Resultados de búsqueda de notas">
-                    {panelSearchResults.length > 0 ? panelSearchResults.map((note) => (
-                      <button key={note.id} type="button" onClick={() => openSearchResult(note)}>
-                        <strong>{note.title}</strong>
-                        <small>Abrir nota</small>
-                      </button>
-                    )) : (
-                      <div className="oanix-folder-focus__no-results">Sin coincidencias en esta carpeta.</div>
-                    )}
-                  </div>
-                )}
-
-                <div className="oanix-folder-focus__details" key={selectedFolderId}>
-                  <span className="oanix-folder-focus__eyebrow">
-                    {selectedFolder ? 'CARPETA' : 'BÓVEDA'}
-                  </span>
-                  <h2 title={selectedFolder?.name ?? 'Todas las notas'}>
-                    {selectedFolder?.name ?? 'Todas las notas'}
-                  </h2>
-                  <p>
-                    {selectedFolder
-                      ? 'Tu espacio visual para organizar y abrir las notas de esta carpeta.'
-                      : 'Acceso a todas las notas visibles de tu bóveda.'}
-                  </p>
-                  <div className="oanix-folder-focus__meta">
-                    <span><small>NOTAS</small><strong>{selectedCount}</strong></span>
-                    <span><small>PORTADA</small><strong>{selectedCover ? 'Sí' : 'No'}</strong></span>
-                  </div>
-
-                  <div className="oanix-folder-focus__actions">
-                    <button className="oanix-folder-focus__open" type="button" onClick={openSelected} disabled={reorderMode}>
-                      <span aria-hidden="true">↗</span>
-                      <span>Abrir</span>
-                    </button>
-                    {selectedFolder && (
-                      <>
-                        <button type="button" data-oanix-folder-customize="true" onClick={() => openCustomizer(selectedFolder)} disabled={reorderMode}>
-                          <span aria-hidden="true">▧</span>
-                          <span>Imagen</span>
-                        </button>
-                        <button type="button" data-oanix-folder-customize="true" onClick={() => openCustomizer(selectedFolder)} disabled={reorderMode}>
-                          <span aria-hidden="true">◐</span>
-                          <span>Color</span>
-                        </button>
-                        <button type="button" onClick={openFolderManager} disabled={reorderMode}>
-                          <span aria-hidden="true">✎</span>
-                          <span>Nombre</span>
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                <div className="oanix-folder-focus__hint">
-                  {reorderMode ? 'Arrastra los iconos de la izquierda y toca ✓ al terminar.' : 'Desliza el selector lateral · mantén presionado para ordenar.'}
-                </div>
-              </section>
             </div>
           )}
 
@@ -861,7 +794,7 @@ export function FolderGridRuntime() {
           <span className="oanix-folder-drag-ghost__visual">
             {dragGhost.cover
               ? <img src={dragGhost.cover} alt="" draggable={false} />
-              : <span className="oanix-folder-rail__folder-mark">⌑</span>}
+              : <span className="oanix-folder-rail__folder-mark">{dragGhost.icon}</span>}
           </span>
           <strong>{dragGhost.name}</strong>
           <small>{dragGhost.noteCount}</small>
@@ -892,36 +825,114 @@ export function FolderGridRuntime() {
           <section
             className="oanix-folder-customizer"
             data-oanix-folder-id={customFolder.id}
-            style={{ '--oanix-folder-color': data.colors.get(customFolder.id) ?? '#111b31' } as CSSProperties}
+            style={{ '--oanix-folder-color': customDraftColor } as CSSProperties}
           >
             <div className="oanix-folder-customizer__preview" aria-hidden="true">
-              {customizerCover ? <img src={customizerCover} alt="" /> : <span>📁</span>}
+              {customizerCover ? <img src={customizerCover} alt="" /> : <span>{customDraftIcon}</span>}
             </div>
             <div className="oanix-folder-customizer__body">
               <span>OPCIONES DE CARPETA</span>
               <strong id="oanix-folder-customizer-title">{customFolder.name}</strong>
               <p>Imagen, color e icono se mantienen cifrados en la configuración local de esta carpeta.</p>
               {customError && <div className="oanix-folder-customizer__error" role="alert">{customError}</div>}
+              {customAppearanceOpen && (
+                <div className="oanix-folder-appearance-picker">
+                  <section className="oanix-folder-appearance-section">
+                    <div className="oanix-folder-appearance-picker__heading">
+                      <strong>Color de carpeta</strong>
+                      <small>Previsualiza el tono y guarda una sola vez al terminar.</small>
+                    </div>
+                    <div className="oanix-folder-appearance-picker__row">
+                      {FOLDER_COLOR_PRESETS.map((color) => (
+                        <button
+                          key={color}
+                          type="button"
+                          className="oanix-folder-appearance-picker__swatch"
+                          style={{ '--oanix-folder-swatch': color, backgroundColor: color } as CSSProperties}
+                          data-selected={customDraftColor.toLowerCase() === color.toLowerCase() ? 'true' : undefined}
+                          aria-label={`Usar color ${color}`}
+                          onClick={() => setCustomDraftColor(color)}
+                          disabled={customBusy}
+                        />
+                      ))}
+                      <input
+                        type="color"
+                        className="oanix-folder-appearance-picker__custom"
+                        value={customDraftColor}
+                        aria-label="Elegir color personalizado"
+                        onChange={(event) => setCustomDraftColor(event.target.value.toLowerCase())}
+                        disabled={customBusy}
+                      />
+                    </div>
+                  </section>
+
+                  <section className="oanix-folder-appearance-section oanix-folder-appearance-section--icons">
+                    <div className="oanix-folder-appearance-picker__heading">
+                      <strong>Icono de carpeta</strong>
+                      <small>Elige el icono y confirma junto con el color.</small>
+                    </div>
+                    <div className="oanix-folder-appearance-picker__icons">
+                      {FOLDER_ICON_OPTIONS.map((icon) => (
+                        <button
+                          key={icon}
+                          type="button"
+                          className="oanix-folder-appearance-picker__icon"
+                          data-selected={customDraftIcon === icon ? 'true' : undefined}
+                          aria-label={`Usar icono ${icon}`}
+                          onClick={() => setCustomDraftIcon(icon)}
+                          disabled={customBusy}
+                        >
+                          {icon}
+                        </button>
+                      ))}
+                    </div>
+                  </section>
+
+                  <button
+                    type="button"
+                    className="oanix-folder-appearance-picker__save"
+                    onClick={() => void handleSaveAppearance()}
+                    disabled={customBusy}
+                  >
+                    {customBusy ? 'Guardando…' : 'Guardar'}
+                  </button>
+                </div>
+              )}
+
               <div className="oanix-folder-customizer__actions">
-                <button type="button" onClick={() => coverInputRef.current?.click()} disabled={customBusy}>
-                  {customBusy ? 'Guardando…' : customizerCover ? 'Cambiar imagen' : 'Poner imagen'}
+                <button
+                  type="button"
+                  className="oanix-folder-customizer__appearance-toggle"
+                  aria-expanded={customAppearanceOpen}
+                  onClick={() => setCustomAppearanceOpen((open) => !open)}
+                  disabled={customBusy}
+                >
+                  🎨 Cambiar color / Icono
+                </button>
+                <button
+                  type="button"
+                  className="oanix-folder-customizer__image-action"
+                  onClick={() => coverInputRef.current?.click()}
+                  disabled={customBusy}
+                >
+                  {customBusy ? 'Guardando…' : customizerCover ? '🖼️ Cambiar imagen de mi dispositivo' : '🖼️ Poner imagen desde mi dispositivo'}
                 </button>
                 {customizerCover && (
                   <button className="oanix-folder-customizer__remove" type="button" onClick={() => void handleRemoveCover()} disabled={customBusy}>
-                    Quitar imagen
+                    🧹 Quitar imagen
                   </button>
                 )}
+                <button type="button" onClick={openScopedManager} disabled={customBusy}>
+                  ✏️ Administrar nombre / eliminar
+                </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    setCustomFolder(null)
-                    openFolderManager()
-                  }}
+                  className="oanix-folder-customizer__cancel-action"
+                  onClick={() => setCustomFolder(null)}
                   disabled={customBusy}
                 >
-                  Administrar nombre / eliminar
+                  Cancelar
                 </button>
-                <button type="button" onClick={() => setCustomFolder(null)} disabled={customBusy}>Cancelar</button>
               </div>
               <input
                 ref={coverInputRef}

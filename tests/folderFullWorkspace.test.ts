@@ -5,7 +5,6 @@ import test from 'node:test'
 const folderRuntime = readFileSync('src/features/folders/FolderGridRuntime.tsx', 'utf8')
 const organicRuntime = readFileSync('src/features/notes/OrganicWorkspaceRuntime.tsx', 'utf8')
 const organicCss = readFileSync('src/features/notes/organicWorkspace.css', 'utf8')
-const appearance = readFileSync('src/features/folders/FolderAppearanceRuntime.tsx', 'utf8')
 const appearanceService = readFileSync('src/features/folders/folderAppearanceService.ts', 'utf8')
 const interactiveCss = readFileSync('src/features/folders/folderInteractive.css', 'utf8')
 const notesWorkspace = readFileSync('src/features/notes/NotesWorkspace.tsx', 'utf8')
@@ -49,9 +48,9 @@ test('portada activa ocupa el fondo y Día Noche comparten geometría', () => {
 })
 
 test('la paleta e iconos reales siguen juntos y persisten cifrados', () => {
-  assert.match(appearance, /🎨 Cambiar color \/ Icono/)
-  assert.match(appearance, /saveFolderColor/)
-  assert.match(appearance, /saveFolderIcon/)
+  assert.match(folderRuntime, /🎨 Cambiar color \/ Icono/)
+  assert.match(folderRuntime, /saveFolderColor/)
+  assert.match(folderRuntime, /saveFolderIcon/)
   assert.match(appearanceService, /writeEncryptedRecord\(FOLDER_APPEARANCE_RECORD, folderId, record\)/)
   assert.match(interactiveCss, /Color \+ icon stay under one button/)
 })

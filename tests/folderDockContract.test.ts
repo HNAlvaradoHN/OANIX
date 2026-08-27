@@ -7,7 +7,7 @@ const app = readFileSync('src/app/App.tsx', 'utf8')
 const gate = readFileSync('src/app/WorkspaceRuntimeGate.tsx', 'utf8')
 const organic = readFileSync('src/features/notes/OrganicWorkspaceRuntime.tsx', 'utf8')
 const css = readFileSync('src/features/notes/folderDockContract.css', 'utf8')
-const appearance = readFileSync('src/features/folders/FolderAppearanceRuntime.tsx', 'utf8')
+const grid = readFileSync('src/features/folders/FolderGridRuntime.tsx', 'utf8')
 
 test('folder dock renders names from the existing organic dataset without a second DOM runtime', () => {
   assert.match(organic, /dataset\.oanixOrganicFolderName = 'Todas'/)
@@ -25,10 +25,11 @@ test('folder options gear remains centered below the name and uses a vector mask
   assert.match(css, /\.oanix-folder-card__gear:hover[\s\S]*transform: translate\(-50%,-1px\) !important/)
 })
 
-test('folder appearance repaint remains idempotent while observer cleanup proceeds independently', () => {
-  assert.match(appearance, /if \(shape\.dataset\.oanixFolderIcon !== icon\) shape\.dataset\.oanixFolderIcon = icon/)
-  assert.match(appearance, /if \(preview\.textContent !== icon\) preview\.textContent = icon/)
-  assert.match(appearance, /if \(element\.style\.getPropertyValue\('--oanix-folder-color'\) !== color\)/)
+test('folder appearance is rendered directly without observer repaint', () => {
+  assert.match(grid, /folder\.icon/)
+  assert.match(grid, /style=\{\{ '--oanix-folder-color': folder\.color \}/)
+  assert.match(grid, /loadFolderIcons/)
+  assert.doesNotMatch(grid, /paintFolders|decorateCustomizer/)
 })
 
 test('folder dock contract is loaded by the unlocked runtime gate before the v38.3 visual authority', () => {

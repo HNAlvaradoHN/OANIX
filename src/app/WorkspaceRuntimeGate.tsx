@@ -1,8 +1,6 @@
 import { EditorOperationRuntime } from '../features/editor/EditorOperationRuntime'
 import '../features/editor/editorTrailingWorkspace.css'
-import { FolderAppearanceRuntime } from '../features/folders/FolderAppearanceRuntime'
 import { FolderCreationRuntime } from '../features/folders/FolderCreationRuntime'
-import { FolderCustomizerBridgeRuntime } from '../features/folders/FolderCustomizerBridgeRuntime'
 import { FolderMobileDragRuntime } from '../features/folders/FolderMobileDragRuntime'
 import { FolderOperationFeedbackRuntime } from '../features/folders/FolderOperationFeedbackRuntime'
 import { FolderScopedManagerRuntime } from '../features/folders/FolderScopedManagerRuntime'
@@ -24,12 +22,10 @@ export function WorkspaceRuntimeGate() {
       <EditorOperationRuntime />
       <NoteCreationFeedbackRuntime />
       <FolderScopedManagerRuntime />
-      <FolderCustomizerBridgeRuntime />
       <OrganicWorkspaceRuntime />
       <WorkspacePersonalizationRuntime />
       <NoteVisualIdentityRuntime />
       <PrivacyStatusHelp />
-      <FolderAppearanceRuntime />
       <WorkspaceQuickPolishRuntime />
       <FolderOperationFeedbackRuntime />
       <FolderCreationRuntime />

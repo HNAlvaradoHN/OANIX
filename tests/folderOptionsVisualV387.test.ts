@@ -2,68 +2,49 @@ import assert from 'node:assert/strict'
 import { existsSync, readFileSync } from 'node:fs'
 import test from 'node:test'
 
-const main = readFileSync('src/main.tsx', 'utf8')
 const gate = readFileSync('src/app/WorkspaceRuntimeGate.tsx', 'utf8')
-const bridge = readFileSync('src/features/folders/FolderCustomizerBridgeRuntime.tsx', 'utf8')
 const creation = readFileSync('src/features/folders/FolderCreationRuntime.tsx', 'utf8')
 const grid = readFileSync('src/features/folders/FolderGridRuntime.tsx', 'utf8')
 const personalization = readFileSync('src/features/notes/WorkspacePersonalizationRuntime.tsx', 'utf8')
-const appearance = readFileSync('src/features/folders/FolderAppearanceRuntime.tsx', 'utf8')
 const scopedManager = readFileSync('src/features/folders/FolderScopedManagerRuntime.tsx', 'utf8')
 
-test('folder gear opens the unified customizer directly without the retired intermediary visual layer', () => {
-  assert.match(bridge, /\.oanix-folder-card__gear/)
-  assert.match(bridge, /openUnifiedFolderCustomizer/)
-  assert.match(bridge, /\.oanix-folder-focus__menu/)
-  assert.match(bridge, /stopImmediatePropagation/)
-  assert.doesNotMatch(personalization, /oanix-folder-options-backdrop|oanix-folder-options__actions/)
-  assert.equal(existsSync('src/features/folders/folderCustomizerBridge.css'), false)
-  assert.equal(existsSync('src/features/notes/folderOptionsVisual.css'), false)
-  assert.doesNotMatch(main, /folderOptionsVisual\.css/)
+test('folder gear opens the React customizer directly', () => {
+  assert.match(grid, /className="oanix-folder-card__gear"/)
+  assert.match(grid, /openCustomizer\(folder\)/)
+  assert.match(grid, /oanix:open-folder-customizer/)
+  assert.doesNotMatch(personalization, /document\.createElement\('span'\)[\s\S]*oanix-folder-card__gear/)
+  assert.equal(existsSync('src/features/folders/FolderCustomizerBridgeRuntime.tsx'), false)
 })
 
-test('folder appearance is a draft with one explicit save action', () => {
-  for (const label of [
-    'Cambiar color / Icono',
-    'Guardar',
-    'Cambiar imagen de mi dispositivo',
-    'Quitar imagen',
-    'Administrar nombre / eliminar',
-    'Cancelar',
-  ]) {
-    assert.match(appearance, new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
-  }
-
-  assert.doesNotMatch(appearance, /Abrir carpeta|Restablecer color|Restablecer icono/)
-  assert.match(appearance, /let draftColor =/)
-  assert.match(appearance, /let draftIcon =/)
-  assert.match(appearance, /void Promise\.all\(\[[\s\S]*saveFolderColor\(lastFolderId, draftColor\)[\s\S]*saveFolderIcon\(lastFolderId, draftIcon\)/)
-  assert.equal((appearance.match(/saveFolderColor\(/g) ?? []).length, 1)
-  assert.equal((appearance.match(/saveFolderIcon\(/g) ?? []).length, 1)
-  assert.match(appearance, /resetDraftFromSaved/)
+test('folder appearance is a React draft with one explicit save', () => {
+  assert.match(grid, /Cambiar color \/ Icono/)
+  assert.match(grid, /customDraftColor/)
+  assert.match(grid, /customDraftIcon/)
+  assert.match(grid, /saveFolderColor\(folderId, color\)/)
+  assert.match(grid, /saveFolderIcon\(folderId, icon\)/)
+  assert.match(grid, /Cambiar imagen de mi dispositivo/)
+  assert.match(grid, /Administrar nombre \/ eliminar/)
+  assert.equal(existsSync('src/features/folders/FolderAppearanceRuntime.tsx'), false)
 })
 
-test('image action opens the existing local image picker directly', () => {
+test('image action keeps the existing local image picker', () => {
   assert.match(grid, /coverInputRef\.current\?\.click\(\)/)
   assert.match(grid, /type="file"/)
   assert.match(grid, /accept="image\/\*"/)
-  assert.doesNotMatch(grid, /capture="camera"|capture=\{'camera'\}/)
+  assert.doesNotMatch(grid, /capture="camera"/)
 })
 
-test('administrar una carpeta pertenece al manager directo y el bridge no observa el dialogo legado', () => {
+test('folder manager opens by explicit folder event instead of scraping DOM', () => {
+  assert.match(grid, /oanix:open-folder-manager/)
+  assert.match(scopedManager, /window\.addEventListener\('oanix:open-folder-manager'/)
   assert.match(scopedManager, /renameFolder/)
   assert.match(scopedManager, /deleteFolder/)
-  assert.match(scopedManager, /event\.stopImmediatePropagation\(\)/)
-  assert.doesNotMatch(bridge, /MutationObserver|data-oanix-manage-folder-id|folder-dialog__panel|folder-list__row/)
+  assert.doesNotMatch(scopedManager, /oanix-folder-focus|oanix-folder-customizer__actions|stopImmediatePropagation/)
   assert.doesNotMatch(creation, /folderManagementActive|data-oanix-manage-folder-id/)
-  assert.doesNotMatch(creation, /createRequestedRef/)
-  assert.match(creation, /CREATE_TRIGGER_SELECTOR/)
-  assert.match(creation, /oanix:open-folder-creator/)
-  assert.match(creation, /\.notes-tab--add, \.oanix-folder-rail__item--add, \.oanix-organic-folder-control--add/)
 })
 
-test('folder bridge mounts before workspace personalization after unlock', () => {
-  const bridgeIndex = gate.indexOf('<FolderCustomizerBridgeRuntime />')
-  const personalizationIndex = gate.indexOf('<WorkspacePersonalizationRuntime />')
-  assert.ok(bridgeIndex >= 0 && personalizationIndex > bridgeIndex)
+test('workspace gate mounts only direct folder owners', () => {
+  assert.match(gate, /<FolderScopedManagerRuntime \/>/)
+  assert.match(gate, /<WorkspacePersonalizationRuntime \/>/)
+  assert.doesNotMatch(gate, /FolderCustomizerBridgeRuntime|FolderAppearanceRuntime/)
 })

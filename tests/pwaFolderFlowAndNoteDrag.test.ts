@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
-const folderAppearance = readFileSync('src/features/folders/FolderAppearanceRuntime.tsx', 'utf8')
+const folderGrid = readFileSync('src/features/folders/FolderGridRuntime.tsx', 'utf8')
 const folderFeedback = readFileSync('src/features/folders/FolderOperationFeedbackRuntime.tsx', 'utf8')
 const folderFeedbackCss = readFileSync('src/features/folders/folderOperationFeedback.css', 'utf8')
 const polishRuntime = readFileSync('src/app/WorkspaceQuickPolishRuntime.tsx', 'utf8')
@@ -10,21 +10,17 @@ const polishCss = readFileSync('src/app/workspaceQuickPolish.css', 'utf8')
 const noteDragRuntime = readFileSync('src/features/notes/NoteListReorderGestureRuntime.tsx', 'utf8')
 const noteDragCss = readFileSync('src/features/notes/noteReorderGesture.css', 'utf8')
 
-test('folder appearance stays preview-only until save and closes the whole customizer', () => {
-  assert.match(folderAppearance, /oanix-folder-customizer__appearance-toggle/)
-  assert.match(folderAppearance, /appearance\.hidden = false/)
-  assert.match(folderAppearance, /actions\.hidden = true/)
-  assert.match(folderAppearance, /Promise\.all\(\[/)
-  assert.match(folderAppearance, /saveAppearance\.textContent = '✓ Guardado'/)
-  assert.match(folderAppearance, /oanix:folder-appearance-saved/)
-  assert.match(folderAppearance, /cancelButton\?\.click\(\)/)
-  assert.doesNotMatch(folderAppearance, /closeCustomizerFromBackdrop/)
-  assert.doesNotMatch(folderFeedback, /collapseAppearancePicker\(/)
-  assert.doesNotMatch(folderFeedback, /✓ Color guardado|✓ Icono guardado|Vista previa aplicada/)
+test('folder appearance stays draft-only until one explicit React save', () => {
+  assert.match(folderGrid, /customAppearanceOpen/)
+  assert.match(folderGrid, /customDraftColor/)
+  assert.match(folderGrid, /customDraftIcon/)
+  assert.match(folderGrid, /Promise\.all\(\[/)
+  assert.match(folderGrid, /oanix:folder-appearance-saved/)
+  assert.match(folderGrid, /setCustomFolder\(null\)/)
+  assert.doesNotMatch(folderGrid, /document\.createElement/)
   assert.doesNotMatch(folderFeedback, /pendingSelection|restoreFolderIcon|aria-busy/)
   assert.match(folderFeedback, /oanix:folder-appearance-saved/)
   assert.match(folderFeedback, /✓ Guardado/)
-  assert.match(folderFeedbackCss, /\.oanix-folder-customizer__actions\[hidden\]\s*\{[\s\S]*display:\s*none\s*!important/)
   assert.doesNotMatch(polishRuntime, /MutationObserver|oanix-folder-customizer__appearance-toggle/)
 })
 

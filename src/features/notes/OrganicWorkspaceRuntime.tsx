@@ -545,7 +545,12 @@ export function OrganicWorkspaceRuntime() {
             className="oanix-organic-folder-control"
             type="button"
             disabled={!activeFolderId}
-            onClick={() => document.querySelector<HTMLButtonElement>('.oanix-folder-focus__menu')?.click()}
+            onClick={() => {
+              if (!activeFolderId) return
+              window.dispatchEvent(new CustomEvent('oanix:open-folder-customizer', {
+                detail: { folderId: activeFolderId },
+              }))
+            }}
             aria-label={activeFolderName ? `Opciones de ${activeFolderName}` : 'Opciones de carpeta'}
             title="Opciones de carpeta"
           >
