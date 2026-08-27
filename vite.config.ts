@@ -19,6 +19,12 @@ export default defineConfig(({ mode }) => {
           globPatterns: ['**/*.{js,css,html,wasm}'],
           navigateFallback: 'index.html',
           cleanupOutdatedCaches: true,
+          // Activate the newly installed shell immediately so an older controller cannot
+          // keep serving HTML that references asset hashes removed by a later Pages deploy.
+          // The application still decides when to reload; clientsClaim/skipWaiting only
+          // replace the controller and never reload an editing session by themselves.
+          skipWaiting: true,
+          clientsClaim: true,
         },
         manifest: {
           name: 'OANIX',

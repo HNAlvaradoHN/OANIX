@@ -6,6 +6,84 @@
     <meta name="theme-color" content="#111827" />
     <meta name="description" content="OANIX — notas privadas, seguras y disponibles sin conexión." />
     <title>OANIX</title>
+    <script>
+      (() => {
+        if (!location.pathname.startsWith('/OANIX/')) return
+
+        const recoveryKey = 'oanix:stylesheet-recovery-attempt'
+
+        const stylesheetLinks = () => Array.from(
+          document.querySelectorAll('link[rel="stylesheet"][href*="/OANIX/assets/"]'),
+        )
+
+        const stylesheetLoaded = (link) => {
+          try {
+            return link.sheet !== null
+          } catch {
+            return false
+          }
+        }
+
+        const clearBrokenShell = async () => {
+          if (!navigator.onLine || sessionStorage.getItem(recoveryKey) === 'reloading') return
+          sessionStorage.setItem(recoveryKey, 'reloading')
+
+          if ('serviceWorker' in navigator) {
+            const registrations = await navigator.serviceWorker.getRegistrations()
+            await Promise.all(
+              registrations
+                .filter((registration) => registration.scope.includes('/OANIX/'))
+                .map((registration) => registration.unregister()),
+            )
+          }
+
+          if ('caches' in window) {
+            const cacheKeys = await caches.keys()
+            await Promise.all(
+              cacheKeys
+                .filter((cacheKey) => cacheKey.startsWith('workbox-precache'))
+                .map((cacheKey) => caches.delete(cacheKey)),
+            )
+          }
+
+          location.reload()
+        }
+
+        const recoverStylesheet = () => {
+          if (!navigator.onLine) return
+
+          const stylesheets = stylesheetLinks()
+          if (stylesheets.length === 0 || stylesheets.every(stylesheetLoaded)) {
+            sessionStorage.removeItem(recoveryKey)
+            return
+          }
+
+          if (sessionStorage.getItem(recoveryKey)) return
+          sessionStorage.setItem(recoveryKey, 'retrying')
+
+          for (const failedLink of stylesheets.filter((link) => !stylesheetLoaded(link))) {
+            const retryUrl = new URL(failedLink.href)
+            retryUrl.searchParams.set('__oanix_retry', Date.now().toString())
+            const replacement = failedLink.cloneNode()
+            replacement.href = retryUrl.toString()
+            replacement.addEventListener(
+              'load',
+              () => sessionStorage.removeItem(recoveryKey),
+              { once: true },
+            )
+            failedLink.replaceWith(replacement)
+          }
+
+          window.setTimeout(() => {
+            if (stylesheetLinks().some((link) => !stylesheetLoaded(link))) {
+              void clearBrokenShell()
+            }
+          }, 2500)
+        }
+
+        window.addEventListener('load', recoverStylesheet, { once: true })
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>
