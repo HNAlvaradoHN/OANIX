@@ -59,7 +59,13 @@ export function FolderAppearanceRuntime() {
     let colors = new Map<string, string>()
     let icons = new Map<string, FolderIcon>()
 
+    const folderReorderActive = () => (
+      document.documentElement.classList.contains('oanix-mobile-folder-dragging')
+      || Boolean(document.querySelector('.oanix-folder-grid--drag-active'))
+    )
+
     const paintFolders = () => {
+      if (folderReorderActive()) return
       const railItems = Array.from(document.querySelectorAll<HTMLElement>(
         '.oanix-folder-rail__item[data-oanix-folder-id]',
       ))
@@ -297,12 +303,15 @@ export function FolderAppearanceRuntime() {
         return
       }
 
-      gridObserver = new MutationObserver(paintFolders)
+      gridObserver = new MutationObserver(() => {
+        if (!folderReorderActive()) paintFolders()
+      })
       gridObserver.observe(observedGrid, { childList: true, subtree: true })
     }
 
     const bodyObserver = new MutationObserver(() => {
       bindGridObserver()
+      if (folderReorderActive()) return
       paintFolders()
       decorateCustomizer()
     })
