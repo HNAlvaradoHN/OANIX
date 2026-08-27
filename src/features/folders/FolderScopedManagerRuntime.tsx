@@ -9,44 +9,6 @@ interface ManagedFolder {
   name: string
 }
 
-interface ManagerTarget {
-  folder: ManagedFolder
-  closeCustomizer?: () => void
-}
-
-function managerTarget(target: EventTarget | null): ManagerTarget | null {
-  if (!(target instanceof Element)) return null
-
-  const customizerButton = target.closest<HTMLButtonElement>('.oanix-folder-customizer__actions button')
-  if (customizerButton?.textContent?.includes('Administrar nombre')) {
-    const customizer = customizerButton.closest<HTMLElement>('.oanix-folder-customizer[data-oanix-folder-id]')
-    const id = customizer?.dataset.oanixFolderId
-    const name = customizer?.querySelector<HTMLElement>('#oanix-folder-customizer-title')?.textContent?.trim()
-    if (!id || !name) return null
-
-    return {
-      folder: { id, name },
-      closeCustomizer: () => {
-        const actions = customizerButton.closest<HTMLElement>('.oanix-folder-customizer__actions')
-        const cancel = Array.from(actions?.children ?? [])
-          .filter((child): child is HTMLButtonElement => child instanceof HTMLButtonElement)
-          .find((candidate) => candidate.textContent?.trim() === 'Cancelar')
-        window.requestAnimationFrame(() => cancel?.click())
-      },
-    }
-  }
-
-  const focusButton = target.closest<HTMLButtonElement>('.oanix-folder-focus__actions button')
-  if (focusButton?.textContent?.includes('Nombre')) {
-    const focus = focusButton.closest<HTMLElement>('.oanix-folder-focus[data-oanix-folder-id]')
-    const id = focus?.dataset.oanixFolderId
-    const name = focus?.querySelector<HTMLElement>('.oanix-folder-focus__details h2')?.textContent?.trim()
-    if (id && name) return { folder: { id, name } }
-  }
-
-  return null
-}
-
 export function FolderScopedManagerRuntime() {
   const [managed, setManaged] = useState<ManagedFolder | null>(null)
   const [draftName, setDraftName] = useState('')
@@ -54,21 +16,20 @@ export function FolderScopedManagerRuntime() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    const intercept = (event: MouseEvent) => {
-      const target = managerTarget(event.target)
-      if (!target) return
-
-      event.preventDefault()
-      event.stopPropagation()
-      event.stopImmediatePropagation()
-      target.closeCustomizer?.()
-      setManaged(target.folder)
-      setDraftName(target.folder.name)
+    const handleOpenManager = (event: Event) => {
+      const detail = event instanceof CustomEvent
+        ? event.detail as { folderId?: unknown; folderName?: unknown } | null
+        : null
+      if (typeof detail?.folderId !== 'string' || typeof detail?.folderName !== 'string') return
+      const name = detail.folderName.trim()
+      if (!name) return
+      setManaged({ id: detail.folderId, name })
+      setDraftName(name)
       setError('')
     }
 
-    document.addEventListener('click', intercept, true)
-    return () => document.removeEventListener('click', intercept, true)
+    window.addEventListener('oanix:open-folder-manager', handleOpenManager)
+    return () => window.removeEventListener('oanix:open-folder-manager', handleOpenManager)
   }, [])
 
   async function saveName() {
