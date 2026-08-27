@@ -56,6 +56,21 @@ test('folders, tags and notes finish reordering automatically after release', ()
   assert.doesNotMatch(noteCss, /oanix-note-jiggle|data-oanix-note-reorder-mode/)
 })
 
+test('organic tag chips filter directly without opening the legacy filter dialog', () => {
+  const organic = readFileSync('src/features/notes/OrganicWorkspaceRuntime.tsx', 'utf8')
+  const workspace = readFileSync('src/features/notes/NotesWorkspace.tsx', 'utf8')
+
+  assert.match(organic, /oanix:select-workspace-tag/)
+  assert.match(organic, /selectWorkspaceTag\(tag\.id\)/)
+  assert.match(organic, /selectWorkspaceTag\(null\)/)
+  assert.doesNotMatch(organic, /folder-dialog__panel\[aria-label="Filtrar por etiqueta"\]/)
+  assert.doesNotMatch(organic, /filterButton\.click\(\)/)
+  assert.match(workspace, /window\.addEventListener\('oanix:select-workspace-tag'/)
+  assert.match(workspace, /activeTagIdRef/)
+  assert.match(workspace, /void handleSelectTag\('all'\)/)
+  assert.match(workspace, /void handleSelectTag\(detail\.tagId\)/)
+})
+
 test('manual tag order reuses encrypted records and remains backward compatible with tag records', () => {
   const repository = readFileSync('src/storage/repositories/tagRepository.ts', 'utf8')
   const service = readFileSync('src/features/tags/tagService.ts', 'utf8')
