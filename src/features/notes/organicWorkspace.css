@@ -428,7 +428,6 @@ html[data-oanix-theme='classic-day'] .oanix-organic-tags__error { color: #991b1b
   background: transparent !important;
   transform: none !important;
 }
-.oanix-folder-focus { display: none !important; }
 
 .oanix-folder-rail {
   position: absolute !important;
