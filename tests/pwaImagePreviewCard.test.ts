@@ -75,3 +75,17 @@ test('image preview observer ignores unrelated workspace DOM churn', () => {
   assert.match(runtime, /records\.some\(mutationTouchesImagePreview\)/)
   assert.doesNotMatch(runtime, /new MutationObserver\(queueNormalize\)/)
 })
+
+test('high-frequency image gesture listeners exist only during an active lightbox touch', () => {
+  assert.match(runtime, /let gestureListenersAttached = false/)
+  assert.match(runtime, /function attachGestureListeners\(\)/)
+  assert.match(runtime, /document\.addEventListener\('pointermove', handlePointerMove, \{ capture: true, passive: false \}\)/)
+  assert.match(runtime, /function detachGestureListeners\(\)/)
+  assert.match(runtime, /touchPoints\.set\(event\.pointerId,[\s\S]*attachGestureListeners\(\)/)
+  assert.match(runtime, /if \(touchPoints\.size === 0\) detachGestureListeners\(\)/)
+  assert.match(runtime, /function clearTouchState\(\)[\s\S]*detachGestureListeners\(\)/)
+  assert.match(
+    runtime,
+    /document\.addEventListener\('pointerdown', handlePointerDown, true\)\s*document\.addEventListener\('click', handleClick, true\)/,
+  )
+})

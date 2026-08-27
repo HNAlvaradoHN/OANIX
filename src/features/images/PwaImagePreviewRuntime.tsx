@@ -73,6 +73,7 @@ export function PwaImagePreviewRuntime() {
     let pinchStartDistance = 0
     let pinchStartScale = 1
     let panState: PanState | null = null
+    let gestureListenersAttached = false
 
     function descriptionNeedsMore(input: HTMLInputElement): boolean {
       return input.value.trim().length > DESCRIPTION_LIMIT
@@ -250,11 +251,28 @@ export function PwaImagePreviewRuntime() {
       })
     }
 
+    function attachGestureListeners() {
+      if (gestureListenersAttached) return
+      gestureListenersAttached = true
+      document.addEventListener('pointermove', handlePointerMove, { capture: true, passive: false })
+      document.addEventListener('pointerup', handlePointerEnd, true)
+      document.addEventListener('pointercancel', handlePointerEnd, true)
+    }
+
+    function detachGestureListeners() {
+      if (!gestureListenersAttached) return
+      gestureListenersAttached = false
+      document.removeEventListener('pointermove', handlePointerMove, true)
+      document.removeEventListener('pointerup', handlePointerEnd, true)
+      document.removeEventListener('pointercancel', handlePointerEnd, true)
+    }
+
     function clearTouchState() {
       touchPoints.clear()
       pinchStartDistance = 0
       pinchStartScale = 1
       panState = null
+      detachGestureListeners()
     }
 
     function syncLightbox() {
@@ -312,6 +330,7 @@ export function PwaImagePreviewRuntime() {
       const viewport = target.closest<HTMLElement>('.image-lightbox__viewport')
       if (viewport && currentLightbox?.contains(viewport) && event.pointerType === 'touch') {
         touchPoints.set(event.pointerId, { x: event.clientX, y: event.clientY })
+        attachGestureListeners()
         const image = lightboxImage()
 
         if (touchPoints.size === 1 && scaleFromImage(image) > 1) {
@@ -367,6 +386,7 @@ export function PwaImagePreviewRuntime() {
         pinchStartDistance = 0
         pinchStartScale = scaleFromImage(lightboxImage())
       }
+      if (touchPoints.size === 0) detachGestureListeners()
     }
 
     function handleClick(event: MouseEvent) {
@@ -448,9 +468,6 @@ export function PwaImagePreviewRuntime() {
 
     document.addEventListener('input', handleInput, true)
     document.addEventListener('pointerdown', handlePointerDown, true)
-    document.addEventListener('pointermove', handlePointerMove, { capture: true, passive: false })
-    document.addEventListener('pointerup', handlePointerEnd, true)
-    document.addEventListener('pointercancel', handlePointerEnd, true)
     document.addEventListener('click', handleClick, true)
     document.addEventListener('keydown', handleKeyDown, true)
     window.addEventListener('popstate', handlePopState)
@@ -460,9 +477,6 @@ export function PwaImagePreviewRuntime() {
       observer.disconnect()
       document.removeEventListener('input', handleInput, true)
       document.removeEventListener('pointerdown', handlePointerDown, true)
-      document.removeEventListener('pointermove', handlePointerMove, true)
-      document.removeEventListener('pointerup', handlePointerEnd, true)
-      document.removeEventListener('pointercancel', handlePointerEnd, true)
       document.removeEventListener('click', handleClick, true)
       document.removeEventListener('keydown', handleKeyDown, true)
       window.removeEventListener('popstate', handlePopState)
