@@ -63,5 +63,5 @@ body:has(#oanix-note-create-feedback) {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .oanix-note-create-feedback__spinner { animation-duration: 1.8s; }
+  .oanix-note-create-feedback__spinner { animation: none; }
 }
