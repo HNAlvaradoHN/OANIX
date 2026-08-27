@@ -33,8 +33,13 @@ export function NoteVisualIdentityRuntime() {
     let applyFrame: number | null = null
     let reloadTimer: number | null = null
     let notesById = new Map<string, NoteRecord>()
+    const noteDragActive = () => document.documentElement.classList.contains('oanix-mobile-note-dragging')
 
     const applyIdentity = () => {
+      if (noteDragActive()) {
+        applyFrame = null
+        return
+      }
       applyFrame = null
       document.querySelectorAll<HTMLElement>('.note-row[data-reorder-note-id]').forEach((row) => {
         const noteId = row.dataset.reorderNoteId
@@ -60,7 +65,7 @@ export function NoteVisualIdentityRuntime() {
     }
 
     const scheduleApply = () => {
-      if (applyFrame !== null) return
+      if (noteDragActive() || applyFrame !== null) return
       applyFrame = window.requestAnimationFrame(applyIdentity)
     }
 
@@ -83,10 +88,10 @@ export function NoteVisualIdentityRuntime() {
       }, RELOAD_DELAY_MS)
     }
 
-    const workspace = document.querySelector<HTMLElement>('.notes-shell')
+    const noteList = document.querySelector<HTMLElement>('.notes-list')
     const observer = new MutationObserver(scheduleApply)
-    if (workspace) {
-      observer.observe(workspace, {
+    if (noteList) {
+      observer.observe(noteList, {
         childList: true,
         subtree: true,
         attributes: true,
