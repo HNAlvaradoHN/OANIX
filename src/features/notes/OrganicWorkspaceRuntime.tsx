@@ -18,6 +18,14 @@ import './organicWorkspace.css'
 const TAG_LONG_PRESS_MS = 460
 const TAG_MOVE_TOLERANCE = 12
 const PRIVATE_UI_RELOAD_DEBOUNCE_MS = 48
+const ORGANIC_WORKSPACE_TARGET_SELECTOR = '.notes-sidebar, .notes-list, .oanix-folder-rail__item, .tag-filter-button, .oanix-organic-tags-host'
+const ORGANIC_WORKSPACE_TARGET_CLASS_NAMES = [
+  'notes-sidebar',
+  'notes-list',
+  'oanix-folder-rail__item',
+  'tag-filter-button',
+  'oanix-organic-tags-host',
+]
 
 interface FolderVisualState {
   covers: Map<string, string>
@@ -27,6 +35,32 @@ interface FolderVisualState {
 const EMPTY_FOLDER_VISUALS: FolderVisualState = {
   covers: new Map(),
   colors: new Map(),
+}
+
+function nodeTouchesOrganicWorkspaceTargets(node: Node): boolean {
+  if (!(node instanceof Element)) return false
+  return node.matches(ORGANIC_WORKSPACE_TARGET_SELECTOR) || node.querySelector(ORGANIC_WORKSPACE_TARGET_SELECTOR) !== null
+}
+
+function mutationTouchesOrganicWorkspaceTargets(record: MutationRecord): boolean {
+  if (record.type === 'childList') {
+    if ([...record.addedNodes, ...record.removedNodes].some(nodeTouchesOrganicWorkspaceTargets)) return true
+    const target = record.target
+    return target instanceof Element && target.matches('.oanix-folder-rail__item, .tag-filter-button')
+  }
+
+  if (record.type !== 'attributes') return false
+  const target = record.target
+  if (!(target instanceof Element)) return false
+  if (record.attributeName === 'aria-current') return target.matches('.tag-filter-button')
+  if (record.attributeName !== 'class') return false
+
+  if (ORGANIC_WORKSPACE_TARGET_CLASS_NAMES.some((className) => target.classList.contains(className))) {
+    return true
+  }
+
+  const oldClasses = new Set((record.oldValue ?? '').split(/\s+/).filter(Boolean))
+  return ORGANIC_WORKSPACE_TARGET_CLASS_NAMES.some((className) => oldClasses.has(className))
 }
 
 function moveTagAroundTarget(
@@ -257,8 +291,8 @@ export function OrganicWorkspaceRuntime() {
     void reloadPrivateUiData()
 
     const workspace = document.querySelector<HTMLElement>('.notes-shell')
-    const observer = new MutationObserver(() => {
-      if (workspaceReorderActive()) return
+    const observer = new MutationObserver((records) => {
+      if (workspaceReorderActive() || !records.some(mutationTouchesOrganicWorkspaceTargets)) return
       ensureHost()
       scheduleWorkspaceDecorate()
     })
@@ -268,6 +302,7 @@ export function OrganicWorkspaceRuntime() {
         subtree: true,
         attributes: true,
         attributeFilter: ['class', 'aria-current'],
+        attributeOldValue: true,
       })
     }
 
