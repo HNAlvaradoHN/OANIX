@@ -55,7 +55,7 @@ test('un gesto rápido cruza etiquetas de un hueco por actualización', () => {
   assert.match(organic, /const desired = moveTagAroundTarget/)
   assert.match(organic, /const direction = desiredIndex > currentIndex \? 1 : -1/)
   assert.match(organic, /currentIndex \+ direction/)
-  assert.match(organic, /moveTagOneStepTowardTarget\(current, tag\.id, dropTarget\.targetId, dropTarget\.placeAfter\)/)
+  assert.match(organic, /moveTagOneStepTowardTarget\(current, draggedId, dropTarget\.targetId, dropTarget\.placeAfter\)/)
 })
 
 test('reflow de etiquetas cancela la animación anterior antes de abrir el siguiente hueco', () => {
