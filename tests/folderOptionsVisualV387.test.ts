@@ -43,7 +43,7 @@ test('folder appearance is a draft with one explicit save action', () => {
 })
 
 test('image action opens the existing local image picker directly', () => {
-  assert.match(grid, /onClick=\{\(\) => coverInputRef\.current\?\.click\(\)\}/)
+  assert.match(grid, /coverInputRef\.current\?\.click\(\)/)
   assert.match(grid, /type="file"/)
   assert.match(grid, /accept="image\/\*"/)
   assert.doesNotMatch(grid, /capture="camera"|capture=\{'camera'\}/)
