@@ -14,7 +14,9 @@ test('reorder móvil queda bajo Pointer Events y SortableJS se reserva para escr
   assert.match(pkg, /"sortablejs": "1\.15\.7"/)
   assert.match(runtime, /import Sortable from 'sortablejs'/)
   assert.match(runtime, /Sortable\.create\(list/)
-  assert.match(runtime, /disabled: coarsePointer/)
+  assert.match(runtime, /disabled: false/)
+  assert.doesNotMatch(runtime, /navigator\.maxTouchPoints/)
+  assert.match(runtime, /sortable\.option\('disabled', event\.pointerType !== 'mouse'\)/)
   assert.match(runtime, /const LONG_PRESS_MS = 220/)
   assert.match(runtime, /const TOUCH_MOVE_CANCEL_PX = 12/)
   assert.match(runtime, /event\.pointerType === 'mouse'/)
@@ -50,8 +52,8 @@ test('instrumentación temporal de drag fue retirada después del diagnóstico',
 })
 
 test('la tarjeta visible usa un overlay independiente y sigue directamente el dedo', () => {
-  assert.match(runtime, /forceFallback: true/)
-  assert.match(runtime, /fallbackOnBody: true/)
+  assert.match(runtime, /forceFallback: false/)
+  assert.match(runtime, /fallbackOnBody: false/)
   assert.match(runtime, /fallbackTolerance: 4/)
   assert.match(runtime, /fallbackClass: 'oanix-mobile-note-drag-ghost'/)
   assert.match(runtime, /ghostClass: 'oanix-mobile-note-placeholder'/)
