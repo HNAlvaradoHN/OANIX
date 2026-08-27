@@ -53,7 +53,8 @@ test('theme choice is only a local UI preference and applies before React paints
 })
 
 test('the workspace three-dot menu keeps security but no longer duplicates Day Night', () => {
-  assert.match(menu, /querySelector<HTMLElement>\('\.workspace-menu\[role="menu"\]'\)/)
+  assert.match(menu, /const WORKSPACE_MENU_SELECTOR = '\.workspace-menu\[role="menu"\]'/)
+  assert.match(menu, /querySelector<HTMLElement>\(WORKSPACE_MENU_SELECTOR\)/)
   assert.match(menu, /createPortal/)
   assert.match(menu, /role="menuitem"/)
   assert.match(menu, />Seguridad</)
