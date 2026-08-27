@@ -5,6 +5,7 @@ import test from 'node:test'
 const notes = readFileSync('src/features/notes/NoteListReorderGestureRuntime.tsx', 'utf8')
 const noteReorderCss = readFileSync('src/features/notes/noteReorderGesture.css', 'utf8')
 const folders = readFileSync('src/features/folders/FolderMobileDragRuntime.tsx', 'utf8')
+const folderGrid = readFileSync('src/features/folders/FolderGridRuntime.tsx', 'utf8')
 const organic = readFileSync('src/features/notes/OrganicWorkspaceRuntime.tsx', 'utf8')
 const organicCss = readFileSync('src/features/notes/organicWorkspace.css', 'utf8')
 
@@ -30,6 +31,8 @@ test('note touch reflow cancels the previous FLIP animation before starting anot
   assert.match(notes, /const noteReflowAnimations = new WeakMap<HTMLElement, Animation>\(\)/)
   assert.match(block, /noteReflowAnimations\.set\(row, animation\)/)
   assert.match(block, /animation\.oncancel = animation\.onfinish/)
+  assert.match(block, /\{ translate: \`\$\{dx\}px \$\{dy\}px\` \}/)
+  assert.doesNotMatch(block, /\{ transform: \`translate\(/)
 })
 
 test('note touch placeholder keeps static slot feedback without an infinite repaint loop', () => {
@@ -42,6 +45,19 @@ test('note touch placeholder keeps static slot feedback without an infinite repa
   assert.match(block, /box-shadow:/)
   assert.doesNotMatch(block, /animation:/)
   assert.doesNotMatch(noteReorderCss, /@keyframes oanix-note-drop-slot-pulse/)
+})
+
+test('desktop folder reflow cancels superseded FLIP and keeps translation independent from hover transforms', () => {
+  const start = folderGrid.indexOf('function animateFolderReflow')
+  const end = folderGrid.indexOf('export function FolderGridRuntime', start)
+  assert.ok(start >= 0 && end > start)
+  const block = folderGrid.slice(start, end)
+  assert.match(folderGrid, /const desktopFolderReflowAnimations = new WeakMap<HTMLElement, Animation>\(\)/)
+  assert.match(block, /desktopFolderReflowAnimations\.get\(element\)\?\.cancel\(\)/)
+  assert.match(block, /\{ translate: \`\$\{deltaX\}px \$\{deltaY\}px\` \}/)
+  assert.match(block, /desktopFolderReflowAnimations\.set\(element, animation\)/)
+  assert.match(block, /animation\.oncancel = animation\.onfinish/)
+  assert.doesNotMatch(block, /\{ transform: \`translate\(/)
 })
 
 test('folder touch reorder snapshots cards only after leaving the current slot', () => {
@@ -63,6 +79,11 @@ test('folder touch reorder no crea una animacion extra sobre la tarjeta sostenid
   assert.match(block, /if \(animate && beforeRects\) animateReflow\(gesture\.rail, beforeRects, gesture\.item\)/)
   assert.doesNotMatch(block, /gesture\.item\.animate\(/)
   assert.doesNotMatch(block, /boxShadow/)
+  const reflowStart = folders.indexOf('function animateReflow')
+  const reflowEnd = folders.indexOf('function reorderDomAtPoint', reflowStart)
+  const reflow = folders.slice(reflowStart, reflowEnd)
+  assert.match(reflow, /\{ translate: \`\$\{dx\}px \$\{dy\}px\` \}/)
+  assert.doesNotMatch(reflow, /\{ transform: \`translate\(/)
 })
 
 test('tag reorder computes a real slot change before capturing FLIP rectangles', () => {
@@ -87,4 +108,9 @@ test('tag reorder leaves transform authority to FLIP instead of an infinite jigg
   assert.match(block, /touch-action: none/)
   assert.doesNotMatch(block, /animation:/)
   assert.doesNotMatch(organicCss, /@keyframes oanix-organic-jiggle/)
+  const reflowStart = organic.indexOf('function animateTagReflow')
+  const reflowEnd = organic.indexOf('function activeTagNameFromWorkspace', reflowStart)
+  const reflow = organic.slice(reflowStart, reflowEnd)
+  assert.match(reflow, /\{ translate: \`\$\{deltaX\}px 0\` \}/)
+  assert.doesNotMatch(reflow, /\{ transform: \`translateX\(/)
 })
