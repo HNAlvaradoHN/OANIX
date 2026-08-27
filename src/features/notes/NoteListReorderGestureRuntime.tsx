@@ -215,10 +215,7 @@ export function NoteListReorderGestureRuntime() {
       clone.style.setProperty('top', `${rect.top}px`, 'important')
       clone.style.setProperty('transform', 'scale(1.015)', 'important')
       clone.style.setProperty('transform-origin', 'center center', 'important')
-      clone.style.setProperty('overflow', 'hidden', 'important')
-      clone.style.setProperty('background', 'rgba(18,18,35,.96)', 'important')
-      clone.style.setProperty('border', '1px solid rgba(255,255,255,.20)', 'important')
-      clone.style.setProperty('border-radius', '1rem', 'important')
+      clone.style.setProperty('overflow', 'visible', 'important')
       clone.style.setProperty('box-shadow', '0 22px 46px rgba(2,6,23,.46), 0 0 0 2px rgba(96,165,250,.30)', 'important')
       document.body.appendChild(clone)
       dragOverlay = clone
