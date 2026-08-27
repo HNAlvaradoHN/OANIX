@@ -6,15 +6,16 @@ const refinements = readFileSync('src/features/notes/workspaceRefinements.css', 
 const compactContract = readFileSync('src/features/notes/compactNoteContract.css', 'utf8')
 const workspace = readFileSync('src/features/notes/NotesWorkspace.tsx', 'utf8')
 
-test('mobile note list stays compact in its normal state', () => {
-  assert.match(refinements, /@media \(max-width: 760px\)/)
-  assert.match(refinements, /\.notes-shell:not\(\.notes-shell--searching\) \.note-row:not\(\.note-row--selected\):not\(\.note-row--menu-open\)/)
-  assert.match(refinements, /min-height:\s*72px !important/)
-  assert.match(refinements, /margin:\s*8px 0 0 !important/)
-  assert.match(refinements, /\.note-row:not\(\.note-row--selected\):not\(\.note-row--menu-open\)::before[\s\S]*?display:\s*none !important/)
-  assert.match(refinements, /left:\s*13px !important/)
-  assert.match(refinements, /top:\s*50% !important/)
-  assert.match(refinements, /-webkit-line-clamp:\s*1 !important/)
+test('mobile note list has one compact geometry authority', () => {
+  assert.doesNotMatch(refinements, /@media \(max-width: 760px\)/)
+  assert.match(compactContract, /@media \(max-width: 760px\)/)
+  assert.match(compactContract, /\.note-row:not\(\.note-row--selected\):not\(\.note-row--menu-open\)\s*\{[\s\S]*?min-height:\s*72px !important/)
+  assert.match(compactContract, /margin:\s*8px 0 0 !important/)
+  assert.match(compactContract, /\.note-row:not\(\.note-row--selected\):not\(\.note-row--menu-open\)::before[\s\S]*?display:\s*none !important/)
+  assert.match(compactContract, /padding:\s*12px clamp\(160px, 44vw, 230px\) 10px 64px !important/)
+  assert.match(compactContract, /left:\s*14px !important/)
+  assert.match(compactContract, /top:\s*50% !important/)
+  assert.match(compactContract, /-webkit-line-clamp:\s*1 !important/)
 })
 
 test('opening the note action menu no longer restores the expanded v38.3 card', () => {
