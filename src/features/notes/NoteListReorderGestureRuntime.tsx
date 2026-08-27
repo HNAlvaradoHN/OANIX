@@ -126,8 +126,8 @@ function animateReflow(list: HTMLElement, before: Map<HTMLElement, DOMRect>, dra
     if (Math.abs(dx) < 1 && Math.abs(dy) < 1) continue
     const animation = row.animate(
       [
-        { transform: `translate(${dx}px, ${dy}px)` },
-        { transform: 'translate(0, 0)' },
+        { translate: `${dx}px ${dy}px` },
+        { translate: '0 0' },
       ],
       { duration: REFLOW_MS, easing: 'cubic-bezier(.2,.8,.2,1)' },
     )

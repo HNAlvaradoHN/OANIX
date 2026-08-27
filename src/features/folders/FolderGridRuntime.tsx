@@ -126,6 +126,8 @@ function captureFolderRects(): Map<string, DOMRect> {
   return rects
 }
 
+const desktopFolderReflowAnimations = new WeakMap<HTMLElement, Animation>()
+
 function animateFolderReflow(before: Map<string, DOMRect>, draggingFolderId: string) {
   window.requestAnimationFrame(() => {
     window.requestAnimationFrame(() => {
@@ -138,13 +140,19 @@ function animateFolderReflow(before: Map<string, DOMRect>, draggingFolderId: str
         const deltaX = previous.left - next.left
         const deltaY = previous.top - next.top
         if (Math.abs(deltaX) < 1 && Math.abs(deltaY) < 1) return
-        element.animate(
+        desktopFolderReflowAnimations.get(element)?.cancel()
+        const animation = element.animate(
           [
-            { transform: `translate(${deltaX}px, ${deltaY}px)` },
-            { transform: 'translate(0, 0)' },
+            { translate: `${deltaX}px ${deltaY}px` },
+            { translate: '0 0' },
           ],
           { duration: 180, easing: 'cubic-bezier(.2,.75,.25,1)' },
         )
+        desktopFolderReflowAnimations.set(element, animation)
+        animation.onfinish = () => {
+          if (desktopFolderReflowAnimations.get(element) === animation) desktopFolderReflowAnimations.delete(element)
+        }
+        animation.oncancel = animation.onfinish
       })
     })
   })

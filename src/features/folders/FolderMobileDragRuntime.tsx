@@ -96,8 +96,8 @@ function animateReflow(rail: HTMLElement, before: Map<HTMLElement, DOMRect>, sou
     folderReflowAnimations.get(item)?.cancel()
     const animation = item.animate(
       [
-        { transform: `translate(${dx}px, ${dy}px)` },
-        { transform: 'translate(0, 0)' },
+        { translate: `${dx}px ${dy}px` },
+        { translate: '0 0' },
       ],
       { duration: REFLOW_MS, easing: 'cubic-bezier(.2,.8,.2,1)' },
     )
