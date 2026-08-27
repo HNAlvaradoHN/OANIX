@@ -9,10 +9,11 @@ test('organic workspace uses real OANIX data and no external prototype dependenc
   const gate = readFileSync('src/app/WorkspaceRuntimeGate.tsx', 'utf8')
 
   assert.match(runtime, /loadFolders/)
-  assert.match(runtime, /loadNotes/)
+  assert.doesNotMatch(runtime, /loadNotes|loadNote\(/)
   assert.match(runtime, /loadTags/)
   assert.match(runtime, /loadFolderCovers/)
   assert.match(runtime, /loadFolderColors/)
+  assert.doesNotMatch(runtime, /NOTE_TAB_COLORS|row\.dataset\.oanixNoteCategory|--oanix-note-tab-color/)
   assert.match(runtime, /persistTagOrder/)
   assert.match(app, /<WorkspaceRuntimeGate \/>/)
   assert.match(gate, /<OrganicWorkspaceRuntime \/>/)
