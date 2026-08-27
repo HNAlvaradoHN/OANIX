@@ -254,13 +254,16 @@ export function WorkspacePersonalizationRuntime() {
 
   useEffect(() => {
     const workspace = document.querySelector<HTMLElement>('.notes-shell')
-    const workspaceObserver = new MutationObserver(() => scheduleDecorate())
+    const workspaceStructureObserver = new MutationObserver(() => scheduleDecorate())
+    const workspaceStateObserver = new MutationObserver(() => scheduleDecorate())
     if (workspace) {
-      workspaceObserver.observe(workspace, {
+      workspaceStructureObserver.observe(workspace, {
         childList: true,
         subtree: true,
+      })
+      workspaceStateObserver.observe(workspace, {
         attributes: true,
-        attributeFilter: ['class', 'aria-current'],
+        attributeFilter: ['class'],
       })
     }
 
@@ -324,7 +327,8 @@ export function WorkspacePersonalizationRuntime() {
     scheduleDecorate()
 
     return () => {
-      workspaceObserver.disconnect()
+      workspaceStructureObserver.disconnect()
+      workspaceStateObserver.disconnect()
       document.removeEventListener('pointerdown', handlePointerDownCapture, true)
       document.removeEventListener('click', handleClickCapture, true)
       window.removeEventListener('oanix:local-data-changed', handleLocalChange)
