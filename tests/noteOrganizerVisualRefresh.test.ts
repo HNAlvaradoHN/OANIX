@@ -5,7 +5,6 @@ import test from 'node:test'
 const notesWorkspace = readFileSync('src/features/notes/NotesWorkspace.tsx', 'utf8')
 const folderCreationCss = readFileSync('src/features/folders/folderCreation.css', 'utf8')
 const folderCreation = readFileSync('src/features/folders/FolderCreationRuntime.tsx', 'utf8')
-const tagCreation = readFileSync('src/features/tags/TagCreationRuntime.tsx', 'utf8')
 const noteService = readFileSync('src/features/notes/noteService.ts', 'utf8')
 const organic = readFileSync('src/features/notes/OrganicWorkspaceRuntime.tsx', 'utf8')
 const personalization = readFileSync('src/features/notes/WorkspacePersonalizationRuntime.tsx', 'utf8')
@@ -60,11 +59,10 @@ test('single note changes refresh only the note visual owner without decrypting 
 test('visual runtimes do not emit duplicate generic change events after encrypted writes', () => {
   const duplicateGenericEvent = /window\.dispatchEvent\(new Event\('oanix:local-data-changed'\)\)/
   assert.doesNotMatch(folderCreation, duplicateGenericEvent)
-  assert.doesNotMatch(tagCreation, duplicateGenericEvent)
+  assert.doesNotMatch(organic, duplicateGenericEvent)
   assert.doesNotMatch(personalization, duplicateGenericEvent)
 
-  assert.match(tagCreation, /detail\.recordType !== 'tag'/)
-  assert.match(tagCreation, /detail\.recordType !== 'tag-order'/)
+  assert.match(organic, /detail\?\.recordType === 'note'\) return/)
 })
 
 test('content autosave batching remains intact while visual refresh becomes faster', () => {
