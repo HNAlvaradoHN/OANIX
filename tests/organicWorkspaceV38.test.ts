@@ -50,7 +50,7 @@ test('folders, tags and notes finish reordering automatically after release', ()
   assert.match(noteGesture, /delayOnTouchOnly: true/)
   assert.match(noteGesture, /forceFallback: true/)
   assert.doesNotMatch(noteGesture, /supportPointer:\s*false/)
-  assert.match(noteGesture, /persistNoteOrder\(orderToPersist\)/)
+  assert.match(noteGesture, /persistNoteOrder\(orderToPersist, \(\) => !disposed && pendingPersistOrder === null\)/)
   assert.match(noteCss, /touch-action: none !important/)
   // Mobile note reorder now deliberately mirrors the proven folder pointer
   // architecture: pointer capture is allowed, synthetic drag fabrication is not.
@@ -74,7 +74,9 @@ test('rapid reorder persistence stays serialized without blocking the next gestu
   assert.match(organic, /tagOrderPersistingRef/)
   assert.doesNotMatch(organic, /event\.button !== 0 \|\| tagOrderingBusy/)
   assert.match(noteService, /historyReason: NoteHistoryReason \| null = 'automatic'/)
-  assert.match(noteService, /manualOrder,[\s\S]*?\}\), null\)/)
+  assert.match(noteService, /manualOrder,[\s\S]*?\}\), null, false\)/)
+  assert.match(noteService, /if \(!shouldContinue\(\)\) break/)
+  assert.match(noteService, /setTimeout\(resolve, 0\)/)
 })
 
 test('organic tag chips filter directly without opening the legacy filter dialog', () => {

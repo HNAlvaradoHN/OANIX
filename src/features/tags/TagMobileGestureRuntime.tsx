@@ -67,12 +67,18 @@ export function TagMobileGestureRuntime() {
         document.documentElement.classList.add('oanix-tag-drag-overlay-active')
       }
 
-      dragOverlay.style.left = `${event.clientX - dragOffsetX}px`
+      const controlsLeft = document.querySelector<HTMLElement>('.oanix-organic-tags__controls')
+        ?.getBoundingClientRect().left ?? window.innerWidth
+      const overlayWidth = dragOverlay.getBoundingClientRect().width
+      const clampedLeft = Math.min(event.clientX - dragOffsetX, controlsLeft - overlayWidth)
+      dragOverlay.style.left = `${clampedLeft}px`
       dragOverlay.style.top = `${event.clientY - dragOffsetY}px`
     }
 
     function scheduleAutoScrollDuringReorder(scroller: HTMLElement, pointerX: number) {
-      latestReorderPointerX = pointerX
+      const controlsLeft = document.querySelector<HTMLElement>('.oanix-organic-tags__controls')
+        ?.getBoundingClientRect().left ?? scroller.getBoundingClientRect().right
+      latestReorderPointerX = Math.min(pointerX, controlsLeft - 1)
       if (autoScrollFrame !== null) return
 
       autoScrollFrame = window.requestAnimationFrame(() => {

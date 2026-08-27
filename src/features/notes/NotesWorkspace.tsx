@@ -365,6 +365,27 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
   }, [])
 
   useEffect(() => {
+    function handlePreviewNoteOrder(event: Event) {
+      const detail = event instanceof CustomEvent
+        ? event.detail as { orderedIds?: unknown } | null
+        : null
+      if (!Array.isArray(detail?.orderedIds) || !detail.orderedIds.every((id) => typeof id === 'string')) return
+      const orderedIds = detail.orderedIds as string[]
+      const orderedSet = new Set(orderedIds)
+      setNotes((current) => {
+        const byId = new Map(current.map((note) => [note.id, note]))
+        const orderedNotes = orderedIds.flatMap((id) => byId.get(id) ?? [])
+        if (orderedNotes.length !== orderedIds.length) return current
+        let orderedIndex = 0
+        return current.map((note) => orderedSet.has(note.id) ? orderedNotes[orderedIndex++] : note)
+      })
+    }
+
+    window.addEventListener('oanix:note-order-preview', handlePreviewNoteOrder)
+    return () => window.removeEventListener('oanix:note-order-preview', handlePreviewNoteOrder)
+  }, [])
+
+  useEffect(() => {
     function handlePersistedNoteOrder(event: Event) {
       const detail = event instanceof CustomEvent
         ? event.detail as { notes?: unknown } | null

@@ -95,6 +95,12 @@ function tagDropTargetAtX(
   return last ? { targetId: last.targetId, placeAfter: true } : null
 }
 
+function clampTagDragX(host: HTMLElement | null, clientX: number): number {
+  const controlsLeft = host?.querySelector<HTMLElement>('.oanix-organic-tags__controls')
+    ?.getBoundingClientRect().left
+  return controlsLeft === undefined ? clientX : Math.min(clientX, controlsLeft - 1)
+}
+
 function captureTagRects(host: HTMLElement | null): Map<string, DOMRect> {
   const rects = new Map<string, DOMRect>()
   host?.querySelectorAll<HTMLElement>('[data-oanix-organic-tag-id]').forEach((element) => {
@@ -416,7 +422,7 @@ export function OrganicWorkspaceRuntime() {
     if (draggingTagId !== tag.id) return
     event.preventDefault()
 
-    const dropTarget = tagDropTargetAtX(tagHost, tag.id, event.clientX)
+    const dropTarget = tagDropTargetAtX(tagHost, tag.id, clampTagDragX(tagHost, event.clientX))
     if (!dropTarget) return
     const before = captureTagRects(tagHost)
     setTags((current) => {
