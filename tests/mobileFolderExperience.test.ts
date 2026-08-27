@@ -57,8 +57,10 @@ test('mobile folder long press stays armed at the threshold and uses live horizo
 
 test('desktop folder drag uses horizontal placement and one exact-order persistence', () => {
   assert.match(desktopDragRuntime, /const placeAfter = event\.clientX > rect\.left \+ rect\.width \/ 2/)
-  assert.match(desktopDragRuntime, /const nextOrder = data\.folders\.map\(\(folder\) => folder\.id\)/)
-  assert.match(desktopDragRuntime, /await persistFolderOrder\(nextOrder\)/)
+  assert.match(desktopDragRuntime, /queueFolderOrderPersistence\(data\.folders\.map\(\(folder\) => folder\.id\)\)/)
+  assert.match(desktopDragRuntime, /const persisted = await persistFolderOrder\(orderToPersist\)/)
+  assert.match(desktopDragRuntime, /pendingFolderOrderRef/)
+  assert.doesNotMatch(desktopDragRuntime, /customBusy \|\| orderingBusy/)
   assert.doesNotMatch(desktopDragRuntime, /reorderFolder\(/)
   assert.doesNotMatch(desktopDragRuntime, /while\s*\(remaining/)
 })
