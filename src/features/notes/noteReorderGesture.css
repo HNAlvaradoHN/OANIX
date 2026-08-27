@@ -26,7 +26,7 @@ html.oanix-v383-visual .note-row[data-reorder-note-id] .note-row__avatar {
 
   .note-row[data-reorder-note-id],
   .note-row[data-reorder-note-id] .note-row__open {
-    touch-action: pan-y !important;
+    touch-action: none !important;
   }
 
   .note-row[data-reorder-note-id] .note-row__avatar,
