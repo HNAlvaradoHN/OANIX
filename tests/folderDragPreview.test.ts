@@ -23,6 +23,13 @@ test('folder drag keeps a lifted copy and a live in-rail drop slot', () => {
   assert.match(styles, /html\.oanix-v383-visual body \.oanix-folder-rail__item\.oanix-mobile-folder-drag-ghost[\s\S]*position:\s*fixed !important/)
 })
 
+test('folder reflow cancels a stale animation before opening the next slot', () => {
+  assert.match(runtime, /const folderReflowAnimations = new WeakMap<HTMLElement, Animation>\(\)/)
+  assert.match(runtime, /folderReflowAnimations\.get\(item\)\?\.cancel\(\)/)
+  assert.match(runtime, /folderReflowAnimations\.set\(item, animation\)/)
+  assert.match(runtime, /duration: REFLOW_MS/)
+})
+
 test('edge auto-scroll continues reordering while the dragged card is held', () => {
   assert.match(runtime, /EDGE_SCROLL_PX/)
   assert.match(runtime, /scrollLeft \+= speed/)
