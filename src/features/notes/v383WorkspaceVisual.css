@@ -736,7 +736,6 @@ html.oanix-v383-visual .oanix-folder-stage {
   background: transparent !important;
   transform: none !important;
 }
-html.oanix-v383-visual .oanix-folder-focus { display: none !important; }
 
 html.oanix-v383-visual .oanix-folder-rail {
   position: absolute !important;
