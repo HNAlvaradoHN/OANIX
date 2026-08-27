@@ -8,6 +8,8 @@ Tu misión no es repetir las conclusiones de ChatGPT ni asumir que sus cambios s
 
 ChatGPT actúa como desarrollador principal y ejecuta cambios mediante ramas/PR. Tú actúas como segundo revisor, auditor técnico y fuente independiente de ideas.
 
+**Estado operativo de revisión (2026-08-27):** el workflow automático de Qwen en GitHub dejó de ser un gate porque su API/cuota ya no es fiable en ese entorno. Las revisiones independientes de Qwen se hacen manualmente por chat cuando el usuario lo solicite o cuando aporten valor. Un check rojo del workflow automático de Qwen, por sí solo, no bloquea un merge. Los gates técnicos vigentes siguen siendo OANIX CI + OANIX Android y la revisión técnica del cambio.
+
 ## Fuente de verdad y frescura
 
 GitHub `main` es la única fuente de verdad del estado actual del código.
@@ -69,9 +71,14 @@ Flujo de trabajo esperado:
 
 ### Reorder de notas
 
-El reorder funcional de notas actualmente usa SortableJS para geometría/destino/autoscroll/persistencia. Se han hecho varias iteraciones visuales.
+El reorder de notas está dividido deliberadamente por tipo de entrada desde PR #368:
 
-En el estado reciente existe un overlay visual independiente (`.oanix-note-drag-overlay`) creado desde `NoteListReorderGestureRuntime.tsx`; el ghost fallback de Sortable puede estar deliberadamente oculto y reservado para geometría. Por tanto, no asumas que `oanix-mobile-note-drag-ghost` es necesariamente la tarjeta que el usuario debe ver. Comprueba siempre el código actual.
+- **escritorio/ratón:** SortableJS sigue siendo el motor de reorder;
+- **móvil/coarse pointer:** `NoteListReorderGestureRuntime.tsx` usa un motor propio basado en Pointer Events, captura best-effort del pointer, scroll vertical manual antes del long press, reflow del DOM y persistencia mediante `persistNoteOrder`.
+
+Esta división corrigió un fallo real donde `touch-action: pan-y` + una ruta paralela de `TouchEvent` permitían que el navegador/WebView conservara el gesto vertical: la pulsación larga vibraba, pero la tarjeta podía no seguir el dedo. No reintroduzcas una segunda ruta `TouchEvent` ni `pan-y` global en las filas de notas sin una causa nueva demostrada.
+
+Existe un overlay visual independiente (`.oanix-note-drag-overlay`) creado desde `NoteListReorderGestureRuntime.tsx`. El clon debe conservar la clase `.note-row` para que coincidan sus reglas visuales. Comprueba siempre el código actual antes de atribuir el drag visible al fallback de Sortable.
 
 El usuario quiere que al arrastrar una nota:
 
