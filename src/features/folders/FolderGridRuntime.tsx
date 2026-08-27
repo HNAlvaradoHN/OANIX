@@ -97,11 +97,6 @@ function sameTargets(left: FolderGridTargets, right: FolderGridTargets): boolean
   )
 }
 
-function visibleFolderTabButtons(tabsShell: HTMLElement | null): HTMLButtonElement[] {
-  if (!tabsShell) return []
-  return Array.from(tabsShell.querySelectorAll<HTMLButtonElement>('.notes-tab:not(.notes-tab--add)'))
-}
-
 function moveFolderAroundTarget(
   folders: FolderRecord[],
   draggedId: string,
@@ -152,13 +147,6 @@ function animateFolderReflow(before: Map<string, DOMRect>, draggingFolderId: str
       })
     })
   })
-}
-
-function scheduleNoteOpen(noteId: string) {
-  window.setTimeout(() => {
-    const selector = `[data-reorder-note-id="${CSS.escape(noteId)}"] .note-row__open`
-    document.querySelector<HTMLButtonElement>(selector)?.click()
-  }, 80)
 }
 
 export function FolderGridRuntime() {
@@ -389,32 +377,9 @@ export function FolderGridRuntime() {
     [data.colors, data.counts, data.covers, data.folders, data.icons],
   )
 
-  const selectedFolder = useMemo(
-    () => selectedFolderId === 'all'
-      ? null
-      : folderCards.find((folder) => folder.id === selectedFolderId) ?? null,
-    [folderCards, selectedFolderId],
-  )
-
-  const panelSearchResults = useMemo(() => {
-    const query = panelSearch.trim().toLocaleLowerCase()
-    if (!query) return []
-    return data.notes
-      .filter((note) => selectedFolderId === 'all' || note.folderId === selectedFolderId)
-      .filter((note) => {
-        const haystack = `${note.title}\n${noteBlocksToPlainText(note.content.blocks)}`.toLocaleLowerCase()
-        return haystack.includes(query)
-      })
-      .slice(0, 6)
-  }, [data.notes, panelSearch, selectedFolderId])
-
-  const selectedCount = selectedFolder ? selectedFolder.noteCount : data.allCount
-  const selectedCover = selectedFolder?.cover ?? ''
-
   function selectAllNotes() {
     if (reorderMode) return
     setSelectedFolderId('all')
-    setPanelSearch('')
     window.dispatchEvent(new CustomEvent('oanix:select-workspace-folder', { detail: { folderId: 'all' } }))
   }
 
@@ -424,40 +389,7 @@ export function FolderGridRuntime() {
       return
     }
     setSelectedFolderId(folder.id)
-    setPanelSearch('')
     window.dispatchEvent(new CustomEvent('oanix:select-workspace-folder', { detail: { folderId: folder.id } }))
-  }
-
-  function openAllNotes() {
-    if (reorderMode) return
-    const button = visibleFolderTabButtons(targets.tabsShell)[0]
-    if (!button) return
-    setGridOpen(false)
-    button.click()
-  }
-
-  function openFolder(folder: FolderRecord) {
-    if (reorderMode) return
-    const button = visibleFolderTabButtons(targets.tabsShell)
-      .find((candidate) => candidate.textContent?.trim() === folder.name)
-    if (!button) {
-      setError('No se pudo abrir esta carpeta. Inténtalo de nuevo.')
-      return
-    }
-
-    setGridOpen(false)
-    button.click()
-  }
-
-  function openSelected() {
-    if (selectedFolder) openFolder(selectedFolder)
-    else openAllNotes()
-  }
-
-  function openSearchResult(note: NoteRecord) {
-    if (selectedFolder) openFolder(selectedFolder)
-    else openAllNotes()
-    scheduleNoteOpen(note.id)
   }
 
   function openFolderManager() {
