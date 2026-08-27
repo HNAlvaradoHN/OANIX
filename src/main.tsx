@@ -32,6 +32,7 @@ import './features/notes/workspaceRefinements.css'
 import './features/notes/compactNoteContract.css'
 import './features/notes/responsiveCompactNoteContract.css'
 import './features/notes/organicWorkspaceTouchMotion.css'
+import './features/folders/folderTouchHoverSpecificity.css'
 
 type OanixUpdateWindow = Window & {
   __oanixApplyUpdate?: () => Promise<void>
