@@ -6,8 +6,12 @@ import './noteReorderGesture.css'
 const LONG_PRESS_MS = 220
 const TOUCH_START_THRESHOLD_PX = 7
 const TOUCH_MOVE_CANCEL_PX = 12
+const SCROLL_START_PX = 4
 const PRESS_ARM_GRACE_MS = 35
 const EDGE_SCROLL_PX = 76
+const MAX_FLING_VELOCITY_PX_MS = 2.4
+const MIN_FLING_VELOCITY_PX_MS = 0.045
+const FLING_FRICTION_PER_FRAME = 0.92
 const MAX_SCROLL_PER_FRAME = 10
 const REFLOW_MS = 120
 
@@ -24,6 +28,9 @@ type TouchGesture = {
   pressedAt: number
   startScrollTop: number
   startWindowScrollY: number
+  lastMoveY: number
+  lastMoveAt: number
+  scrollVelocityY: number
   grabOffsetX: number
   grabOffsetY: number
   moved: boolean
@@ -139,6 +146,7 @@ function scrollSpeed(clientY: number): number {
 export function NoteListReorderGestureRuntime() {
   useEffect(() => {
     let suppressClickUntil = 0
+    let scrollMomentumFrame: number | null = null
     let dragOverlay: HTMLElement | null = null
     let dragOverlayTemplate: HTMLElement | null = null
     let dragOverlayOffset: ClientPoint | null = null
@@ -182,6 +190,34 @@ export function NoteListReorderGestureRuntime() {
       })
       dragIdentityById.clear()
     }
+    const stopScrollMomentum = () => {
+      if (scrollMomentumFrame === null) return
+      window.cancelAnimationFrame(scrollMomentumFrame)
+      scrollMomentumFrame = null
+    }
+    const startScrollMomentum = (velocityY: number) => {
+      stopScrollMomentum()
+      if (Math.abs(velocityY) < MIN_FLING_VELOCITY_PX_MS) return
+      let velocity = Math.max(-MAX_FLING_VELOCITY_PX_MS, Math.min(MAX_FLING_VELOCITY_PX_MS, velocityY))
+      let previousAt = performance.now()
+      const tick = (now: number) => {
+        const elapsed = Math.min(32, Math.max(1, now - previousAt))
+        previousAt = now
+        const before = list.scrollTop
+        list.scrollTop += velocity * elapsed
+        if (list.scrollTop === before) {
+          scrollMomentumFrame = null
+          return
+        }
+        velocity *= Math.pow(FLING_FRICTION_PER_FRAME, elapsed / 16.67)
+        if (Math.abs(velocity) < MIN_FLING_VELOCITY_PX_MS) {
+          scrollMomentumFrame = null
+          return
+        }
+        scrollMomentumFrame = window.requestAnimationFrame(tick)
+      }
+      scrollMomentumFrame = window.requestAnimationFrame(tick)
+    }
     const removeDragOverlay = () => {
       dragOverlay?.remove()
       dragOverlay = null
@@ -217,7 +253,8 @@ export function NoteListReorderGestureRuntime() {
       clone.style.setProperty('transform-origin', 'center center', 'important')
       clone.style.setProperty('overflow', 'visible', 'important')
       clone.style.setProperty('box-shadow', '0 22px 46px rgba(2,6,23,.46), 0 0 0 2px rgba(96,165,250,.30)', 'important')
-      document.body.appendChild(clone)
+      const overlayHost = list.closest<HTMLElement>('.notes-shell') ?? document.body
+      overlayHost.appendChild(clone)
       dragOverlay = clone
       const anchor = point ?? lastPointer ?? { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }
       dragOverlayOffset = {
@@ -356,6 +393,9 @@ export function NoteListReorderGestureRuntime() {
         pressedAt: performance.now(),
         startScrollTop: list.scrollTop,
         startWindowScrollY: window.scrollY,
+        lastMoveY: clientY,
+        lastMoveAt: performance.now(),
+        scrollVelocityY: 0,
         grabOffsetX: clientX - rect.left,
         grabOffsetY: clientY - rect.top,
         moved: false,
@@ -375,6 +415,27 @@ export function NoteListReorderGestureRuntime() {
         const dx = clientX - touchGesture.startX
         const dy = clientY - touchGesture.startY
         const distance = Math.hypot(dx, dy)
+        const verticalIntent = Math.abs(dy) >= Math.abs(dx)
+
+        if (verticalIntent && Math.abs(dy) >= SCROLL_START_PX) {
+          touchGesture.moved = true
+          clearTouchTimer()
+          preventDefault()
+          const now = performance.now()
+          const elapsed = Math.max(1, now - touchGesture.lastMoveAt)
+          const fingerDeltaY = clientY - touchGesture.lastMoveY
+          const instantaneousVelocity = -fingerDeltaY / elapsed
+          touchGesture.scrollVelocityY = touchGesture.scrollVelocityY * 0.35 + instantaneousVelocity * 0.65
+          touchGesture.lastMoveY = clientY
+          touchGesture.lastMoveAt = now
+          if (list.scrollHeight > list.clientHeight + 1) {
+            list.scrollTop -= fingerDeltaY
+          } else {
+            window.scrollTo(0, touchGesture.startWindowScrollY - dy)
+          }
+          return
+        }
+
         if (distance < TOUCH_MOVE_CANCEL_PX) return
 
         const heldFor = performance.now() - touchGesture.pressedAt
@@ -390,14 +451,6 @@ export function NoteListReorderGestureRuntime() {
 
         touchGesture.moved = true
         clearTouchTimer()
-        if (Math.abs(dy) >= Math.abs(dx)) {
-          preventDefault()
-          if (list.scrollHeight > list.clientHeight + 1) {
-            list.scrollTop = touchGesture.startScrollTop - dy
-          } else {
-            window.scrollTo(0, touchGesture.startWindowScrollY - dy)
-          }
-        }
         return
       }
 
@@ -412,7 +465,10 @@ export function NoteListReorderGestureRuntime() {
       stopTouchAutoScroll()
 
       if (!finished.dragging) {
-        if (finished.moved) suppressClickUntil = performance.now() + 380
+        if (finished.moved) {
+          suppressClickUntil = performance.now() + 380
+          startScrollMomentum(finished.scrollVelocityY)
+        }
         touchGesture = null
         return
       }
@@ -432,6 +488,7 @@ export function NoteListReorderGestureRuntime() {
       const item = event.target.closest<HTMLElement>('.note-row[data-reorder-note-id]')
       if (!item || item.parentElement !== list) return
       event.stopPropagation()
+      stopScrollMomentum()
       beginGesture(event.pointerId, item, event.clientX, event.clientY)
     }
     const onTouchPointerMove = (event: PointerEvent) => {
@@ -544,6 +601,7 @@ export function NoteListReorderGestureRuntime() {
 
     return () => {
       sortable.destroy()
+      stopScrollMomentum()
       cancelTouchGesture(true)
       clearDragVisuals()
       document.removeEventListener('pointerdown', rememberPointer, true)
