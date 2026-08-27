@@ -232,11 +232,10 @@ body > .note-row.oanix-mobile-note-drag-overlay .note-row__menu-wrap {
   display: none !important;
 }
 
-/* Drag cards are appended directly to <body>. Give both visual paths a fully
-   autonomous surface so they never depend on .notes-shell/.notes-list theme
-   selectors after leaving the workspace DOM tree. */
-body > .note-row.oanix-mobile-note-drag-ghost,
-body > .note-row.oanix-mobile-note-drag-overlay {
+/* The Sortable fallback ghost needs an autonomous fallback surface because it
+   can be detached from the workspace. The independent touch overlay already
+   carries the computed styles of the real note and must keep them intact. */
+body > .note-row.oanix-mobile-note-drag-ghost {
   position: fixed !important;
   margin: 0 !important;
   background: rgba(18,18,35,.96) !important;
@@ -250,14 +249,15 @@ body > .note-row.oanix-mobile-note-drag-overlay {
   opacity: .99 !important;
 }
 
-body > .note-row.oanix-mobile-note-drag-ghost .note-row__topline strong,
-body > .note-row.oanix-mobile-note-drag-overlay .note-row__topline strong {
+body > .note-row.oanix-mobile-note-drag-ghost .note-row__topline strong {
   color: #fff !important;
 }
 
 body > .note-row.oanix-mobile-note-drag-ghost .note-row__preview,
-body > .note-row.oanix-mobile-note-drag-ghost .note-row__topline time,
-body > .note-row.oanix-mobile-note-drag-overlay .note-row__preview,
-body > .note-row.oanix-mobile-note-drag-overlay .note-row__topline time {
+body > .note-row.oanix-mobile-note-drag-ghost .note-row__topline time {
   color: rgba(255,255,255,.60) !important;
+}
+
+body > .note-row.oanix-mobile-note-drag-overlay {
+  overflow: visible !important;
 }

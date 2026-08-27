@@ -68,10 +68,14 @@ test('la tarjeta visible usa un overlay independiente y sigue directamente el de
   assert.match(css, /@keyframes oanix-note-drop-slot-pulse/)
 })
 
-test('overlay independiente mantiene visible todo el contenido de la nota', () => {
+test('overlay independiente mantiene visible todo el contenido y la superficie real de la nota', () => {
   assert.match(css, /body > \.note-row\.oanix-mobile-note-drag-overlay > \*[\s\S]*visibility:\s*visible !important[\s\S]*opacity:\s*1 !important/)
   assert.match(css, /body > \.note-row\.oanix-mobile-note-drag-overlay::after\s*\{[\s\S]*opacity:\s*1 !important/)
   assert.match(css, /body > \.note-row\.oanix-mobile-note-drag-overlay \.note-row__avatar[\s\S]*visibility:\s*visible !important/)
+  assert.match(css, /body > \.note-row\.oanix-mobile-note-drag-overlay[\s\S]*background:\s*var\(--oanix-note-drag-background\) !important/)
+  assert.match(runtime, /clone\.style\.setProperty\('overflow', 'visible', 'important'\)/)
+  assert.doesNotMatch(runtime, /clone\.style\.setProperty\('background'/)
+  assert.doesNotMatch(runtime, /clone\.style\.setProperty\('overflow', 'hidden'/)
   assert.match(runtime, /removeDragOverlay\(\)/)
 })
 
