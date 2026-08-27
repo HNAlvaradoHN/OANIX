@@ -23,3 +23,12 @@ test('note attachments observes only the notes workspace', () => {
   assert.match(attachments, /observer\.observe\(workspace,\s*\{[\s\S]*subtree:\s*true/)
   assert.doesNotMatch(attachments, /observer\.observe\(document\.body/)
 })
+
+test('note attachments refresh only when attachment targets can change', () => {
+  assert.match(attachments, /const ATTACHMENT_TARGET_SELECTOR = \[/)
+  assert.match(attachments, /function mutationTouchesAttachmentTargets\(record: MutationRecord\)/)
+  assert.match(attachments, /record\.addedNodes, \.\.\.record\.removedNodes/)
+  assert.match(attachments, /record\.oldValue \?\? ''/)
+  assert.match(attachments, /records\.some\(mutationTouchesAttachmentTargets\)/)
+  assert.match(attachments, /attributeOldValue:\s*true/)
+})
