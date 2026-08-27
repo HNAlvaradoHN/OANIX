@@ -3,6 +3,7 @@
 Todos los cambios relevantes del proyecto se registran aquí por versión.
 
 ## Unreleased
+- Reorder de notas móvil — PR #368: separa explícitamente los motores por entrada. Ratón/escritorio mantiene SortableJS; coarse/mobile usa un único flujo Pointer Events con captura best-effort, scroll vertical manual previo al long press y persistencia existente. Se elimina la ruta paralela `TouchEvent`/`pan-y` que podía dejar el gesto vertical bajo control del navegador/WebView y se conserva `.note-row` en el overlay visible para que sus estilos coincidan correctamente.
 - Post-V3 Rediseño visual — primer pase `Midnight Violet`: nueva capa de tema semántico negro/morado con cian técnico, bordes definidos y glow suave, tipografía reforzada contra recortes de descendentes, `O` tecnológica con núcleo/orbita sutil y movimiento reducido, workspace/editor convertidos a superficie oscura premium y notas separadas en tarjetas tipo papel digital.
 - Post-V3 Miniaturas de notas: el avatar de lista y de nota abierta reutiliza la primera imagen ya cifrada como miniatura mediante `loadEncryptedImagePreview`; si no existe mantiene la inicial. La imagen solo vive como Blob URL temporal en memoria y se revoca al desmontar/cambiar.
 - V3 cerrada: firma debug estable verificada con SHA-256 exacta, estado observable en CI y prueba física de continuidad APK `versionCode 1` → `versionCode 2` aceptada sin desinstalar. Issue #79 cerrado; #105 permanece diferido al pulido Android/RC.
