@@ -11,8 +11,16 @@ import { loadFolderColors } from '../folders/folderAppearanceService'
 import { loadFolderCovers } from '../folders/folderCoverService'
 import { loadFolders } from '../folders/folderService'
 import type { FolderRecord } from '../folders/folderTypes'
-import { loadTags, persistTagOrder } from '../tags/tagService'
-import type { TagRecord } from '../tags/tagTypes'
+import { createTag, loadTags, persistTagOrder } from '../tags/tagService'
+import {
+  DEFAULT_TAG_COLOR,
+  DEFAULT_TAG_ICON,
+  TAG_COLOR_OPTIONS,
+  TAG_ICON_OPTIONS,
+  normalizeTagName,
+  type TagRecord,
+} from '../tags/tagTypes'
+import '../tags/tagCreation.css'
 import './organicWorkspace.css'
 
 const TAG_LONG_PRESS_MS = 460
@@ -189,6 +197,13 @@ export function OrganicWorkspaceRuntime() {
   const [tagReorderMode, setTagReorderMode] = useState(false)
   const [draggingTagId, setDraggingTagId] = useState<string | null>(null)
   const [tagOrderError, setTagOrderError] = useState('')
+  const [tagActionMenuOpen, setTagActionMenuOpen] = useState(false)
+  const [tagCreateOpen, setTagCreateOpen] = useState(false)
+  const [tagName, setTagName] = useState('')
+  const [tagIcon, setTagIcon] = useState(DEFAULT_TAG_ICON)
+  const [tagColor, setTagColor] = useState(DEFAULT_TAG_COLOR)
+  const [tagCreateBusy, setTagCreateBusy] = useState(false)
+  const [tagCreateError, setTagCreateError] = useState('')
   const tagsRef = useRef<TagRecord[]>([])
   const tagHostRef = useRef<HTMLElement | null>(null)
   const draggingTagIdRef = useRef<string | null>(null)
@@ -343,6 +358,46 @@ export function OrganicWorkspaceRuntime() {
     () => activeFolderId ? foldersRef.current.find((folder) => folder.id === activeFolderId)?.name ?? '' : '',
     [activeFolderId, folderVisuals],
   )
+
+  function resetTagDraft() {
+    setTagName('')
+    setTagIcon(DEFAULT_TAG_ICON)
+    setTagColor(DEFAULT_TAG_COLOR)
+    setTagCreateError('')
+  }
+
+  async function handleCreateTag() {
+    if (tagCreateBusy) return
+    const normalized = normalizeTagName(tagName)
+    if (!normalized) {
+      setTagCreateError('Escribe un nombre para la etiqueta.')
+      return
+    }
+    if (tagsRef.current.some((tag) => tag.name.toLocaleLowerCase() === normalized.toLocaleLowerCase())) {
+      setTagCreateError('Ya existe una etiqueta con ese nombre.')
+      return
+    }
+
+    setTagCreateBusy(true)
+    setTagCreateError('')
+    try {
+      const created = await createTag(normalized, { icon: tagIcon, color: tagColor })
+      const next = [...tagsRef.current, created]
+      tagsRef.current = next
+      setTags(next)
+      setTagCreateOpen(false)
+      resetTagDraft()
+    } catch (createError) {
+      setTagCreateError(createError instanceof Error ? createError.message : 'No se pudo crear la etiqueta.')
+    } finally {
+      setTagCreateBusy(false)
+    }
+  }
+
+  function openTagDeleteManager() {
+    setTagActionMenuOpen(false)
+    document.querySelector<HTMLButtonElement>('.notes-tag-filter button[aria-label="Administrar etiquetas"]')?.click()
+  }
 
   function queueTagOrderPersistence(nextOrder: string[]) {
     pendingTagOrderRef.current = [...nextOrder]
@@ -546,6 +601,8 @@ export function OrganicWorkspaceRuntime() {
                 type="button"
                 key={tag.id}
                 data-oanix-organic-tag-id={tag.id}
+                data-oanix-tag-icon={tag.icon || DEFAULT_TAG_ICON}
+                style={{ '--oanix-tag-color': tag.color || DEFAULT_TAG_COLOR } as CSSProperties}
                 onClick={() => handleTagClick(tag)}
                 onPointerDown={(event) => beginTagPointerDown(tag, event)}
                 onPointerMove={(event) => handleTagPointerMove(tag, event)}
@@ -562,16 +619,115 @@ export function OrganicWorkspaceRuntime() {
             <span className="oanix-organic-tags__arrows" aria-hidden="true">‹‹</span>
             <button
               type="button"
-              onClick={() => document.querySelector<HTMLButtonElement>('.notes-tag-filter button[aria-label="Administrar etiquetas"]')?.click()}
-              aria-label="Administrar etiquetas"
+              onClick={() => setTagActionMenuOpen((open) => !open)}
+              aria-label="Opciones de etiquetas"
               title="Etiquetas"
+              aria-expanded={tagActionMenuOpen}
             >
               ＋
             </button>
           </div>
+          {tagActionMenuOpen && (
+            <div className="oanix-tag-actions" role="menu" aria-label="Acciones de etiquetas">
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setTagActionMenuOpen(false)
+                  resetTagDraft()
+                  setTagCreateOpen(true)
+                }}
+              >
+                Agregar etiqueta
+              </button>
+              <button type="button" role="menuitem" onClick={openTagDeleteManager}>
+                Eliminar etiqueta
+              </button>
+            </div>
+          )}
           {tagOrderError && <span className="oanix-organic-tags__error" role="alert">{tagOrderError}</span>}
         </div>,
         tagHost,
+      )}
+
+      {tagCreateOpen && createPortal(
+        <div className="oanix-tag-create-backdrop" role="presentation" onPointerDown={(event) => {
+          if (event.target === event.currentTarget && !tagCreateBusy) setTagCreateOpen(false)
+        }}>
+          <section
+            className="oanix-tag-create"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Nueva etiqueta"
+            onPointerDown={(event) => event.stopPropagation()}
+          >
+            <header>
+              <span className="oanix-tag-create__title-icon" aria-hidden="true">🏷️</span>
+              <strong>Nueva etiqueta</strong>
+            </header>
+
+            <label className="oanix-tag-create__field">
+              <span>NOMBRE</span>
+              <input
+                autoFocus
+                value={tagName}
+                onChange={(event) => setTagName(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' && !tagCreateBusy) void handleCreateTag()
+                  if (event.key === 'Escape' && !tagCreateBusy) setTagCreateOpen(false)
+                }}
+                maxLength={40}
+                placeholder="Ej. Proyectos 2026..."
+                aria-label="Nombre de nueva etiqueta"
+              />
+            </label>
+
+            <fieldset className="oanix-tag-create__section">
+              <legend>ICONO</legend>
+              <div className="oanix-tag-create__icons">
+                {TAG_ICON_OPTIONS.map((candidate) => (
+                  <button
+                    key={candidate}
+                    type="button"
+                    className={candidate === tagIcon ? 'is-selected' : ''}
+                    aria-label={`Usar icono ${candidate}`}
+                    aria-pressed={candidate === tagIcon}
+                    onClick={() => setTagIcon(candidate)}
+                  >
+                    {candidate}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+
+            <fieldset className="oanix-tag-create__section">
+              <legend>COLOR</legend>
+              <div className="oanix-tag-create__colors">
+                {TAG_COLOR_OPTIONS.map((candidate) => (
+                  <button
+                    key={candidate}
+                    type="button"
+                    className={candidate === tagColor ? 'is-selected' : ''}
+                    aria-label={`Usar color ${candidate}`}
+                    aria-pressed={candidate === tagColor}
+                    style={{ '--oanix-tag-create-color': candidate } as CSSProperties}
+                    onClick={() => setTagColor(candidate)}
+                  />
+                ))}
+              </div>
+            </fieldset>
+
+            {tagCreateError && <p className="oanix-tag-create__error" role="alert">{tagCreateError}</p>}
+
+            <footer>
+              <button type="button" className="is-cancel" onClick={() => setTagCreateOpen(false)} disabled={tagCreateBusy}>Cancelar</button>
+              <button type="button" className="is-primary" onClick={() => void handleCreateTag()} disabled={tagCreateBusy}>
+                {tagCreateBusy ? 'Creando…' : 'Crear'}
+              </button>
+            </footer>
+          </section>
+        </div>,
+        document.body,
       )}
     </>
   )
