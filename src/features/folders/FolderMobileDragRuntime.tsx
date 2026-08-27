@@ -131,13 +131,7 @@ function reorderDomAtPoint(gesture: TouchGesture, animate = true) {
   if (insertionTarget) gesture.rail.insertBefore(gesture.item, insertionTarget)
   else gesture.rail.insertBefore(gesture.item, endAnchor(gesture.rail))
 
-  if (animate && beforeRects) {
-    animateReflow(gesture.rail, beforeRects, gesture.item)
-    gesture.item.animate(
-      [{ boxShadow: '0 0 0 0 rgba(59,130,246,0)' }, { boxShadow: '0 0 0 3px rgba(59,130,246,.24)' }],
-      { duration: 120, easing: 'ease-out' },
-    )
-  }
+  if (animate && beforeRects) animateReflow(gesture.rail, beforeRects, gesture.item)
 }
 
 function scrollSpeed(clientX: number, rect: DOMRect): number {
