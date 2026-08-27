@@ -16,3 +16,11 @@ for (const [name, runtime] of [
     assert.doesNotMatch(runtime, /observer\.observe\(document\.documentElement/)
   })
 }
+
+test('device credential capability check runs only when the unlock form changes or window regains focus', () => {
+  assert.match(credentialRuntime, /let currentForm: HTMLFormElement \| null = null/)
+  assert.match(credentialRuntime, /const formChanged = form !== currentForm/)
+  assert.match(credentialRuntime, /if \(!formChanged && !forceAvailabilityCheck\) return/)
+  assert.match(credentialRuntime, /new MutationObserver\(\(\) => refresh\(\)\)/)
+  assert.match(credentialRuntime, /const handleFocus = \(\) => refresh\(true\)/)
+})

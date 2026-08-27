@@ -19,16 +19,21 @@ export function AndroidDeviceCredentialRetryRuntime({
 
   useEffect(() => {
     let active = true
+    let currentForm: HTMLFormElement | null = null
 
-    const refresh = () => {
+    const refresh = (forceAvailabilityCheck = false) => {
       const passwordInput = document.querySelector<HTMLInputElement>('#master-password')
       const form = passwordInput?.closest('form') ?? null
+      const formChanged = form !== currentForm
+      currentForm = form
       setTarget(form)
 
       if (!form) {
         setAvailable(false)
         return
       }
+
+      if (!formChanged && !forceAvailabilityCheck) return
 
       void canUseAndroidDeviceCredentialUnlock()
         .then((value) => {
@@ -41,16 +46,17 @@ export function AndroidDeviceCredentialRetryRuntime({
 
     refresh()
     const appRoot = document.getElementById('root')
-    const observer = appRoot ? new MutationObserver(refresh) : null
+    const observer = appRoot ? new MutationObserver(() => refresh()) : null
     if (appRoot && observer) {
       observer.observe(appRoot, { childList: true, subtree: true })
     }
-    window.addEventListener('focus', refresh)
+    const handleFocus = () => refresh(true)
+    window.addEventListener('focus', handleFocus)
 
     return () => {
       active = false
       observer?.disconnect()
-      window.removeEventListener('focus', refresh)
+      window.removeEventListener('focus', handleFocus)
     }
   }, [])
 
