@@ -10,6 +10,8 @@ const REORDER_SLOT_TICK_MS = 85
 interface ActiveSwipe {
   pointerId: number
   tagId: string
+  scroller: HTMLElement
+  root: HTMLElement
   startX: number
   startY: number
   startScrollLeft: number
@@ -63,16 +65,16 @@ export function TagMobileGestureRuntime() {
       return reorderGeometry
     }
 
-    function ensureDragOverlay(event: PointerEvent, scroller: HTMLElement) {
-      const source = document.querySelector<HTMLElement>(
-        '.oanix-organic-tags.is-reordering .oanix-organic-tag-chip.is-dragging[data-oanix-organic-tag-id]',
-      )
-      if (!source) {
-        removeDragOverlay()
-        return
-      }
-
+    function ensureDragOverlay(event: PointerEvent, scroller: HTMLElement, root: HTMLElement) {
       if (!dragOverlay) {
+        const source = root.querySelector<HTMLElement>(
+          '.oanix-organic-tag-chip.is-dragging[data-oanix-organic-tag-id]',
+        )
+        if (!source) {
+          removeDragOverlay()
+          return
+        }
+
         const rect = source.getBoundingClientRect()
         dragOffsetX = Math.min(Math.max(event.clientX - rect.left, 0), rect.width)
         dragOffsetY = Math.min(Math.max(event.clientY - rect.top, 0), rect.height)
@@ -104,7 +106,8 @@ export function TagMobileGestureRuntime() {
 
       const tick = (now: number) => {
         autoScrollFrame = null
-        if (!active || !document.querySelector('.oanix-organic-tags.is-reordering')) return
+        const current = active
+        if (!current || current.scroller !== scroller || !current.root.classList.contains('is-reordering')) return
 
         let delta = 0
         const rightEdge = Math.min(geometry.scrollerRight, geometry.controlsLeft)
@@ -142,12 +145,15 @@ export function TagMobileGestureRuntime() {
       if (!(target instanceof Element)) return
       const chip = target.closest<HTMLElement>('.oanix-organic-tag-chip[data-oanix-organic-tag-id]')
       const scroller = chip?.closest<HTMLElement>('.oanix-organic-tags__scroll')
+      const root = scroller?.closest<HTMLElement>('.oanix-organic-tags')
       const tagId = chip ? tagIdFromTarget(chip) : ''
-      if (!chip || !scroller || !tagId) return
+      if (!chip || !scroller || !root || !tagId) return
 
       active = {
         pointerId: event.pointerId,
         tagId,
+        scroller,
+        root,
         startX: event.clientX,
         startY: event.clientY,
         startScrollLeft: scroller.scrollLeft,
@@ -158,30 +164,30 @@ export function TagMobileGestureRuntime() {
     function handlePointerMove(event: PointerEvent) {
       if (event.pointerType === 'mouse') return
       if (!active || active.pointerId !== event.pointerId) return
-      const scroller = document.querySelector<HTMLElement>('.oanix-organic-tags__scroll')
-      if (!scroller) return
+      const current = active
+      const { scroller, root } = current
 
-      if (document.querySelector('.oanix-organic-tags.is-reordering')) {
-        active.scrolling = false
-        suppressClickForId = active.tagId
+      if (root.classList.contains('is-reordering')) {
+        current.scrolling = false
+        suppressClickForId = current.tagId
         event.preventDefault()
-        ensureDragOverlay(event, scroller)
+        ensureDragOverlay(event, scroller, root)
         scheduleAutoScrollDuringReorder(scroller, event.clientX)
         return
       }
 
       removeDragOverlay()
-      const dx = event.clientX - active.startX
-      const dy = event.clientY - active.startY
-      if (!active.scrolling) {
+      const dx = event.clientX - current.startX
+      const dy = event.clientY - current.startY
+      if (!current.scrolling) {
         if (Math.abs(dx) < SWIPE_START_PX) return
         if (Math.abs(dx) <= Math.abs(dy)) return
-        active.scrolling = true
+        current.scrolling = true
       }
 
       event.preventDefault()
-      scroller.scrollLeft = active.startScrollLeft - dx
-      suppressClickForId = active.tagId
+      scroller.scrollLeft = current.startScrollLeft - dx
+      suppressClickForId = current.tagId
     }
 
     function clearPointer(event: PointerEvent) {
