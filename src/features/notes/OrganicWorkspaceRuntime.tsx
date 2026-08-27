@@ -291,37 +291,13 @@ export function OrganicWorkspaceRuntime() {
     window.addEventListener('oanix:conflict-resolved', handleConflictResolved)
     window.addEventListener('oanix:workspace-folder-committed', handleCommittedFolder)
 
-    function finishFolderReorder() {
-      if (!document.querySelector('.oanix-folder-grid--reordering')) return
-      document.body.setAttribute('data-oanix-folder-drop-finishing', 'true')
-      let attempts = 0
-      const finish = () => {
-        attempts += 1
-        const done = document.querySelector<HTMLButtonElement>('.oanix-folder-rail__done')
-        if (done && !done.disabled) {
-          done.click()
-          document.body.removeAttribute('data-oanix-folder-drop-finishing')
-          return
-        }
-        if (attempts < 100) window.setTimeout(finish, 40)
-        else document.body.removeAttribute('data-oanix-folder-drop-finishing')
-      }
-      window.setTimeout(finish, 0)
-    }
-
-    document.addEventListener('pointerup', finishFolderReorder)
-    document.addEventListener('pointercancel', finishFolderReorder)
-
     return () => {
       observer.disconnect()
       window.removeEventListener('oanix:local-data-changed', handleLocalChange)
       window.removeEventListener('oanix:conflict-resolved', handleConflictResolved)
       window.removeEventListener('oanix:workspace-folder-committed', handleCommittedFolder)
-      document.removeEventListener('pointerup', finishFolderReorder)
-      document.removeEventListener('pointercancel', finishFolderReorder)
       if (reloadTimerRef.current !== null) window.clearTimeout(reloadTimerRef.current)
       if (pressTimerRef.current !== null) window.clearTimeout(pressTimerRef.current)
-      document.body.removeAttribute('data-oanix-folder-drop-finishing')
       document.querySelector('.oanix-organic-tags-host')?.remove()
     }
   }, [])
