@@ -10,6 +10,17 @@ import './personalization.css'
 import './personalization-workspace.css'
 import './session-auto-lock.css'
 
+const WORKSPACE_SELECTOR = '.notes-shell'
+const WORKSPACE_MENU_SELECTOR = '.workspace-menu[role="menu"]'
+
+function mutationTouchesSelector(record: MutationRecord, selector: string): boolean {
+  const nodes = [...Array.from(record.addedNodes), ...Array.from(record.removedNodes)]
+  return nodes.some((node) => {
+    if (!(node instanceof Element)) return false
+    return node.matches(selector) || node.querySelector(selector) !== null
+  })
+}
+
 export function ThemeMenu() {
   const [open, setOpen] = useState(false)
   const [autoLockMinutes, setAutoLockMinutes] = useState<AutoLockMinutes>(() => readSavedAutoLockMinutes())
@@ -28,19 +39,53 @@ export function ThemeMenu() {
   }
 
   useEffect(() => {
-    const workspace = document.querySelector<HTMLElement>('.notes-shell')
+    const appRoot = document.getElementById('root')
+    let workspace: HTMLElement | null = null
+    let workspaceMenuObserver: MutationObserver | null = null
 
     function syncWorkspaceMenu() {
-      const next = workspace?.querySelector<HTMLElement>('.workspace-menu[role="menu"]') ?? null
+      const next = workspace?.querySelector<HTMLElement>(WORKSPACE_MENU_SELECTOR) ?? null
       setWorkspaceMenu((current) => current === next ? current : next)
     }
 
-    syncWorkspaceMenu()
-    if (!workspace) return
+    function bindWorkspace() {
+      const nextWorkspace = document.querySelector<HTMLElement>(WORKSPACE_SELECTOR)
+      if (nextWorkspace === workspace) {
+        syncWorkspaceMenu()
+        return
+      }
 
-    const observer = new MutationObserver(syncWorkspaceMenu)
-    observer.observe(workspace, { childList: true, subtree: true })
-    return () => observer.disconnect()
+      workspaceMenuObserver?.disconnect()
+      workspace = nextWorkspace
+      syncWorkspaceMenu()
+
+      if (!workspace) {
+        workspaceMenuObserver = null
+        return
+      }
+
+      workspaceMenuObserver = new MutationObserver((records) => {
+        if (records.some((record) => mutationTouchesSelector(record, WORKSPACE_MENU_SELECTOR))) {
+          syncWorkspaceMenu()
+        }
+      })
+      workspaceMenuObserver.observe(workspace, { childList: true, subtree: true })
+    }
+
+    bindWorkspace()
+    if (!appRoot) return () => workspaceMenuObserver?.disconnect()
+
+    const workspaceHostObserver = new MutationObserver((records) => {
+      if (records.some((record) => mutationTouchesSelector(record, WORKSPACE_SELECTOR))) {
+        bindWorkspace()
+      }
+    })
+    workspaceHostObserver.observe(appRoot, { childList: true, subtree: true })
+
+    return () => {
+      workspaceHostObserver.disconnect()
+      workspaceMenuObserver?.disconnect()
+    }
   }, [])
 
   useEffect(() => {
