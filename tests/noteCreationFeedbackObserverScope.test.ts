@@ -11,8 +11,14 @@ test('note creation feedback observes document detail state without a global sub
   assert.doesNotMatch(detailObserverBlock, /subtree: true/)
 })
 
-test('note creation feedback scopes workspace mutations to structural changes and disabled create-state changes', () => {
-  assert.match(runtime, /document\.querySelector<HTMLElement>\('\.notes-shell'\)/)
+test('note creation feedback ignores unrelated workspace mutations', () => {
+  assert.match(runtime, /const FEEDBACK_SURFACE_SELECTOR = `\$\{CREATE_BUTTON_SELECTOR\}, \.notes-error, \.note-save-error`/)
+  assert.match(runtime, /function mutationTouchesFeedbackSurface\(record: MutationRecord\)/)
+  assert.match(runtime, /record\.type === 'attributes'/)
+  assert.match(runtime, /record\.target instanceof Element && record\.target\.matches\(CREATE_BUTTON_SELECTOR\)/)
+  assert.match(runtime, /node\.matches\(FEEDBACK_SURFACE_SELECTOR\) \|\| node\.querySelector\(FEEDBACK_SURFACE_SELECTOR\) !== null/)
+  assert.match(runtime, /records\.some\(mutationTouchesFeedbackSurface\)/)
+
   const workspaceObserverBlock = runtime.match(/workspaceObserver\.observe\(observedWorkspace, \{([\s\S]*?)\n\s*\}\)/)?.[1] ?? ''
   assert.match(workspaceObserverBlock, /childList: true/)
   assert.match(workspaceObserverBlock, /subtree: true/)
