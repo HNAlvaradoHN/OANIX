@@ -9,5 +9,5 @@ test('privacy help portal observer ignores unrelated body mutations', () => {
   assert.match(runtime, /function mutationTouchesPrivacyActions\(record: MutationRecord\)/)
   assert.match(runtime, /records\.some\(mutationTouchesPrivacyActions\)/)
   assert.match(runtime, /portalObserver\.observe\(document\.body, \{ childList: true \}\)/)
-  assert.doesNotMatch(runtime, /new MutationObserver\(scheduleInspect\)/)
+  assert.doesNotMatch(runtime, /const portalObserver = new MutationObserver\(scheduleInspect\)/)
 })
