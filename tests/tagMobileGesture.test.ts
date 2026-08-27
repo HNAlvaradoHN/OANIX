@@ -38,6 +38,21 @@ test('reorder muestra un clon fijo bajo el dedo y oculta el chip que salta en el
   assert.match(css, /\.oanix-tag-drag-overlay[\s\S]*?pointer-events:\s*none !important/)
 })
 
+test('reorder abre hueco también al cruzar los extremos del carril', () => {
+  assert.match(organic, /function tagDropTargetAtX/)
+  assert.match(organic, /clientX < candidate\.rect\.left \+ candidate\.rect\.width \/ 2/)
+  assert.match(organic, /placeAfter: false/)
+  assert.match(organic, /placeAfter: true/)
+  assert.match(organic, /if \(next === current\) return current/)
+  assert.doesNotMatch(organic, /document\.elementFromPoint\(event\.clientX, event\.clientY\)/)
+})
+
+test('reflow de etiquetas cancela la animación anterior antes de abrir el siguiente hueco', () => {
+  assert.match(organic, /const tagReflowAnimations = new WeakMap<HTMLElement, Animation>/)
+  assert.match(organic, /tagReflowAnimations\.get\(element\)\?\.cancel\(\)/)
+  assert.match(organic, /duration: 150/)
+})
+
 test('reorder puede desplazar la tira al acercarse a los bordes sin tocar persistencia', () => {
   assert.match(runtime, /REORDER_EDGE_PX = 44/)
   assert.match(runtime, /REORDER_SCROLL_STEP_PX = 12/)
