@@ -68,10 +68,18 @@ test('mantener presionada una carpeta conserva drag real y la suelta termina el 
   assert.doesNotMatch(interactiveCss, /@keyframes oanix-folder-jiggle/)
   assert.doesNotMatch(interactiveCss, /animation:\s*oanix-folder-jiggle/)
   assert.match(interactiveCss, /\.oanix-folder-grid--reordering \.oanix-folder-rail__item\[data-oanix-folder-id\][\s\S]*cursor:\s*grab/)
-  assert.match(interactiveCss, /\.oanix-folder-grid--reordering \.oanix-folder-rail__item\.is-dragging[\s\S]*opacity:\s*\.28[\s\S]*transform:\s*scale\(\.85\)/)
+  assert.match(interactiveCss, /\.oanix-folder-grid--reordering \.oanix-folder-rail__item\.is-dragging[\s\S]*opacity:\s*\.28[\s\S]*scale:\s*\.85/)
+  assert.doesNotMatch(interactiveCss, /\.oanix-folder-grid--reordering \.oanix-folder-rail__item\.is-dragging[\s\S]*transform:\s*scale\(\.85\)/)
   assert.match(runtime, /function finishFolderDrag[\s\S]*setReorderMode\(false\)/)
   assert.match(runtime, /function cancelFolderGesture[\s\S]*setReorderMode\(false\)/)
   assert.doesNotMatch(runtime + organicRuntime + organicCss, /finishFolderReorder|oanix-folder-rail__done|data-oanix-folder-drop-finishing/)
+})
+
+test('el CSS de interacción no conserva controles retirados del personalizador', () => {
+  assert.doesNotMatch(interactiveCss, /oanix-folder-customizer__open-action/)
+  assert.doesNotMatch(interactiveCss, /oanix-folder-appearance-picker__reset/)
+  assert.doesNotMatch(interactiveCss, /oanix-folder-appearance-picker\[hidden\]/)
+  assert.doesNotMatch(interactiveCss, /FolderAppearanceRuntime/)
 })
 
 test('FolderGridRuntime sigue dentro de la sesión desbloqueada como fuente de comportamiento real', () => {
