@@ -413,6 +413,8 @@
   .oanix-folder-rail__item > small { top: 43px; }
 }
 
+}
+
 @media (max-height: 650px) and (min-width: 769px) {
   .oanix-folder-rail { padding-top: 10px; }
   .oanix-folder-rail__scroll { gap: 8px; }
