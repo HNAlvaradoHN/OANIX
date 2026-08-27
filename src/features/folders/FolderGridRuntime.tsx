@@ -49,6 +49,7 @@ interface FolderDragGhost {
   name: string
   noteCount: number
   cover: string
+  icon: FolderIcon
   left: number
   top: number
   width: number
@@ -442,6 +443,7 @@ export function FolderGridRuntime() {
       name: folder.name,
       noteCount: data.counts.get(folder.id) ?? 0,
       cover: data.covers.get(folder.id) ?? '',
+      icon: data.icons.get(folder.id) ?? defaultIconForIndex(Math.max(0, data.folders.findIndex((item) => item.id === folder.id))),
       left: rect.left,
       top: rect.top,
       width: rect.width,
@@ -792,7 +794,7 @@ export function FolderGridRuntime() {
           <span className="oanix-folder-drag-ghost__visual">
             {dragGhost.cover
               ? <img src={dragGhost.cover} alt="" draggable={false} />
-              : <span className="oanix-folder-rail__folder-mark">⌑</span>}
+              : <span className="oanix-folder-rail__folder-mark">{dragGhost.icon}</span>}
           </span>
           <strong>{dragGhost.name}</strong>
           <small>{dragGhost.noteCount}</small>
