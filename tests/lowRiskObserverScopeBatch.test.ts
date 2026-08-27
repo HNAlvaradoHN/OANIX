@@ -8,9 +8,11 @@ const nativeNoteShare = readFileSync('src/platform/android/NativeNoteShareRuntim
 const nativeShare = readFileSync('src/platform/android/NativeShareRuntime.tsx', 'utf8')
 const keystoreDiagnostic = readFileSync('src/platform/android/AndroidKeystoreDiagnosticRuntime.tsx', 'utf8')
 
-test('bulk privacy observes note rows only inside the notes workspace', () => {
-  assert.match(bulkPrivacy, /document\.querySelector<HTMLElement>\('\.notes-shell'\)/)
-  assert.match(bulkPrivacy, /observer\.observe\(workspace, \{ childList: true, subtree: true \}\)/)
+test('bulk privacy observes direct note-list structure instead of the whole workspace', () => {
+  assert.match(bulkPrivacy, /document\.querySelector<HTMLElement>\('\.notes-list'\)/)
+  assert.match(bulkPrivacy, /observer\.observe\(noteList, \{ childList: true \}\)/)
+  assert.doesNotMatch(bulkPrivacy, /observer\.observe\(workspace/)
+  assert.doesNotMatch(bulkPrivacy, /subtree: true/)
   assert.doesNotMatch(bulkPrivacy, /observer\.observe\(document\.body/)
 })
 
