@@ -204,12 +204,12 @@ html[data-oanix-theme='classic-day'] .notes-brand span { color: #ea580c !importa
 }
 
 .oanix-organic-tags.is-reordering .oanix-organic-tag-chip[data-oanix-organic-tag-id] {
-  animation: oanix-organic-jiggle .16s ease-in-out infinite alternate;
+  outline: 1px solid color-mix(in srgb,#60a5fa 28%,transparent);
+  outline-offset: 1px;
   cursor: grab;
   touch-action: none;
 }
 .oanix-organic-tags.is-reordering .oanix-organic-tag-chip.is-dragging {
-  animation: none;
   opacity: .42;
   transform: scale(.94);
   border: 1px dashed #60a5fa;
@@ -574,10 +574,6 @@ body[data-oanix-folder-drop-finishing] .oanix-folder-grid--reordering .oanix-fol
 .oanix-folder-grid--reordering ~ .oanix-organic-folder-controls,
 body:has(.oanix-folder-grid--reordering) .oanix-organic-folder-controls { opacity: .45; pointer-events: none; }
 
-@keyframes oanix-organic-jiggle {
-  from { transform: rotate(-1.2deg) translateX(-.35px); }
-  to { transform: rotate(1.2deg) translateX(.35px); }
-}
 @keyframes oanix-organic-arrows {
   0%,100% { transform: translateX(0); opacity: .55; }
   50% { transform: translateX(-4px); opacity: 1; }
@@ -628,5 +624,6 @@ body:has(.oanix-folder-grid--reordering) .oanix-organic-folder-controls { opacit
   .oanix-organic-background,
   .note-row,
   .oanix-organic-tags.is-reordering .oanix-organic-tag-chip[data-oanix-organic-tag-id],
-  .oanix-organic-tags__arrows { animation: none !important; transition: none !important; }
+  .oanix-organic-tags__arrows { transition: none !important; }
+  .oanix-organic-tags__arrows { animation: none !important; }
 }
