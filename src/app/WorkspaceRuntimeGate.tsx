@@ -14,7 +14,6 @@ import '../features/privacy/noteBulkPrivacyOverrides.css'
 import { PrivacyStatusHelp } from '../features/privacy/PrivacyStatusHelp'
 import { TagCreationRuntime } from '../features/tags/TagCreationRuntime'
 import { TagMobileGestureRuntime } from '../features/tags/TagMobileGestureRuntime'
-import '../features/tags/tagTouchMotionGuard.css'
 import { WorkspaceQuickPolishRuntime } from './WorkspaceQuickPolishRuntime'
 
 export function WorkspaceRuntimeGate() {
