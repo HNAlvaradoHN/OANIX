@@ -11,9 +11,15 @@ test('note creation feedback observes document detail state without a global sub
   assert.doesNotMatch(detailObserverBlock, /subtree: true/)
 })
 
-test('note creation feedback scopes content mutations to the notes workspace', () => {
+test('note creation feedback scopes workspace mutations to structural changes and disabled create-state changes', () => {
   assert.match(runtime, /document\.querySelector<HTMLElement>\('\.notes-shell'\)/)
-  assert.match(runtime, /workspaceObserver\.observe\(observedWorkspace, \{\s*childList: true,\s*subtree: true,\s*characterData: true/s)
+  const workspaceObserverBlock = runtime.match(/workspaceObserver\.observe\(observedWorkspace, \{([\s\S]*?)\n\s*\}\)/)?.[1] ?? ''
+  assert.match(workspaceObserverBlock, /childList: true/)
+  assert.match(workspaceObserverBlock, /subtree: true/)
+  assert.match(workspaceObserverBlock, /attributes: true/)
+  assert.match(workspaceObserverBlock, /attributeFilter: \['disabled'\]/)
+  assert.doesNotMatch(workspaceObserverBlock, /characterData: true/)
+  assert.doesNotMatch(workspaceObserverBlock, /aria-label/)
   assert.doesNotMatch(runtime, /observer\.observe\(document\.documentElement/)
   assert.doesNotMatch(runtime, /observer\.observe\(document\.body/)
 })

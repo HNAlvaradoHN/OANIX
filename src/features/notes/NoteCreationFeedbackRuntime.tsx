@@ -119,9 +119,8 @@ export function NoteCreationFeedbackRuntime() {
       workspaceObserver.observe(observedWorkspace, {
         childList: true,
         subtree: true,
-        characterData: true,
         attributes: true,
-        attributeFilter: ['disabled', 'aria-label'],
+        attributeFilter: ['disabled'],
       })
     }
 
