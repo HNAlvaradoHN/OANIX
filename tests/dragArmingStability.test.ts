@@ -16,7 +16,7 @@ test('active folder drag owns pointer movement until release', () => {
   assert.match(runtime, /gesture\.dragging = true/)
   assert.match(runtime, /setPointerCapture\(gesture\.pointerId\)/)
   assert.match(runtime, /if \(!gesture\.dragging\)[\s\S]*return[\s\S]*event\.preventDefault\(\)[\s\S]*positionGhost\(gesture\)[\s\S]*reorderDomAtPoint\(gesture\)/)
-  assert.match(runtime, /document\.addEventListener\('pointerup', persistAndFinish, true\)/)
+  assert.match(runtime, /document\.addEventListener\('pointerup', finishGesture, true\)/)
   assert.match(runtime, /document\.addEventListener\('pointercancel', cancelGesture, true\)/)
 })
 

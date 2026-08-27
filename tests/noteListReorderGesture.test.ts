@@ -55,7 +55,6 @@ test('la tarjeta visible usa un overlay independiente y sigue directamente el de
   assert.match(runtime, /forceFallback: false/)
   assert.match(runtime, /fallbackOnBody: false/)
   assert.match(runtime, /fallbackTolerance: 4/)
-  assert.match(runtime, /fallbackClass: 'oanix-mobile-note-drag-ghost'/)
   assert.match(runtime, /ghostClass: 'oanix-mobile-note-placeholder'/)
   assert.match(runtime, /cloneNode\(true\)/)
   assert.match(runtime, /clone\.classList\.add\('oanix-mobile-note-drag-overlay'\)/)
@@ -70,6 +69,7 @@ test('la tarjeta visible usa un overlay independiente y sigue directamente el de
   assert.match(css, /.notes-shell > \.note-row\.oanix-mobile-note-drag-overlay[\s\S]*?pointer-events:\s*none !important/)
   assert.match(css, /\.note-row\.oanix-mobile-note-placeholder[\s\S]*?border:\s*2px dashed/)
   assert.match(css, /\.note-row\.oanix-mobile-note-placeholder > \*[\s\S]*?visibility:\s*hidden !important/)
+  assert.doesNotMatch(css, /body > \.note-row\.oanix-mobile-note-drag-ghost/)
   assert.match(css, /@keyframes oanix-note-drop-slot-pulse/)
 })
 

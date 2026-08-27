@@ -1,5 +1,4 @@
 import { useEffect } from 'react'
-import { persistFolderOrder } from './folderService'
 import './folderMobileDrag.css'
 
 const LONG_PRESS_MS = 220
@@ -266,7 +265,7 @@ export function FolderMobileDragRuntime() {
       reorderDomAtPoint(gesture)
     }
 
-    const persistAndFinish = async (event: PointerEvent) => {
+    const finishGesture = (event: PointerEvent) => {
       if (!gesture || event.pointerId !== gesture.pointerId) return
       const finished = gesture
       event.stopPropagation()
@@ -281,16 +280,15 @@ export function FolderMobileDragRuntime() {
       event.preventDefault()
       suppressClickUntil = performance.now() + 520
       const nextOrder = folderOrder(finished.rail)
+      const changed = nextOrder.join('|') !== finished.orderBefore.join('|')
       cleanupVisuals()
       gesture = null
 
-      try {
-        await persistFolderOrder(nextOrder)
-        window.dispatchEvent(new Event('oanix:local-data-changed'))
+      if (changed) {
+        window.dispatchEvent(new CustomEvent('oanix:folder-order-preview', {
+          detail: { orderedIds: nextOrder },
+        }))
         if ('vibrate' in navigator) navigator.vibrate?.(12)
-      } catch {
-        restoreDomOrder(finished.rail, finished.orderBefore)
-        window.dispatchEvent(new Event('oanix:local-data-changed'))
       }
     }
 
@@ -348,7 +346,7 @@ export function FolderMobileDragRuntime() {
 
     document.addEventListener('pointerdown', onPointerDown, true)
     document.addEventListener('pointermove', onPointerMove, true)
-    document.addEventListener('pointerup', persistAndFinish, true)
+    document.addEventListener('pointerup', finishGesture, true)
     document.addEventListener('pointercancel', cancelGesture, true)
     document.addEventListener('wheel', onWheel, { capture: true, passive: false })
     document.addEventListener('click', onClick, true)
@@ -360,7 +358,7 @@ export function FolderMobileDragRuntime() {
       cancelGesture()
       document.removeEventListener('pointerdown', onPointerDown, true)
       document.removeEventListener('pointermove', onPointerMove, true)
-      document.removeEventListener('pointerup', persistAndFinish, true)
+      document.removeEventListener('pointerup', finishGesture, true)
       document.removeEventListener('pointercancel', cancelGesture, true)
       document.removeEventListener('wheel', onWheel, true)
       document.removeEventListener('click', onClick, true)
