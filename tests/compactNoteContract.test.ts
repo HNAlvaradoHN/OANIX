@@ -9,8 +9,7 @@ const gate = readFileSync('src/app/WorkspaceRuntimeGate.tsx', 'utf8')
 const main = readFileSync('src/main.tsx', 'utf8')
 
 test('compact note rows reserve separate icon, text and metadata zones', () => {
-  assert.match(compactContract, /padding-left:\s*64px !important/)
-  assert.match(compactContract, /padding-right:\s*clamp\(160px, 44vw, 230px\) !important/)
+  assert.match(compactContract, /padding:\s*12px clamp\(160px, 44vw, 230px\) 10px 64px !important/)
   assert.match(compactContract, /max-width:\s*min\(30vw, 180px\) !important/)
   assert.match(compactContract, /place-items:\s*center !important/)
   assert.match(compactContract, /transform:\s*translateY\(-1px\) !important/)
