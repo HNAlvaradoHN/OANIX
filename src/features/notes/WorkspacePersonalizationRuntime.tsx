@@ -81,6 +81,7 @@ export function WorkspacePersonalizationRuntime() {
     if (decorateFrameRef.current !== null) window.cancelAnimationFrame(decorateFrameRef.current)
     decorateFrameRef.current = window.requestAnimationFrame(() => {
       decorateFrameRef.current = null
+      if (workspaceReorderActive()) return
       decorateWorkspace()
     })
   }
