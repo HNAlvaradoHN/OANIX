@@ -1,0 +1,7 @@
+/* The arrows remain visible as the reorder affordance on touch, but they do not
+ * need to pulse forever while the workspace is idle. */
+@media (pointer: coarse) {
+  .oanix-organic-tags__arrows {
+    animation: none !important;
+  }
+}
