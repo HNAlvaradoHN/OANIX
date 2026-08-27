@@ -1,0 +1,5 @@
+@media (pointer: coarse) {
+  .oanix-organic-tags__arrows {
+    animation: none !important;
+  }
+}
