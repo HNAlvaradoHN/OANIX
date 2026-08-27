@@ -516,7 +516,7 @@ export function OrganicWorkspaceRuntime() {
 
   const backgroundStyle = {
     '--oanix-organic-folder-color': activeFolderColor,
-    ...(activeFolderCover ? { backgroundImage: `url("${activeFolderCover.replace(/"/g, '\\"')}")` } : {}),
+    ...(activeFolderCover ? { '--oanix-organic-cover-image': `url("${activeFolderCover.replace(/"/g, '\\"')}")` } : {}),
   } as CSSProperties
 
   return (
