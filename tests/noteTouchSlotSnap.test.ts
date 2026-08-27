@@ -48,8 +48,8 @@ test('al soltar conserva el DOM final y persiste exactamente ese orden', () => {
   assert.match(runtime, /const nextOrder = noteOrder\(list\)/)
   assert.match(runtime, /const changed = nextOrder\.join\('\|'\) !== finished\.orderBefore\.join\('\|'\)/)
   assert.match(runtime, /clearDragVisuals\(\)/)
-  assert.match(runtime, /if \(changed\) void persistCurrentOrder\(nextOrder\)/)
-  assert.match(runtime, /persistNoteOrder\(nextOrder\)/)
+  assert.match(runtime, /if \(changed\) persistCurrentOrder\(nextOrder\)/)
+  assert.match(runtime, /persistNoteOrder\(orderToPersist\)/)
 })
 
 test('pinned permanece dentro de su grupo y autoscroll sigue activo', () => {
