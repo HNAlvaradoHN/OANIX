@@ -56,7 +56,9 @@ test('administrar una carpeta queda aislado a esa carpeta y no abre el creador n
   assert.match(bridge, /Administrar nombre o eliminar esta carpeta/)
   assert.match(creation, /folderManagementActive\(\)/)
   assert.match(creation, /if \(folderManagementActive\(\)\) return/)
-  assert.match(creation, /createRequestedRef/)
+  assert.doesNotMatch(creation, /createRequestedRef/)
+  assert.match(creation, /CREATE_TRIGGER_SELECTOR/)
+  assert.match(creation, /oanix:open-folder-creator/)
   assert.match(creation, /\.notes-tab--add, \.oanix-folder-rail__item--add, \.oanix-organic-folder-control--add/)
 })
 
