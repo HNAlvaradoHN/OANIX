@@ -10,6 +10,7 @@ const tagCreator = readFileSync('src/features/tags/TagCreationRuntime.tsx', 'utf
 const tagService = readFileSync('src/features/tags/tagService.ts', 'utf8')
 const tagTypes = readFileSync('src/features/tags/tagTypes.ts', 'utf8')
 const refinements = readFileSync('src/features/notes/workspaceRefinements.css', 'utf8')
+const globalCss = readFileSync('src/styles/global.css', 'utf8')
 
 test('folder creation no longer depends on the legacy folder manager dialog', () => {
   assert.doesNotMatch(folderCreator, /MutationObserver/)
@@ -21,6 +22,12 @@ test('folder creation no longer depends on the legacy folder manager dialog', ()
 test('workspace no longer blocks behind a fake boot screen and reserves the tag rail from first frame', () => {
   assert.doesNotMatch(main, /WorkspaceBootRuntime/)
   assert.match(refinements, /notes-sidebar:not\(:has\(\.oanix-organic-tags-host\)\) \.notes-list[\s\S]*margin-top:\s*62px !important/)
+})
+
+test('touch startup keeps large blurred vault ambience static while preserving small core motion', () => {
+  assert.match(globalCss, /@media \(pointer: coarse\)[\s\S]*\.vault-shell::after,[\s\S]*\.vault-glow[\s\S]*animation:\s*none/)
+  assert.match(globalCss, /\.vault-core__ring--outer[\s\S]*animation:\s*vaultOrbit/)
+  assert.match(globalCss, /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.vault-core__ring[\s\S]*animation:\s*none !important/)
 })
 
 test('top tag plus owns professional tag creation with persisted icon and color after unlock', () => {
