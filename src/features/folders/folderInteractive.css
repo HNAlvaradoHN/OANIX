@@ -330,6 +330,23 @@ html[data-oanix-theme='classic-day'] .oanix-folder-customizer .oanix-folder-appe
   .oanix-folder-appearance-picker__icons { grid-template-columns: repeat(5,minmax(0,1fr)); }
 }
 
+/* Touch browsers can keep :hover latched after a tap. Neutralize transform-only
+   hover feedback there so it cannot compete with selection or reorder feedback. */
+@media (hover: none), (pointer: coarse) {
+  .oanix-folder-rail__item:hover:not(.is-selected) {
+    transform: none !important;
+  }
+
+  .oanix-folder-rail__item.is-selected:hover {
+    transform: translateY(-2px) translateZ(18px) !important;
+  }
+
+  .oanix-folder-customizer button:hover:not(:focus-visible),
+  .oanix-folder-customizer .oanix-folder-appearance-picker__icon:hover:not(:focus-visible) {
+    transform: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .oanix-folder-customizer button { transition: none !important; }
 }
