@@ -47,10 +47,9 @@ test('folder gear uses an optically centered pseudo glyph', () => {
   assert.match(polishCss, /justify-content:\s*center/)
 })
 
-test('sortable fallback note keeps the original card dimensions and stays visible on body', () => {
-  assert.match(noteDragCss, /body\s*>\s*\.note-row\.oanix-mobile-note-drag-ghost/)
-  assert.match(noteDragCss, /width:\s*var\(--oanix-note-drag-width\)\s*!important/)
-  assert.match(noteDragCss, /height:\s*var\(--oanix-note-drag-height\)\s*!important/)
-  assert.match(noteDragCss, /visibility:\s*visible\s*!important/)
-  assert.match(noteDragCss, /opacity:\s*\.99\s*!important/)
+test('desktop note drag does not detach a legacy fallback card to body', () => {
+  assert.match(noteDragRuntime, /forceFallback: false/)
+  assert.match(noteDragRuntime, /fallbackOnBody: false/)
+  assert.doesNotMatch(noteDragCss, /body\s*>\s*\.note-row\.oanix-mobile-note-drag-ghost/)
+  assert.match(noteDragCss, /.notes-shell > \.note-row\.oanix-mobile-note-drag-overlay/)
 })
