@@ -57,8 +57,8 @@ test('note drag keeps Sortable ordering but renders an independent visible overl
   assert.match(noteReorder, /document\.addEventListener\('pointermove', onTouchPointerMove/)
   assert.doesNotMatch(noteReorder, /document\.addEventListener\('touchmove'/)
   assert.match(noteReorderCss, /\.note-row\.oanix-mobile-note-drag-ghost[\s\S]*opacity:\s*\.99 !important/)
-  assert.match(noteReorderCss, /body > \.note-row\.oanix-mobile-note-drag-overlay[\s\S]*position:\s*fixed !important/)
-  assert.match(noteReorderCss, /body > \.note-row\.oanix-mobile-note-drag-overlay[\s\S]*z-index:\s*10050 !important/)
+  assert.match(noteReorderCss, /.notes-shell > \.note-row\.oanix-mobile-note-drag-overlay[\s\S]*position:\s*fixed !important/)
+  assert.match(noteReorderCss, /.notes-shell > \.note-row\.oanix-mobile-note-drag-overlay[\s\S]*z-index:\s*10050 !important/)
 })
 
 test('note color becomes authoritative only after identity is resolved by note id', () => {
