@@ -167,6 +167,8 @@ export function FolderGridRuntime() {
   const suppressFolderSelectRef = useRef<string | null>(null)
   const coverInputRef = useRef<HTMLInputElement | null>(null)
   const dragStartOrderRef = useRef<string[]>([])
+  const pendingFolderOrderRef = useRef<string[] | null>(null)
+  const folderOrderPersistingRef = useRef(false)
 
   useEffect(() => {
     gridOpenRef.current = gridOpen
@@ -450,8 +452,41 @@ export function FolderGridRuntime() {
     }
   }
 
+  function queueFolderOrderPersistence(nextOrder: string[]) {
+    pendingFolderOrderRef.current = [...nextOrder]
+    if (folderOrderPersistingRef.current) return
+
+    folderOrderPersistingRef.current = true
+    setOrderingBusy(true)
+    void (async () => {
+      try {
+        while (pendingFolderOrderRef.current) {
+          const orderToPersist = pendingFolderOrderRef.current
+          pendingFolderOrderRef.current = null
+          try {
+            const persisted = await persistFolderOrder(orderToPersist)
+            if (pendingFolderOrderRef.current) continue
+            setData((current) => {
+              const currentIds = current.folders.map((folder) => folder.id)
+              const stillMatchesPersistedOrder = currentIds.length === orderToPersist.length
+                && currentIds.every((id, index) => id === orderToPersist[index])
+              return stillMatchesPersistedOrder ? { ...current, folders: persisted } : current
+            })
+          } catch {
+            setError('No se pudo guardar el nuevo orden de las carpetas.')
+            if (!pendingFolderOrderRef.current) void refreshData()
+          }
+        }
+      } finally {
+        folderOrderPersistingRef.current = false
+        setOrderingBusy(false)
+        if (pendingFolderOrderRef.current) queueFolderOrderPersistence(pendingFolderOrderRef.current)
+      }
+    })()
+  }
+
   function beginFolderPointerDown(folder: FolderRecord, event: ReactPointerEvent<HTMLButtonElement>) {
-    if (event.button !== 0 || customBusy || orderingBusy) return
+    if (event.button !== 0 || customBusy) return
     clearLongPress()
 
     if (reorderMode) {
@@ -500,7 +535,7 @@ export function FolderGridRuntime() {
     })
   }
 
-  async function finishFolderDrag(event: ReactPointerEvent<HTMLButtonElement>) {
+  function finishFolderDrag(event: ReactPointerEvent<HTMLButtonElement>) {
     clearLongPress()
     const folderId = draggingFolderId
     if (!folderId) return
@@ -520,18 +555,7 @@ export function FolderGridRuntime() {
     const finalIndex = data.folders.findIndex((folder) => folder.id === folderId)
     if (startIndex < 0 || finalIndex < 0 || startIndex === finalIndex) return
 
-    const nextOrder = data.folders.map((folder) => folder.id)
-
-    setOrderingBusy(true)
-    try {
-      const nextFolders = await persistFolderOrder(nextOrder)
-      setData((current) => ({ ...current, folders: nextFolders }))
-    } catch {
-      setError('No se pudo guardar el nuevo orden de las carpetas.')
-      await refreshData()
-    } finally {
-      setOrderingBusy(false)
-    }
+    queueFolderOrderPersistence(data.folders.map((folder) => folder.id))
   }
 
   function cancelFolderGesture() {
@@ -642,7 +666,7 @@ export function FolderGridRuntime() {
                       onClick={() => selectFolder(folder)}
                       onPointerDown={(event) => beginFolderPointerDown(folder, event)}
                       onPointerMove={handleFolderPointerMove}
-                      onPointerUp={(event) => void finishFolderDrag(event)}
+                      onPointerUp={finishFolderDrag}
                       onPointerCancel={cancelFolderGesture}
                       onContextMenu={(event) => event.preventDefault()}
                       aria-label={reorderMode ? `Mover carpeta ${folder.name}` : `Seleccionar carpeta ${folder.name}`}
@@ -670,7 +694,7 @@ export function FolderGridRuntime() {
                 </div>
 
                 {reorderMode && (
-                  <button className="oanix-folder-rail__done" type="button" onClick={finishReorderMode} disabled={orderingBusy}>
+                  <button className="oanix-folder-rail__done" type="button" onClick={finishReorderMode}>
                     {orderingBusy ? '…' : '✓'}
                   </button>
                 )}
