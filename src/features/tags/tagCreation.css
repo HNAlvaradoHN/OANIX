@@ -216,6 +216,48 @@
   box-shadow: 0 8px 18px rgba(37,99,235,.25);
 }
 
+.oanix-tag-actions {
+  position: absolute;
+  z-index: 30;
+  right: 0;
+  top: 44px;
+  min-width: 168px;
+  display: grid;
+  gap: 4px;
+  padding: 6px;
+  border: 1px solid rgba(148,163,184,.2);
+  border-radius: 14px;
+  background: rgba(15,23,42,.96);
+  box-shadow: 0 16px 36px rgba(2,6,23,.42);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.oanix-tag-actions button {
+  min-height: 40px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #f8fafc;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  text-align: left;
+}
+
+.oanix-tag-actions button:hover,
+.oanix-tag-actions button:focus-visible {
+  outline: none;
+  background: rgba(59,130,246,.18);
+}
+
+.oanix-tag-actions button:last-child:hover,
+.oanix-tag-actions button:last-child:focus-visible {
+  background: rgba(239,68,68,.16);
+  color: #fecaca;
+}
+
 @media (max-width: 390px) {
   .oanix-tag-create {
     gap: 15px;

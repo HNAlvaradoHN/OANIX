@@ -2,20 +2,27 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
-const runtime = readFileSync('src/features/tags/TagCreationRuntime.tsx', 'utf8')
+const organic = readFileSync('src/features/notes/OrganicWorkspaceRuntime.tsx', 'utf8')
+const gate = readFileSync('src/app/WorkspaceRuntimeGate.tsx', 'utf8')
+const notesWorkspace = readFileSync('src/features/notes/NotesWorkspace.tsx', 'utf8')
 
-test('tag creation observes only the notes workspace and filters unrelated subtree churn', () => {
-  assert.match(runtime, /document\.querySelector<HTMLElement>\('\.notes-shell'\)/)
-  assert.match(runtime, /observer\.observe\(workspace, \{ childList: true, subtree: true \}\)/)
-  assert.match(runtime, /function mutationTouchesTagSurface\(record: MutationRecord\)/)
-  assert.match(runtime, /TAG_DECORATION_SELECTOR/)
-  assert.match(runtime, /records\.some\(mutationTouchesTagSurface\)/)
-  assert.doesNotMatch(runtime, /new MutationObserver\(scheduleDecorate\)/)
-  assert.doesNotMatch(runtime, /observer\.observe\(document\.body/)
+test('tag plus actions are owned by the organic workspace without a second click-capture runtime', () => {
+  assert.doesNotMatch(gate, /TagCreationRuntime/)
+  assert.match(organic, /onClick=\{\(\) => setTagActionMenuOpen\(\(open\) => !open\)\}/)
+  assert.match(organic, />\s*Agregar etiqueta\s*</)
+  assert.match(organic, />\s*Eliminar etiqueta\s*</)
+  assert.doesNotMatch(organic, /document\.addEventListener\('click', handleClickCapture, true\)/)
 })
 
-test('tag creation keeps local data events as the storage-driven refresh path', () => {
-  assert.match(runtime, /oanix:local-data-changed/)
-  assert.match(runtime, /recordType !== 'tag'/)
-  assert.match(runtime, /recordType !== 'tag-order'/)
+test('tag creation persists icon and color directly and decorates chips from state', () => {
+  assert.match(organic, /createTag\(normalized, \{ icon: tagIcon, color: tagColor \}\)/)
+  assert.match(organic, /data-oanix-tag-icon=\{tag\.icon \|\| DEFAULT_TAG_ICON\}/)
+  assert.match(organic, /--oanix-tag-color/)
+})
+
+test('delete action reuses the existing encrypted tag manager and delete handler', () => {
+  assert.match(organic, /button\[aria-label="Administrar etiquetas"\]/)
+  assert.match(notesWorkspace, /async function handleDeleteTag\(tag: TagRecord\)/)
+  assert.match(notesWorkspace, /await deleteTag\(tag\.id\)/)
+  assert.match(notesWorkspace, /onClick=\{\(\) => void handleDeleteTag\(tag\)\}/)
 })

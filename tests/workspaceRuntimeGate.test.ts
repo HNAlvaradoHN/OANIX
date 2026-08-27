@@ -22,6 +22,7 @@ test('workspace-only runtimes hydrate together once the unlocked app mounts the 
   assert.doesNotMatch(gate, /FolderAppearanceRuntime|FolderCustomizerBridgeRuntime/)
   assert.match(gate, /<FolderScopedManagerRuntime \/>/)
   assert.match(gate, /<FolderMobileDragRuntime \/>/)
-  assert.match(gate, /<TagCreationRuntime \/>/)
+  assert.doesNotMatch(gate, /TagCreationRuntime/)
+  assert.match(gate, /<TagMobileGestureRuntime \/>/)
   assert.match(gate, /<V383WorkspaceVisualRuntime \/>/)
 })
