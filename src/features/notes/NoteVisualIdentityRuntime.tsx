@@ -56,7 +56,7 @@ export function NoteVisualIdentityRuntime() {
       // cover identity changes, so the observer only watches structural list mutations.
       // Disconnect while applying to avoid reacting to any DOM churn caused by decoration.
       observer?.disconnect()
-      document.querySelectorAll<HTMLElement>('.note-row[data-reorder-note-id]').forEach((row) => {
+      noteList?.querySelectorAll<HTMLElement>(':scope > .note-row[data-reorder-note-id]').forEach((row) => {
         const noteId = row.dataset.reorderNoteId
         const note = noteId ? notesById.get(noteId) : null
         if (!note) return
