@@ -49,10 +49,12 @@ test('bulk selection finish control is a green check without overflowing text', 
 })
 
 test('note drag keeps Sortable ordering but renders an independent visible overlay', () => {
-  assert.match(noteReorder, /forceFallback: true/)
-  assert.match(noteReorder, /fallbackOnBody: true/)
+  assert.match(noteReorder, /forceFallback: false/)
+  assert.match(noteReorder, /fallbackOnBody: false/)
   assert.match(noteReorder, /fallbackClass: 'oanix-mobile-note-drag-ghost'/)
   assert.match(noteReorder, /cloneNode\(true\)/)
+  assert.match(noteReorder, /createDragOverlay\(touchGesture\.item/)
+  assert.doesNotMatch(noteReorder, /createDragOverlay\(event\.item/) 
   assert.match(noteReorder, /oanix-mobile-note-drag-overlay/)
   assert.match(noteReorder, /document\.addEventListener\('pointermove', onTouchPointerMove/)
   assert.doesNotMatch(noteReorder, /document\.addEventListener\('touchmove'/)
