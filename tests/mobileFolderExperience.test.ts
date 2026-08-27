@@ -8,6 +8,7 @@ const gate = readFileSync('src/app/WorkspaceRuntimeGate.tsx', 'utf8')
 const createRuntime = readFileSync('src/features/folders/FolderCreationRuntime.tsx', 'utf8')
 const createCss = readFileSync('src/features/folders/folderCreation.css', 'utf8')
 const dragRuntime = readFileSync('src/features/folders/FolderMobileDragRuntime.tsx', 'utf8')
+const desktopDragRuntime = readFileSync('src/features/folders/FolderGridRuntime.tsx', 'utf8')
 const dragCss = readFileSync('src/features/folders/folderMobileDrag.css', 'utf8')
 const folderService = readFileSync('src/features/folders/folderService.ts', 'utf8')
 
@@ -37,20 +38,29 @@ test('legacy folder manager is visually replaced by the focused Nueva carpeta di
   assert.match(createRuntime, />Cancelar<\/button>/)
   assert.match(createRuntime, /saveFolderColor\(created\.id, color\)/)
   assert.match(createRuntime, /saveFolderIcon\(created\.id, icon\)/)
-  assert.match(createRuntime, /\.notes-create-fab, \.empty-action/)
+  assert.match(createRuntime, /createFolder\(normalizedName\)/)
+  assert.match(createRuntime, /oanix:open-folder-creator/)
 })
 
-test('folder drag keeps touch long press and desktop pointer drag with live horizontal placement', () => {
+test('mobile folder long press stays armed at the threshold and uses live horizontal placement', () => {
   assert.match(dragRuntime, /const LONG_PRESS_MS = 220/)
   assert.match(dragRuntime, /const PRESS_ARM_GRACE_MS = 35/)
   assert.match(dragRuntime, /const MOVE_CANCEL_PX = 14/)
-  assert.match(dragRuntime, /event\.pointerType === 'mouse' \? 0 : LONG_PRESS_MS/)
-  assert.match(dragRuntime, /heldFor >= requiredHold - PRESS_ARM_GRACE_MS/)
+  assert.match(dragRuntime, /if \(event\.pointerType === 'mouse' \|\| event\.button !== 0 \|\| gesture\) return/)
+  assert.match(dragRuntime, /heldFor >= LONG_PRESS_MS - PRESS_ARM_GRACE_MS/)
   assert.match(dragRuntime, /beginDrag\(\)[\s\S]*gesture\?\.dragging/)
   assert.match(dragRuntime, /siblings\.find\(\(item\) => \{[\s\S]*gesture\.lastX < rect\.left \+ rect\.width \/ 2/)
   assert.match(dragRuntime, /insertBefore\(gesture\.item, insertionTarget\)/)
   assert.match(dragRuntime, /appendChild\(gesture\.item\)/)
   assert.doesNotMatch(dragRuntime, /clientY > rect\.top \+ rect\.height \/ 2/)
+})
+
+test('desktop folder drag uses horizontal placement and one exact-order persistence', () => {
+  assert.match(desktopDragRuntime, /const placeAfter = event\.clientX > rect\.left \+ rect\.width \/ 2/)
+  assert.match(desktopDragRuntime, /const nextOrder = data\.folders\.map\(\(folder\) => folder\.id\)/)
+  assert.match(desktopDragRuntime, /await persistFolderOrder\(nextOrder\)/)
+  assert.doesNotMatch(desktopDragRuntime, /reorderFolder\(/)
+  assert.doesNotMatch(desktopDragRuntime, /while\s*\(remaining/)
 })
 
 test('edge auto-scroll is continuous but does not launch heavy reflow animation every frame', () => {
