@@ -1,27 +1,10 @@
 import { useEffect } from 'react'
 
-function syncCoveredBackground(background: HTMLElement | null) {
-  if (!background) return
-
-  if (!background.classList.contains('oanix-organic-background--covered')) {
-    background.style.removeProperty('--oanix-organic-cover-image')
-    return
-  }
-
-  const inlineImage = background.style.backgroundImage.trim()
-  if (!inlineImage || inlineImage === 'none') return
-
-  if (background.style.getPropertyValue('--oanix-organic-cover-image') !== inlineImage) {
-    background.style.setProperty('--oanix-organic-cover-image', inlineImage)
-  }
-  background.style.removeProperty('background-image')
-}
-
 /**
  * Final visual contract marker for the unlocked notes workspace.
  *
- * The runtime only watches the two DOM nodes whose own state it mirrors. It does
- * not observe document.body or unrelated workspace mutations.
+ * The runtime only mirrors note-detail state from the real notes shell. It does
+ * not observe document.body, covers, or unrelated workspace mutations.
  */
 export function V383WorkspaceVisualRuntime() {
   useEffect(() => {
@@ -51,36 +34,8 @@ export function V383WorkspaceVisualRuntime() {
       })
     }
 
-    let backgroundObserver: MutationObserver | null = null
-    let backgroundFrame = 0
-    let backgroundAttempts = 0
-
-    const bindBackgroundObserver = () => {
-      backgroundFrame = 0
-      const background = document.querySelector<HTMLElement>('.oanix-organic-background')
-      if (!background) {
-        backgroundAttempts += 1
-        if (backgroundAttempts < 30) {
-          backgroundFrame = window.requestAnimationFrame(bindBackgroundObserver)
-        }
-        return
-      }
-
-      const observedBackground = background
-      syncCoveredBackground(observedBackground)
-      backgroundObserver = new MutationObserver(() => syncCoveredBackground(observedBackground))
-      backgroundObserver.observe(observedBackground, {
-        attributes: true,
-        attributeFilter: ['class', 'style'],
-      })
-    }
-
-    bindBackgroundObserver()
-
     return () => {
       shellObserver?.disconnect()
-      backgroundObserver?.disconnect()
-      if (backgroundFrame) window.cancelAnimationFrame(backgroundFrame)
       root.classList.remove('oanix-v383-visual', 'oanix-note-detail-open')
       body.classList.remove('oanix-v383-visual', 'oanix-note-detail-open')
     }
