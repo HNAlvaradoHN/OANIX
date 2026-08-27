@@ -6,6 +6,7 @@ const notes = readFileSync('src/features/notes/NoteListReorderGestureRuntime.tsx
 const noteReorderCss = readFileSync('src/features/notes/noteReorderGesture.css', 'utf8')
 const folders = readFileSync('src/features/folders/FolderMobileDragRuntime.tsx', 'utf8')
 const organic = readFileSync('src/features/notes/OrganicWorkspaceRuntime.tsx', 'utf8')
+const organicCss = readFileSync('src/features/notes/organicWorkspace.css', 'utf8')
 
 test('note touch reorder snapshots rows only after leaving the current slot', () => {
   const start = notes.indexOf('const reorderTouchDomAtPoint')
@@ -75,4 +76,15 @@ test('tag reorder computes a real slot change before capturing FLIP rectangles',
   assert.ok(move >= 0 && noOp > move && snapshot > noOp)
   assert.match(block, /tagsRef\.current = next/)
   assert.match(block, /setTags\(next\)/)
+})
+
+test('tag reorder leaves transform authority to FLIP instead of an infinite jiggle animation', () => {
+  const start = organicCss.indexOf('.oanix-organic-tags.is-reordering .oanix-organic-tag-chip[data-oanix-organic-tag-id] {')
+  const end = organicCss.indexOf('.oanix-organic-tags.is-reordering .oanix-organic-tag-chip.is-dragging', start)
+  assert.ok(start >= 0 && end > start)
+  const block = organicCss.slice(start, end)
+  assert.match(block, /cursor: grab/)
+  assert.match(block, /touch-action: none/)
+  assert.doesNotMatch(block, /animation:/)
+  assert.doesNotMatch(organicCss, /@keyframes oanix-organic-jiggle/)
 })
