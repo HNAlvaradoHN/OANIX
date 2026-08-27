@@ -576,11 +576,9 @@ export function NoteListReorderGestureRuntime() {
     }
 
     const sortable = Sortable.create(list, sortableOptions)
-    const rememberPointer = (event: PointerEvent) => {
+    const syncSortableWithPointer = (event: PointerEvent) => {
       sortable.option('disabled', event.pointerType !== 'mouse')
-      const point = { x: event.clientX, y: event.clientY }
-      lastPointer = point
-      if (!touchGesture?.dragging) positionDragOverlay(point)
+      lastPointer = { x: event.clientX, y: event.clientY }
     }
     const onClick = (event: MouseEvent) => {
       if (performance.now() >= suppressClickUntil) return
@@ -602,8 +600,7 @@ export function NoteListReorderGestureRuntime() {
     }
     const onBlur = () => cancelTouchGesture(true)
 
-    document.addEventListener('pointerdown', rememberPointer, { capture: true, passive: true })
-    document.addEventListener('pointermove', rememberPointer, { capture: true, passive: true })
+    document.addEventListener('pointerdown', syncSortableWithPointer, { capture: true, passive: true })
     document.addEventListener('pointerdown', onTouchPointerDown, true)
     document.addEventListener('pointermove', onTouchPointerMove, { capture: true, passive: false })
     document.addEventListener('pointerup', finishPointerGesture, true)
@@ -621,8 +618,7 @@ export function NoteListReorderGestureRuntime() {
       stopScrollMomentum()
       cancelTouchGesture(true)
       clearDragVisuals()
-      document.removeEventListener('pointerdown', rememberPointer, true)
-      document.removeEventListener('pointermove', rememberPointer, true)
+      document.removeEventListener('pointerdown', syncSortableWithPointer, true)
       document.removeEventListener('pointerdown', onTouchPointerDown, true)
       document.removeEventListener('pointermove', onTouchPointerMove, true)
       document.removeEventListener('pointerup', finishPointerGesture, true)
