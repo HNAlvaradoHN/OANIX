@@ -157,7 +157,6 @@ export function NoteListReorderGestureRuntime() {
     const dragIdentityById = new Map<string, DragIdentity>()
     const list = document.querySelector<HTMLElement>('.notes-list')
     if (!list?.classList.contains('notes-list')) return
-    const coarsePointer = window.matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0
     const noteRows = () => Array.from(list.querySelectorAll<HTMLElement>(':scope > .note-row[data-reorder-note-id]'))
 
     const freezeDragIdentity = () => {
@@ -531,15 +530,15 @@ export function NoteListReorderGestureRuntime() {
       handle: '.note-row[data-reorder-note-id]',
       filter: (_event, target) => interactionBlocked() || isExcludedInteractiveTarget(target),
       preventOnFilter: false,
-      disabled: coarsePointer,
+      disabled: false,
       direction: 'vertical',
       animation: 140,
       easing: 'cubic-bezier(.2,.8,.2,1)',
       delay: LONG_PRESS_MS,
       delayOnTouchOnly: true,
       touchStartThreshold: TOUCH_START_THRESHOLD_PX,
-      forceFallback: true,
-      fallbackOnBody: true,
+      forceFallback: false,
+      fallbackOnBody: false,
       fallbackTolerance: 4,
       fallbackClass: 'oanix-mobile-note-drag-ghost',
       chosenClass: 'oanix-mobile-note-chosen',
@@ -554,7 +553,6 @@ export function NoteListReorderGestureRuntime() {
       dataIdAttr: 'data-reorder-note-id',
       onChoose: (event) => {
         freezeDragIdentity()
-        dragOverlayTemplate = prepareDragOverlayTemplate(event.item)
         event.item.setAttribute('data-oanix-note-dragging', 'true')
         exposeDraggedRowSurface(event.item)
         window.getSelection()?.removeAllRanges()
@@ -563,7 +561,6 @@ export function NoteListReorderGestureRuntime() {
         exposeDraggedRowSurface(event.item)
         document.body.classList.add('oanix-mobile-note-dragging')
         document.documentElement.classList.add('oanix-mobile-note-dragging')
-        createDragOverlay(event.item, lastPointer)
         navigator.vibrate?.(30)
       },
       onMove: (event) => {
@@ -581,6 +578,7 @@ export function NoteListReorderGestureRuntime() {
 
     const sortable = Sortable.create(list, sortableOptions)
     const rememberPointer = (event: PointerEvent) => {
+      sortable.option('disabled', event.pointerType !== 'mouse')
       const point = { x: event.clientX, y: event.clientY }
       lastPointer = point
       if (!touchGesture?.dragging) positionDragOverlay(point)
