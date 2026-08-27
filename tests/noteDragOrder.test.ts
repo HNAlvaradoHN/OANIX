@@ -15,7 +15,7 @@ test('note ordering is owned by the SortableJS long-press runtime', () => {
   assert.match(runtime, /button:not\(\.note-row__open\)/)
   assert.match(runtime, /forceFallback: true/)
   assert.match(runtime, /delayOnTouchOnly: true/)
-  assert.match(runtime, /persistNoteOrder\(nextOrder\)/)
+  assert.match(runtime, /persistNoteOrder\(orderToPersist\)/)
   assert.doesNotMatch(workspace, /aria-label=\{`Mover \$\{note\.title\} arriba`\}/)
   assert.doesNotMatch(workspace, /aria-label=\{`Mover \$\{note\.title\} abajo`\}/)
 })
