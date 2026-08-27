@@ -25,7 +25,8 @@ test('workspace-dependent runtimes mount with the unlocked app instead of observ
   assert.doesNotMatch(gate, /MutationObserver/)
   assert.doesNotMatch(gate, /document\.querySelector/)
   assert.match(gate, /<OrganicWorkspaceRuntime \/>/)
-  assert.match(gate, /<FolderAppearanceRuntime \/>/)
+  assert.doesNotMatch(gate, /FolderAppearanceRuntime|FolderCustomizerBridgeRuntime/)
+  assert.match(gate, /<FolderScopedManagerRuntime \/>/)
   assert.match(gate, /<FolderMobileDragRuntime \/>/)
 })
 
