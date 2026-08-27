@@ -46,7 +46,7 @@ test('reorder abre hueco también al cruzar los extremos del carril', () => {
   assert.match(organic, /placeAfter: true/)
   assert.match(organic, /function clampTagDragX/)
   assert.match(organic, /Math\.min\(clientX, controlsLeft - 1\)/)
-  assert.match(organic, /if \(next === current\) return current/)
+  assert.match(organic, /if \(next === current\) return/)
   assert.doesNotMatch(organic, /document\.elementFromPoint\(event\.clientX, event\.clientY\)/)
 })
 

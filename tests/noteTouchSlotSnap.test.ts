@@ -30,7 +30,7 @@ test('la fila real se convierte en slot y se mueve por el punto medio de las not
   assert.match(runtime, /function snapshotRects/)
   assert.match(runtime, /const reorderTouchDomAtPoint/)
   assert.match(runtime, /gesture\.lastY < rect\.top \+ rect\.height \/ 2/)
-  assert.match(runtime, /list\.insertBefore\(gesture\.item, insertionTarget\)/)
+  assert.match(runtime, /list\.insertBefore\(gesture\.item, destination\)/)
   assert.match(runtime, /list\.appendChild\(gesture\.item\)/)
   assert.match(css, /\.note-row\.oanix-mobile-note-placeholder[\s\S]*border:\s*2px dashed/)
   assert.match(css, /\.note-row\.oanix-mobile-note-placeholder > \*[\s\S]*visibility:\s*hidden !important/)
@@ -57,7 +57,8 @@ test('al soltar conserva el DOM final y persiste exactamente ese orden', () => {
 test('pinned permanece dentro de su grupo y autoscroll sigue activo', () => {
   assert.match(runtime, /const draggedPinned = rowPinned\(gesture\.item\)/)
   assert.match(runtime, /const eligible = all\.filter\(\(row\) => rowPinned\(row\) === draggedPinned\)/)
-  assert.match(runtime, /const firstUnpinned = all\.find\(\(row\) => !rowPinned\(row\)\)/)
+  assert.match(runtime, /const firstUnpinned = draggedPinned && !insertionTarget/)
+  assert.match(runtime, /all\.find\(\(row\) => !rowPinned\(row\)\)/)
   assert.match(runtime, /startTouchAutoScroll\(\)/)
   assert.match(runtime, /list\.scrollTop \+= speed/)
   assert.match(runtime, /window\.scrollBy\(0, speed\)/)
