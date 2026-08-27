@@ -82,6 +82,7 @@ function enqueueNoteMutation(
   noteId: string,
   mutate: (note: NoteRecord) => NoteRecord,
   historyReason: NoteHistoryReason | null = 'automatic',
+  notify = true,
 ): Promise<NoteRecord> {
   const previous = mutationQueues.get(noteId) ?? Promise.resolve()
   const next = previous
@@ -105,7 +106,7 @@ function enqueueNoteMutation(
         }
       }
 
-      await saveNote(updated)
+      await saveNote(updated, notify)
       if (historyError) reportHistoryWarning(noteId, historyError)
       return updated
     })
@@ -327,7 +328,10 @@ export async function restoreNoteVersion(snapshot: NoteHistorySnapshot): Promise
   )
 }
 
-export async function persistNoteOrder(orderedNoteIds: string[]): Promise<NoteRecord[]> {
+export async function persistNoteOrder(
+  orderedNoteIds: string[],
+  shouldContinue: () => boolean = () => true,
+): Promise<NoteRecord[]> {
   const uniqueIds = [...new Set(orderedNoteIds)]
   if (uniqueIds.length !== orderedNoteIds.length) {
     throw new Error('El orden de notas contiene identificadores duplicados.')
@@ -352,22 +356,25 @@ export async function persistNoteOrder(orderedNoteIds: string[]): Promise<NoteRe
     : orderedNoteIds.map((_, index) => orderedNoteIds.length - index)
 
   const updatedById = new Map<string, NoteRecord>()
-  await Promise.all(orderedNoteIds.map(async (noteId, index) => {
+  for (let index = 0; index < orderedNoteIds.length; index += 1) {
+    if (!shouldContinue()) break
+    const noteId = orderedNoteIds[index]
     const existing = recordById.get(noteId)
-    if (!existing) return
+    if (!existing) continue
     const manualOrder = targetOrders[index]
 
     if (existing.manualOrder === manualOrder) {
       updatedById.set(noteId, existing)
-      return
+      continue
     }
 
     const updated = await enqueueNoteMutation(noteId, (current) => ({
       ...current,
       manualOrder,
-    }), null)
+    }), null, false)
     updatedById.set(noteId, updated)
-  }))
+    await new Promise<void>((resolve) => setTimeout(resolve, 0))
+  }
 
   return orderedNoteIds.map((noteId) => updatedById.get(noteId) ?? recordById.get(noteId)!)
 }

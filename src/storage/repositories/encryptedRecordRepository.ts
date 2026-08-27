@@ -112,6 +112,7 @@ export async function writeEncryptedRecord<T>(
   recordType: string,
   recordId: string,
   value: T,
+  notify = true,
 ): Promise<void> {
   const vaultKey = requireActiveVaultKey()
   invalidateEncryptedRecordCaches(recordType)
@@ -133,7 +134,7 @@ export async function writeEncryptedRecord<T>(
       database.close()
     }
   })
-  notifyLocalEncryptedChange(recordType, recordId)
+  if (notify) notifyLocalEncryptedChange(recordType, recordId)
 }
 
 export async function readEncryptedRecord<T>(

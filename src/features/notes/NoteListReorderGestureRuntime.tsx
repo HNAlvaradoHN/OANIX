@@ -281,6 +281,7 @@ export function NoteListReorderGestureRuntime() {
     const persistCurrentOrder = (nextOrder: string[]) => {
       if (nextOrder.length === 0) return
       pendingPersistOrder = [...nextOrder]
+      window.dispatchEvent(new CustomEvent('oanix:note-order-preview', { detail: { orderedIds: nextOrder } }))
       if (persistLoop) return
 
       persistLoop = (async () => {
@@ -288,7 +289,7 @@ export function NoteListReorderGestureRuntime() {
           const orderToPersist = pendingPersistOrder
           pendingPersistOrder = null
           try {
-            const updatedNotes = await persistNoteOrder(orderToPersist)
+            const updatedNotes = await persistNoteOrder(orderToPersist, () => !disposed && pendingPersistOrder === null)
             if (disposed || pendingPersistOrder) continue
             window.dispatchEvent(new CustomEvent('oanix:note-order-persisted', { detail: { notes: updatedNotes.map((note) => ({ id: note.id, manualOrder: note.manualOrder })) } }))
             window.dispatchEvent(new CustomEvent('oanix:local-data-changed', { detail: { recordType: 'note' } }))
@@ -505,6 +506,7 @@ export function NoteListReorderGestureRuntime() {
       if (!item || item.parentElement !== list) return
       event.stopPropagation()
       stopScrollMomentum()
+      suppressClickUntil = 0
       beginGesture(event.pointerId, item, event.clientX, event.clientY)
     }
     const onTouchPointerMove = (event: PointerEvent) => {

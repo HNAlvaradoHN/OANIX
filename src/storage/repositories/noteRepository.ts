@@ -8,8 +8,8 @@ import { isNoteRecord, type NoteRecord } from '../../features/notes/noteTypes'
 
 const NOTE_RECORD_TYPE = 'note'
 
-export async function saveNote(note: NoteRecord): Promise<void> {
-  await writeEncryptedRecord(NOTE_RECORD_TYPE, note.id, note)
+export async function saveNote(note: NoteRecord, notify = true): Promise<void> {
+  await writeEncryptedRecord(NOTE_RECORD_TYPE, note.id, note, notify)
 }
 
 export async function deleteNoteRecord(noteId: string): Promise<void> {

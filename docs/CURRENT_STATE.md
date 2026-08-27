@@ -91,6 +91,7 @@ Implementación vigente de notas desde PR #368:
 - coarse/mobile usa un único motor Pointer Events propio, con `touch-action: none`, scroll vertical manual antes del long press y pointer capture best-effort;
 - la antigua ruta paralela `TouchEvent` quedó retirada porque podía dejar el gesto vertical bajo control del navegador/WebView;
 - CI, Android y Pages de `main` pasaron tras la integración. La validación física del gesto continuo en dispositivo real sigue siendo **VALIDATION_DEBT** hasta que el usuario la ejecute.
+- Corrección posterior en validación: al soltar, React adopta inmediatamente el orden visible y la persistencia cifrada se ejecuta detrás sin notificaciones intermedias; un orden nuevo reemplaza trabajo pendiente. El primer toque tras desplazar la lista ya no hereda la supresión del gesto anterior, y las etiquetas tienen un tope antes del control `+`. Mantener como **VALIDATION_DEBT** hasta probar PC y PWA reales.
 
 ## Archivos grandes — motor actual
 
