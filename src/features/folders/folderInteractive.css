@@ -330,15 +330,16 @@ html[data-oanix-theme='classic-day'] .oanix-folder-customizer .oanix-folder-appe
   .oanix-folder-appearance-picker__icons { grid-template-columns: repeat(5,minmax(0,1fr)); }
 }
 
-/* Touch browsers can keep :hover latched after a tap. Neutralize transform-only
-   hover feedback there so it cannot compete with selection or reorder feedback. */
+/* Touch browsers can keep :hover latched after a tap. Keep this final folder
+   interaction authority specific enough to beat the v38.3 visual layer without
+   requiring a separate global override file. */
 @media (hover: none), (pointer: coarse) {
-  .oanix-folder-rail__item:hover:not(.is-selected) {
+  html.oanix-v383-visual .oanix-folder-rail__item:hover:not(.is-selected) {
     transform: none !important;
   }
 
-  .oanix-folder-rail__item.is-selected:hover {
-    transform: translateY(-2px) translateZ(18px) !important;
+  html.oanix-v383-visual .oanix-folder-rail__item.is-selected:hover {
+    transform: translateY(-1px) !important;
   }
 
   .oanix-folder-customizer button:hover:not(:focus-visible),
