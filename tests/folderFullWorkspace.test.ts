@@ -28,7 +28,7 @@ test('las tarjetas de notas conservan datos y acciones reales con la geometría 
   assert.match(organicCss, /margin: -15px 0 0 !important/)
   assert.match(organicCss, /clip-path: polygon\(15% 0%,85% 0%,100% 100%,0% 100%\)/)
   assert.match(personalizationRuntime, /row\.dataset\.oanixNoteCategory = category/)
-  assert.match(personalizationRuntime, /row\.style\.setProperty\('--oanix-note-tab-color', color\)/)
+  assert.doesNotMatch(personalizationRuntime, /row\.style\.setProperty\('--oanix-note-tab-color'/)
   assert.doesNotMatch(organicRuntime, /row\.dataset\.oanixNoteCategory|--oanix-note-tab-color/)
 })
 
