@@ -65,34 +65,6 @@ export function FolderOperationFeedbackRuntime() {
       }
     }
 
-    let modalObserver: MutationObserver | null = null
-    let observedModal: HTMLElement | null = null
-
-    const bindModalObserver = () => {
-      const nextModal = document.querySelector<HTMLElement>(FOLDER_CUSTOMIZER_SELECTOR)
-      if (nextModal === observedModal) return
-
-      modalObserver?.disconnect()
-      observedModal = nextModal
-      if (!observedModal) {
-        modalObserver = null
-        return
-      }
-
-      modalObserver = new MutationObserver(syncReactBusyState)
-      modalObserver.observe(observedModal, {
-        childList: true,
-        subtree: true,
-        attributes: true,
-        attributeFilter: ['disabled'],
-      })
-      syncReactBusyState()
-    }
-
-    const portalObserver = new MutationObserver((records) => {
-      if (records.some(mutationTouchesFolderCustomizer)) bindModalObserver()
-    })
-
     const handleClickCapture = (event: MouseEvent) => {
       const target = event.target
       if (!(target instanceof Element)) return
@@ -133,6 +105,38 @@ export function FolderOperationFeedbackRuntime() {
       setStatus(modal, '⏳ Procesando y cifrando imagen…', 'busy', 'react')
     }
 
+    let modalObserver: MutationObserver | null = null
+    let observedModal: HTMLElement | null = null
+
+    const bindModalObserver = () => {
+      const nextModal = document.querySelector<HTMLElement>(FOLDER_CUSTOMIZER_SELECTOR)
+      if (nextModal === observedModal) return
+
+      modalObserver?.disconnect()
+      observedModal?.removeEventListener('click', handleClickCapture, true)
+      observedModal?.removeEventListener('change', handleChangeCapture, true)
+      observedModal = nextModal
+      if (!observedModal) {
+        modalObserver = null
+        return
+      }
+
+      observedModal.addEventListener('click', handleClickCapture, true)
+      observedModal.addEventListener('change', handleChangeCapture, true)
+      modalObserver = new MutationObserver(syncReactBusyState)
+      modalObserver.observe(observedModal, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['disabled'],
+      })
+      syncReactBusyState()
+    }
+
+    const portalObserver = new MutationObserver((records) => {
+      if (records.some(mutationTouchesFolderCustomizer)) bindModalObserver()
+    })
+
     const handleAppearanceSaved = () => {
       const modal = document.querySelector<HTMLElement>(FOLDER_CUSTOMIZER_SELECTOR)
       if (!modal) return
@@ -140,17 +144,15 @@ export function FolderOperationFeedbackRuntime() {
       clearLater(modal, 700)
     }
 
-    document.addEventListener('click', handleClickCapture, true)
-    document.addEventListener('change', handleChangeCapture, true)
     window.addEventListener('oanix:folder-appearance-saved', handleAppearanceSaved)
     bindModalObserver()
     portalObserver.observe(document.body, { childList: true })
     syncReactBusyState()
 
     return () => {
-      document.removeEventListener('click', handleClickCapture, true)
-      document.removeEventListener('change', handleChangeCapture, true)
       window.removeEventListener('oanix:folder-appearance-saved', handleAppearanceSaved)
+      observedModal?.removeEventListener('click', handleClickCapture, true)
+      observedModal?.removeEventListener('change', handleChangeCapture, true)
       portalObserver.disconnect()
       modalObserver?.disconnect()
       if (clearTimer !== null) window.clearTimeout(clearTimer)
