@@ -40,14 +40,19 @@ function folderOrder(rail: HTMLElement): string[] {
     .flatMap((item) => item.dataset.oanixFolderId ? [item.dataset.oanixFolderId] : [])
 }
 
+function endAnchor(rail: HTMLElement): Element | null {
+  return rail.querySelector(':scope > .oanix-folder-rail__item--add')
+}
+
 function restoreDomOrder(rail: HTMLElement, ids: string[]) {
   const byId = new Map(
     Array.from(rail.querySelectorAll<HTMLElement>(':scope > .oanix-folder-rail__item[data-oanix-folder-id]'))
       .flatMap((item) => item.dataset.oanixFolderId ? [[item.dataset.oanixFolderId, item] as const] : []),
   )
+  const anchor = endAnchor(rail)
   ids.forEach((id) => {
     const item = byId.get(id)
-    if (item) rail.appendChild(item)
+    if (item) rail.insertBefore(item, anchor)
   })
 }
 
@@ -110,14 +115,14 @@ function reorderDomAtPoint(gesture: TouchGesture, animate = true) {
   if (
     insertionTarget
       ? gesture.item.nextElementSibling === insertionTarget
-      : gesture.item === gesture.rail.lastElementChild
+      : gesture.item.nextElementSibling === endAnchor(gesture.rail)
   ) {
     return
   }
 
   const beforeRects = animate ? snapshotRects(gesture.rail) : null
   if (insertionTarget) gesture.rail.insertBefore(gesture.item, insertionTarget)
-  else gesture.rail.appendChild(gesture.item)
+  else gesture.rail.insertBefore(gesture.item, endAnchor(gesture.rail))
 
   if (animate && beforeRects) {
     animateReflow(gesture.rail, beforeRects, gesture.item)
