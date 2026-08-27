@@ -10,7 +10,7 @@ import {
   saveFolderCover,
 } from './folderCoverService'
 import { loadFolderColors } from './folderAppearanceService'
-import { loadFolders, reorderFolder } from './folderService'
+import { loadFolders, persistFolderOrder } from './folderService'
 import type { FolderRecord } from './folderTypes'
 import './folderGrid.css'
 import './folderInteractive.css'
@@ -489,7 +489,7 @@ export function FolderGridRuntime() {
     if (!targetId || targetId === draggingFolderId || !target) return
 
     const rect = target.getBoundingClientRect()
-    const placeAfter = event.clientY > rect.top + rect.height / 2
+    const placeAfter = event.clientX > rect.left + rect.width / 2
     const beforeRects = captureFolderRects()
 
     setData((current) => {
@@ -520,15 +520,11 @@ export function FolderGridRuntime() {
     const finalIndex = data.folders.findIndex((folder) => folder.id === folderId)
     if (startIndex < 0 || finalIndex < 0 || startIndex === finalIndex) return
 
+    const nextOrder = data.folders.map((folder) => folder.id)
+
     setOrderingBusy(true)
     try {
-      const direction = finalIndex < startIndex ? 'up' : 'down'
-      let remaining = Math.abs(finalIndex - startIndex)
-      let nextFolders = await loadFolders()
-      while (remaining > 0) {
-        nextFolders = await reorderFolder(folderId, direction)
-        remaining -= 1
-      }
+      const nextFolders = await persistFolderOrder(nextOrder)
       setData((current) => ({ ...current, folders: nextFolders }))
     } catch {
       setError('No se pudo guardar el nuevo orden de las carpetas.')
