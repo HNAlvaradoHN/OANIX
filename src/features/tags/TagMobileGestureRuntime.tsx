@@ -27,6 +27,8 @@ export function TagMobileGestureRuntime() {
     let dragOverlay: HTMLElement | null = null
     let dragOffsetX = 0
     let dragOffsetY = 0
+    let dragOverlayWidth = 0
+    let reorderGeometry: { controlsLeft: number; scrollerLeft: number; scrollerRight: number } | null = null
     let autoScrollFrame: number | null = null
     let latestReorderPointerX = 0
     let lastEdgeSlotTickAt = 0
@@ -39,6 +41,8 @@ export function TagMobileGestureRuntime() {
 
     function resetActiveGesture() {
       active = null
+      dragOverlayWidth = 0
+      reorderGeometry = null
       if (autoScrollFrame !== null) {
         window.cancelAnimationFrame(autoScrollFrame)
         autoScrollFrame = null
@@ -46,7 +50,20 @@ export function TagMobileGestureRuntime() {
       removeDragOverlay()
     }
 
-    function ensureDragOverlay(event: PointerEvent) {
+    function geometryForReorder(scroller: HTMLElement) {
+      if (reorderGeometry) return reorderGeometry
+      const scrollerRect = scroller.getBoundingClientRect()
+      const controlsLeft = document.querySelector<HTMLElement>('.oanix-organic-tags__controls')
+        ?.getBoundingClientRect().left ?? scrollerRect.right
+      reorderGeometry = {
+        controlsLeft,
+        scrollerLeft: scrollerRect.left,
+        scrollerRight: scrollerRect.right,
+      }
+      return reorderGeometry
+    }
+
+    function ensureDragOverlay(event: PointerEvent, scroller: HTMLElement) {
       const source = document.querySelector<HTMLElement>(
         '.oanix-organic-tags.is-reordering .oanix-organic-tag-chip.is-dragging[data-oanix-organic-tag-id]',
       )
@@ -64,43 +81,40 @@ export function TagMobileGestureRuntime() {
         dragOverlay.classList.add('oanix-tag-drag-overlay')
         dragOverlay.removeAttribute('data-oanix-organic-tag-id')
         dragOverlay.setAttribute('aria-hidden', 'true')
+        dragOverlayWidth = rect.width
         dragOverlay.style.width = `${rect.width}px`
         dragOverlay.style.height = `${rect.height}px`
         document.body.appendChild(dragOverlay)
         document.documentElement.classList.add('oanix-tag-drag-overlay-active')
       }
 
-      const controlsLeft = document.querySelector<HTMLElement>('.oanix-organic-tags__controls')
-        ?.getBoundingClientRect().left ?? window.innerWidth
-      const overlayWidth = dragOverlay.getBoundingClientRect().width
+      const geometry = geometryForReorder(scroller)
       const clampedLeft = Math.min(
         event.clientX - dragOffsetX,
-        controlsLeft - REORDER_RIGHT_GUARD_PX - overlayWidth,
+        geometry.controlsLeft - REORDER_RIGHT_GUARD_PX - dragOverlayWidth,
       )
       dragOverlay.style.left = `${clampedLeft}px`
       dragOverlay.style.top = `${event.clientY - dragOffsetY}px`
     }
 
     function scheduleAutoScrollDuringReorder(scroller: HTMLElement, pointerX: number) {
-      const controlsLeft = document.querySelector<HTMLElement>('.oanix-organic-tags__controls')
-        ?.getBoundingClientRect().left ?? scroller.getBoundingClientRect().right
-      latestReorderPointerX = Math.min(pointerX, controlsLeft - REORDER_RIGHT_GUARD_PX)
+      const geometry = geometryForReorder(scroller)
+      latestReorderPointerX = Math.min(pointerX, geometry.controlsLeft - REORDER_RIGHT_GUARD_PX)
       if (autoScrollFrame !== null) return
 
       const tick = (now: number) => {
         autoScrollFrame = null
         if (!active || !document.querySelector('.oanix-organic-tags.is-reordering')) return
 
-        const rect = scroller.getBoundingClientRect()
         let delta = 0
-        const nearLeft = latestReorderPointerX < rect.left + REORDER_EDGE_PX
-        const nearRight = latestReorderPointerX > Math.min(rect.right, controlsLeft) - REORDER_EDGE_PX
+        const rightEdge = Math.min(geometry.scrollerRight, geometry.controlsLeft)
+        const nearLeft = latestReorderPointerX < geometry.scrollerLeft + REORDER_EDGE_PX
+        const nearRight = latestReorderPointerX > rightEdge - REORDER_EDGE_PX
 
         if (nearLeft) {
-          const strength = Math.min(1, (rect.left + REORDER_EDGE_PX - latestReorderPointerX) / REORDER_EDGE_PX)
+          const strength = Math.min(1, (geometry.scrollerLeft + REORDER_EDGE_PX - latestReorderPointerX) / REORDER_EDGE_PX)
           delta = -Math.max(1, Math.round(REORDER_MAX_SCROLL_PX * strength))
         } else if (nearRight) {
-          const rightEdge = Math.min(rect.right, controlsLeft)
           const strength = Math.min(1, (latestReorderPointerX - (rightEdge - REORDER_EDGE_PX)) / REORDER_EDGE_PX)
           delta = Math.max(1, Math.round(REORDER_MAX_SCROLL_PX * strength))
         }
@@ -151,7 +165,7 @@ export function TagMobileGestureRuntime() {
         active.scrolling = false
         suppressClickForId = active.tagId
         event.preventDefault()
-        ensureDragOverlay(event)
+        ensureDragOverlay(event, scroller)
         scheduleAutoScrollDuringReorder(scroller, event.clientX)
         return
       }
