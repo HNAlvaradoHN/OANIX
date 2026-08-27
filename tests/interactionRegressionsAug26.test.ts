@@ -11,18 +11,14 @@ const noteReorder = readFileSync('src/features/notes/NoteListReorderGestureRunti
 const noteReorderCss = readFileSync('src/features/notes/noteReorderGesture.css', 'utf8')
 const bulkOverride = readFileSync('src/features/privacy/noteBulkPrivacyOverrides.css', 'utf8')
 
-test('folder manager is scoped to the selected folder and bypasses legacy create flow', () => {
+test('folder manager is scoped by explicit event and bypasses hidden DOM bridges', () => {
   assert.match(folderManager, /renameFolder/)
   assert.match(folderManager, /deleteFolder/)
   assert.match(folderManager, /moveNoteToFolder\(note\.id, null\)/)
-  assert.match(folderManager, /\.oanix-folder-customizer__actions button/)
-  assert.match(folderManager, /\.oanix-folder-focus__actions button/)
-  assert.match(folderManager, /event\.stopImmediatePropagation\(\)/)
-  assert.doesNotMatch(folderManager, /notes-tab--add/)
-
-  const managerIndex = gate.indexOf('<FolderScopedManagerRuntime />')
-  const legacyBridgeIndex = gate.indexOf('<FolderCustomizerBridgeRuntime />')
-  assert.ok(managerIndex >= 0 && legacyBridgeIndex > managerIndex)
+  assert.match(folderManager, /oanix:open-folder-manager/)
+  assert.doesNotMatch(folderManager, /oanix-folder-focus|oanix-folder-customizer__actions|stopImmediatePropagation/)
+  assert.match(gate, /<FolderScopedManagerRuntime \/>/)
+  assert.doesNotMatch(gate, /FolderCustomizerBridgeRuntime/)
 })
 
 test('folder wheel supports the vertical desktop rail and horizontal variants', () => {
