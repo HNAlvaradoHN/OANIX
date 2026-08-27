@@ -125,15 +125,14 @@ export function NoteCreationFeedbackRuntime() {
       attributeFilter: ['class'],
     })
 
-    const workspace = document.querySelector<HTMLElement>('.notes-shell')
-    const observedWorkspace = workspace ?? undefined
-    const workspaceObserver = observedWorkspace
+    const sidebar = document.querySelector<HTMLElement>('.notes-sidebar')
+    const sidebarObserver = sidebar
       ? new MutationObserver((records) => {
           if (records.some(mutationTouchesFeedbackSurface)) sync()
         })
       : null
-    if (observedWorkspace && workspaceObserver) {
-      workspaceObserver.observe(observedWorkspace, {
+    if (sidebar && sidebarObserver) {
+      sidebarObserver.observe(sidebar, {
         childList: true,
         subtree: true,
         attributes: true,
@@ -144,7 +143,7 @@ export function NoteCreationFeedbackRuntime() {
     return () => {
       document.removeEventListener('click', onClick, true)
       detailObserver.disconnect()
-      workspaceObserver?.disconnect()
+      sidebarObserver?.disconnect()
       stop()
     }
   }, [])
