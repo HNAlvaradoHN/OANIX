@@ -31,7 +31,7 @@ test('el gesto móvil evita selección de texto y conserva swipe horizontal cort
 test('reorder muestra un clon fijo bajo el dedo y oculta el chip que salta en el layout', () => {
   assert.match(runtime, /cloneNode\(true\)/)
   assert.match(runtime, /oanix-tag-drag-overlay/)
-  assert.match(runtime, /controlsLeft - REORDER_RIGHT_GUARD_PX - overlayWidth/)
+  assert.match(runtime, /geometry\.controlsLeft - REORDER_RIGHT_GUARD_PX - dragOverlayWidth/)
   assert.match(runtime, /dragOverlay\.style\.left = `\$\{clampedLeft\}px`/)
   assert.match(runtime, /dragOverlay\.style\.top = `\$\{event\.clientY - dragOffsetY\}px`/)
   assert.match(css, /\.oanix-organic-tags\.is-reordering \.oanix-organic-tag-chip\.is-dragging[\s\S]*?opacity:\s*\.08 !important/)
@@ -72,11 +72,24 @@ test('reorder desplaza la tira de forma pautada al acercarse a los bordes', () =
   assert.match(runtime, /scheduleAutoScrollDuringReorder/)
   assert.match(runtime, /const tick = \(now: number\)/)
   assert.match(runtime, /autoScrollFrame = window\.requestAnimationFrame\(tick\)/)
-  assert.match(runtime, /latestReorderPointerX = Math\.min\(pointerX, controlsLeft - REORDER_RIGHT_GUARD_PX\)/)
+  assert.match(runtime, /latestReorderPointerX = Math\.min\(pointerX, geometry\.controlsLeft - REORDER_RIGHT_GUARD_PX\)/)
   assert.match(runtime, /window\.dispatchEvent\(new CustomEvent\('oanix:tag-reorder-edge-tick'/)
   assert.match(runtime, /lastEdgeSlotTickAt/)
   assert.doesNotMatch(runtime, /REORDER_SCROLL_STEP_PX = 12/)
   assert.doesNotMatch(runtime, /persistTagOrder/)
+})
+
+test('reorder tactil mide la geometria una vez por gesto y no fuerza layout en cada frame', () => {
+  assert.match(runtime, /let reorderGeometry: \{ controlsLeft: number; scrollerLeft: number; scrollerRight: number \} \| null = null/)
+  assert.match(runtime, /function geometryForReorder\(scroller: HTMLElement\)/)
+  assert.match(runtime, /if \(reorderGeometry\) return reorderGeometry/)
+  assert.match(runtime, /dragOverlayWidth = rect\.width/)
+  assert.doesNotMatch(runtime, /dragOverlay\.getBoundingClientRect\(\)\.width/)
+  assert.match(runtime, /reorderGeometry = null/)
+  const tickStart = runtime.indexOf('const tick = (now: number)')
+  const tickEnd = runtime.indexOf('autoScrollFrame = window.requestAnimationFrame(tick)', tickStart)
+  assert.ok(tickStart >= 0 && tickEnd > tickStart)
+  assert.doesNotMatch(runtime.slice(tickStart, tickEnd), /getBoundingClientRect/)
 })
 
 test('el borde derecho sigue avanzando huecos aunque el dedo quede quieto', () => {
