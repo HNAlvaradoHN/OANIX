@@ -12,7 +12,7 @@ test('touch coarse usa una ruta propia y no compite con Sortable', () => {
   assert.match(runtime, /document\.addEventListener\('pointerdown', onTouchPointerDown/)
   assert.match(runtime, /document\.addEventListener\('pointermove', onTouchPointerMove/)
   assert.match(runtime, /document\.addEventListener\('pointerup', finishPointerGesture/)
-  assert.match(runtime, /document\.addEventListener\('touchend', finishNativeTouchGesture/)
+  assert.doesNotMatch(runtime, /touchend|finishNativeTouchGesture|TouchEvent/)
 })
 
 test('el drag tactil se arma y reacomoda con tiempos cortos sin eliminar la proteccion de scroll', () => {
@@ -34,11 +34,14 @@ test('la fila real se convierte en slot y se mueve por el punto medio de las not
   assert.match(css, /\.note-row\.oanix-mobile-note-placeholder > \*[\s\S]*visibility:\s*hidden !important/)
 })
 
-test('el flotante se desacopla de la clase note-row para no heredar pieles antiguas', () => {
-  assert.match(runtime, /clone\.className = 'oanix-mobile-note-drag-overlay'/)
+test('el flotante conserva note-row para que coincidan sus estilos y elimina estados de drag heredados', () => {
+  assert.match(runtime, /clone\.classList\.remove\('oanix-mobile-note-chosen', 'oanix-mobile-note-placeholder', 'oanix-mobile-note-drag-source', 'oanix-mobile-note-drag-ghost'\)/)
+  assert.match(runtime, /clone\.classList\.add\('oanix-mobile-note-drag-overlay'\)/)
+  assert.doesNotMatch(runtime, /clone\.className = 'oanix-mobile-note-drag-overlay'/)
   assert.match(runtime, /clone\.querySelector<HTMLElement>\('\.note-row__menu-wrap'\)\?\.remove\(\)/)
   assert.match(runtime, /clone\.style\.setProperty\('position', 'fixed', 'important'\)/)
   assert.match(runtime, /clone\.style\.setProperty\('z-index', '2147483000', 'important'\)/)
+  assert.match(css, /body > \.note-row\.oanix-mobile-note-drag-overlay/)
 })
 
 test('al soltar conserva el DOM final y persiste exactamente ese orden', () => {
