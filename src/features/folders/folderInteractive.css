@@ -1,19 +1,14 @@
 /* Interaction-only styles for the exact folder-home reference.
    Business/data behavior remains in FolderGridRuntime and FolderAppearanceRuntime. */
 
-@keyframes oanix-folder-jiggle {
-  0% { transform: rotate(-2deg) scale(1.04); }
-  50% { transform: rotate(2deg) scale(1.04); }
-  100% { transform: rotate(-2deg) scale(1.04); }
-}
-
+/* Reorder movement is owned by the FLIP animation in FolderGridRuntime.
+   Keep this state visual without animating transform on every card, otherwise
+   the CSS animation and FLIP both write transform during the same gesture. */
 .oanix-folder-grid--reordering .oanix-folder-rail__item[data-oanix-folder-id] {
-  animation: oanix-folder-jiggle .15s ease-in-out infinite alternate;
   cursor: grab;
 }
 
 .oanix-folder-grid--reordering .oanix-folder-rail__item.is-dragging {
-  animation: none;
   opacity: .28;
   transform: scale(.85);
   cursor: grabbing;
@@ -360,6 +355,5 @@ html[data-oanix-theme='classic-day'] .oanix-folder-customizer .oanix-folder-appe
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .oanix-folder-grid--reordering .oanix-folder-rail__item[data-oanix-folder-id] { animation: none !important; }
   .oanix-folder-customizer button { transition: none !important; }
 }
