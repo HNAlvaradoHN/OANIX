@@ -2,23 +2,21 @@ import assert from 'node:assert/strict'
 import { existsSync, readFileSync } from 'node:fs'
 import test from 'node:test'
 
-const bridge = readFileSync('src/features/folders/FolderCustomizerBridgeRuntime.tsx', 'utf8')
-const personalization = readFileSync('src/features/notes/WorkspacePersonalizationRuntime.tsx', 'utf8')
+const grid = readFileSync('src/features/folders/FolderGridRuntime.tsx', 'utf8')
+const organic = readFileSync('src/features/notes/OrganicWorkspaceRuntime.tsx', 'utf8')
 const gate = readFileSync('src/app/WorkspaceRuntimeGate.tsx', 'utf8')
 
-test('gear click never creates the retired intermediary folder menu', () => {
-  assert.match(bridge, /\.oanix-folder-card__gear/)
-  assert.match(bridge, /event\.preventDefault\(\)/)
-  assert.match(bridge, /event\.stopPropagation\(\)/)
-  assert.match(bridge, /event\.stopImmediatePropagation\(\)/)
-  assert.doesNotMatch(personalization, /oanix-folder-options-backdrop|folderMenuId|setFolderMenuId/)
-  assert.equal(existsSync('src/features/folders/folderCustomizerBridge.css'), false)
+test('folder options open the real React customizer without a click bridge', () => {
+  assert.match(grid, /className="oanix-folder-card__gear"/)
+  assert.match(grid, /openCustomizer\(folder\)/)
+  assert.match(grid, /oanix:open-folder-customizer/)
+  assert.match(organic, /oanix:open-folder-customizer/)
+  assert.doesNotMatch(organic, /\.oanix-folder-focus__menu/)
+  assert.equal(existsSync('src/features/folders/FolderCustomizerBridgeRuntime.tsx'), false)
+  assert.doesNotMatch(gate, /FolderCustomizerBridgeRuntime/)
 })
 
-test('gear routes to the same real customizer already used by folder focus', () => {
-  assert.match(bridge, /\.oanix-folder-focus\[data-oanix-folder-id=/)
-  assert.match(bridge, /\.oanix-folder-focus__menu/)
-  const bridgeIndex = gate.indexOf('<FolderCustomizerBridgeRuntime />')
-  const personalizationIndex = gate.indexOf('<WorkspacePersonalizationRuntime />')
-  assert.ok(bridgeIndex >= 0 && personalizationIndex > bridgeIndex)
+test('the retired hidden focus panel is not rendered by the folder grid', () => {
+  assert.doesNotMatch(grid, /className=\{\`oanix-folder-focus/)
+  assert.doesNotMatch(grid, /oanix-folder-focus__menu|oanix-folder-focus__actions|oanix-folder-focus__search/)
 })
