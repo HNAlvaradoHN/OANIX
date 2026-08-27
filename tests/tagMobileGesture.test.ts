@@ -47,18 +47,29 @@ test('reorder abre hueco también al cruzar los extremos del carril', () => {
   assert.doesNotMatch(organic, /document\.elementFromPoint\(event\.clientX, event\.clientY\)/)
 })
 
+test('un gesto rápido cruza etiquetas de un hueco por actualización', () => {
+  assert.match(organic, /function moveTagOneStepTowardTarget/)
+  assert.match(organic, /const desired = moveTagAroundTarget/)
+  assert.match(organic, /const direction = desiredIndex > currentIndex \? 1 : -1/)
+  assert.match(organic, /currentIndex \+ direction/)
+  assert.match(organic, /moveTagOneStepTowardTarget\(current, tag\.id, dropTarget\.targetId, dropTarget\.placeAfter\)/)
+})
+
 test('reflow de etiquetas cancela la animación anterior antes de abrir el siguiente hueco', () => {
   assert.match(organic, /const tagReflowAnimations = new WeakMap<HTMLElement, Animation>/)
   assert.match(organic, /tagReflowAnimations\.get\(element\)\?\.cancel\(\)/)
   assert.match(organic, /duration: 150/)
 })
 
-test('reorder puede desplazar la tira al acercarse a los bordes sin tocar persistencia', () => {
-  assert.match(runtime, /REORDER_EDGE_PX = 44/)
-  assert.match(runtime, /REORDER_SCROLL_STEP_PX = 12/)
-  assert.match(runtime, /autoScrollDuringReorder/)
-  assert.match(runtime, /scroller\.scrollLeft -= REORDER_SCROLL_STEP_PX/)
-  assert.match(runtime, /scroller\.scrollLeft \+= REORDER_SCROLL_STEP_PX/)
+test('reorder desplaza la tira de forma pautada al acercarse a los bordes', () => {
+  assert.match(runtime, /REORDER_EDGE_PX = 64/)
+  assert.match(runtime, /REORDER_MAX_SCROLL_PX = 4/)
+  assert.match(runtime, /scheduleAutoScrollDuringReorder/)
+  assert.match(runtime, /window\.requestAnimationFrame/)
+  assert.match(runtime, /latestReorderPointerX/)
+  assert.match(runtime, /Math\.round\(REORDER_MAX_SCROLL_PX \* strength\)/)
+  assert.match(runtime, /if \(delta !== 0\) scroller\.scrollLeft \+= delta/)
+  assert.doesNotMatch(runtime, /REORDER_SCROLL_STEP_PX = 12/)
   assert.doesNotMatch(runtime, /persistTagOrder/)
 })
 
