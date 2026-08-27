@@ -1,16 +1,16 @@
 /* Interaction-only styles for the exact folder-home reference.
-   Business/data behavior remains in FolderGridRuntime and FolderAppearanceRuntime. */
+   FolderGridRuntime owns the current folder UI and encrypted appearance actions. */
 
-/* Reorder movement is owned by the FLIP animation in FolderGridRuntime.
-   Keep this state visual without animating transform on every card, otherwise
-   the CSS animation and FLIP both write transform during the same gesture. */
+/* Reorder movement is owned by the FLIP translation in FolderGridRuntime.
+   Keep source feedback on the independent scale property so selected/hover
+   transforms cannot override the held-card state. */
 .oanix-folder-grid--reordering .oanix-folder-rail__item[data-oanix-folder-id] {
   cursor: grab;
 }
 
 .oanix-folder-grid--reordering .oanix-folder-rail__item.is-dragging {
   opacity: .28;
-  transform: scale(.85);
+  scale: .85;
   cursor: grabbing;
 }
 
@@ -168,13 +168,6 @@
   transform: none;
 }
 
-.oanix-folder-customizer__actions .oanix-folder-customizer__open-action {
-  border-color: transparent;
-  background: linear-gradient(90deg,#9333ea,#db2777);
-  color: #fff;
-  box-shadow: 0 10px 22px rgba(147,51,234,.24);
-}
-
 .oanix-folder-customizer__actions .oanix-folder-customizer__appearance-toggle {
   background: rgba(255,255,255,.1);
 }
@@ -206,8 +199,6 @@
   padding: 0;
   border: 0;
 }
-.oanix-folder-appearance-picker[hidden] { display: none !important; }
-
 .oanix-folder-appearance-section {
   padding: 12px;
   border: 1px solid rgba(255,255,255,.1);
@@ -292,17 +283,6 @@
   box-shadow: 0 0 14px rgba(147,51,234,.28);
 }
 
-.oanix-folder-customizer .oanix-folder-appearance-picker__reset {
-  width: auto;
-  min-height: 32px;
-  margin-top: 9px;
-  padding: 6px 10px;
-  border-radius: 8px;
-  background: rgba(255,255,255,.05);
-  color: rgba(255,255,255,.68);
-  font-size: 10px;
-}
-
 /* Day mode keeps the same clean menu geometry with the verified light palette. */
 html[data-oanix-theme='classic-day'] .oanix-folder-customizer-backdrop {
   background: rgba(15,23,42,.42);
@@ -319,10 +299,6 @@ html[data-oanix-theme='classic-day'] .oanix-folder-appearance-section {
   border-color: rgba(15,23,42,.11);
   background: rgba(255,255,255,.72);
   color: #0f172a;
-}
-html[data-oanix-theme='classic-day'] .oanix-folder-customizer__actions .oanix-folder-customizer__open-action {
-  color: #fff;
-  background: linear-gradient(90deg,#9333ea,#db2777);
 }
 html[data-oanix-theme='classic-day'] .oanix-folder-customizer__actions .oanix-folder-customizer__cancel-action {
   background: rgba(15,23,42,.05);
