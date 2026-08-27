@@ -517,15 +517,9 @@ html[data-oanix-theme='classic-day'] .oanix-organic-tags__error { color: #991b1b
 }
 
 .oanix-folder-rail__item--add { display: none !important; }
-.oanix-folder-rail__done { display: none !important; }
-
 .oanix-folder-grid--reordering .oanix-folder-rail__item[data-oanix-folder-id] {
   touch-action: none !important;
 }
-body[data-oanix-folder-drop-finishing] .oanix-folder-grid--reordering .oanix-folder-rail__item[data-oanix-folder-id] {
-  animation: none !important;
-}
-
 .oanix-organic-folder-controls {
   position: fixed;
   z-index: 2450;
