@@ -4,9 +4,13 @@ import test from 'node:test'
 
 const runtime = readFileSync('src/features/tags/TagCreationRuntime.tsx', 'utf8')
 
-test('tag creation observes only the notes workspace', () => {
+test('tag creation observes only the notes workspace and filters unrelated subtree churn', () => {
   assert.match(runtime, /document\.querySelector<HTMLElement>\('\.notes-shell'\)/)
   assert.match(runtime, /observer\.observe\(workspace, \{ childList: true, subtree: true \}\)/)
+  assert.match(runtime, /function mutationTouchesTagSurface\(record: MutationRecord\)/)
+  assert.match(runtime, /TAG_DECORATION_SELECTOR/)
+  assert.match(runtime, /records\.some\(mutationTouchesTagSurface\)/)
+  assert.doesNotMatch(runtime, /new MutationObserver\(scheduleDecorate\)/)
   assert.doesNotMatch(runtime, /observer\.observe\(document\.body/)
 })
 
