@@ -101,18 +101,22 @@ function reorderDomAtPoint(gesture: TouchGesture, animate = true) {
     gesture.rail.querySelectorAll<HTMLElement>(':scope > .oanix-folder-rail__item[data-oanix-folder-id]'),
   ).filter((item) => item !== gesture.item)
 
-  const beforeOrder = folderOrder(gesture.rail).join('|')
-  const beforeRects = animate ? snapshotRects(gesture.rail) : null
   const insertionTarget = siblings.find((item) => {
     const rect = item.getBoundingClientRect()
     return gesture.lastX < rect.left + rect.width / 2
   })
 
+  if (
+    insertionTarget
+      ? gesture.item.nextElementSibling === insertionTarget
+      : gesture.item === gesture.rail.lastElementChild
+  ) {
+    return
+  }
+
+  const beforeRects = animate ? snapshotRects(gesture.rail) : null
   if (insertionTarget) gesture.rail.insertBefore(gesture.item, insertionTarget)
   else gesture.rail.appendChild(gesture.item)
-
-  const changed = folderOrder(gesture.rail).join('|') !== beforeOrder
-  if (!changed) return
 
   if (animate && beforeRects) {
     animateReflow(gesture.rail, beforeRects)
