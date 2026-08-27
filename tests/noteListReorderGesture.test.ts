@@ -10,18 +10,20 @@ const privacyRuntime = readFileSync('src/features/privacy/NoteBulkPrivacyRuntime
 const app = readFileSync('src/app/App.tsx', 'utf8')
 const pkg = readFileSync('package.json', 'utf8')
 
-test('reorder móvil usa SortableJS y conserva scroll nativo antes del long press', () => {
+test('reorder móvil queda bajo Pointer Events y SortableJS se reserva para escritorio', () => {
   assert.match(pkg, /"sortablejs": "1\.15\.7"/)
   assert.match(runtime, /import Sortable from 'sortablejs'/)
   assert.match(runtime, /Sortable\.create\(list/)
+  assert.match(runtime, /disabled: coarsePointer/)
   assert.match(runtime, /const LONG_PRESS_MS = 220/)
-  assert.match(runtime, /const TOUCH_START_THRESHOLD_PX = 7/)
-  assert.match(runtime, /delay: LONG_PRESS_MS/)
-  assert.match(runtime, /delayOnTouchOnly: true/)
-  assert.match(runtime, /touchStartThreshold: TOUCH_START_THRESHOLD_PX/)
-  assert.doesNotMatch(runtime, /supportPointer:\s*false/)
-  assert.match(css, /touch-action: pan-y !important/)
-  assert.doesNotMatch(runtime, /setPointerCapture|scrollTop -=/)
+  assert.match(runtime, /const TOUCH_MOVE_CANCEL_PX = 12/)
+  assert.match(runtime, /event\.pointerType === 'mouse'/)
+  assert.match(runtime, /setPointerCapture\(touchGesture\.pointerId\)/)
+  assert.match(runtime, /startScrollTop: list\.scrollTop/)
+  assert.match(runtime, /list\.scrollTop = touchGesture\.startScrollTop - dy/)
+  assert.match(runtime, /window\.scrollTo\(0, touchGesture\.startWindowScrollY - dy\)/)
+  assert.match(css, /touch-action: none !important/)
+  assert.doesNotMatch(runtime, /TouchEvent|onNativeTouch/)
 })
 
 test('toda la fila es superficie de drag y los controles reales quedan excluidos', () => {
@@ -35,7 +37,7 @@ test('toda la fila es superficie de drag y los controles reales quedan excluidos
   assert.match(avatar, /className=\{className\}/)
   assert.match(css, /\.note-row\[data-reorder-note-id\],\s*\n\.note-row\[data-reorder-note-id\] \.note-row__open/)
   assert.match(css, /cursor:\s*grab/)
-  assert.match(css, /@media \(pointer: coarse\)[\s\S]*?touch-action:\s*pan-y !important/)
+  assert.match(css, /@media \(pointer: coarse\)[\s\S]*?touch-action:\s*none !important/)
   assert.doesNotMatch(runtime, /touchArmTimer|touchArmed/)
 })
 
@@ -52,10 +54,12 @@ test('la tarjeta visible usa un overlay independiente y sigue directamente el de
   assert.match(runtime, /fallbackClass: 'oanix-mobile-note-drag-ghost'/)
   assert.match(runtime, /ghostClass: 'oanix-mobile-note-placeholder'/)
   assert.match(runtime, /cloneNode\(true\)/)
+  assert.match(runtime, /clone\.classList\.add\('oanix-mobile-note-drag-overlay'\)/)
+  assert.doesNotMatch(runtime, /clone\.className = 'oanix-mobile-note-drag-overlay'/)
   assert.match(runtime, /dragOverlay/)
   assert.match(runtime, /createDragOverlay\(event\.item/)
   assert.match(runtime, /document\.addEventListener\('pointermove'/)
-  assert.match(runtime, /document\.addEventListener\('touchmove'/)
+  assert.doesNotMatch(runtime, /document\.addEventListener\('touchmove'/)
   assert.match(css, /body > \.note-row\.oanix-mobile-note-drag-overlay[\s\S]*?position:\s*fixed !important/)
   assert.match(css, /body > \.note-row\.oanix-mobile-note-drag-overlay[\s\S]*?z-index:\s*10050 !important/)
   assert.match(css, /body > \.note-row\.oanix-mobile-note-drag-overlay[\s\S]*?pointer-events:\s*none !important/)
@@ -84,17 +88,21 @@ test('identidad visual se congela por note id durante el drag y se restaura ante
   assert.match(css, /--oanix-note-tab-color:\s*var\(--oanix-note-drag-stable-tab-color\) !important/)
 })
 
-test('auto-scroll y orden vertical pertenecen a SortableJS', () => {
+test('escritorio usa SortableJS y móvil mantiene orden vertical y auto-scroll propios', () => {
   assert.match(runtime, /direction: 'vertical'/)
   assert.match(runtime, /scroll: true/)
   assert.match(runtime, /scrollSensitivity: 72/)
   assert.match(runtime, /scrollSpeed: 12/)
   assert.match(runtime, /bubbleScroll: false/)
   assert.match(runtime, /swapThreshold: 0\.62/)
+  assert.match(runtime, /function scrollSpeed\(clientY: number\)/)
+  assert.match(runtime, /reorderTouchDomAtPoint\(touchGesture/)
+  assert.match(runtime, /window\.scrollBy\(0, speed\)/)
 })
 
 test('notas fijadas y no fijadas no se mezclan', () => {
   assert.match(runtime, /function rowPinned/)
+  assert.match(runtime, /const draggedPinned = rowPinned\(gesture\.item\)/)
   assert.match(runtime, /rowPinned\(event\.dragged\) === rowPinned\(event\.related\)/)
 })
 
