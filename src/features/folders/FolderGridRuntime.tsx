@@ -175,6 +175,30 @@ export function FolderGridRuntime() {
   }, [gridOpen])
 
   useEffect(() => {
+    const handleMobileOrderPreview = (event: Event) => {
+      const detail = event instanceof CustomEvent
+        ? event.detail as { orderedIds?: unknown } | null
+        : null
+      if (!Array.isArray(detail?.orderedIds) || !detail.orderedIds.every((id) => typeof id === 'string')) return
+
+      const orderedIds = detail.orderedIds as string[]
+      let accepted = false
+      setData((current) => {
+        if (orderedIds.length !== current.folders.length) return current
+        const byId = new Map(current.folders.map((folder) => [folder.id, folder]))
+        if (orderedIds.some((id) => !byId.has(id))) return current
+        const nextFolders = orderedIds.map((id) => byId.get(id)!)
+        accepted = nextFolders.some((folder, index) => folder.id !== current.folders[index]?.id)
+        return accepted ? { ...current, folders: nextFolders } : current
+      })
+      if (accepted) queueFolderOrderPersistence(orderedIds)
+    }
+
+    window.addEventListener('oanix:folder-order-preview', handleMobileOrderPreview)
+    return () => window.removeEventListener('oanix:folder-order-preview', handleMobileOrderPreview)
+  }, [])
+
+  useEffect(() => {
     const handleCommittedFolder = (event: Event) => {
       const detail = event instanceof CustomEvent
         ? event.detail as { folderId?: unknown } | null
