@@ -69,6 +69,14 @@ const EMPTY_DATA: FolderGridData = {
 
 const FOLDER_LONG_PRESS_MS = 460
 const FOLDER_SHAPES = ['blob-a', 'circle', 'squircle', 'blob-b', 'diamond', 'hexagon'] as const
+const FOLDER_GRID_TARGET_SELECTOR = '.notes-sidebar, .notes-tabs-shell, .notes-header, .notes-search, .notes-tab'
+const FOLDER_GRID_TARGET_CLASS_NAMES = [
+  'notes-sidebar',
+  'notes-tabs-shell',
+  'notes-header',
+  'notes-search',
+  'notes-tab',
+]
 
 function defaultIconForIndex(index: number): FolderIcon {
   return (FOLDER_DEFAULT_ICONS[index % FOLDER_DEFAULT_ICONS.length] ?? DEFAULT_FOLDER_ICON) as FolderIcon
@@ -96,6 +104,34 @@ function sameTargets(left: FolderGridTargets, right: FolderGridTargets): boolean
     && left.searchOpen === right.searchOpen
     && left.activeLabel === right.activeLabel
   )
+}
+
+function nodeTouchesFolderGridTargets(node: Node): boolean {
+  if (!(node instanceof Element)) return false
+  return node.matches(FOLDER_GRID_TARGET_SELECTOR) || node.querySelector(FOLDER_GRID_TARGET_SELECTOR) !== null
+}
+
+function mutationTouchesFolderGridTargets(record: MutationRecord): boolean {
+  if (record.type === 'childList') {
+    return [...record.addedNodes, ...record.removedNodes].some(nodeTouchesFolderGridTargets)
+  }
+
+  if (record.type === 'characterData') {
+    return record.target.parentElement?.closest('.notes-tab') !== null
+  }
+
+  if (record.type !== 'attributes') return false
+  const target = record.target
+  if (!(target instanceof Element)) return false
+  if (record.attributeName === 'aria-current') return target.matches('.notes-tab')
+  if (record.attributeName !== 'class') return false
+
+  if (FOLDER_GRID_TARGET_CLASS_NAMES.some((className) => target.classList.contains(className))) {
+    return true
+  }
+
+  const oldClasses = new Set((record.oldValue ?? '').split(/\s+/).filter(Boolean))
+  return FOLDER_GRID_TARGET_CLASS_NAMES.some((className) => oldClasses.has(className))
 }
 
 function moveFolderAroundTarget(
@@ -308,12 +344,16 @@ export function FolderGridRuntime() {
       return () => window.cancelAnimationFrame(frame)
     }
 
-    const observer = new MutationObserver(refreshTargets)
+    const observer = new MutationObserver((records) => {
+      if (records.some(mutationTouchesFolderGridTargets)) refreshTargets()
+    })
     observer.observe(workspace, {
       childList: true,
       subtree: true,
       attributes: true,
       attributeFilter: ['aria-current', 'class'],
+      attributeOldValue: true,
+      characterData: true,
     })
 
     return () => {
