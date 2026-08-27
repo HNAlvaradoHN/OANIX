@@ -11,6 +11,7 @@ export function V383WorkspaceVisualRuntime() {
     const root = document.documentElement
     const body = document.body
     const shell = document.querySelector<HTMLElement>('.notes-shell')
+    let lastNoteDetailOpen: boolean | null = null
 
     const syncNoteDetailState = () => {
       const noteDetailOpen = Boolean(
@@ -18,6 +19,11 @@ export function V383WorkspaceVisualRuntime() {
       )
       root.classList.toggle('oanix-note-detail-open', noteDetailOpen)
       body.classList.toggle('oanix-note-detail-open', noteDetailOpen)
+      if (lastNoteDetailOpen === noteDetailOpen) return
+      lastNoteDetailOpen = noteDetailOpen
+      window.dispatchEvent(new CustomEvent('oanix:note-detail-state-changed', {
+        detail: { open: noteDetailOpen },
+      }))
     }
 
     root.classList.add('oanix-v383-visual')
