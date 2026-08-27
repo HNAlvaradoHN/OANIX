@@ -921,8 +921,7 @@ html.oanix-v383-visual .oanix-folder-card__favorite {
 html.oanix-v383-visual .oanix-folder-card__pin { left: 5px !important; background: #eab308 !important; color: #000 !important; }
 html.oanix-v383-visual .oanix-folder-card__favorite { left: 24px !important; background: #ec4899 !important; color: #fff !important; }
 
-html.oanix-v383-visual .oanix-folder-rail__item--add,
-html.oanix-v383-visual .oanix-folder-rail__done { display: none !important; }
+html.oanix-v383-visual .oanix-folder-rail__item--add { display: none !important; }
 
 /* left capsule: exactly two controls, Add + Day/Night */
 html.oanix-v383-visual .oanix-organic-folder-controls {
