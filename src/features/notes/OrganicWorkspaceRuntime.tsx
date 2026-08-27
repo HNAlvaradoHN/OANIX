@@ -209,6 +209,21 @@ export function OrganicWorkspaceRuntime() {
     })
   }
 
+  function workspaceReorderActive() {
+    return (
+      document.documentElement.classList.contains('oanix-mobile-note-dragging')
+      || document.documentElement.classList.contains('oanix-mobile-folder-dragging')
+      || Boolean(document.querySelector('.oanix-folder-grid--drag-active, .oanix-organic-tags.is-reordering'))
+    )
+  }
+
+  function scheduleWorkspaceDecorate() {
+    if (workspaceReorderActive()) return
+    window.requestAnimationFrame(() => {
+      if (!workspaceReorderActive()) decorateWorkspace()
+    })
+  }
+
   async function reloadPrivateUiData() {
     if (!document.querySelector('.notes-sidebar')) return
     try {
@@ -225,7 +240,7 @@ export function OrganicWorkspaceRuntime() {
       setTags(nextTags)
       setFolderVisuals({ covers, colors })
       setTagOrderError('')
-      window.requestAnimationFrame(decorateWorkspace)
+      scheduleWorkspaceDecorate()
     } catch {
       // The runtime only paints private UI while an unlocked workspace exists.
     }
@@ -243,7 +258,7 @@ export function OrganicWorkspaceRuntime() {
           : [...current, note]
         : current.filter((item) => item.id !== noteId)
       notesRef.current = next
-      window.requestAnimationFrame(decorateWorkspace)
+      scheduleWorkspaceDecorate()
     } catch {
       // A later full refresh or sync event can recover a transient read failure.
     }
@@ -280,17 +295,11 @@ export function OrganicWorkspaceRuntime() {
     ensureHost()
     void reloadPrivateUiData()
 
-    const workspaceReorderActive = () => (
-      document.documentElement.classList.contains('oanix-mobile-note-dragging')
-      || document.documentElement.classList.contains('oanix-mobile-folder-dragging')
-      || Boolean(document.querySelector('.oanix-folder-grid--drag-active, .oanix-organic-tags.is-reordering'))
-    )
-
     const workspace = document.querySelector<HTMLElement>('.notes-shell')
     const observer = new MutationObserver(() => {
       if (workspaceReorderActive()) return
       ensureHost()
-      window.requestAnimationFrame(decorateWorkspace)
+      scheduleWorkspaceDecorate()
     })
     if (workspace) {
       observer.observe(workspace, {
