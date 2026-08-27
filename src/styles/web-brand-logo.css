@@ -59,49 +59,13 @@ html.oanix-brand-final .notes-brand__mark::after {
   animation: none !important;
 }
 
-/* Inside the PWA the mark has a very small living motion on fine-pointer devices.
- * Touch devices keep the same appearance without paying for continuous transforms.
+/* Keep the approved brand mark visually stable while the app is idle.
+ * Continuous logo transforms and sheen were decorative only and kept the compositor
+ * active even when the workspace had no user interaction.
  */
 html.oanix-brand-final.oanix-brand-pwa-preview .vault-logo,
 html.oanix-brand-final.oanix-brand-pwa-preview .notes-brand__mark {
-  animation: oanix-brand-float 5.8s ease-in-out infinite;
-  will-change: transform;
-}
-
-html.oanix-brand-final.oanix-brand-pwa-preview .vault-logo::after,
-html.oanix-brand-final.oanix-brand-pwa-preview .notes-brand__mark::after {
-  content: '' !important;
-  display: block !important;
-  position: absolute;
-  z-index: 2;
-  top: -18%;
-  bottom: -18%;
-  left: -62%;
-  width: 42%;
-  border-radius: 45%;
-  background: linear-gradient(
-    118deg,
-    transparent 0%,
-    rgba(255, 255, 255, .02) 27%,
-    rgba(255, 255, 255, .18) 50%,
-    rgba(255, 166, 76, .08) 61%,
-    transparent 100%
-  );
-  transform: skewX(-14deg);
-  pointer-events: none;
-  animation: oanix-brand-sheen 7.2s ease-in-out infinite !important;
-}
-
-@keyframes oanix-brand-float {
-  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
-  50% { transform: translate3d(0, -1.5px, 0) scale(1.012); }
-}
-
-@keyframes oanix-brand-sheen {
-  0%, 18% { left: -62%; opacity: 0; }
-  26% { opacity: .55; }
-  46% { left: 122%; opacity: .18; }
-  55%, 100% { left: 122%; opacity: 0; }
+  will-change: auto;
 }
 
 html.oanix-brand-final .vault-brandline strong,
@@ -139,30 +103,10 @@ html.oanix-brand-pwa-preview.oanix-classic-day .notes-brand__mark {
   }
 }
 
-@media (pointer: coarse) {
-  html.oanix-brand-final.oanix-brand-pwa-preview .vault-logo,
-  html.oanix-brand-final.oanix-brand-pwa-preview .notes-brand__mark {
-    animation: none !important;
-    will-change: auto;
-  }
-
-  html.oanix-brand-final.oanix-brand-pwa-preview .vault-logo::after,
-  html.oanix-brand-final.oanix-brand-pwa-preview .notes-brand__mark::after {
-    animation: none !important;
-    display: none !important;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   html.oanix-brand-final .vault-logo,
   html.oanix-brand-final .notes-brand__mark {
     transition: none !important;
     animation: none !important;
-  }
-
-  html.oanix-brand-final.oanix-brand-pwa-preview .vault-logo::after,
-  html.oanix-brand-final.oanix-brand-pwa-preview .notes-brand__mark::after {
-    animation: none !important;
-    display: none !important;
   }
 }
