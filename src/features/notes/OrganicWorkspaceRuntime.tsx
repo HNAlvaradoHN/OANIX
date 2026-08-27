@@ -49,6 +49,29 @@ function moveTagAroundTarget(
   return next.every((tag, index) => tag.id === tags[index]?.id) ? tags : next
 }
 
+function moveTagOneStepTowardTarget(
+  tags: TagRecord[],
+  draggedId: string,
+  targetId: string,
+  placeAfter: boolean,
+): TagRecord[] {
+  const currentIndex = tags.findIndex((tag) => tag.id === draggedId)
+  if (currentIndex < 0) return tags
+
+  const desired = moveTagAroundTarget(tags, draggedId, targetId, placeAfter)
+  if (desired === tags) return tags
+  const desiredIndex = desired.findIndex((tag) => tag.id === draggedId)
+  if (desiredIndex < 0 || desiredIndex === currentIndex) return tags
+
+  const next = [...tags]
+  const [dragged] = next.splice(currentIndex, 1)
+  if (!dragged) return tags
+  const direction = desiredIndex > currentIndex ? 1 : -1
+  const insertionIndex = Math.max(0, Math.min(next.length, currentIndex + direction))
+  next.splice(insertionIndex, 0, dragged)
+  return next
+}
+
 function tagDropTargetAtX(
   host: HTMLElement | null,
   draggedId: string,
@@ -364,7 +387,7 @@ export function OrganicWorkspaceRuntime() {
     if (!dropTarget) return
     const before = captureTagRects(tagHost)
     setTags((current) => {
-      const next = moveTagAroundTarget(current, tag.id, dropTarget.targetId, dropTarget.placeAfter)
+      const next = moveTagOneStepTowardTarget(current, tag.id, dropTarget.targetId, dropTarget.placeAfter)
       if (next === current) return current
       tagsRef.current = next
       animateTagReflow(tagHost, before, tag.id)
