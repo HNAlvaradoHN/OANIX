@@ -15,7 +15,6 @@ type SortableOptionsWithHandle = NonNullable<Parameters<typeof Sortable.create>[
 type DragIdentity = { cardColor: string; tabColor: string; icon: string | null }
 type ClientPoint = { x: number; y: number }
 type TouchGesture = {
-  source: 'pointer' | 'touch'
   pointerId: number
   item: HTMLElement
   startX: number
@@ -23,6 +22,8 @@ type TouchGesture = {
   lastX: number
   lastY: number
   pressedAt: number
+  startScrollTop: number
+  startWindowScrollY: number
   grabOffsetX: number
   grabOffsetY: number
   moved: boolean
@@ -55,15 +56,6 @@ function interactionBlocked(): boolean {
 }
 function isExcludedInteractiveTarget(target: HTMLElement): boolean {
   return Boolean(target.closest('.note-row__menu-wrap, button:not(.note-row__open), a, input, textarea, select, [contenteditable="true"]'))
-}
-function eventClientPoint(event: Event | undefined): ClientPoint | null {
-  if (!event) return null
-  if (event instanceof TouchEvent) {
-    const touch = event.touches[0] ?? event.changedTouches[0]
-    return touch ? { x: touch.clientX, y: touch.clientY } : null
-  }
-  if (event instanceof MouseEvent) return { x: event.clientX, y: event.clientY }
-  return null
 }
 function exposeDraggedRowSurface(row: HTMLElement) {
   const root = document.documentElement
@@ -102,7 +94,8 @@ function prepareDragOverlayTemplate(row: HTMLElement): HTMLElement {
   copyComputedStyleTree(row, clone)
   clone.removeAttribute('data-oanix-note-dragging')
   clone.removeAttribute('data-reorder-note-id')
-  clone.className = 'oanix-mobile-note-drag-overlay'
+  clone.classList.remove('oanix-mobile-note-chosen', 'oanix-mobile-note-placeholder', 'oanix-mobile-note-drag-source', 'oanix-mobile-note-drag-ghost')
+  clone.classList.add('oanix-mobile-note-drag-overlay')
   clone.querySelector<HTMLElement>('.note-row__menu-wrap')?.remove()
   clone.setAttribute('aria-hidden', 'true')
   return clone
@@ -155,7 +148,6 @@ export function NoteListReorderGestureRuntime() {
     const list = document.querySelector<HTMLElement>('.notes-list')
     if (!list?.classList.contains('notes-list')) return
     const coarsePointer = window.matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0
-    const nativeTouchEvents = typeof TouchEvent !== 'undefined'
     const noteRows = () => Array.from(list.querySelectorAll<HTMLElement>(':scope > .note-row[data-reorder-note-id]'))
 
     const freezeDragIdentity = () => {
@@ -333,20 +325,31 @@ export function NoteListReorderGestureRuntime() {
       startTouchAutoScroll()
       window.getSelection()?.removeAllRanges()
       navigator.vibrate?.(30)
+      try {
+        touchGesture.item.setPointerCapture(touchGesture.pointerId)
+      } catch {
+        // Pointer capture is best effort on Android WebView/PWA implementations.
+      }
     }
     const cancelTouchGesture = (restoreOrder = true) => {
       if (!touchGesture) return
       clearTouchTimer()
       stopTouchAutoScroll()
       if (restoreOrder && touchGesture.dragging && touchGesture.orderBefore.length) restoreDomOrder(list, touchGesture.orderBefore)
+      try {
+        if (touchGesture.item.hasPointerCapture(touchGesture.pointerId)) {
+          touchGesture.item.releasePointerCapture(touchGesture.pointerId)
+        }
+      } catch {
+        // Pointer capture may already be gone after blur/cancel.
+      }
       touchGesture = null
       clearDragVisuals()
     }
-    const beginGesture = (source: 'pointer' | 'touch', pointerId: number, item: HTMLElement, clientX: number, clientY: number) => {
+    const beginGesture = (pointerId: number, item: HTMLElement, clientX: number, clientY: number) => {
       const rect = item.getBoundingClientRect()
       lastPointer = { x: clientX, y: clientY }
       touchGesture = {
-        source,
         pointerId,
         item,
         startX: clientX,
@@ -354,6 +357,8 @@ export function NoteListReorderGestureRuntime() {
         lastX: clientX,
         lastY: clientY,
         pressedAt: performance.now(),
+        startScrollTop: list.scrollTop,
+        startWindowScrollY: window.scrollY,
         grabOffsetX: clientX - rect.left,
         grabOffsetY: clientY - rect.top,
         moved: false,
@@ -388,6 +393,14 @@ export function NoteListReorderGestureRuntime() {
 
         touchGesture.moved = true
         clearTouchTimer()
+        if (Math.abs(dy) >= Math.abs(dx)) {
+          preventDefault()
+          if (list.scrollHeight > list.clientHeight + 1) {
+            list.scrollTop = touchGesture.startScrollTop - dy
+          } else {
+            window.scrollTo(0, touchGesture.startWindowScrollY - dy)
+          }
+        }
         return
       }
 
@@ -417,45 +430,28 @@ export function NoteListReorderGestureRuntime() {
     }
 
     const onTouchPointerDown = (event: PointerEvent) => {
-      if (!coarsePointer || event.pointerType === 'mouse' || event.button !== 0 || touchGesture || interactionBlocked()) return
-      if (nativeTouchEvents && event.pointerType === 'touch') return
+      if (event.pointerType === 'mouse' || event.button !== 0 || touchGesture || interactionBlocked()) return
       if (!(event.target instanceof HTMLElement) || isExcludedInteractiveTarget(event.target)) return
       const item = event.target.closest<HTMLElement>('.note-row[data-reorder-note-id]')
       if (!item || item.parentElement !== list) return
-      beginGesture('pointer', event.pointerId, item, event.clientX, event.clientY)
+      event.stopPropagation()
+      beginGesture(event.pointerId, item, event.clientX, event.clientY)
     }
     const onTouchPointerMove = (event: PointerEvent) => {
-      if (!touchGesture || touchGesture.source !== 'pointer' || event.pointerId !== touchGesture.pointerId) return
+      if (!touchGesture || event.pointerId !== touchGesture.pointerId) return
+      event.stopPropagation()
       advanceGesture(event.clientX, event.clientY, () => event.preventDefault())
     }
     const finishPointerGesture = (event: PointerEvent) => {
-      if (!touchGesture || touchGesture.source !== 'pointer' || event.pointerId !== touchGesture.pointerId) return
+      if (!touchGesture || event.pointerId !== touchGesture.pointerId) return
+      const item = touchGesture.item
+      event.stopPropagation()
       completeGesture(() => event.preventDefault())
-    }
-    const touchForGesture = (event: TouchEvent): Touch | null => {
-      if (!touchGesture || touchGesture.source !== 'touch') return null
-      return Array.from(event.touches).find((touch) => touch.identifier === touchGesture?.pointerId)
-        ?? Array.from(event.changedTouches).find((touch) => touch.identifier === touchGesture?.pointerId)
-        ?? null
-    }
-    const onNativeTouchStart = (event: TouchEvent) => {
-      if (!coarsePointer || touchGesture || interactionBlocked()) return
-      if (!(event.target instanceof HTMLElement) || isExcludedInteractiveTarget(event.target)) return
-      const item = event.target.closest<HTMLElement>('.note-row[data-reorder-note-id]')
-      const touch = event.changedTouches[0]
-      if (!item || item.parentElement !== list || !touch) return
-      beginGesture('touch', touch.identifier, item, touch.clientX, touch.clientY)
-    }
-    const onNativeTouchMove = (event: TouchEvent) => {
-      const touch = touchForGesture(event)
-      if (!touch) return
-      advanceGesture(touch.clientX, touch.clientY, () => event.preventDefault())
-    }
-    const finishNativeTouchGesture = (event: TouchEvent) => {
-      if (!touchGesture || touchGesture.source !== 'touch') return
-      const ended = Array.from(event.changedTouches).some((touch) => touch.identifier === touchGesture?.pointerId)
-      if (!ended) return
-      completeGesture(() => event.preventDefault())
+      try {
+        if (item.hasPointerCapture(event.pointerId)) item.releasePointerCapture(event.pointerId)
+      } catch {
+        // Pointer capture may already be gone.
+      }
     }
 
     const sortableOptions: SortableOptionsWithHandle = {
@@ -512,9 +508,8 @@ export function NoteListReorderGestureRuntime() {
     }
 
     const sortable = Sortable.create(list, sortableOptions)
-    const rememberPointer = (event: TouchEvent | PointerEvent) => {
-      const point = eventClientPoint(event)
-      if (!point) return
+    const rememberPointer = (event: PointerEvent) => {
+      const point = { x: event.clientX, y: event.clientY }
       lastPointer = point
       if (!touchGesture?.dragging) positionDragOverlay(point)
     }
@@ -529,27 +524,17 @@ export function NoteListReorderGestureRuntime() {
       event.preventDefault()
     }
     const onTouchPointerCancel = (event: PointerEvent) => {
-      if (!touchGesture || touchGesture.source !== 'pointer' || event.pointerId !== touchGesture.pointerId) return
+      if (!touchGesture || event.pointerId !== touchGesture.pointerId) return
+      event.stopPropagation()
       cancelTouchGesture(true)
-    }
-    const onNativeTouchCancel = (event: TouchEvent) => {
-      if (!touchGesture || touchGesture.source !== 'touch') return
-      const cancelled = Array.from(event.changedTouches).some((touch) => touch.identifier === touchGesture?.pointerId)
-      if (cancelled) cancelTouchGesture(true)
     }
     const onVisibilityChange = () => {
       if (document.hidden) cancelTouchGesture(true)
     }
     const onBlur = () => cancelTouchGesture(true)
 
-    document.addEventListener('touchstart', rememberPointer, { capture: true, passive: true })
-    document.addEventListener('touchmove', rememberPointer, { capture: true, passive: true })
     document.addEventListener('pointerdown', rememberPointer, { capture: true, passive: true })
     document.addEventListener('pointermove', rememberPointer, { capture: true, passive: true })
-    document.addEventListener('touchstart', onNativeTouchStart, { capture: true, passive: true })
-    document.addEventListener('touchmove', onNativeTouchMove, { capture: true, passive: false })
-    document.addEventListener('touchend', finishNativeTouchGesture, { capture: true, passive: false })
-    document.addEventListener('touchcancel', onNativeTouchCancel, true)
     document.addEventListener('pointerdown', onTouchPointerDown, true)
     document.addEventListener('pointermove', onTouchPointerMove, { capture: true, passive: false })
     document.addEventListener('pointerup', finishPointerGesture, true)
@@ -564,14 +549,8 @@ export function NoteListReorderGestureRuntime() {
       sortable.destroy()
       cancelTouchGesture(true)
       clearDragVisuals()
-      document.removeEventListener('touchstart', rememberPointer, true)
-      document.removeEventListener('touchmove', rememberPointer, true)
       document.removeEventListener('pointerdown', rememberPointer, true)
       document.removeEventListener('pointermove', rememberPointer, true)
-      document.removeEventListener('touchstart', onNativeTouchStart, true)
-      document.removeEventListener('touchmove', onNativeTouchMove, true)
-      document.removeEventListener('touchend', finishNativeTouchGesture, true)
-      document.removeEventListener('touchcancel', onNativeTouchCancel, true)
       document.removeEventListener('pointerdown', onTouchPointerDown, true)
       document.removeEventListener('pointermove', onTouchPointerMove, true)
       document.removeEventListener('pointerup', finishPointerGesture, true)

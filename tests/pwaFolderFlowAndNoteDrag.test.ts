@@ -28,13 +28,15 @@ test('folder appearance stays preview-only until save and closes the whole custo
   assert.doesNotMatch(polishRuntime, /MutationObserver|oanix-folder-customizer__appearance-toggle/)
 })
 
-test('coarse touch note drag owns vertical movement after long press without stealing normal pre-drag scroll', () => {
-  assert.match(noteDragRuntime, /document\.addEventListener\('touchmove', onNativeTouchMove, \{ capture: true, passive: false \}\)/)
+test('coarse touch note drag owns vertical movement with one pointer engine and manual pre-drag scroll', () => {
+  assert.match(noteDragRuntime, /document\.addEventListener\('pointermove', onTouchPointerMove, \{ capture: true, passive: false \}\)/)
   assert.match(noteDragRuntime, /if \(!touchGesture\.dragging\)[\s\S]*distance < TOUCH_MOVE_CANCEL_PX[\s\S]*heldFor >= LONG_PRESS_MS - PRESS_ARM_GRACE_MS/)
-  assert.match(noteDragRuntime, /if \(nativeTouchEvents && event\.pointerType === 'touch'\) return/)
-  assert.match(noteDragRuntime, /advanceGesture\(touch\.clientX, touch\.clientY, \(\) => event\.preventDefault\(\)\)/)
-  assert.match(noteDragRuntime, /completeGesture\(\(\) => event\.preventDefault\(\)\)/)
-  assert.match(noteDragCss, /touch-action:\s*pan-y\s*!important/)
+  assert.match(noteDragRuntime, /event\.pointerType === 'mouse'/)
+  assert.match(noteDragRuntime, /list\.scrollTop = touchGesture\.startScrollTop - dy/)
+  assert.match(noteDragRuntime, /window\.scrollTo\(0, touchGesture\.startWindowScrollY - dy\)/)
+  assert.match(noteDragRuntime, /setPointerCapture\(touchGesture\.pointerId\)/)
+  assert.doesNotMatch(noteDragRuntime, /TouchEvent|onNativeTouch/)
+  assert.match(noteDragCss, /touch-action:\s*none\s*!important/)
 })
 
 test('folder gear uses an optically centered pseudo glyph', () => {
