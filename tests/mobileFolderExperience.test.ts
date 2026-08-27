@@ -40,11 +40,12 @@ test('legacy folder manager is visually replaced by the focused Nueva carpeta di
   assert.match(createRuntime, /\.notes-create-fab, \.empty-action/)
 })
 
-test('mobile folder long press stays armed at the threshold and uses live horizontal placement', () => {
+test('folder drag keeps touch long press and desktop pointer drag with live horizontal placement', () => {
   assert.match(dragRuntime, /const LONG_PRESS_MS = 220/)
   assert.match(dragRuntime, /const PRESS_ARM_GRACE_MS = 35/)
   assert.match(dragRuntime, /const MOVE_CANCEL_PX = 14/)
-  assert.match(dragRuntime, /heldFor >= LONG_PRESS_MS - PRESS_ARM_GRACE_MS/)
+  assert.match(dragRuntime, /event\.pointerType === 'mouse' \? 0 : LONG_PRESS_MS/)
+  assert.match(dragRuntime, /heldFor >= requiredHold - PRESS_ARM_GRACE_MS/)
   assert.match(dragRuntime, /beginDrag\(\)[\s\S]*gesture\?\.dragging/)
   assert.match(dragRuntime, /siblings\.find\(\(item\) => \{[\s\S]*gesture\.lastX < rect\.left \+ rect\.width \/ 2/)
   assert.match(dragRuntime, /insertBefore\(gesture\.item, insertionTarget\)/)
