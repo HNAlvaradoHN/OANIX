@@ -17,6 +17,19 @@ test('note touch reorder snapshots rows only after leaving the current slot', ()
   assert.doesNotMatch(block, /const beforeOrder = noteOrder/)
 })
 
+test('note touch reflow cancels the previous FLIP animation before starting another one', () => {
+  const start = notes.indexOf('function animateReflow')
+  const end = notes.indexOf('function scrollSpeed', start)
+  assert.ok(start >= 0 && end > start)
+  const block = notes.slice(start, end)
+  const cancel = block.indexOf('noteReflowAnimations.get(row)?.cancel()')
+  const animate = block.indexOf('const animation = row.animate(')
+  assert.ok(cancel >= 0 && animate > cancel)
+  assert.match(notes, /const noteReflowAnimations = new WeakMap<HTMLElement, Animation>\(\)/)
+  assert.match(block, /noteReflowAnimations\.set\(row, animation\)/)
+  assert.match(block, /animation\.oncancel = animation\.onfinish/)
+})
+
 test('folder touch reorder snapshots cards only after leaving the current slot', () => {
   const start = folders.indexOf('function reorderDomAtPoint')
   const end = folders.indexOf('function scrollSpeed', start)
