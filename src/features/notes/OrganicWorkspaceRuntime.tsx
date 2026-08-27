@@ -46,7 +46,30 @@ function moveTagAroundTarget(
   const targetIndex = next.findIndex((tag) => tag.id === targetId)
   if (!dragged || targetIndex < 0) return tags
   next.splice(targetIndex + (placeAfter ? 1 : 0), 0, dragged)
-  return next
+  return next.every((tag, index) => tag.id === tags[index]?.id) ? tags : next
+}
+
+function tagDropTargetAtX(
+  host: HTMLElement | null,
+  draggedId: string,
+  clientX: number,
+): { targetId: string; placeAfter: boolean } | null {
+  const candidates = Array.from(host?.querySelectorAll<HTMLElement>('[data-oanix-organic-tag-id]') ?? [])
+    .flatMap((element) => {
+      const targetId = element.dataset.oanixOrganicTagId
+      if (!targetId || targetId === draggedId) return []
+      return [{ targetId, rect: element.getBoundingClientRect() }]
+    })
+    .sort((left, right) => left.rect.left - right.rect.left)
+
+  if (candidates.length === 0) return null
+  for (const candidate of candidates) {
+    if (clientX < candidate.rect.left + candidate.rect.width / 2) {
+      return { targetId: candidate.targetId, placeAfter: false }
+    }
+  }
+  const last = candidates[candidates.length - 1]
+  return last ? { targetId: last.targetId, placeAfter: true } : null
 }
 
 function captureTagRects(host: HTMLElement | null): Map<string, DOMRect> {
@@ -57,6 +80,8 @@ function captureTagRects(host: HTMLElement | null): Map<string, DOMRect> {
   })
   return rects
 }
+
+const tagReflowAnimations = new WeakMap<HTMLElement, Animation>()
 
 function animateTagReflow(host: HTMLElement | null, before: Map<string, DOMRect>, draggingId: string) {
   window.requestAnimationFrame(() => {
@@ -69,10 +94,15 @@ function animateTagReflow(host: HTMLElement | null, before: Map<string, DOMRect>
         const next = element.getBoundingClientRect()
         const deltaX = previous.left - next.left
         if (Math.abs(deltaX) < 1) return
-        element.animate(
+        tagReflowAnimations.get(element)?.cancel()
+        const animation = element.animate(
           [{ transform: `translateX(${deltaX}px)` }, { transform: 'translateX(0)' }],
-          { duration: 170, easing: 'cubic-bezier(.2,.75,.25,1)' },
+          { duration: 150, easing: 'cubic-bezier(.2,.75,.25,1)' },
         )
+        tagReflowAnimations.set(element, animation)
+        animation.addEventListener('finish', () => {
+          if (tagReflowAnimations.get(element) === animation) tagReflowAnimations.delete(element)
+        }, { once: true })
       })
     })
   })
@@ -330,15 +360,12 @@ export function OrganicWorkspaceRuntime() {
     if (draggingTagId !== tag.id) return
     event.preventDefault()
 
-    const target = document.elementFromPoint(event.clientX, event.clientY)
-      ?.closest<HTMLElement>('[data-oanix-organic-tag-id]')
-    const targetId = target?.dataset.oanixOrganicTagId
-    if (!target || !targetId || targetId === tag.id) return
-    const rect = target.getBoundingClientRect()
-    const placeAfter = event.clientX > rect.left + rect.width / 2
+    const dropTarget = tagDropTargetAtX(tagHost, tag.id, event.clientX)
+    if (!dropTarget) return
     const before = captureTagRects(tagHost)
     setTags((current) => {
-      const next = moveTagAroundTarget(current, tag.id, targetId, placeAfter)
+      const next = moveTagAroundTarget(current, tag.id, dropTarget.targetId, dropTarget.placeAfter)
+      if (next === current) return current
       tagsRef.current = next
       animateTagReflow(tagHost, before, tag.id)
       return next
