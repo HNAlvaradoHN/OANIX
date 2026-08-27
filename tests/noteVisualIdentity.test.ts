@@ -21,7 +21,10 @@ test('color e icono se reaplican por data-reorder-note-id despues de mutaciones'
   assert.match(runtime, /--oanix-note-card-color/)
   assert.match(runtime, /--oanix-note-tab-color/)
   assert.match(runtime, /avatar\.dataset\.oanixNoteIcon/)
+  assert.match(runtime, /const noteList = document\.querySelector<HTMLElement>\('\.notes-list'\)/)
   assert.match(runtime, /new MutationObserver\(scheduleApply\)/)
+  assert.match(runtime, /observer\.observe\(noteList/)
+  assert.match(runtime, /noteDragActive\(\)/)
   assert.match(runtime, /attributeFilter: \['style', 'data-oanix-note-icon'\]/)
 })
 
