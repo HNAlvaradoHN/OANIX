@@ -159,6 +159,8 @@ export function OrganicWorkspaceRuntime() {
   const [draggingTagId, setDraggingTagId] = useState<string | null>(null)
   const [tagOrderError, setTagOrderError] = useState('')
   const tagsRef = useRef<TagRecord[]>([])
+  const tagHostRef = useRef<HTMLElement | null>(null)
+  const draggingTagIdRef = useRef<string | null>(null)
   const foldersRef = useRef<FolderRecord[]>([])
   const notesRef = useRef<NoteRecord[]>([])
   const pressTimerRef = useRef<number | null>(null)
@@ -172,6 +174,10 @@ export function OrganicWorkspaceRuntime() {
   useEffect(() => {
     tagsRef.current = tags
   }, [tags])
+
+  useEffect(() => {
+    tagHostRef.current = tagHost
+  }, [tagHost])
 
   function decorateWorkspace() {
     document.querySelectorAll<HTMLElement>('.oanix-folder-rail__item').forEach((item) => {
@@ -406,11 +412,26 @@ export function OrganicWorkspaceRuntime() {
       pressTimerRef.current = null
       suppressTagClickRef.current = tag.id
       dragStartOrderRef.current = tagsRef.current.map((item) => item.id)
+      draggingTagIdRef.current = tag.id
       setTagReorderMode(true)
       setDraggingTagId(tag.id)
       try { button.setPointerCapture(event.pointerId) } catch { /* best effort */ }
       if ('vibrate' in navigator) navigator.vibrate?.(18)
     }, TAG_LONG_PRESS_MS)
+  }
+
+  function advanceTagDragAtX(draggedId: string, clientX: number) {
+    const host = tagHostRef.current
+    const dropTarget = tagDropTargetAtX(host, draggedId, clampTagDragX(host, clientX))
+    if (!dropTarget) return
+    const before = captureTagRects(host)
+    setTags((current) => {
+      const next = moveTagOneStepTowardTarget(current, draggedId, dropTarget.targetId, dropTarget.placeAfter)
+      if (next === current) return current
+      tagsRef.current = next
+      animateTagReflow(host, before, draggedId)
+      return next
+    })
   }
 
   function handleTagPointerMove(tag: TagRecord, event: ReactPointerEvent<HTMLButtonElement>) {
@@ -421,18 +442,20 @@ export function OrganicWorkspaceRuntime() {
     }
     if (draggingTagId !== tag.id) return
     event.preventDefault()
-
-    const dropTarget = tagDropTargetAtX(tagHost, tag.id, clampTagDragX(tagHost, event.clientX))
-    if (!dropTarget) return
-    const before = captureTagRects(tagHost)
-    setTags((current) => {
-      const next = moveTagOneStepTowardTarget(current, tag.id, dropTarget.targetId, dropTarget.placeAfter)
-      if (next === current) return current
-      tagsRef.current = next
-      animateTagReflow(tagHost, before, tag.id)
-      return next
-    })
+    advanceTagDragAtX(tag.id, event.clientX)
   }
+
+  useEffect(() => {
+    const handleEdgeTick = (event: Event) => {
+      const draggedId = draggingTagIdRef.current
+      const detail = event instanceof CustomEvent ? event.detail as { clientX?: unknown } | null : null
+      if (!draggedId || typeof detail?.clientX !== 'number') return
+      advanceTagDragAtX(draggedId, detail.clientX)
+    }
+
+    window.addEventListener('oanix:tag-reorder-edge-tick', handleEdgeTick)
+    return () => window.removeEventListener('oanix:tag-reorder-edge-tick', handleEdgeTick)
+  }, [])
 
   function finishTagDrag(tag: TagRecord, event: ReactPointerEvent<HTMLButtonElement>) {
     clearTagPress()
@@ -441,6 +464,7 @@ export function OrganicWorkspaceRuntime() {
       if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId)
     } catch { /* best effort */ }
 
+    draggingTagIdRef.current = null
     setDraggingTagId(null)
     setTagReorderMode(false)
     const before = dragStartOrderRef.current
