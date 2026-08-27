@@ -81,7 +81,7 @@ function reportHistoryWarning(noteId: string, error: unknown) {
 function enqueueNoteMutation(
   noteId: string,
   mutate: (note: NoteRecord) => NoteRecord,
-  historyReason: NoteHistoryReason = 'automatic',
+  historyReason: NoteHistoryReason | null = 'automatic',
 ): Promise<NoteRecord> {
   const previous = mutationQueues.get(noteId) ?? Promise.resolve()
   const next = previous
@@ -97,10 +97,12 @@ function enqueueNoteMutation(
       if (sameNoteState(existing, updated)) return existing
 
       let historyError: unknown = null
-      try {
-        await captureNoteVersion(existing, historyReason)
-      } catch (error) {
-        historyError = error
+      if (historyReason !== null) {
+        try {
+          await captureNoteVersion(existing, historyReason)
+        } catch (error) {
+          historyError = error
+        }
       }
 
       await saveNote(updated)
@@ -363,7 +365,7 @@ export async function persistNoteOrder(orderedNoteIds: string[]): Promise<NoteRe
     const updated = await enqueueNoteMutation(noteId, (current) => ({
       ...current,
       manualOrder,
-    }))
+    }), null)
     updatedById.set(noteId, updated)
   }))
 

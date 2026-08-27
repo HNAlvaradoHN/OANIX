@@ -50,13 +50,31 @@ test('folders, tags and notes finish reordering automatically after release', ()
   assert.match(noteGesture, /delayOnTouchOnly: true/)
   assert.match(noteGesture, /forceFallback: true/)
   assert.doesNotMatch(noteGesture, /supportPointer:\s*false/)
-  assert.match(noteGesture, /persistNoteOrder\(nextOrder\)/)
+  assert.match(noteGesture, /persistNoteOrder\(orderToPersist\)/)
   assert.match(noteCss, /touch-action: none !important/)
   // Mobile note reorder now deliberately mirrors the proven folder pointer
   // architecture: pointer capture is allowed, synthetic drag fabrication is not.
   assert.match(noteGesture, /setPointerCapture\(touchGesture\.pointerId\)/)
   assert.doesNotMatch(noteGesture, /finishAutomaticMode|dispatchDragStart|new PointerEvent|elementFromPoint|TouchEvent/)
   assert.doesNotMatch(noteCss, /oanix-note-jiggle|data-oanix-note-reorder-mode/)
+})
+
+test('rapid reorder persistence stays serialized without blocking the next gesture', () => {
+  const organic = readFileSync('src/features/notes/OrganicWorkspaceRuntime.tsx', 'utf8')
+  const folderGrid = readFileSync('src/features/folders/FolderGridRuntime.tsx', 'utf8')
+  const noteGesture = readFileSync('src/features/notes/NoteListReorderGestureRuntime.tsx', 'utf8')
+  const noteService = readFileSync('src/features/notes/noteService.ts', 'utf8')
+
+  assert.match(noteGesture, /pendingPersistOrder/)
+  assert.match(noteGesture, /if \(persistLoop\) return/)
+  assert.match(folderGrid, /pendingFolderOrderRef/)
+  assert.match(folderGrid, /folderOrderPersistingRef/)
+  assert.doesNotMatch(folderGrid, /event\.button !== 0 \|\| customBusy \|\| orderingBusy/)
+  assert.match(organic, /pendingTagOrderRef/)
+  assert.match(organic, /tagOrderPersistingRef/)
+  assert.doesNotMatch(organic, /event\.button !== 0 \|\| tagOrderingBusy/)
+  assert.match(noteService, /historyReason: NoteHistoryReason \| null = 'automatic'/)
+  assert.match(noteService, /manualOrder,[\s\S]*?\}\), null\)/)
 })
 
 test('organic tag chips filter directly without opening the legacy filter dialog', () => {
