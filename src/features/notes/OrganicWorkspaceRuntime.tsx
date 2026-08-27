@@ -151,7 +151,6 @@ export function OrganicWorkspaceRuntime() {
   const [folderVisuals, setFolderVisuals] = useState<FolderVisualState>(EMPTY_FOLDER_VISUALS)
   const [tagReorderMode, setTagReorderMode] = useState(false)
   const [draggingTagId, setDraggingTagId] = useState<string | null>(null)
-  const [tagOrderingBusy, setTagOrderingBusy] = useState(false)
   const [tagOrderError, setTagOrderError] = useState('')
   const tagsRef = useRef<TagRecord[]>([])
   const foldersRef = useRef<FolderRecord[]>([])
@@ -161,6 +160,8 @@ export function OrganicWorkspaceRuntime() {
   const dragStartOrderRef = useRef<string[]>([])
   const suppressTagClickRef = useRef<string | null>(null)
   const reloadTimerRef = useRef<number | null>(null)
+  const pendingTagOrderRef = useRef<string[] | null>(null)
+  const tagOrderPersistingRef = useRef(false)
 
   useEffect(() => {
     tagsRef.current = tags
@@ -346,6 +347,38 @@ export function OrganicWorkspaceRuntime() {
     [activeFolderId, folderVisuals],
   )
 
+  function queueTagOrderPersistence(nextOrder: string[]) {
+    pendingTagOrderRef.current = [...nextOrder]
+    if (tagOrderPersistingRef.current) return
+
+    tagOrderPersistingRef.current = true
+    void (async () => {
+      try {
+        while (pendingTagOrderRef.current) {
+          const orderToPersist = pendingTagOrderRef.current
+          pendingTagOrderRef.current = null
+          try {
+            const persisted = await persistTagOrder(orderToPersist)
+            if (pendingTagOrderRef.current) continue
+            const currentIds = tagsRef.current.map((tag) => tag.id)
+            const stillMatchesPersistedOrder = currentIds.length === orderToPersist.length
+              && currentIds.every((id, index) => id === orderToPersist[index])
+            if (stillMatchesPersistedOrder) {
+              tagsRef.current = persisted
+              setTags(persisted)
+            }
+          } catch {
+            setTagOrderError('No se pudo guardar el nuevo orden de etiquetas.')
+            if (!pendingTagOrderRef.current) void reloadPrivateUiData()
+          }
+        }
+      } finally {
+        tagOrderPersistingRef.current = false
+        if (pendingTagOrderRef.current) queueTagOrderPersistence(pendingTagOrderRef.current)
+      }
+    })()
+  }
+
   function clearTagPress() {
     if (pressTimerRef.current !== null) window.clearTimeout(pressTimerRef.current)
     pressTimerRef.current = null
@@ -353,7 +386,7 @@ export function OrganicWorkspaceRuntime() {
   }
 
   function beginTagPointerDown(tag: TagRecord, event: ReactPointerEvent<HTMLButtonElement>) {
-    if (event.button !== 0 || tagOrderingBusy) return
+    if (event.button !== 0) return
     clearTagPress()
     const button = event.currentTarget
     pressPointerRef.current = {
@@ -395,7 +428,7 @@ export function OrganicWorkspaceRuntime() {
     })
   }
 
-  async function finishTagDrag(tag: TagRecord, event: ReactPointerEvent<HTMLButtonElement>) {
+  function finishTagDrag(tag: TagRecord, event: ReactPointerEvent<HTMLButtonElement>) {
     clearTagPress()
     if (draggingTagId !== tag.id) return
     try {
@@ -408,18 +441,8 @@ export function OrganicWorkspaceRuntime() {
     const nextIds = tagsRef.current.map((item) => item.id)
     if (before.length === nextIds.length && before.every((id, index) => id === nextIds[index])) return
 
-    setTagOrderingBusy(true)
     setTagOrderError('')
-    try {
-      const persisted = await persistTagOrder(nextIds)
-      tagsRef.current = persisted
-      setTags(persisted)
-    } catch {
-      setTagOrderError('No se pudo guardar el nuevo orden de etiquetas.')
-      void reloadPrivateUiData()
-    } finally {
-      setTagOrderingBusy(false)
-    }
+    queueTagOrderPersistence(nextIds)
   }
 
   function cancelTagDrag(tag: TagRecord, event: ReactPointerEvent<HTMLButtonElement>) {
@@ -505,7 +528,7 @@ export function OrganicWorkspaceRuntime() {
                 onClick={() => handleTagClick(tag)}
                 onPointerDown={(event) => beginTagPointerDown(tag, event)}
                 onPointerMove={(event) => handleTagPointerMove(tag, event)}
-                onPointerUp={(event) => void finishTagDrag(tag, event)}
+                onPointerUp={(event) => finishTagDrag(tag, event)}
                 onPointerCancel={(event) => cancelTagDrag(tag, event)}
                 onContextMenu={(event) => event.preventDefault()}
                 aria-label={tagReorderMode ? `Mover etiqueta ${tag.name}` : `Filtrar por ${tag.name}`}
