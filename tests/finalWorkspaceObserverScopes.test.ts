@@ -12,7 +12,9 @@ test('organic workspace observes the notes shell instead of the whole document b
 })
 
 test('workspace personalization scopes observation to notes shell and keeps the customizer portal observer-free', () => {
-  assert.match(personalization, /workspaceObserver\.observe\(workspace,\s*\{[\s\S]*subtree:\s*true/)
+  assert.match(personalization, /workspaceStructureObserver\.observe\(workspace,\s*\{[\s\S]*subtree:\s*true/)
+  assert.match(personalization, /workspaceStateObserver\.observe\(workspace,\s*\{[\s\S]*attributeFilter:\s*\['class'\]/)
+  assert.doesNotMatch(personalization, /workspaceStateObserver\.observe\(workspace,\s*\{[\s\S]*subtree:\s*true/)
   assert.doesNotMatch(personalization, /portalObserver/)
   assert.doesNotMatch(personalization, /observe\(document\.body/)
   assert.match(personalization, /createPortal\([\s\S]*document\.body/)
