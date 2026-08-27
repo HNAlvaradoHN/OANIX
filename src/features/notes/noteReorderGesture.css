@@ -34,7 +34,8 @@ html.oanix-v383-visual .note-row[data-reorder-note-id] .note-row__avatar {
     touch-action: none !important;
   }
 
-  .note-row:hover {
+  .note-row:hover,
+  html.oanix-v383-visual .note-row:hover {
     transform: none !important;
   }
 }
