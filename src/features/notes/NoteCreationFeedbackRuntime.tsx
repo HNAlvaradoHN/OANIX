@@ -118,12 +118,7 @@ export function NoteCreationFeedbackRuntime() {
     }
 
     document.addEventListener('click', onClick, true)
-
-    const detailObserver = new MutationObserver(sync)
-    detailObserver.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ['class'],
-    })
+    window.addEventListener('oanix:note-detail-state-changed', sync)
 
     const sidebar = document.querySelector<HTMLElement>('.notes-sidebar')
     const sidebarObserver = sidebar
@@ -142,7 +137,7 @@ export function NoteCreationFeedbackRuntime() {
 
     return () => {
       document.removeEventListener('click', onClick, true)
-      detailObserver.disconnect()
+      window.removeEventListener('oanix:note-detail-state-changed', sync)
       sidebarObserver?.disconnect()
       stop()
     }

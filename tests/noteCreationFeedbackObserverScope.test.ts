@@ -3,12 +3,15 @@ import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
 const runtime = readFileSync('src/features/notes/NoteCreationFeedbackRuntime.tsx', 'utf8')
+const visualRuntime = readFileSync('src/features/notes/V383WorkspaceVisualRuntime.tsx', 'utf8')
 
-test('note creation feedback observes document detail state without a global subtree observer', () => {
-  const detailObserverBlock = runtime.match(/detailObserver\.observe\(document\.documentElement, \{([\s\S]*?)\n\s*\}\)/)?.[1] ?? ''
-  assert.match(detailObserverBlock, /attributes: true/)
-  assert.match(detailObserverBlock, /attributeFilter: \['class'\]/)
-  assert.doesNotMatch(detailObserverBlock, /subtree: true/)
+test('note creation feedback consumes the visual owner detail event instead of observing root classes', () => {
+  assert.doesNotMatch(runtime, /detailObserver/)
+  assert.doesNotMatch(runtime, /observe\(document\.documentElement/)
+  assert.match(runtime, /window\.addEventListener\('oanix:note-detail-state-changed', sync\)/)
+  assert.match(runtime, /window\.removeEventListener\('oanix:note-detail-state-changed', sync\)/)
+  assert.match(visualRuntime, /window\.dispatchEvent\(new CustomEvent\('oanix:note-detail-state-changed'/)
+  assert.match(visualRuntime, /lastNoteDetailOpen === noteDetailOpen/)
 })
 
 test('note creation feedback ignores unrelated sidebar mutations', () => {
