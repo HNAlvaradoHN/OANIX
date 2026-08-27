@@ -13,6 +13,17 @@ interface VersionHistoryCenterProps {
   onRestored: () => void
 }
 
+const VERSION_HISTORY_HOST_SELECTOR = '.notes-header__actions'
+
+function mutationTouchesVersionHistoryHost(record: MutationRecord): boolean {
+  const nodes = [...Array.from(record.addedNodes), ...Array.from(record.removedNodes)]
+  return nodes.some((node) => {
+    if (!(node instanceof Element)) return false
+    return node.matches(VERSION_HISTORY_HOST_SELECTOR)
+      || node.querySelector(VERSION_HISTORY_HOST_SELECTOR) !== null
+  })
+}
+
 function wait(milliseconds: number) {
   return new Promise<void>((resolve) => window.setTimeout(resolve, milliseconds))
 }
@@ -67,14 +78,16 @@ export function VersionHistoryCenter({ onRestored }: VersionHistoryCenterProps) 
 
   useEffect(() => {
     function refreshHost() {
-      setHost(document.querySelector<HTMLElement>('.notes-header__actions'))
+      setHost(document.querySelector<HTMLElement>(VERSION_HISTORY_HOST_SELECTOR))
     }
 
     const appRoot = document.getElementById('root')
     if (!appRoot) return
 
     refreshHost()
-    const observer = new MutationObserver(refreshHost)
+    const observer = new MutationObserver((records) => {
+      if (records.some(mutationTouchesVersionHistoryHost)) refreshHost()
+    })
     observer.observe(appRoot, { childList: true, subtree: true })
     return () => observer.disconnect()
   }, [])
