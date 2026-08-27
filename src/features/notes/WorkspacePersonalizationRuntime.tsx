@@ -264,9 +264,6 @@ export function WorkspacePersonalizationRuntime() {
       })
     }
 
-    const portalObserver = new MutationObserver(() => scheduleDecorate())
-    portalObserver.observe(document.body, { childList: true })
-
     const scheduleRefresh = () => {
       if (refreshTimerRef.current !== null) window.clearTimeout(refreshTimerRef.current)
       refreshTimerRef.current = window.setTimeout(() => {
@@ -328,7 +325,6 @@ export function WorkspacePersonalizationRuntime() {
 
     return () => {
       workspaceObserver.disconnect()
-      portalObserver.disconnect()
       document.removeEventListener('pointerdown', handlePointerDownCapture, true)
       document.removeEventListener('click', handleClickCapture, true)
       window.removeEventListener('oanix:local-data-changed', handleLocalChange)
