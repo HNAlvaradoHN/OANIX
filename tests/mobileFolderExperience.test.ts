@@ -55,6 +55,13 @@ test('mobile folder long press stays armed at the threshold and uses live horizo
   assert.doesNotMatch(dragRuntime, /clientY > rect\.top \+ rect\.height \/ 2/)
 })
 
+test('mobile folder reflow leaves the held source transform to its drag state', () => {
+  assert.match(dragRuntime, /function animateReflow\(rail: HTMLElement, before: Map<HTMLElement, DOMRect>, source: HTMLElement\)/)
+  assert.match(dragRuntime, /if \(item === source\) continue/)
+  assert.match(dragRuntime, /animateReflow\(gesture\.rail, beforeRects, gesture\.item\)/)
+  assert.match(dragCss, /oanix-mobile-folder-drag-source[\s\S]*transform:\s*scale\(\.97\)\s*!important/)
+})
+
 test('desktop folder drag uses horizontal placement and one exact-order persistence', () => {
   assert.match(desktopDragRuntime, /const placeAfter = event\.clientX > rect\.left \+ rect\.width \/ 2/)
   assert.match(desktopDragRuntime, /queueFolderOrderPersistence\(data\.folders\.map\(\(folder\) => folder\.id\)\)/)
