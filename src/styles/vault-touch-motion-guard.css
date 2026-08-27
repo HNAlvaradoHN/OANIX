@@ -1,0 +1,14 @@
+/* Keep functional loading feedback intact while removing ambient, permanent
+ * motion from coarse-pointer vault screens. Desktop keeps the full motion set. */
+@media (pointer: coarse) {
+  .vault-shell::after,
+  .vault-glow,
+  .vault-kicker > span,
+  .vault-core > strong,
+  .vault-core__ring--outer,
+  .vault-core__ring--middle,
+  .vault-core__scan,
+  .vault-card__pulse {
+    animation: none !important;
+  }
+}
