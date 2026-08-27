@@ -68,7 +68,16 @@ export function WorkspacePersonalizationRuntime() {
     dataRef.current = data
   }, [data])
 
+  function workspaceReorderActive() {
+    return (
+      document.documentElement.classList.contains('oanix-mobile-note-dragging')
+      || document.documentElement.classList.contains('oanix-mobile-folder-dragging')
+      || Boolean(document.querySelector('.oanix-folder-grid--drag-active, .oanix-organic-tags.is-reordering'))
+    )
+  }
+
   function scheduleDecorate() {
+    if (workspaceReorderActive()) return
     if (decorateFrameRef.current !== null) window.cancelAnimationFrame(decorateFrameRef.current)
     decorateFrameRef.current = window.requestAnimationFrame(() => {
       decorateFrameRef.current = null
