@@ -72,10 +72,10 @@ export function NoteBulkPrivacyRuntime() {
       })
     }
 
-    const workspace = document.querySelector<HTMLElement>('.notes-shell')
-    if (!workspace) return
+    const noteList = document.querySelector<HTMLElement>('.notes-list')
+    if (!noteList) return
     const observer = new MutationObserver(scanRows)
-    observer.observe(workspace, { childList: true, subtree: true })
+    observer.observe(noteList, { childList: true })
     return () => {
       window.cancelAnimationFrame(frame)
       observer.disconnect()
