@@ -34,11 +34,28 @@ export function TagMobileGestureRuntime() {
     let autoScrollFrame: number | null = null
     let latestReorderPointerX = 0
     let lastEdgeSlotTickAt = 0
+    let gestureListenersAttached = false
 
     function removeDragOverlay() {
       dragOverlay?.remove()
       dragOverlay = null
       document.documentElement.classList.remove('oanix-tag-drag-overlay-active')
+    }
+
+    function attachGestureListeners() {
+      if (gestureListenersAttached) return
+      gestureListenersAttached = true
+      document.addEventListener('pointermove', handlePointerMove, { capture: true, passive: false })
+      document.addEventListener('pointerup', clearPointer, true)
+      document.addEventListener('pointercancel', clearPointer, true)
+    }
+
+    function detachGestureListeners() {
+      if (!gestureListenersAttached) return
+      gestureListenersAttached = false
+      document.removeEventListener('pointermove', handlePointerMove, true)
+      document.removeEventListener('pointerup', clearPointer, true)
+      document.removeEventListener('pointercancel', clearPointer, true)
     }
 
     function resetActiveGesture() {
@@ -50,6 +67,7 @@ export function TagMobileGestureRuntime() {
         autoScrollFrame = null
       }
       removeDragOverlay()
+      detachGestureListeners()
     }
 
     function geometryForReorder(scroller: HTMLElement) {
@@ -159,6 +177,7 @@ export function TagMobileGestureRuntime() {
         startScrollLeft: scroller.scrollLeft,
         scrolling: false,
       }
+      attachGestureListeners()
     }
 
     function handlePointerMove(event: PointerEvent) {
@@ -212,9 +231,6 @@ export function TagMobileGestureRuntime() {
     const handleBlur = () => resetActiveGesture()
 
     document.addEventListener('pointerdown', handlePointerDown, true)
-    document.addEventListener('pointermove', handlePointerMove, { capture: true, passive: false })
-    document.addEventListener('pointerup', clearPointer, true)
-    document.addEventListener('pointercancel', clearPointer, true)
     document.addEventListener('click', handleClick, true)
     document.addEventListener('visibilitychange', handleVisibilityChange)
     window.addEventListener('blur', handleBlur)
@@ -222,9 +238,6 @@ export function TagMobileGestureRuntime() {
     return () => {
       resetActiveGesture()
       document.removeEventListener('pointerdown', handlePointerDown, true)
-      document.removeEventListener('pointermove', handlePointerMove, true)
-      document.removeEventListener('pointerup', clearPointer, true)
-      document.removeEventListener('pointercancel', clearPointer, true)
       document.removeEventListener('click', handleClick, true)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       window.removeEventListener('blur', handleBlur)
