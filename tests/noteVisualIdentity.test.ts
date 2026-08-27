@@ -15,13 +15,14 @@ test('fallback visual de nota es estable por id y no por indice DOM', () => {
   assert.doesNotMatch(runtime, /NOTE_VISUAL_COLORS\[index/)
 })
 
-test('color e icono se reaplican por data-reorder-note-id sin observar estilos por cada mutacion', () => {
-  assert.match(runtime, /\.note-row\[data-reorder-note-id\]/)
+test('color e icono se reaplican solo dentro de notes-list sin observar estilos por cada mutacion', () => {
+  assert.match(runtime, /const noteList = document\.querySelector<HTMLElement>\('\.notes-list'\)/)
+  assert.match(runtime, /noteList\?\.querySelectorAll<HTMLElement>\(':scope > \.note-row\[data-reorder-note-id\]'\)/)
+  assert.doesNotMatch(runtime, /document\.querySelectorAll<HTMLElement>\('\.note-row\[data-reorder-note-id\]'\)/)
   assert.match(runtime, /notesById\.get\(noteId\)/)
   assert.match(runtime, /--oanix-note-card-color/)
   assert.match(runtime, /--oanix-note-tab-color/)
   assert.match(runtime, /avatar\.dataset\.oanixNoteIcon/)
-  assert.match(runtime, /const noteList = document\.querySelector<HTMLElement>\('\.notes-list'\)/)
   assert.match(runtime, /observer = new MutationObserver\(scheduleApply\)/)
   assert.match(runtime, /observer\?\.disconnect\(\)/)
   assert.match(runtime, /childList:\s*true/)
