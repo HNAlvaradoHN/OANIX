@@ -51,8 +51,15 @@ test('mobile folder long press stays armed at the threshold and uses live horizo
   assert.match(dragRuntime, /beginDrag\(\)[\s\S]*gesture\?\.dragging/)
   assert.match(dragRuntime, /siblings\.find\(\(item\) => \{[\s\S]*gesture\.lastX < rect\.left \+ rect\.width \/ 2/)
   assert.match(dragRuntime, /insertBefore\(gesture\.item, insertionTarget\)/)
-  assert.match(dragRuntime, /appendChild\(gesture\.item\)/)
+  assert.match(dragRuntime, /function endAnchor\(rail: HTMLElement\)/)
+  assert.match(dragRuntime, /insertBefore\(gesture\.item, endAnchor\(gesture\.rail\)\)/)
+  assert.doesNotMatch(dragRuntime, /appendChild\(gesture\.item\)/)
   assert.doesNotMatch(dragRuntime, /clientY > rect\.top \+ rect\.height \/ 2/)
+})
+
+test('mobile folder cancel restores folders before the add control', () => {
+  assert.match(dragRuntime, /const anchor = endAnchor\(rail\)/)
+  assert.match(dragRuntime, /if \(item\) rail\.insertBefore\(item, anchor\)/)
 })
 
 test('mobile folder reflow leaves the held source transform to its drag state', () => {
