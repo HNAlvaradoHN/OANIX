@@ -39,6 +39,73 @@ type OanixUpdateWindow = Window & {
 
 const oanixWindow = window as OanixUpdateWindow
 const isCapacitorBuild = import.meta.env.MODE === 'capacitor'
+const STYLESHEET_RECOVERY_KEY = 'oanix:stylesheet-recovery-attempt'
+
+function oanixStylesheetLinks(): HTMLLinkElement[] {
+  return Array.from(document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"][href*="/OANIX/assets/"]'))
+}
+
+function stylesheetLooksLoaded(link: HTMLLinkElement): boolean {
+  try {
+    return link.sheet !== null
+  } catch {
+    return false
+  }
+}
+
+async function clearOanixPrecacheAndReload(): Promise<void> {
+  if (!navigator.onLine || sessionStorage.getItem(STYLESHEET_RECOVERY_KEY) === 'reloading') return
+  sessionStorage.setItem(STYLESHEET_RECOVERY_KEY, 'reloading')
+
+  if ('serviceWorker' in navigator) {
+    const registrations = await navigator.serviceWorker.getRegistrations()
+    await Promise.all(
+      registrations
+        .filter((registration) => registration.scope.includes('/OANIX/'))
+        .map((registration) => registration.unregister()),
+    )
+  }
+
+  if ('caches' in window) {
+    const cacheKeys = await caches.keys()
+    await Promise.all(
+      cacheKeys
+        .filter((cacheKey) => cacheKey.startsWith('workbox-precache'))
+        .map((cacheKey) => caches.delete(cacheKey)),
+    )
+  }
+
+  window.location.reload()
+}
+
+async function recoverMissingPwaStylesheet(): Promise<void> {
+  if (!navigator.onLine) return
+
+  const stylesheets = oanixStylesheetLinks()
+  if (stylesheets.length === 0 || stylesheets.every(stylesheetLooksLoaded)) {
+    sessionStorage.removeItem(STYLESHEET_RECOVERY_KEY)
+    return
+  }
+
+  if (sessionStorage.getItem(STYLESHEET_RECOVERY_KEY)) return
+  sessionStorage.setItem(STYLESHEET_RECOVERY_KEY, 'retrying')
+
+  const failedStylesheets = stylesheets.filter((link) => !stylesheetLooksLoaded(link))
+  for (const failedLink of failedStylesheets) {
+    const retryUrl = new URL(failedLink.href)
+    retryUrl.searchParams.set('__oanix_retry', Date.now().toString())
+    const replacement = failedLink.cloneNode() as HTMLLinkElement
+    replacement.href = retryUrl.toString()
+    replacement.addEventListener('load', () => sessionStorage.removeItem(STYLESHEET_RECOVERY_KEY), { once: true })
+    failedLink.replaceWith(replacement)
+  }
+
+  window.setTimeout(() => {
+    if (oanixStylesheetLinks().some((link) => !stylesheetLooksLoaded(link))) {
+      void clearOanixPrecacheAndReload()
+    }
+  }, 2500)
+}
 
 // The approved workspace class must exist before React's first paint. Leaving this
 // to V383WorkspaceVisualRuntime.useEffect exposes the legacy card geometry for a frame.
@@ -79,6 +146,8 @@ if (!isCapacitorBuild) {
       window.setInterval(checkForUpdate, 5 * 60 * 1000)
     },
   })
+
+  window.addEventListener('load', () => void recoverMissingPwaStylesheet(), { once: true })
 }
 
 createRoot(document.getElementById('root')!).render(

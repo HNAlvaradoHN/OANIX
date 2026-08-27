@@ -13,7 +13,23 @@ test('PWA updates never auto-reload the vault password screen', () => {
   assert.match(main, /oanix:update-available/)
   assert.match(main, /updateSW\(true\)/)
   assert.doesNotMatch(main, /immediate:\s*true/)
-  assert.doesNotMatch(main, /window\.location\.reload\(|location\.reload\(/)
+
+  const registrationBlock = main.match(/const updateSW = registerSW\(\{[\s\S]*?\n  \}\)/)?.[0] ?? ''
+  assert.ok(registrationBlock, 'missing prompt-based PWA registration block')
+  assert.doesNotMatch(registrationBlock, /window\.location\.reload\(|location\.reload\(/)
+})
+
+test('stylesheet recovery reload is isolated from normal PWA updates', () => {
+  const main = readFileSync('src/main.tsx', 'utf8')
+  const recoveryBlock = main.match(/async function clearOanixPrecacheAndReload\(\): Promise<void> \{[\s\S]*?\n\}/)?.[0] ?? ''
+
+  assert.ok(recoveryBlock, 'missing stylesheet recovery fallback')
+  assert.match(recoveryBlock, /!navigator\.onLine/)
+  assert.match(recoveryBlock, /STYLESHEET_RECOVERY_KEY/)
+  assert.match(recoveryBlock, /registration\.scope\.includes\('\/OANIX\/'\)/)
+  assert.match(recoveryBlock, /cacheKey\.startsWith\('workbox-precache'\)/)
+  assert.match(recoveryBlock, /window\.location\.reload\(\)/)
+  assert.equal((main.match(/window\.location\.reload\(\)/g) ?? []).length, 1)
 })
 
 test('PWA keeps the executable app shell available offline', () => {

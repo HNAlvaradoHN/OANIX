@@ -54,3 +54,27 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+      - name: Verify deployed shell assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE_URL="https://hnalvaradohn.github.io/OANIX/"
+          ORIGIN="https://hnalvaradohn.github.io"
+
+          html="$(curl --fail --silent --show-error --location --retry 8 --retry-delay 3 --retry-all-errors "${BASE_URL}?oanix_smoke=${GITHUB_SHA}")"
+          css_path="$(printf '%s' "$html" | grep -oE 'href="/OANIX/assets/[^"]+\.css"' | head -n1 | cut -d'"' -f2)"
+          js_path="$(printf '%s' "$html" | grep -oE 'src="/OANIX/assets/[^"]+\.js"' | head -n1 | cut -d'"' -f2)"
+
+          test -n "$css_path"
+          test -n "$js_path"
+
+          curl --fail --silent --show-error --location --retry 8 --retry-delay 3 --retry-all-errors \
+            --output /tmp/oanix.css "${ORIGIN}${css_path}?oanix_smoke=${GITHUB_SHA}"
+          curl --fail --silent --show-error --location --retry 8 --retry-delay 3 --retry-all-errors \
+            --output /tmp/oanix.js "${ORIGIN}${js_path}?oanix_smoke=${GITHUB_SHA}"
+
+          test "$(wc -c < /tmp/oanix.css)" -gt 10000
+          test "$(wc -c < /tmp/oanix.js)" -gt 10000
+          grep -q '.vault-shell' /tmp/oanix.css
+          grep -q 'oanix-v383-visual' /tmp/oanix.js
