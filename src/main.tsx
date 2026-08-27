@@ -31,6 +31,7 @@ import './features/notes/workspaceStateContract.css'
 import './features/notes/workspaceRefinements.css'
 import './features/notes/compactNoteContract.css'
 import './features/notes/responsiveCompactNoteContract.css'
+import './features/notes/organicWorkspaceTouchMotion.css'
 
 type OanixUpdateWindow = Window & {
   __oanixApplyUpdate?: () => Promise<void>
