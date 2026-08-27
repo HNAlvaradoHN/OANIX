@@ -3,7 +3,9 @@ import './tagMobileGesture.css'
 
 const SWIPE_START_PX = 7
 const REORDER_EDGE_PX = 64
-const REORDER_MAX_SCROLL_PX = 4
+const REORDER_MAX_SCROLL_PX = 3
+const REORDER_RIGHT_GUARD_PX = 8
+const REORDER_SLOT_TICK_MS = 85
 
 interface ActiveSwipe {
   pointerId: number
@@ -27,6 +29,7 @@ export function TagMobileGestureRuntime() {
     let dragOffsetY = 0
     let autoScrollFrame: number | null = null
     let latestReorderPointerX = 0
+    let lastEdgeSlotTickAt = 0
 
     function removeDragOverlay() {
       dragOverlay?.remove()
@@ -70,7 +73,10 @@ export function TagMobileGestureRuntime() {
       const controlsLeft = document.querySelector<HTMLElement>('.oanix-organic-tags__controls')
         ?.getBoundingClientRect().left ?? window.innerWidth
       const overlayWidth = dragOverlay.getBoundingClientRect().width
-      const clampedLeft = Math.min(event.clientX - dragOffsetX, controlsLeft - overlayWidth)
+      const clampedLeft = Math.min(
+        event.clientX - dragOffsetX,
+        controlsLeft - REORDER_RIGHT_GUARD_PX - overlayWidth,
+      )
       dragOverlay.style.left = `${clampedLeft}px`
       dragOverlay.style.top = `${event.clientY - dragOffsetY}px`
     }
@@ -78,24 +84,40 @@ export function TagMobileGestureRuntime() {
     function scheduleAutoScrollDuringReorder(scroller: HTMLElement, pointerX: number) {
       const controlsLeft = document.querySelector<HTMLElement>('.oanix-organic-tags__controls')
         ?.getBoundingClientRect().left ?? scroller.getBoundingClientRect().right
-      latestReorderPointerX = Math.min(pointerX, controlsLeft - 1)
+      latestReorderPointerX = Math.min(pointerX, controlsLeft - REORDER_RIGHT_GUARD_PX)
       if (autoScrollFrame !== null) return
 
-      autoScrollFrame = window.requestAnimationFrame(() => {
+      const tick = (now: number) => {
         autoScrollFrame = null
+        if (!active || !document.querySelector('.oanix-organic-tags.is-reordering')) return
+
         const rect = scroller.getBoundingClientRect()
         let delta = 0
+        const nearLeft = latestReorderPointerX < rect.left + REORDER_EDGE_PX
+        const nearRight = latestReorderPointerX > Math.min(rect.right, controlsLeft) - REORDER_EDGE_PX
 
-        if (latestReorderPointerX < rect.left + REORDER_EDGE_PX) {
+        if (nearLeft) {
           const strength = Math.min(1, (rect.left + REORDER_EDGE_PX - latestReorderPointerX) / REORDER_EDGE_PX)
           delta = -Math.max(1, Math.round(REORDER_MAX_SCROLL_PX * strength))
-        } else if (latestReorderPointerX > rect.right - REORDER_EDGE_PX) {
-          const strength = Math.min(1, (latestReorderPointerX - (rect.right - REORDER_EDGE_PX)) / REORDER_EDGE_PX)
+        } else if (nearRight) {
+          const rightEdge = Math.min(rect.right, controlsLeft)
+          const strength = Math.min(1, (latestReorderPointerX - (rightEdge - REORDER_EDGE_PX)) / REORDER_EDGE_PX)
           delta = Math.max(1, Math.round(REORDER_MAX_SCROLL_PX * strength))
         }
 
-        if (delta !== 0) scroller.scrollLeft += delta
-      })
+        if (delta === 0) return
+
+        scroller.scrollLeft += delta
+        if (now - lastEdgeSlotTickAt >= REORDER_SLOT_TICK_MS) {
+          lastEdgeSlotTickAt = now
+          window.dispatchEvent(new CustomEvent('oanix:tag-reorder-edge-tick', {
+            detail: { clientX: latestReorderPointerX },
+          }))
+        }
+        autoScrollFrame = window.requestAnimationFrame(tick)
+      }
+
+      autoScrollFrame = window.requestAnimationFrame(tick)
     }
 
     function handlePointerDown(event: PointerEvent) {
