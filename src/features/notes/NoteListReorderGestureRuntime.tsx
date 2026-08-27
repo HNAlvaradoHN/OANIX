@@ -26,7 +26,6 @@ type TouchGesture = {
   lastX: number
   lastY: number
   pressedAt: number
-  startScrollTop: number
   startWindowScrollY: number
   lastMoveY: number
   lastMoveAt: number
@@ -391,7 +390,6 @@ export function NoteListReorderGestureRuntime() {
         lastX: clientX,
         lastY: clientY,
         pressedAt: performance.now(),
-        startScrollTop: list.scrollTop,
         startWindowScrollY: window.scrollY,
         lastMoveY: clientY,
         lastMoveAt: performance.now(),
@@ -416,6 +414,17 @@ export function NoteListReorderGestureRuntime() {
         const dy = clientY - touchGesture.startY
         const distance = Math.hypot(dx, dy)
         const verticalIntent = Math.abs(dy) >= Math.abs(dx)
+        const heldFor = performance.now() - touchGesture.pressedAt
+
+        if (distance < TOUCH_MOVE_CANCEL_PX && heldFor >= LONG_PRESS_MS - PRESS_ARM_GRACE_MS) {
+          beginTouchDrag()
+          if (touchGesture?.dragging) {
+            preventDefault()
+            positionDragOverlay(lastPointer)
+            reorderTouchDomAtPoint(touchGesture)
+            return
+          }
+        }
 
         if (verticalIntent && Math.abs(dy) >= SCROLL_START_PX) {
           touchGesture.moved = true
@@ -437,17 +446,6 @@ export function NoteListReorderGestureRuntime() {
         }
 
         if (distance < TOUCH_MOVE_CANCEL_PX) return
-
-        const heldFor = performance.now() - touchGesture.pressedAt
-        if (heldFor >= LONG_PRESS_MS - PRESS_ARM_GRACE_MS) {
-          beginTouchDrag()
-          if (touchGesture?.dragging) {
-            preventDefault()
-            positionDragOverlay(lastPointer)
-            reorderTouchDomAtPoint(touchGesture)
-            return
-          }
-        }
 
         touchGesture.moved = true
         clearTouchTimer()
