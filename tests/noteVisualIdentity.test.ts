@@ -39,6 +39,14 @@ test('personalizacion manual actualiza la identidad autoritativa antes de redeco
   assert.match(runtime, /notesById\.set\(note\.id, note\)/)
 })
 
+test('workspace personalization no compite con la autoridad visual de notas', () => {
+  assert.doesNotMatch(personalization, /row\.style\.setProperty\('--oanix-note-card-color'/)
+  assert.doesNotMatch(personalization, /row\.style\.setProperty\('--oanix-note-tab-color'/)
+  assert.doesNotMatch(personalization, /avatar\.dataset\.oanixNoteIcon\s*=/)
+  assert.match(personalization, /row\.dataset\.oanixNoteCategory = category/)
+  assert.match(personalization, /preview\.dataset\.oanixNoteDescription/)
+})
+
 test('capa autoritativa monta despues de los dos decoradores existentes', () => {
   const organicIndex = gate.indexOf('<OrganicWorkspaceRuntime />')
   const personalizationIndex = gate.indexOf('<WorkspacePersonalizationRuntime />')
