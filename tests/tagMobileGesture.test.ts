@@ -122,3 +122,16 @@ test('un swipe no abre accidentalmente la etiqueta y el runtime se monta desbloq
   assert.match(runtime, /event\.stopImmediatePropagation\(\)/)
   assert.match(gate, /<TagMobileGestureRuntime \/>/)
 })
+
+test('los listeners de alta frecuencia solo viven durante un gesto táctil activo', () => {
+  assert.match(runtime, /let gestureListenersAttached = false/)
+  assert.match(runtime, /function attachGestureListeners\(\)/)
+  assert.match(runtime, /document\.addEventListener\('pointermove', handlePointerMove, \{ capture: true, passive: false \}\)/)
+  assert.match(runtime, /function detachGestureListeners\(\)/)
+  assert.match(runtime, /active = \{[\s\S]*scrolling: false,[\s\S]*\}\s*attachGestureListeners\(\)/)
+  assert.match(runtime, /function resetActiveGesture\(\)[\s\S]*detachGestureListeners\(\)/)
+  assert.match(
+    runtime,
+    /document\.addEventListener\('pointerdown', handlePointerDown, true\)\s*document\.addEventListener\('click', handleClick, true\)/,
+  )
+})
