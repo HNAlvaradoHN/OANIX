@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { loadNotes } from '../notes/noteService'
-import { noteBlocksToPlainText, type NoteRecord } from '../notes/noteTypes'
 import { listNotePrivacy } from '../privacy/notePrivacyService'
 import {
   loadFolderCovers,
@@ -9,7 +8,20 @@ import {
   removeFolderCover,
   saveFolderCover,
 } from './folderCoverService'
-import { loadFolderColors } from './folderAppearanceService'
+import {
+  DEFAULT_FOLDER_COLOR,
+  DEFAULT_FOLDER_ICON,
+  FOLDER_COLOR_PRESETS,
+  FOLDER_DEFAULT_ICONS,
+  FOLDER_ICON_OPTIONS,
+  type FolderIcon,
+} from './folderAppearanceCatalog'
+import {
+  loadFolderColors,
+  loadFolderIcons,
+  saveFolderColor,
+  saveFolderIcon,
+} from './folderAppearanceService'
 import { loadFolders, persistFolderOrder } from './folderService'
 import type { FolderRecord } from './folderTypes'
 import './folderGrid.css'
@@ -25,11 +37,11 @@ interface FolderGridTargets {
 
 interface FolderGridData {
   folders: FolderRecord[]
-  notes: NoteRecord[]
   allCount: number
   counts: Map<string, number>
   covers: Map<string, string>
   colors: Map<string, string>
+  icons: Map<string, FolderIcon>
 }
 
 interface FolderDragGhost {
@@ -47,15 +59,19 @@ interface FolderDragGhost {
 
 const EMPTY_DATA: FolderGridData = {
   folders: [],
-  notes: [],
   allCount: 0,
   counts: new Map(),
   covers: new Map(),
   colors: new Map(),
+  icons: new Map(),
 }
 
 const FOLDER_LONG_PRESS_MS = 460
 const FOLDER_SHAPES = ['blob-a', 'circle', 'squircle', 'blob-b', 'diamond', 'hexagon'] as const
+
+function defaultIconForIndex(index: number): FolderIcon {
+  return (FOLDER_DEFAULT_ICONS[index % FOLDER_DEFAULT_ICONS.length] ?? DEFAULT_FOLDER_ICON) as FolderIcon
+}
 
 function currentTargets(): FolderGridTargets {
   const sidebar = document.querySelector<HTMLElement>('.notes-sidebar')
@@ -150,12 +166,14 @@ export function FolderGridRuntime() {
   const [gridOpen, setGridOpen] = useState(true)
   const [data, setData] = useState<FolderGridData>(EMPTY_DATA)
   const [selectedFolderId, setSelectedFolderId] = useState<string | 'all'>('all')
-  const [panelSearch, setPanelSearch] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [customFolder, setCustomFolder] = useState<FolderRecord | null>(null)
   const [customBusy, setCustomBusy] = useState(false)
   const [customError, setCustomError] = useState('')
+  const [customAppearanceOpen, setCustomAppearanceOpen] = useState(false)
+  const [customDraftColor, setCustomDraftColor] = useState(DEFAULT_FOLDER_COLOR)
+  const [customDraftIcon, setCustomDraftIcon] = useState<FolderIcon>(DEFAULT_FOLDER_ICON)
   const [reorderMode, setReorderMode] = useState(false)
   const [draggingFolderId, setDraggingFolderId] = useState<string | null>(null)
   const [dragGhost, setDragGhost] = useState<FolderDragGhost | null>(null)
@@ -222,12 +240,13 @@ export function FolderGridRuntime() {
     setError('')
 
     try {
-      const [folders, notes, privacy, covers, colors] = await Promise.all([
+      const [folders, notes, privacy, covers, colors, icons] = await Promise.all([
         loadFolders(),
         loadNotes(),
         listNotePrivacy(),
         loadFolderCovers(),
         loadFolderColors(),
+        loadFolderIcons(),
       ])
       if (request !== refreshRequestRef.current) return
 
@@ -241,7 +260,7 @@ export function FolderGridRuntime() {
         counts.set(note.folderId, (counts.get(note.folderId) ?? 0) + 1)
       }
 
-      setData({ folders, notes: visibleNotes, allCount: visibleNotes.length, counts, covers, colors })
+      setData({ folders, allCount: visibleNotes.length, counts, covers, colors, icons })
       setSelectedFolderId((current) => (
         current === 'all' || folders.some((folder) => folder.id === current) ? current : 'all'
       ))
@@ -364,9 +383,10 @@ export function FolderGridRuntime() {
       noteCount: data.counts.get(folder.id) ?? 0,
       cover: data.covers.get(folder.id) ?? '',
       shape: FOLDER_SHAPES[index % FOLDER_SHAPES.length],
-      color: data.colors.get(folder.id) ?? '#111b31',
+      color: data.colors.get(folder.id) ?? DEFAULT_FOLDER_COLOR,
+      icon: data.icons.get(folder.id) ?? defaultIconForIndex(index),
     })),
-    [data.colors, data.counts, data.covers, data.folders],
+    [data.colors, data.counts, data.covers, data.folders, data.icons],
   )
 
   const selectedFolder = useMemo(
