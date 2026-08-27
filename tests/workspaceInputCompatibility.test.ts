@@ -5,13 +5,9 @@ import test from 'node:test'
 const runtime = readFileSync('src/features/notes/WorkspaceInputCompatibilityRuntime.tsx', 'utf8')
 const main = readFileSync('src/main.tsx', 'utf8')
 
-test('mouse reactiva el Sortable existente sin crear una segunda implementacion de drag', () => {
-  assert.match(runtime, /sortableApi\.get\(list\)/)
-  assert.match(runtime, /event\.pointerType === 'mouse'/)
-  assert.match(runtime, /sortable\.option\('disabled', false\)/)
-  assert.match(runtime, /event\.pointerType === 'touch'/)
-  assert.match(runtime, /sortable\.option\('disabled', true\)/)
-  assert.doesNotMatch(runtime, /Sortable\.create\(/)
+test('el runtime global ya no compite por el estado de Sortable de notas', () => {
+  assert.doesNotMatch(runtime, /sortablejs|sortableApi|sortable\.option|NOTE_LIST_SELECTOR/)
+  assert.doesNotMatch(runtime, /pointerdown|pointerType/)
 })
 
 test('los botones visibles de carpetas abren el creador por evento directo', () => {
