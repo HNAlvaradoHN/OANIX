@@ -146,6 +146,9 @@ export function NoteListReorderGestureRuntime() {
   useEffect(() => {
     let suppressClickUntil = 0
     let scrollMomentumFrame: number | null = null
+    let pendingPersistOrder: string[] | null = null
+    let persistLoop: Promise<void> | null = null
+    let disposed = false
     let dragOverlay: HTMLElement | null = null
     let dragOverlayTemplate: HTMLElement | null = null
     let dragOverlayOffset: ClientPoint | null = null
@@ -275,16 +278,31 @@ export function NoteListReorderGestureRuntime() {
       clearDraggedRowSurface()
       window.getSelection()?.removeAllRanges()
     }
-    const persistCurrentOrder = async (nextOrder: string[]) => {
+    const persistCurrentOrder = (nextOrder: string[]) => {
       if (nextOrder.length === 0) return
-      try {
-        const updatedNotes = await persistNoteOrder(nextOrder)
-        window.dispatchEvent(new CustomEvent('oanix:note-order-persisted', { detail: { notes: updatedNotes.map((note) => ({ id: note.id, manualOrder: note.manualOrder })) } }))
-        window.dispatchEvent(new CustomEvent('oanix:local-data-changed', { detail: { recordType: 'note' } }))
-        navigator.vibrate?.(12)
-      } catch {
-        window.dispatchEvent(new Event('oanix:workspace-refresh'))
-      }
+      pendingPersistOrder = [...nextOrder]
+      if (persistLoop) return
+
+      persistLoop = (async () => {
+        while (!disposed && pendingPersistOrder) {
+          const orderToPersist = pendingPersistOrder
+          pendingPersistOrder = null
+          try {
+            const updatedNotes = await persistNoteOrder(orderToPersist)
+            if (disposed || pendingPersistOrder) continue
+            window.dispatchEvent(new CustomEvent('oanix:note-order-persisted', { detail: { notes: updatedNotes.map((note) => ({ id: note.id, manualOrder: note.manualOrder })) } }))
+            window.dispatchEvent(new CustomEvent('oanix:local-data-changed', { detail: { recordType: 'note' } }))
+            navigator.vibrate?.(12)
+          } catch {
+            if (!pendingPersistOrder && !disposed) {
+              window.dispatchEvent(new Event('oanix:workspace-refresh'))
+            }
+          }
+        }
+      })().finally(() => {
+        persistLoop = null
+        if (!disposed && pendingPersistOrder) persistCurrentOrder(pendingPersistOrder)
+      })
     }
 
     const reorderTouchDomAtPoint = (gesture: TouchGesture, animate = true) => {
@@ -477,7 +495,7 @@ export function NoteListReorderGestureRuntime() {
       const changed = nextOrder.join('|') !== finished.orderBefore.join('|')
       touchGesture = null
       clearDragVisuals()
-      if (changed) void persistCurrentOrder(nextOrder)
+      if (changed) persistCurrentOrder(nextOrder)
     }
 
     const onTouchPointerDown = (event: PointerEvent) => {
@@ -555,7 +573,7 @@ export function NoteListReorderGestureRuntime() {
         const nextOrder = noteOrder(event.to)
         clearDragVisuals()
         if (event.oldIndex === event.newIndex || nextOrder.length === 0) return
-        void persistCurrentOrder(nextOrder)
+        persistCurrentOrder(nextOrder)
       },
     }
 
@@ -598,6 +616,8 @@ export function NoteListReorderGestureRuntime() {
     window.addEventListener('blur', onBlur)
 
     return () => {
+      disposed = true
+      pendingPersistOrder = null
       sortable.destroy()
       stopScrollMomentum()
       cancelTouchGesture(true)
