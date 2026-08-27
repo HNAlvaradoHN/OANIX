@@ -33,6 +33,56 @@ type PrivateAuthAction =
   | { kind: 'open-note'; noteId: string }
   | { kind: 'remove-private'; noteId: string }
 
+const PRIVACY_SURFACE_SELECTOR = [
+  '.note-row',
+  '.note-row__menu',
+  '.note-row__menu-button',
+  '.note-view',
+  '.note-view__menu',
+  '.note-view__menu-button',
+  '.workspace-menu',
+  '.workspace-menu-wrap',
+  '.note-canvas',
+  '.notes-search',
+  '.notes-search__meta',
+].join(', ')
+
+const PRIVACY_CLASS_NAMES = [
+  'note-row',
+  'note-row--selected',
+  'note-row__menu',
+  'note-row__menu-button',
+  'note-view',
+  'note-view__menu',
+  'note-view__menu-button',
+  'workspace-menu',
+  'workspace-menu-wrap',
+  'note-canvas',
+  'notes-search',
+  'notes-search__meta',
+]
+
+function elementTouchesPrivacySurface(element: Element): boolean {
+  return element.matches(PRIVACY_SURFACE_SELECTOR)
+    || element.querySelector(PRIVACY_SURFACE_SELECTOR) !== null
+}
+
+function mutationTouchesPrivacySurface(record: MutationRecord): boolean {
+  if (record.type === 'attributes') {
+    const target = record.target
+    if (!(target instanceof Element)) return false
+    if (target.matches(PRIVACY_SURFACE_SELECTOR)) return true
+    if (record.attributeName !== 'class' || !record.oldValue) return false
+    const oldClasses = record.oldValue.split(/\s+/)
+    return PRIVACY_CLASS_NAMES.some((className) => oldClasses.includes(className))
+  }
+
+  const target = record.target
+  if (target instanceof Element && target.matches(PRIVACY_SURFACE_SELECTOR)) return true
+  const nodes = [...Array.from(record.addedNodes), ...Array.from(record.removedNodes)]
+  return nodes.some((node) => node instanceof Element && elementTouchesPrivacySurface(node))
+}
+
 function normalizedSearch(value: string): string {
   return value
     .normalize('NFD')
@@ -139,20 +189,28 @@ export function NotePrivacyRuntime() {
     }
 
     const workspace = document.querySelector<HTMLElement>('.notes-shell')
-    const observer = new MutationObserver(bump)
+    const observer = new MutationObserver((records) => {
+      if (records.some(mutationTouchesPrivacySurface)) bump()
+    })
     if (workspace) {
       observer.observe(workspace, {
         childList: true,
         subtree: true,
         attributes: true,
         attributeFilter: ['class', 'aria-expanded'],
+        attributeOldValue: true,
       })
     }
-    window.addEventListener('input', bump, true)
+
+    const onInput = (event: Event) => {
+      const target = event.target
+      if (target instanceof Element && target.matches('.notes-search input[type="search"]')) bump()
+    }
+    window.addEventListener('input', onInput, true)
 
     return () => {
       observer.disconnect()
-      window.removeEventListener('input', bump, true)
+      window.removeEventListener('input', onInput, true)
       if (frame) window.cancelAnimationFrame(frame)
     }
   }, [])
