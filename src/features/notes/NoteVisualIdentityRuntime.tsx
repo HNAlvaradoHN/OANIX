@@ -42,8 +42,6 @@ export function NoteVisualIdentityRuntime() {
       observer.observe(noteList, {
         childList: true,
         subtree: true,
-        attributes: true,
-        attributeFilter: ['style', 'data-oanix-note-icon'],
       })
     }
 
@@ -54,9 +52,9 @@ export function NoteVisualIdentityRuntime() {
       }
       applyFrame = null
 
-      // This runtime is the final visual authority for note rows. Disconnect while
-      // applying its own style/dataset writes so they do not schedule a redundant
-      // follow-up frame through the MutationObserver.
+      // This runtime is the final visual authority for note rows. React/local-data events
+      // cover identity changes, so the observer only watches structural list mutations.
+      // Disconnect while applying to avoid reacting to any DOM churn caused by decoration.
       observer?.disconnect()
       document.querySelectorAll<HTMLElement>('.note-row[data-reorder-note-id]').forEach((row) => {
         const noteId = row.dataset.reorderNoteId
