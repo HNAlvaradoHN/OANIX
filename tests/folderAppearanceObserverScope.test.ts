@@ -1,16 +1,15 @@
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import test from 'node:test'
 
-const runtime = readFileSync('src/features/folders/FolderAppearanceRuntime.tsx', 'utf8')
+const grid = readFileSync('src/features/folders/FolderGridRuntime.tsx', 'utf8')
+const gate = readFileSync('src/app/WorkspaceRuntimeGate.tsx', 'utf8')
 
-test('folder appearance runtime scopes DOM observation to the folder grid and direct body children', () => {
-  assert.match(runtime, /gridObserver\.observe\(observedGrid, \{ childList: true, subtree: true \}\)/)
-  assert.match(runtime, /bodyObserver\.observe\(document\.body, \{ childList: true \}\)/)
-  assert.doesNotMatch(runtime, /observe\(document\.body, \{ childList: true, subtree: true \}\)/)
-})
-
-test('folder appearance runtime disconnects both scoped observers', () => {
-  assert.match(runtime, /bodyObserver\.disconnect\(\)/)
-  assert.match(runtime, /gridObserver\?\.disconnect\(\)/)
+test('folder appearance no longer needs an observer runtime', () => {
+  assert.equal(existsSync('src/features/folders/FolderAppearanceRuntime.tsx'), false)
+  assert.doesNotMatch(gate, /FolderAppearanceRuntime/)
+  assert.match(grid, /loadFolderIcons/)
+  assert.match(grid, /saveFolderColor/)
+  assert.match(grid, /saveFolderIcon/)
+  assert.doesNotMatch(grid, /document\.createElement\('button'\)/)
 })
