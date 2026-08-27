@@ -6,8 +6,10 @@ const runtime = readFileSync('src/features/notes/NoteListReorderGestureRuntime.t
 const css = readFileSync('src/features/notes/noteReorderGesture.css', 'utf8')
 
 test('touch coarse usa una ruta propia y no compite con Sortable', () => {
-  assert.match(runtime, /const coarsePointer = window\.matchMedia\('\(pointer: coarse\)'\)/)
-  assert.match(runtime, /disabled: coarsePointer/)
+  assert.match(runtime, /disabled: false/)
+  assert.doesNotMatch(runtime, /const coarsePointer/)
+  assert.doesNotMatch(runtime, /navigator\.maxTouchPoints/)
+  assert.match(runtime, /sortable\.option\('disabled', event\.pointerType !== 'mouse'\)/)
   assert.match(runtime, /type TouchGesture/)
   assert.match(runtime, /document\.addEventListener\('pointerdown', onTouchPointerDown/)
   assert.match(runtime, /document\.addEventListener\('pointermove', onTouchPointerMove/)
