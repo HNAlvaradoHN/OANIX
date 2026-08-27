@@ -309,26 +309,24 @@ export function NoteListReorderGestureRuntime() {
       const draggedPinned = rowPinned(gesture.item)
       const all = noteRows().filter((row) => row !== gesture.item)
       const eligible = all.filter((row) => rowPinned(row) === draggedPinned)
-      const beforeOrder = noteOrder(list).join('|')
-      const beforeRects = animate ? snapshotRects(list) : null
       const insertionTarget = eligible.find((row) => {
         const rect = row.getBoundingClientRect()
         return gesture.lastY < rect.top + rect.height / 2
       })
+      const firstUnpinned = draggedPinned && !insertionTarget
+        ? all.find((row) => !rowPinned(row)) ?? null
+        : null
+      const destination = insertionTarget ?? firstUnpinned
 
-      if (insertionTarget) {
-        list.insertBefore(gesture.item, insertionTarget)
-      } else if (draggedPinned) {
-        const firstUnpinned = all.find((row) => !rowPinned(row))
-        if (firstUnpinned) list.insertBefore(gesture.item, firstUnpinned)
-        else list.appendChild(gesture.item)
-      } else {
-        list.appendChild(gesture.item)
+      if (destination ? gesture.item.nextElementSibling === destination : gesture.item === list.lastElementChild) {
+        return
       }
 
-      const changed = noteOrder(list).join('|') !== beforeOrder
-      if (!changed || !beforeRects) return
-      animateReflow(list, beforeRects, gesture.item)
+      const beforeRects = animate ? snapshotRects(list) : null
+      if (destination) list.insertBefore(gesture.item, destination)
+      else list.appendChild(gesture.item)
+
+      if (beforeRects) animateReflow(list, beforeRects, gesture.item)
     }
     const stopTouchAutoScroll = () => {
       if (!touchGesture || touchGesture.scrollFrame === null) return
