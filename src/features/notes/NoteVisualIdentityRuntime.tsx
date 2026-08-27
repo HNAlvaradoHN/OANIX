@@ -33,7 +33,19 @@ export function NoteVisualIdentityRuntime() {
     let applyFrame: number | null = null
     let reloadTimer: number | null = null
     let notesById = new Map<string, NoteRecord>()
+    let observer: MutationObserver | null = null
     const noteDragActive = () => document.documentElement.classList.contains('oanix-mobile-note-dragging')
+    const noteList = document.querySelector<HTMLElement>('.notes-list')
+
+    const observeNoteList = () => {
+      if (!noteList || !observer) return
+      observer.observe(noteList, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['style', 'data-oanix-note-icon'],
+      })
+    }
 
     const applyIdentity = () => {
       if (noteDragActive()) {
@@ -41,6 +53,11 @@ export function NoteVisualIdentityRuntime() {
         return
       }
       applyFrame = null
+
+      // This runtime is the final visual authority for note rows. Disconnect while
+      // applying its own style/dataset writes so they do not schedule a redundant
+      // follow-up frame through the MutationObserver.
+      observer?.disconnect()
       document.querySelectorAll<HTMLElement>('.note-row[data-reorder-note-id]').forEach((row) => {
         const noteId = row.dataset.reorderNoteId
         const note = noteId ? notesById.get(noteId) : null
@@ -62,6 +79,7 @@ export function NoteVisualIdentityRuntime() {
         const icon = note.visualIcon ?? DEFAULT_NOTE_VISUAL_ICON
         if (avatar && avatar.dataset.oanixNoteIcon !== icon) avatar.dataset.oanixNoteIcon = icon
       })
+      observeNoteList()
     }
 
     const scheduleApply = () => {
@@ -88,16 +106,8 @@ export function NoteVisualIdentityRuntime() {
       }, RELOAD_DELAY_MS)
     }
 
-    const noteList = document.querySelector<HTMLElement>('.notes-list')
-    const observer = new MutationObserver(scheduleApply)
-    if (noteList) {
-      observer.observe(noteList, {
-        childList: true,
-        subtree: true,
-        attributes: true,
-        attributeFilter: ['style', 'data-oanix-note-icon'],
-      })
-    }
+    observer = new MutationObserver(scheduleApply)
+    observeNoteList()
 
     const handleLocalChange = (event: Event) => {
       const detail = event instanceof CustomEvent
@@ -128,7 +138,7 @@ export function NoteVisualIdentityRuntime() {
 
     return () => {
       disposed = true
-      observer.disconnect()
+      observer?.disconnect()
       window.removeEventListener('oanix:local-data-changed', handleLocalChange)
       window.removeEventListener('oanix:note-visual-changed', handleVisualChanged)
       window.removeEventListener('oanix:note-order-persisted', handleOrderPersisted)
