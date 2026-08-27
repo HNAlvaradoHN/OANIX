@@ -12,7 +12,6 @@ import { V383WorkspaceVisualRuntime } from '../features/notes/V383WorkspaceVisua
 import { WorkspacePersonalizationRuntime } from '../features/notes/WorkspacePersonalizationRuntime'
 import '../features/privacy/noteBulkPrivacyOverrides.css'
 import { PrivacyStatusHelp } from '../features/privacy/PrivacyStatusHelp'
-import { TagCreationRuntime } from '../features/tags/TagCreationRuntime'
 import { TagMobileGestureRuntime } from '../features/tags/TagMobileGestureRuntime'
 import { WorkspaceQuickPolishRuntime } from './WorkspaceQuickPolishRuntime'
 
@@ -30,7 +29,6 @@ export function WorkspaceRuntimeGate() {
       <FolderOperationFeedbackRuntime />
       <FolderCreationRuntime />
       <FolderMobileDragRuntime />
-      <TagCreationRuntime />
       <TagMobileGestureRuntime />
       <V383WorkspaceVisualRuntime />
     </>
