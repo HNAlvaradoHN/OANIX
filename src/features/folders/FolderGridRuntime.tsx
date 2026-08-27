@@ -169,10 +169,15 @@ export function FolderGridRuntime() {
   const dragStartOrderRef = useRef<string[]>([])
   const pendingFolderOrderRef = useRef<string[] | null>(null)
   const folderOrderPersistingRef = useRef(false)
+  const foldersRef = useRef<FolderRecord[]>([])
 
   useEffect(() => {
     gridOpenRef.current = gridOpen
   }, [gridOpen])
+
+  useEffect(() => {
+    foldersRef.current = data.folders
+  }, [data.folders])
 
   useEffect(() => {
     const handleMobileOrderPreview = (event: Event) => {
@@ -182,16 +187,16 @@ export function FolderGridRuntime() {
       if (!Array.isArray(detail?.orderedIds) || !detail.orderedIds.every((id) => typeof id === 'string')) return
 
       const orderedIds = detail.orderedIds as string[]
-      let accepted = false
-      setData((current) => {
-        if (orderedIds.length !== current.folders.length) return current
-        const byId = new Map(current.folders.map((folder) => [folder.id, folder]))
-        if (orderedIds.some((id) => !byId.has(id))) return current
-        const nextFolders = orderedIds.map((id) => byId.get(id)!)
-        accepted = nextFolders.some((folder, index) => folder.id !== current.folders[index]?.id)
-        return accepted ? { ...current, folders: nextFolders } : current
-      })
-      if (accepted) queueFolderOrderPersistence(orderedIds)
+      const currentFolders = foldersRef.current
+      if (orderedIds.length !== currentFolders.length) return
+      const byId = new Map(currentFolders.map((folder) => [folder.id, folder]))
+      if (orderedIds.some((id) => !byId.has(id))) return
+      const nextFolders = orderedIds.map((id) => byId.get(id)!)
+      if (nextFolders.every((folder, index) => folder.id === currentFolders[index]?.id)) return
+
+      foldersRef.current = nextFolders
+      setData((current) => ({ ...current, folders: nextFolders }))
+      queueFolderOrderPersistence(orderedIds)
     }
 
     window.addEventListener('oanix:folder-order-preview', handleMobileOrderPreview)
