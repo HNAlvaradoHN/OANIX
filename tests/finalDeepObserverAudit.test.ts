@@ -11,6 +11,13 @@ test('folder operation feedback observes deeply only inside the customizer porta
   assert.doesNotMatch(folderFeedback, /observe\(document\.body,\s*\{[\s\S]*subtree:\s*true/)
 })
 
+test('folder operation feedback ignores unrelated body portal mutations', () => {
+  assert.match(folderFeedback, /const FOLDER_CUSTOMIZER_SELECTOR = '\.oanix-folder-customizer'/)
+  assert.match(folderFeedback, /function mutationTouchesFolderCustomizer\(record: MutationRecord\)/)
+  assert.match(folderFeedback, /node\.matches\(FOLDER_CUSTOMIZER_SELECTOR\) \|\| node\.querySelector\(FOLDER_CUSTOMIZER_SELECTOR\) !== null/)
+  assert.match(folderFeedback, /records\.some\(mutationTouchesFolderCustomizer\)/)
+})
+
 test('note attachments observes only the notes workspace', () => {
   assert.match(attachments, /querySelector<HTMLElement>\('\.notes-shell'\)/)
   assert.match(attachments, /observer\.observe\(workspace,\s*\{[\s\S]*subtree:\s*true/)
