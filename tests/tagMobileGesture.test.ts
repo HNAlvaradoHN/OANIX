@@ -23,8 +23,8 @@ test('el gesto móvil evita selección de texto y conserva swipe horizontal cort
   assert.match(css, /user-select: none !important/)
   assert.match(css, /-webkit-touch-callout: none !important/)
   assert.match(runtime, /startScrollLeft/)
-  assert.match(runtime, /scroller\.scrollLeft = active\.startScrollLeft - dx/)
-  assert.match(runtime, /document\.querySelector\('\.oanix-organic-tags\.is-reordering'\)/)
+  assert.match(runtime, /scroller\.scrollLeft = current\.startScrollLeft - dx/)
+  assert.match(runtime, /root\.classList\.contains\('is-reordering'\)/)
   assert.match(runtime, /event\.preventDefault\(\)/)
 })
 
@@ -90,6 +90,17 @@ test('reorder tactil mide la geometria una vez por gesto y no fuerza layout en c
   const tickEnd = runtime.indexOf('autoScrollFrame = window.requestAnimationFrame(tick)', tickStart)
   assert.ok(tickStart >= 0 && tickEnd > tickStart)
   assert.doesNotMatch(runtime.slice(tickStart, tickEnd), /getBoundingClientRect/)
+})
+
+test('el hot path tactil reutiliza el carril y el root capturados al iniciar el gesto', () => {
+  assert.match(runtime, /scroller: HTMLElement/)
+  assert.match(runtime, /root: HTMLElement/)
+  assert.match(runtime, /const root = scroller\?\.closest<HTMLElement>\('\.oanix-organic-tags'\)/)
+  assert.match(runtime, /const \{ scroller, root \} = current/)
+  assert.match(runtime, /current\.root\.classList\.contains\('is-reordering'\)/)
+  assert.match(runtime, /const source = root\.querySelector<HTMLElement>/)
+  assert.doesNotMatch(runtime, /document\.querySelector<HTMLElement>\('\.oanix-organic-tags__scroll'\)/)
+  assert.doesNotMatch(runtime, /document\.querySelector\('\.oanix-organic-tags\.is-reordering'\)/)
 })
 
 test('el borde derecho sigue avanzando huecos aunque el dedo quede quieto', () => {
