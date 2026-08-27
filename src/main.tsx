@@ -36,73 +36,6 @@ type OanixUpdateWindow = Window & {
 
 const oanixWindow = window as OanixUpdateWindow
 const isCapacitorBuild = import.meta.env.MODE === 'capacitor'
-const STYLESHEET_RECOVERY_KEY = 'oanix:stylesheet-recovery-attempt'
-
-function oanixStylesheetLinks(): HTMLLinkElement[] {
-  return Array.from(document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"][href*="/OANIX/assets/"]'))
-}
-
-function stylesheetLooksLoaded(link: HTMLLinkElement): boolean {
-  try {
-    return link.sheet !== null
-  } catch {
-    return false
-  }
-}
-
-async function clearOanixPrecacheAndReload(): Promise<void> {
-  if (!navigator.onLine || sessionStorage.getItem(STYLESHEET_RECOVERY_KEY) === 'reloading') return
-  sessionStorage.setItem(STYLESHEET_RECOVERY_KEY, 'reloading')
-
-  if ('serviceWorker' in navigator) {
-    const registrations = await navigator.serviceWorker.getRegistrations()
-    await Promise.all(
-      registrations
-        .filter((registration) => registration.scope.includes('/OANIX/'))
-        .map((registration) => registration.unregister()),
-    )
-  }
-
-  if ('caches' in window) {
-    const cacheKeys = await caches.keys()
-    await Promise.all(
-      cacheKeys
-        .filter((cacheKey) => cacheKey.startsWith('workbox-precache'))
-        .map((cacheKey) => caches.delete(cacheKey)),
-    )
-  }
-
-  window.location.reload()
-}
-
-async function recoverMissingPwaStylesheet(): Promise<void> {
-  if (!navigator.onLine) return
-
-  const stylesheets = oanixStylesheetLinks()
-  if (stylesheets.length === 0 || stylesheets.every(stylesheetLooksLoaded)) {
-    sessionStorage.removeItem(STYLESHEET_RECOVERY_KEY)
-    return
-  }
-
-  if (sessionStorage.getItem(STYLESHEET_RECOVERY_KEY)) return
-  sessionStorage.setItem(STYLESHEET_RECOVERY_KEY, 'retrying')
-
-  const failedStylesheets = stylesheets.filter((link) => !stylesheetLooksLoaded(link))
-  for (const failedLink of failedStylesheets) {
-    const retryUrl = new URL(failedLink.href)
-    retryUrl.searchParams.set('__oanix_retry', Date.now().toString())
-    const replacement = failedLink.cloneNode() as HTMLLinkElement
-    replacement.href = retryUrl.toString()
-    replacement.addEventListener('load', () => sessionStorage.removeItem(STYLESHEET_RECOVERY_KEY), { once: true })
-    failedLink.replaceWith(replacement)
-  }
-
-  window.setTimeout(() => {
-    if (oanixStylesheetLinks().some((link) => !stylesheetLooksLoaded(link))) {
-      void clearOanixPrecacheAndReload()
-    }
-  }, 2500)
-}
 
 // The approved workspace class must exist before React's first paint. Leaving this
 // to V383WorkspaceVisualRuntime.useEffect exposes the legacy card geometry for a frame.
@@ -123,9 +56,27 @@ document.documentElement.style.setProperty(
 applyOanixTheme(readSavedOanixTheme(), false)
 
 if (!isCapacitorBuild) {
-  // Keep the existing prompt-based update strategy on the PWA: a new service worker is discovered
-  // in the background, but OANIX only reloads after the user explicitly chooses to update.
-  // The native Capacitor bundle is already installed locally, so it must not register the PWA SW.
+  // A fresh worker activates and claims clients immediately, but OANIX never reloads
+  // the visible app automatically. When the controller changes, the normal update
+  // banner becomes the explicit reload gate after pending saves are checked in App.
+  let hasPwaController = 'serviceWorker' in navigator && Boolean(navigator.serviceWorker.controller)
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!hasPwaController) {
+        hasPwaController = true
+        return
+      }
+
+      oanixWindow.__oanixApplyUpdate = async () => {
+        window.location.reload()
+      }
+      window.dispatchEvent(new Event('oanix:update-available'))
+    })
+  }
+
+  // Keep the user-facing prompt contract. onNeedRefresh remains as a compatibility
+  // path for browsers that surface a waiting worker before immediate activation.
   const updateSW = registerSW({
     immediate: false,
     onNeedRefresh() {
@@ -143,8 +94,6 @@ if (!isCapacitorBuild) {
       window.setInterval(checkForUpdate, 5 * 60 * 1000)
     },
   })
-
-  window.addEventListener('load', () => void recoverMissingPwaStylesheet(), { once: true })
 }
 
 createRoot(document.getElementById('root')!).render(
