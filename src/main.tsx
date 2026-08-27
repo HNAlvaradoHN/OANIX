@@ -5,9 +5,6 @@ import { App } from './app/App'
 import { ThemeMenu } from './features/personalization/ThemeMenu'
 import { applyOanixTheme, readSavedOanixTheme } from './features/personalization/themeCatalog'
 import { PwaImagePreviewRuntime } from './features/images/PwaImagePreviewRuntime'
-import { NoteMenuScrollDismiss } from './features/notes/NoteMenuScrollDismiss'
-import { NoteMenuViewportFit } from './features/notes/NoteMenuViewportFit'
-import { WorkspaceInputCompatibilityRuntime } from './features/notes/WorkspaceInputCompatibilityRuntime'
 import './features/folders/folderNavigationState.css'
 import './styles/global.css'
 import './styles/midnight-violet.css'
@@ -155,8 +152,5 @@ createRoot(document.getElementById('root')!).render(
     <App />
     <ThemeMenu />
     <PwaImagePreviewRuntime />
-    <NoteMenuScrollDismiss />
-    <NoteMenuViewportFit />
-    <WorkspaceInputCompatibilityRuntime />
   </StrictMode>,
 )

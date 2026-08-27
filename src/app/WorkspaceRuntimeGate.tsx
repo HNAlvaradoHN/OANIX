@@ -6,9 +6,12 @@ import { FolderOperationFeedbackRuntime } from '../features/folders/FolderOperat
 import { FolderScopedManagerRuntime } from '../features/folders/FolderScopedManagerRuntime'
 import '../features/notes/folderDockContract.css'
 import { NoteCreationFeedbackRuntime } from '../features/notes/NoteCreationFeedbackRuntime'
+import { NoteMenuScrollDismiss } from '../features/notes/NoteMenuScrollDismiss'
+import { NoteMenuViewportFit } from '../features/notes/NoteMenuViewportFit'
 import { NoteVisualIdentityRuntime } from '../features/notes/NoteVisualIdentityRuntime'
 import { OrganicWorkspaceRuntime } from '../features/notes/OrganicWorkspaceRuntime'
 import { V383WorkspaceVisualRuntime } from '../features/notes/V383WorkspaceVisualRuntime'
+import { WorkspaceInputCompatibilityRuntime } from '../features/notes/WorkspaceInputCompatibilityRuntime'
 import { WorkspacePersonalizationRuntime } from '../features/notes/WorkspacePersonalizationRuntime'
 import '../features/privacy/noteBulkPrivacyOverrides.css'
 import { PrivacyStatusHelp } from '../features/privacy/PrivacyStatusHelp'
@@ -24,6 +27,9 @@ export function WorkspaceRuntimeGate() {
       <OrganicWorkspaceRuntime />
       <WorkspacePersonalizationRuntime />
       <NoteVisualIdentityRuntime />
+      <NoteMenuScrollDismiss />
+      <NoteMenuViewportFit />
+      <WorkspaceInputCompatibilityRuntime />
       <PrivacyStatusHelp />
       <WorkspaceQuickPolishRuntime />
       <FolderOperationFeedbackRuntime />
