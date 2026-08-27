@@ -142,6 +142,16 @@ button:disabled, input:disabled { cursor: not-allowed; opacity: .62; }
 @keyframes vaultDrift { 0% { transform: translate3d(-2%, -2%, 0) scale(.95); } 100% { transform: translate3d(8%, 6%, 0) scale(1.08); } }
 @keyframes vaultSweep { 0%,20% { transform: translateX(-120%); } 58%,100% { transform: translateX(120%); } }
 
+@media (pointer: coarse) {
+  /* Large blurred layers are attractive on desktop, but continuously moving
+     them costs GPU time on Android/PWA touch devices. Keep the same ambient
+     composition static and reserve motion for the small vault-core accents. */
+  .vault-shell::after,
+  .vault-glow {
+    animation: none;
+  }
+}
+
 @media (max-width: 860px) {
   .vault-shell { place-items: start center; overflow-y: auto; }
   .vault-landing { min-height: auto; grid-template-columns: 1fr; gap: 1.8rem; padding: max(1rem, env(safe-area-inset-top)) 0 max(1.5rem, env(safe-area-inset-bottom)); }
