@@ -5,7 +5,6 @@ import test from 'node:test'
 const runtime = readFileSync('src/features/folders/FolderGridRuntime.tsx', 'utf8')
 const organicRuntime = readFileSync('src/features/notes/OrganicWorkspaceRuntime.tsx', 'utf8')
 const organicCss = readFileSync('src/features/notes/organicWorkspace.css', 'utf8')
-const appearanceRuntime = readFileSync('src/features/folders/FolderAppearanceRuntime.tsx', 'utf8')
 const coverService = readFileSync('src/features/folders/folderCoverService.ts', 'utf8')
 const interactiveCss = readFileSync('src/features/folders/folderInteractive.css', 'utf8')
 const app = readFileSync('src/app/App.tsx', 'utf8')
@@ -23,7 +22,7 @@ test('los contadores y búsqueda heredada no exponen notas de Caja privada', () 
   assert.match(runtime, /record\.privateBox === true/)
   assert.match(runtime, /privateNoteIds/)
   assert.match(runtime, /const visibleNotes = notes\.filter\(\(note\) => !privateNoteIds\.has\(note\.id\)\)/)
-  assert.match(runtime, /notes: visibleNotes/)
+  assert.match(runtime, /allCount: visibleNotes\.length/)
 })
 
 test('la referencia vigente convierte el rail real en dock inferior dentro del mismo workspace', () => {
@@ -31,7 +30,7 @@ test('la referencia vigente convierte el rail real en dock inferior dentro del m
   assert.match(organicCss, /height: calc\(135px \+ env\(safe-area-inset-bottom\)\) !important/)
   assert.match(organicCss, /\.oanix-folder-rail[\s\S]*flex-direction: row !important/)
   assert.match(organicCss, /\.oanix-folder-rail__scroll[\s\S]*overflow-x: auto !important/)
-  assert.match(organicCss, /\.oanix-folder-focus \{ display: none !important; \}/)
+  assert.doesNotMatch(runtime, /oanix-folder-focus__menu|oanix-folder-focus__search|className=\{\`oanix-folder-focus/)
   assert.match(runtime, /oanix:select-workspace-folder/)
   assert.match(organicRuntime, /oanix:workspace-folder-committed/)
   assert.doesNotMatch(organicRuntime, /selectWorkspaceFolderFromDock/)
@@ -48,12 +47,13 @@ test('portada y color reales alimentan el fondo del workspace sin imágenes exte
   assert.match(coverService, /FOLDER_COVER_RECORD = 'folder-cover'/)
 })
 
-test('crear y personalizar carpetas siguen usando los handlers reales', () => {
+test('crear y personalizar carpetas usan rutas directas y servicios reales', () => {
   assert.match(organicRuntime, /\.oanix-folder-rail__item--add/)
-  assert.match(organicRuntime, /\.oanix-folder-focus__menu/)
-  assert.match(appearanceRuntime, /saveFolderColor/)
-  assert.match(appearanceRuntime, /saveFolderIcon/)
-  assert.match(appearanceRuntime, /\.oanix-folder-focus__menu/)
+  assert.match(organicRuntime, /oanix:open-folder-customizer/)
+  assert.match(runtime, /saveFolderColor/)
+  assert.match(runtime, /saveFolderIcon/)
+  assert.match(runtime, /className="oanix-folder-card__gear"/)
+  assert.doesNotMatch(organicRuntime + runtime, /\.oanix-folder-focus__menu/)
 })
 
 test('mantener presionada una carpeta conserva drag real y la suelta termina el modo automáticamente', () => {
