@@ -9,12 +9,22 @@ import {
 } from './tagTypes'
 import './tagCreation.css'
 
+const TAG_DECORATION_SELECTOR = '.oanix-organic-tags-host, .oanix-organic-tags__controls, .oanix-organic-tag-chip'
+
 function organicTagAddButton(): HTMLButtonElement | null {
   return document.querySelector<HTMLButtonElement>('.oanix-organic-tags__controls button')
 }
 
 function normalizeTagName(value: string): string {
   return value.trim().replace(/\s+/g, ' ')
+}
+
+function mutationTouchesTagSurface(record: MutationRecord): boolean {
+  const nodes = [...Array.from(record.addedNodes), ...Array.from(record.removedNodes)]
+  return nodes.some((node) => {
+    if (!(node instanceof Element)) return false
+    return node.matches(TAG_DECORATION_SELECTOR) || node.querySelector(TAG_DECORATION_SELECTOR) !== null
+  })
 }
 
 export function TagCreationRuntime() {
@@ -103,7 +113,9 @@ export function TagCreationRuntime() {
     const workspace = document.querySelector<HTMLElement>('.notes-shell')
     let observer: MutationObserver | null = null
     if (workspace) {
-      observer = new MutationObserver(scheduleDecorate)
+      observer = new MutationObserver((records) => {
+        if (records.some(mutationTouchesTagSurface)) scheduleDecorate()
+      })
       observer.observe(workspace, { childList: true, subtree: true })
     }
     window.addEventListener('oanix:local-data-changed', handleLocalChange)
