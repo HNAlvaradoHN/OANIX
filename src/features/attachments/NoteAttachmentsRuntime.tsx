@@ -27,6 +27,34 @@ interface AttachmentTargets {
   insertGrid: HTMLElement | null
 }
 
+const ATTACHMENT_TARGET_SELECTOR = [
+  '.note-row--selected[data-reorder-note-id]',
+  '.image-note-editor-root',
+  '.editor-toolbar',
+  '.editor-command-grid--insert',
+].join(', ')
+
+function elementTouchesAttachmentTargets(element: Element): boolean {
+  return element.matches(ATTACHMENT_TARGET_SELECTOR) || Boolean(element.querySelector(ATTACHMENT_TARGET_SELECTOR))
+}
+
+function mutationTouchesAttachmentTargets(record: MutationRecord): boolean {
+  if (!(record.target instanceof Element)) return false
+
+  if (record.type === 'attributes') {
+    if (elementTouchesAttachmentTargets(record.target)) return true
+    if (record.target.matches('[data-reorder-note-id]')) {
+      return record.oldValue?.includes('note-row--selected') === true
+        || record.target.classList.contains('note-row--selected')
+    }
+    return false
+  }
+
+  return [...record.addedNodes, ...record.removedNodes].some((node) => (
+    node instanceof Element && elementTouchesAttachmentTargets(node)
+  ))
+}
+
 function wait(milliseconds: number): Promise<void> {
   return new Promise((resolve) => window.setTimeout(resolve, milliseconds))
 }
@@ -181,13 +209,16 @@ export function NoteAttachmentsRuntime() {
 
     refresh()
     const workspace = document.querySelector<HTMLElement>('.notes-shell')
-    const observer = new MutationObserver(refresh)
+    const observer = new MutationObserver((records) => {
+      if (records.some(mutationTouchesAttachmentTargets)) refresh()
+    })
     if (workspace) {
       observer.observe(workspace, {
         childList: true,
         subtree: true,
         attributes: true,
         attributeFilter: ['class'],
+        attributeOldValue: true,
       })
     }
     window.addEventListener('popstate', refresh)
