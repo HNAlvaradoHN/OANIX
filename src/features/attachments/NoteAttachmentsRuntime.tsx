@@ -51,11 +51,12 @@ function mutationTouchesAttachmentTargets(record: MutationRecord): boolean {
     return [...record.addedNodes, ...record.removedNodes].some(nodeTouchesAttachmentTargets)
   }
 
-  if (record.type !== 'attributes' || record.attributeName !== 'class' || !(record.target instanceof Element)) {
+  const target = record.target
+  if (record.type !== 'attributes' || record.attributeName !== 'class' || !(target instanceof Element)) {
     return false
   }
 
-  if (ATTACHMENT_TARGET_CLASS_NAMES.some((className) => record.target.classList.contains(className))) {
+  if (ATTACHMENT_TARGET_CLASS_NAMES.some((className) => target.classList.contains(className))) {
     return true
   }
 
