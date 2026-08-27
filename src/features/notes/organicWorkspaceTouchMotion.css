@@ -1,6 +1,9 @@
 /* The arrows remain visible as the reorder affordance on touch, but they do not
- * need to pulse forever while the workspace is idle. */
+ * need to pulse forever while the workspace is idle. Keep the v38.3 selector
+ * equally specific so this final touch guard cannot be overridden by the visual
+ * authority's !important animation rule. */
 @media (pointer: coarse) {
+  html.oanix-v383-visual .oanix-organic-tags__arrows,
   .oanix-organic-tags__arrows {
     animation: none !important;
   }
