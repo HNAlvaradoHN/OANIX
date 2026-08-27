@@ -78,8 +78,9 @@ function snapshotRects(rail: HTMLElement): Map<HTMLElement, DOMRect> {
   )
 }
 
-function animateReflow(rail: HTMLElement, before: Map<HTMLElement, DOMRect>) {
+function animateReflow(rail: HTMLElement, before: Map<HTMLElement, DOMRect>, source: HTMLElement) {
   for (const item of Array.from(rail.querySelectorAll<HTMLElement>(':scope > .oanix-folder-rail__item[data-oanix-folder-id]'))) {
+    if (item === source) continue
     const previous = before.get(item)
     if (!previous) continue
     const next = item.getBoundingClientRect()
@@ -119,7 +120,7 @@ function reorderDomAtPoint(gesture: TouchGesture, animate = true) {
   else gesture.rail.appendChild(gesture.item)
 
   if (animate && beforeRects) {
-    animateReflow(gesture.rail, beforeRects)
+    animateReflow(gesture.rail, beforeRects, gesture.item)
     gesture.item.animate(
       [{ boxShadow: '0 0 0 0 rgba(59,130,246,0)' }, { boxShadow: '0 0 0 3px rgba(59,130,246,.24)' }],
       { duration: 120, easing: 'ease-out' },
