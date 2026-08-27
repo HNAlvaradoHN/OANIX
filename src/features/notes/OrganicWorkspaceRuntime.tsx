@@ -122,7 +122,7 @@ function animateTagReflow(host: HTMLElement | null, before: Map<string, DOMRect>
         if (Math.abs(deltaX) < 1) return
         tagReflowAnimations.get(element)?.cancel()
         const animation = element.animate(
-          [{ transform: `translateX(${deltaX}px)` }, { transform: 'translateX(0)' }],
+          [{ translate: `${deltaX}px 0` }, { translate: '0 0' }],
           { duration: 150, easing: 'cubic-bezier(.2,.75,.25,1)' },
         )
         tagReflowAnimations.set(element, animation)
