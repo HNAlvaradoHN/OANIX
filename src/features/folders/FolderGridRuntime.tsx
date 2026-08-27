@@ -174,7 +174,6 @@ export function FolderGridRuntime() {
   const [reorderMode, setReorderMode] = useState(false)
   const [draggingFolderId, setDraggingFolderId] = useState<string | null>(null)
   const [dragGhost, setDragGhost] = useState<FolderDragGhost | null>(null)
-  const [orderingBusy, setOrderingBusy] = useState(false)
   const gridOpenRef = useRef(gridOpen)
   const refreshTimerRef = useRef<number | null>(null)
   const refreshRequestRef = useRef(0)
@@ -471,7 +470,6 @@ export function FolderGridRuntime() {
     if (folderOrderPersistingRef.current) return
 
     folderOrderPersistingRef.current = true
-    setOrderingBusy(true)
     void (async () => {
       try {
         while (pendingFolderOrderRef.current) {
@@ -493,7 +491,6 @@ export function FolderGridRuntime() {
         }
       } finally {
         folderOrderPersistingRef.current = false
-        setOrderingBusy(false)
         if (pendingFolderOrderRef.current) queueFolderOrderPersistence(pendingFolderOrderRef.current)
       }
     })()
@@ -556,6 +553,7 @@ export function FolderGridRuntime() {
     suppressFolderSelectRef.current = folderId
     setDraggingFolderId(null)
     setDragGhost(null)
+    setReorderMode(false)
 
     try {
       if (event.currentTarget.hasPointerCapture(event.pointerId)) {
@@ -577,6 +575,8 @@ export function FolderGridRuntime() {
     if (!draggingFolderId) return
     setDraggingFolderId(null)
     setDragGhost(null)
+    setReorderMode(false)
+    suppressFolderSelectRef.current = null
     const startOrder = dragStartOrderRef.current
     setData((current) => {
       const rank = new Map(startOrder.map((id, index) => [id, index]))
@@ -585,14 +585,6 @@ export function FolderGridRuntime() {
         folders: [...current.folders].sort((left, right) => (rank.get(left.id) ?? 9999) - (rank.get(right.id) ?? 9999)),
       }
     })
-  }
-
-  function finishReorderMode() {
-    clearLongPress()
-    setDraggingFolderId(null)
-    setDragGhost(null)
-    setReorderMode(false)
-    suppressFolderSelectRef.current = null
   }
 
   function openCustomizer(folder: FolderRecord) {
@@ -770,11 +762,6 @@ export function FolderGridRuntime() {
                   </button>
                 </div>
 
-                {reorderMode && (
-                  <button className="oanix-folder-rail__done" type="button" onClick={finishReorderMode}>
-                    {orderingBusy ? '…' : '✓'}
-                  </button>
-                )}
               </aside>
 
             </div>
