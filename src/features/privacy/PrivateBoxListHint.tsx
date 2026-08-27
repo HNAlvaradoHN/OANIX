@@ -40,8 +40,22 @@ export function PrivateBoxListHint() {
       })
     }
 
+    function mutationCanAffectHint(record: MutationRecord): boolean {
+      if (record.type === 'attributes') return record.target instanceof HTMLElement
+      if (record.type !== 'childList') return false
+
+      for (const node of [...record.addedNodes, ...record.removedNodes]) {
+        if (!(node instanceof Element)) continue
+        if (node.matches('.notes-list, .notes-search, .note-row[data-reorder-note-id]')) return true
+        if (node.querySelector('.notes-list, .notes-search, .note-row[data-reorder-note-id]')) return true
+      }
+      return false
+    }
+
     inspect()
-    const observer = new MutationObserver(scheduleInspect)
+    const observer = new MutationObserver((records) => {
+      if (records.some(mutationCanAffectHint)) scheduleInspect()
+    })
     observer.observe(observedWorkspace, {
       childList: true,
       subtree: true,
