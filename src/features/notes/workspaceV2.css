@@ -617,13 +617,6 @@ html.oanix-note-bulk-selecting .oanix-workspace-v2__note-actions {
   box-shadow: 0 10px 24px color-mix(in srgb, var(--v2-folder-color, #2563eb) 42%, transparent);
 }
 
-.oanix-workspace-v2__folder--add .oanix-workspace-v2__folder-shape {
-  border-style: dashed;
-  background: rgba(37,99,235,.14);
-  color: #2563eb;
-  box-shadow: none;
-}
-
 .oanix-workspace-v2__drag-ghost {
   position: fixed;
   z-index: 9999;
@@ -1153,31 +1146,6 @@ body.oanix-v2-note-dragging {
   font-size: .72rem;
 }
 
-.oanix-workspace-v2__folder-action-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: .48rem;
-}
-
-.oanix-workspace-v2__folder-action-grid button {
-  min-height: 2.7rem;
-  padding: .55rem .65rem;
-  border: 1px solid var(--v2-border);
-  border-radius: .78rem;
-  background: rgba(255,255,255,.07);
-  color: var(--v2-text);
-  font: inherit;
-  font-size: .75rem;
-  font-weight: 800;
-  text-align: left;
-  cursor: pointer;
-}
-
-.oanix-workspace-v2__folder-action-grid button.is-danger {
-  border-color: rgba(239,68,68,.3);
-  color: #ef4444;
-}
-
 .oanix-workspace-v2__hidden-file {
   position: fixed;
   width: 1px;
@@ -1185,12 +1153,6 @@ body.oanix-v2-note-dragging {
   overflow: hidden;
   clip-path: inset(50%);
   white-space: nowrap;
-}
-
-@media (max-width: 420px) {
-  .oanix-workspace-v2__folder-action-grid {
-    grid-template-columns: 1fr;
-  }
 }
 
 .oanix-workspace-v2__modal-field textarea,
