@@ -26,3 +26,13 @@ test('workspace v2 deletion delegates to the existing note-safe tag deletion han
   assert.match(workspace, /onDeleteTag=\{handleDeleteTag\}/)
   assert.match(source, /await onDelete\(tag\)/)
 })
+
+
+test('workspace v2 tag dialogs portal above the workspace and consume mobile back before app exit', () => {
+  assert.match(source, /createPortal/)
+  assert.match(source, /TAG_DIALOG_HISTORY_KEY = 'oanixWorkspaceV2TagDialog'/)
+  assert.match(source, /window\.history\.pushState/)
+  assert.match(source, /window\.history\.back\(\)/)
+  assert.match(source, /window\.addEventListener\('popstate', handlePopState\)/)
+  assert.match(source, /oanix-workspace-v2__modal--tag/)
+})
