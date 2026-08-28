@@ -1966,3 +1966,208 @@ html[data-oanix-theme='classic-day'] .oanix-workspace-v2.has-wallpaper .oanix-wo
     box-shadow: inset 0 1px 0 rgba(255,255,255,.24);
   }
 }
+
+
+/* Workspace V2 responsive timeline correction.
+   The previous desktop !important geometry was still winning on narrow screens.
+   Keep one authoritative geometry block per viewport so cards, axis and controls
+   adapt together instead of inheriting the desktop half-column layout. */
+@media (min-width: 821px) {
+  html[data-oanix-theme] .oanix-workspace-v2 .oanix-workspace-v2__timeline {
+    position: relative;
+    left: 50%;
+    width: min(calc(100% - 2rem), 58rem);
+    margin: 0;
+    padding: .24rem 0 .65rem;
+    transform: translateX(-50%);
+  }
+
+  html[data-oanix-theme] .oanix-workspace-v2 .oanix-workspace-v2__timeline::before {
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  html[data-oanix-theme] .oanix-workspace-v2 .oanix-workspace-v2__timeline-item.note-row {
+    left: 0 !important;
+    width: 50% !important;
+    padding: clamp(.26rem, .62vh, .38rem) 1.45rem clamp(.26rem, .62vh, .38rem) .15rem !important;
+    text-align: right !important;
+  }
+
+  html[data-oanix-theme] .oanix-workspace-v2 .oanix-workspace-v2__timeline-item.note-row:nth-child(even) {
+    left: 50% !important;
+    width: 50% !important;
+    padding: clamp(.26rem, .62vh, .38rem) .15rem clamp(.26rem, .62vh, .38rem) 1.45rem !important;
+    text-align: left !important;
+  }
+}
+
+@media (max-width: 820px) {
+  html[data-oanix-theme] .oanix-workspace-v2 .oanix-workspace-v2__timeline {
+    position: relative;
+    left: 0;
+    width: 100%;
+    margin: 0;
+    padding: .18rem .12rem .55rem;
+    transform: none;
+    box-sizing: border-box;
+  }
+
+  html[data-oanix-theme] .oanix-workspace-v2 .oanix-workspace-v2__timeline::before {
+    left: .67rem;
+    width: 2px;
+    transform: none;
+  }
+
+  html[data-oanix-theme] .oanix-workspace-v2 .oanix-workspace-v2__timeline-item.note-row,
+  html[data-oanix-theme] .oanix-workspace-v2 .oanix-workspace-v2__timeline-item.note-row:nth-child(even) {
+    left: 0 !important;
+    width: 100% !important;
+    align-self: stretch !important;
+    padding: .28rem .1rem .28rem 1.62rem !important;
+    text-align: left !important;
+  }
+
+  html[data-oanix-theme] .oanix-workspace-v2 .oanix-workspace-v2__timeline-dot,
+  html[data-oanix-theme] .oanix-workspace-v2 .oanix-workspace-v2__timeline-item.note-row:nth-child(even) .oanix-workspace-v2__timeline-dot {
+    top: .9rem;
+    right: auto;
+    left: .2rem;
+  }
+
+  html[data-oanix-theme] .oanix-workspace-v2 .oanix-workspace-v2__note-card.note-row__open,
+  html[data-oanix-theme] .oanix-workspace-v2 .oanix-workspace-v2__timeline-item.note-row:nth-child(even) .oanix-workspace-v2__note-card {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: .7rem .76rem !important;
+    border-radius: 1rem;
+  }
+
+  .oanix-workspace-v2__note-meta {
+    margin-bottom: .25rem;
+  }
+
+  .oanix-workspace-v2__note-title {
+    margin-bottom: .2rem;
+    font-size: clamp(.92rem, 3.8vw, 1.02rem);
+  }
+
+  .oanix-workspace-v2__note-description {
+    margin-bottom: .44rem;
+    -webkit-line-clamp: 1;
+  }
+
+  .oanix-workspace-v2__note-actions,
+  .oanix-workspace-v2__timeline-item:nth-child(even) .oanix-workspace-v2__note-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    justify-content: stretch;
+    gap: .28rem;
+  }
+
+  .oanix-workspace-v2__note-actions button {
+    width: 100%;
+    max-width: 2.2rem;
+    height: 2.05rem;
+    justify-self: center;
+  }
+
+  .oanix-workspace-v2__notes-scroll {
+    padding-top: .38rem;
+    padding-bottom: max(7rem, calc(6.25rem + env(safe-area-inset-bottom)));
+  }
+
+  .oanix-workspace-v2__create-note,
+  .oanix-workspace-v2 .oanix-workspace-v2__create-note.notes-create-fab {
+    bottom: max(5.95rem, calc(5.25rem + env(safe-area-inset-bottom)));
+  }
+}
+
+@media (max-width: 480px) {
+  .oanix-workspace-v2__notes-scroll {
+    padding-inline: .34rem;
+    padding-bottom: max(6.35rem, calc(5.75rem + env(safe-area-inset-bottom)));
+  }
+
+  html[data-oanix-theme] .oanix-workspace-v2 .oanix-workspace-v2__timeline-item.note-row,
+  html[data-oanix-theme] .oanix-workspace-v2 .oanix-workspace-v2__timeline-item.note-row:nth-child(even) {
+    padding: .24rem .06rem .24rem 1.45rem !important;
+  }
+
+  html[data-oanix-theme] .oanix-workspace-v2 .oanix-workspace-v2__timeline::before {
+    left: .58rem;
+  }
+
+  html[data-oanix-theme] .oanix-workspace-v2 .oanix-workspace-v2__timeline-dot,
+  html[data-oanix-theme] .oanix-workspace-v2 .oanix-workspace-v2__timeline-item.note-row:nth-child(even) .oanix-workspace-v2__timeline-dot {
+    left: .11rem;
+  }
+
+  html[data-oanix-theme] .oanix-workspace-v2 .oanix-workspace-v2__note-card.note-row__open {
+    padding: .64rem .68rem !important;
+  }
+
+  .oanix-workspace-v2__note-actions {
+    gap: .2rem;
+  }
+
+  .oanix-workspace-v2__note-actions button {
+    max-width: 2.05rem;
+    height: 1.98rem;
+    border-radius: .64rem;
+  }
+
+  .oanix-workspace-v2__folder-dock {
+    grid-template-columns: 3.5rem minmax(0, 1fr) 2.28rem;
+    gap: .22rem;
+    padding: .34rem .36rem .3rem;
+  }
+
+  .oanix-workspace-v2__folder--all {
+    width: 3.5rem;
+    padding-right: .12rem;
+  }
+
+  .oanix-workspace-v2__folder {
+    flex-basis: 3.72rem;
+  }
+
+  .oanix-workspace-v2__folder-shape {
+    width: 2.55rem;
+    height: 2.55rem;
+    border-radius: .85rem .85rem .64rem .64rem;
+    font-size: 1.16rem;
+  }
+
+  .oanix-workspace-v2__folder-main strong,
+  .oanix-workspace-v2__folder--all > strong {
+    font-size: .58rem;
+  }
+
+  .oanix-workspace-v2__folder-gear {
+    right: 0;
+    bottom: .76rem;
+    width: 1.2rem;
+    height: 1.2rem;
+  }
+
+  .oanix-workspace-v2__dock-actions {
+    gap: .16rem;
+    padding-left: .18rem;
+  }
+
+  .oanix-workspace-v2__dock-action {
+    width: 2rem;
+    height: 2rem;
+    border-radius: .68rem;
+  }
+
+  .oanix-workspace-v2__create-note,
+  .oanix-workspace-v2 .oanix-workspace-v2__create-note.notes-create-fab {
+    width: 2.9rem;
+    height: 2.9rem;
+    bottom: max(5.35rem, calc(4.8rem + env(safe-area-inset-bottom)));
+  }
+}
