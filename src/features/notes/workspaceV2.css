@@ -1284,3 +1284,53 @@ body.oanix-v2-note-dragging {
     left: auto;
   }
 }
+
+
+/* V2 polish: keep keyboard navigation obvious and reduce per-card GPU work
+   on touch devices without changing workspace behavior or data flow. */
+.oanix-workspace-v2 {
+  --v2-focus-ring: rgba(37, 99, 235, .92);
+}
+
+.oanix-workspace-v2 :is(
+  .icon-button,
+  .oanix-workspace-v2__chip,
+  .oanix-workspace-v2__chip-add,
+  .oanix-workspace-v2__note-card,
+  .oanix-workspace-v2__note-actions button,
+  .oanix-workspace-v2__create-note,
+  .oanix-workspace-v2__folder-main,
+  .oanix-workspace-v2__folder-gear,
+  .oanix-workspace-v2__modal button,
+  .oanix-workspace-v2__modal input,
+  .oanix-workspace-v2__modal textarea,
+  .oanix-workspace-v2__modal select
+):focus-visible {
+  outline: 3px solid var(--v2-focus-ring);
+  outline-offset: 3px;
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .oanix-workspace-v2__note-card {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background:
+      linear-gradient(
+        135deg,
+        rgba(var(--v2-note-r, 37), var(--v2-note-g, 99), var(--v2-note-b, 235), .38),
+        rgba(var(--v2-note-r, 37), var(--v2-note-g, 99), var(--v2-note-b, 235), .19)
+      ),
+      rgba(255, 255, 255, .28);
+  }
+
+  [data-oanix-theme="classic-night"] .oanix-workspace-v2__note-card,
+  [data-oanix-theme="midnight-violet"] .oanix-workspace-v2__note-card {
+    background:
+      linear-gradient(
+        135deg,
+        rgba(var(--v2-note-r, 37), var(--v2-note-g, 99), var(--v2-note-b, 235), .34),
+        rgba(var(--v2-note-r, 37), var(--v2-note-g, 99), var(--v2-note-b, 235), .16)
+      ),
+      rgba(15, 23, 42, .58);
+  }
+}

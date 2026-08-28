@@ -39,6 +39,8 @@ test('workspace v2 visual surface is namespaced and reduced-motion aware', () =>
   assert.match(source, /className="notes-sidebar oanix-workspace-v2"/)
   assert.match(css, /^\.oanix-workspace-v2\s*\{/m)
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/)
+  assert.match(css, /:focus-visible/)
+  assert.match(css, /@media \(hover: none\) and \(pointer: coarse\)[\s\S]*oanix-workspace-v2__note-card[\s\S]*backdrop-filter: none/)
   assert.doesNotMatch(css, /(^|\n)\s*(html|body|:root|button|input|main|aside)\s*[,{]/)
   assert.doesNotMatch(css, /transition:\s*all/)
   assert.doesNotMatch(css, /animation:[^;]*infinite/)
