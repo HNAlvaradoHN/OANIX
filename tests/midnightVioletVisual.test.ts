@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
 const main = readFileSync('src/main.tsx', 'utf8')
+const themeVisualStyles = readFileSync('src/app/ThemeVisualStyles.ts', 'utf8')
 const authority = readFileSync('src/styles/midnight-violet.css', 'utf8')
 const foundation = readFileSync('src/styles/midnight-violet-foundation.css', 'utf8')
 const surfaces = readFileSync('src/styles/midnight-violet-surfaces.css', 'utf8')
@@ -13,7 +14,9 @@ const workspace = readFileSync('src/features/notes/NotesWorkspace.tsx', 'utf8')
 const gate = readFileSync('src/app/VaultGate.tsx', 'utf8')
 
 test('Midnight Violet has one public CSS authority with stable internal order', () => {
-  assert.match(main, /styles\/midnight-violet\.css/)
+  assert.match(main, /\.\/app\/ThemeVisualStyles/)
+  assert.match(themeVisualStyles, /styles\/midnight-violet\.css/)
+  assert.doesNotMatch(main, /styles\/midnight-violet\.css/)
   assert.doesNotMatch(main, /styles\/redesign\.css/)
   assert.doesNotMatch(main, /styles\/redesign-polish\.css/)
 
@@ -24,7 +27,7 @@ test('Midnight Violet has one public CSS authority with stable internal order', 
 
 test('Midnight Violet remains the semantic baseline while personalization may restore another preset', () => {
   assert.match(main, /applyOanixTheme\(readSavedOanixTheme\(\), false\)/)
-  assert.match(main, /styles\/theme-surfaces\.css/)
+  assert.match(themeVisualStyles, /styles\/theme-surfaces\.css/)
   assert.doesNotMatch(main, /styles\/themes\.css/)
   assert.match(foundation, /:root\[data-oanix-theme='midnight-violet'\]/)
   assert.match(themeSurfaces, /:root\[data-oanix-theme='midnight-violet'\]/)
