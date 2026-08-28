@@ -44,5 +44,5 @@ test('workspace v2 visual surface is namespaced and reduced-motion aware', () =>
 })
 
 test('workspace v2 note card keyboard activation does not hijack nested action buttons', () => {
-  assert.match(source, /onKeyDown=\{\(event\) => \{[\s\S]*event\.target !== event\.currentTarget[\s\S]*onSelectNote\(note\.id\)/)
+  assert.match(source, /onKeyDown=\{\(event\) => \{[\s\S]*event\.target !== event\.currentTarget[\s\S]*event\.currentTarget\.click\(\)/)
 })
