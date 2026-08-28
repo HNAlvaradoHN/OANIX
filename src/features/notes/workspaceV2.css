@@ -1693,3 +1693,57 @@ body.oanix-v2-note-dragging {
     backdrop-filter: blur(14px);
   }
 }
+
+
+/* Workspace V2 follow-up fixes */
+.oanix-workspace-v2__folder--all > strong {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  font-size: .64rem;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.oanix-workspace-v2__folder--all > small {
+  display: grid;
+}
+
+.oanix-workspace-v2__header-actions > .icon-button[aria-label='Buscar en notas'],
+.oanix-workspace-v2__header-actions > .icon-button[aria-label='Cerrar búsqueda'] {
+  order: 1;
+}
+
+.oanix-workspace-v2__header-actions > .icon-button[aria-label='Bloquear OANIX'] {
+  order: 2;
+}
+
+.oanix-workspace-v2__header-actions > .version-history-launcher {
+  order: 3;
+}
+
+.oanix-workspace-v2__header-actions > .account-header-action {
+  order: 4;
+}
+
+.oanix-workspace-v2__header-actions > .workspace-menu-wrap {
+  order: 5;
+}
+
+html[data-oanix-theme='classic-day'] .workspace-menu.oanix-workspace-v2__focus-menu {
+  border-color: rgba(255,255,255,.62);
+  background: rgba(244, 248, 252, .82);
+  color: #172033;
+  box-shadow: 0 28px 80px rgba(15,23,42,.22), inset 0 1px 0 rgba(255,255,255,.86);
+}
+
+html[data-oanix-theme='classic-day'] .workspace-menu.oanix-workspace-v2__focus-menu button {
+  border-color: rgba(71,85,105,.11);
+  background: rgba(255,255,255,.5);
+}
+
+html[data-oanix-theme='classic-day'] .workspace-menu.oanix-workspace-v2__focus-menu button:hover,
+html[data-oanix-theme='classic-day'] .workspace-menu.oanix-workspace-v2__focus-menu button:focus-visible {
+  background: rgba(255,255,255,.82);
+}
