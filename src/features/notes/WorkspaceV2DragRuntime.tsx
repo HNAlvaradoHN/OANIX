@@ -67,7 +67,7 @@ function clickSuppressed(root: HTMLElement): boolean {
 }
 
 export function workspaceV2ClickSuppressed(root: HTMLElement | null): boolean {
-  return root ? clickSuppressed(root) : false
+  return root ? clickSuppressed(activeRoot) : false
 }
 
 export function WorkspaceV2DragRuntime({
@@ -78,8 +78,8 @@ export function WorkspaceV2DragRuntime({
   disabled = false,
 }: WorkspaceV2DragRuntimeProps) {
   useEffect(() => {
-    const root = rootRef.current
-    if (!root || disabled) return
+    const activeRoot = rootRef.current
+    if (!activeRoot || disabled) return
 
     let gesture: ActiveGesture | null = null
 
@@ -211,7 +211,7 @@ export function WorkspaceV2DragRuntime({
       const changed = wasDragging && nextOrder.join(',') !== gesture.initialOrder.join(',')
 
       clearGestureVisuals()
-      if (wasDragging) suppressClicks(root)
+      if (wasDragging) suppressClicks(activeRoot)
       gesture = null
 
       if (!changed) return
@@ -261,7 +261,7 @@ export function WorkspaceV2DragRuntime({
       if (target.closest('button[data-v2-drag-ignore="true"], a, input, textarea, select, [contenteditable="true"]')) return
 
       const item = target.closest<HTMLElement>('[data-v2-drag-kind][data-v2-id]')
-      if (!item || !root.contains(item)) return
+      if (!item || !activeRoot.contains(item)) return
       const kind = item.dataset.v2DragKind as WorkspaceV2DragKind | undefined
       if (kind !== 'folder' && kind !== 'tag' && kind !== 'note') return
       const container = item.parentElement
@@ -293,17 +293,17 @@ export function WorkspaceV2DragRuntime({
     }
 
     function handleClick(event: MouseEvent) {
-      if (!clickSuppressed(root)) return
+      if (!clickSuppressed(activeRoot)) return
       event.preventDefault()
       event.stopPropagation()
     }
 
-    root.addEventListener('pointerdown', handlePointerDown, true)
-    root.addEventListener('click', handleClick, true)
+    activeRoot.addEventListener('pointerdown', handlePointerDown, true)
+    activeRoot.addEventListener('click', handleClick, true)
 
     return () => {
-      root.removeEventListener('pointerdown', handlePointerDown, true)
-      root.removeEventListener('click', handleClick, true)
+      activeRoot.removeEventListener('pointerdown', handlePointerDown, true)
+      activeRoot.removeEventListener('click', handleClick, true)
       document.removeEventListener('pointermove', handlePointerMove, true)
       document.removeEventListener('pointerup', handlePointerUp, true)
       document.removeEventListener('pointercancel', handlePointerCancel, true)
