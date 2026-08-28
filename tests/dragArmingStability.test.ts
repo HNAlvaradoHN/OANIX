@@ -25,3 +25,16 @@ test('edge scrolling keeps placement live with the faster reflow budget', () => 
   assert.match(runtime, /MAX_SCROLL_PER_FRAME = 10/)
   assert.match(runtime, /REFLOW_MS = 120/)
 })
+
+test('folder drag high-frequency listeners exist only while a touch gesture is active', () => {
+  assert.match(runtime, /let gestureListenersAttached = false/)
+  assert.match(runtime, /function attachGestureListeners\(\)/)
+  assert.match(runtime, /document\.addEventListener\('pointermove', onPointerMove, true\)/)
+  assert.match(runtime, /function detachGestureListeners\(\)/)
+  assert.match(runtime, /gesture = \{[\s\S]*scrollFrame: null,[\s\S]*\}\s*attachGestureListeners\(\)/)
+  assert.match(runtime, /gesture = null\s*detachGestureListeners\(\)/)
+  assert.match(
+    runtime,
+    /document\.addEventListener\('pointerdown', onPointerDown, true\)\s*document\.addEventListener\('wheel', onWheel/,
+  )
+})
