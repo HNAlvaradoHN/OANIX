@@ -294,7 +294,7 @@ export function WorkspaceV2Sidebar({
       </header>
 
       {searchOpen && (
-        <div className="oanix-workspace-v2__search" role="search">
+        <div className="notes-search oanix-workspace-v2__search" role="search">
           <span aria-hidden="true">⌕</span>
           <input
             ref={searchInputRef}
@@ -309,6 +309,9 @@ export function WorkspaceV2Sidebar({
           {searchQuery.trim() && (
             <button type="button" onClick={onClearSearch} aria-label="Limpiar búsqueda">×</button>
           )}
+          <div className="notes-search__meta oanix-workspace-v2__search-meta">
+            Búsqueda local cifrada
+          </div>
         </div>
       )}
 
@@ -349,7 +352,7 @@ export function WorkspaceV2Sidebar({
 
       {error && <p className="oanix-workspace-v2__error" role="alert">{error}</p>}
 
-      <div className="oanix-workspace-v2__notes-scroll" data-v2-scroll-kind="note">
+      <div className="notes-list oanix-workspace-v2__notes-scroll" data-v2-scroll-kind="note">
         {loading ? (
           <div className="oanix-workspace-v2__empty"><strong>Cargando notas…</strong></div>
         ) : visibleNotes.length === 0 ? (
@@ -367,9 +370,10 @@ export function WorkspaceV2Sidebar({
               return (
                 <article
                   key={note.id}
-                  className={`oanix-workspace-v2__timeline-item${selectedId === note.id ? ' is-selected' : ''}`}
+                  className={`note-row oanix-workspace-v2__timeline-item${selectedId === note.id ? ' is-selected note-row--selected' : ''}`}
                   data-v2-drag-kind="note"
                   data-v2-id={note.id}
+                  data-reorder-note-id={note.id}
                   data-v2-group={note.pinned === true ? 'pinned' : 'normal'}
                 >
                   <span
@@ -378,7 +382,7 @@ export function WorkspaceV2Sidebar({
                     aria-hidden="true"
                   />
                   <div
-                    className="oanix-workspace-v2__note-card"
+                    className="note-row__open oanix-workspace-v2__note-card"
                     style={{
                       '--v2-note-r': red,
                       '--v2-note-g': green,
@@ -403,9 +407,11 @@ export function WorkspaceV2Sidebar({
                         {category?.name ?? (note.pinned ? 'Fijada' : 'Nota')}
                       </span>
                     </div>
-                    <strong className="oanix-workspace-v2__note-title">
-                      {note.visualIcon ?? DEFAULT_NOTE_VISUAL_ICON} {note.title}
-                    </strong>
+                    <span className="note-row__topline oanix-workspace-v2__note-title-line">
+                      <strong className="oanix-workspace-v2__note-title">
+                        {note.visualIcon ?? DEFAULT_NOTE_VISUAL_ICON} {note.title}
+                      </strong>
+                    </span>
                     <p className="oanix-workspace-v2__note-description">{noteDescription(note)}</p>
                     <div className="oanix-workspace-v2__note-actions">
                       <button
@@ -443,6 +449,19 @@ export function WorkspaceV2Sidebar({
                       </button>
                       <button
                         type="button"
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          window.dispatchEvent(new CustomEvent('oanix:open-note-privacy', {
+                            detail: { noteId: note.id },
+                          }))
+                        }}
+                        title="Privacidad"
+                        data-v2-drag-ignore="true"
+                      >
+                        🔐
+                      </button>
+                      <button
+                        type="button"
                         className="is-danger"
                         disabled={deletingId !== null}
                         onClick={(event) => {
@@ -464,7 +483,7 @@ export function WorkspaceV2Sidebar({
       </div>
 
       <button
-        className="oanix-workspace-v2__create-note"
+        className="notes-create-fab oanix-workspace-v2__create-note"
         type="button"
         onClick={onCreateNote}
         disabled={creating || Boolean(searchQuery.trim())}
