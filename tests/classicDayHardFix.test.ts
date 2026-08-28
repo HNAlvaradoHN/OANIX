@@ -4,6 +4,7 @@ import test from 'node:test'
 
 const catalog = readFileSync('src/features/personalization/themeCatalog.ts', 'utf8')
 const main = readFileSync('src/main.tsx', 'utf8')
+const themeVisualStyles = readFileSync('src/app/ThemeVisualStyles.ts', 'utf8')
 const legacyGate = readFileSync('src/app/LegacyWorkspaceRuntimeGate.tsx', 'utf8')
 const visualRuntime = readFileSync('src/features/notes/V383WorkspaceVisualRuntime.tsx', 'utf8')
 const classicThemeSurfaces = readFileSync('src/styles/classic-theme-surfaces.css', 'utf8')
@@ -19,9 +20,11 @@ test('classic day pins a soft pastel palette inline so dark legacy variables can
 })
 
 test('v38.3 contract is lazy legacy-only while classic theme surfaces remain shared', () => {
-  const dayIndex = main.indexOf("./styles/classic-theme-surfaces.css")
+  const dayIndex = themeVisualStyles.indexOf("../styles/classic-theme-surfaces.css")
   const visualIndex = visualRuntime.indexOf("./v383WorkspaceVisual.css")
   const refinementIndex = visualRuntime.indexOf("./workspaceRefinements.css")
+  assert.match(main, /\.\/app\/ThemeVisualStyles/)
+  assert.doesNotMatch(main, /\.\/styles\/classic-theme-surfaces\.css/)
   assert.ok(dayIndex >= 0)
   assert.ok(visualIndex >= 0 && refinementIndex > visualIndex)
   assert.doesNotMatch(main, /features\/notes\/v383WorkspaceVisual\.css/)
