@@ -22,8 +22,10 @@ import {
   moveNoteToFolder,
   renameNote,
   replaceNoteContent,
+  setNoteListAppearance,
   setNotePinned,
   setNoteTags,
+  type NoteListAppearanceInput,
 } from './noteService'
 import { searchItemsByLocalFields, type LocalSearchField } from '../search/localSearch'
 import { prepareDailyEntriesForEditing } from './dailyEntries'
@@ -1262,6 +1264,25 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     setNoteMenuId(noteId)
   }
 
+  async function handleV2CustomizeNote(noteId: string, input: NoteListAppearanceInput) {
+    if (noteId === selectedIdRef.current && !(await flushPendingContent())) {
+      throw new Error('No se pudo confirmar el guardado actual antes de personalizar.')
+    }
+
+    const updated = await setNoteListAppearance(noteId, input)
+    replaceNoteInState(updated)
+    if (updated.id === selectedIdRef.current) {
+      setDraftTitle(updated.title)
+      setSaveState('saved')
+    }
+    window.dispatchEvent(new CustomEvent('oanix:note-visual-changed', {
+      detail: { note: updated },
+    }))
+    window.dispatchEvent(new CustomEvent('oanix:local-data-changed', {
+      detail: { recordType: 'note', recordId: updated.id },
+    }))
+  }
+
   async function handleV2FolderOrder(folderIds: string[]) {
     if (folderIds.length !== folders.length) return
     try {
@@ -1367,6 +1388,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
           onDeleteTag={handleDeleteTag}
           onRenameFolder={handleV2RenameFolder}
           onDeleteFolder={handleDeleteFolder}
+          onCustomizeNote={handleV2CustomizeNote}
           onFolderOrder={(ids) => void handleV2FolderOrder(ids)}
           onTagOrder={(ids) => void handleV2TagOrder(ids)}
           onNoteOrder={(ids) => void handleV2NoteOrder(ids)}
