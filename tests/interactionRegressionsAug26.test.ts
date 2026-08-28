@@ -10,7 +10,7 @@ const noteFeedback = readFileSync('src/features/notes/NoteCreationFeedbackRuntim
 const noteIdentity = readFileSync('src/features/notes/NoteVisualIdentityRuntime.tsx', 'utf8')
 const noteReorder = readFileSync('src/features/notes/NoteListReorderGestureRuntime.tsx', 'utf8')
 const noteReorderCss = readFileSync('src/features/notes/noteReorderGesture.css', 'utf8')
-const bulkOverride = readFileSync('src/features/privacy/noteBulkPrivacyOverrides.css', 'utf8')
+const bulkOverride = readFileSync('src/features/privacy/noteBulkPrivacy.css', 'utf8')
 
 test('folder manager is scoped by explicit event and bypasses hidden DOM bridges', () => {
   assert.match(folderManager, /renameFolder/)
