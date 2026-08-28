@@ -22,14 +22,8 @@ import './styles/vault-touch-motion-guard.css'
 import './styles/vaultCloudProgress.css'
 import './features/images/pwa-image-no-name.css'
 
-// v38.3 remains the base workspace authority. The state contract below only
-// handles exclusive note-detail and covered-background states that live outside it.
-import './features/notes/v383WorkspaceVisual.css'
-import './features/notes/workspaceStateContract.css'
-import './features/notes/workspaceRefinements.css'
-import './features/notes/compactNoteContract.css'
-import './features/notes/responsiveCompactNoteContract.css'
-import './features/notes/organicWorkspaceTouchMotion.css'
+// Workspace V2 is the default authority. Legacy v38.3-only presentation
+// is code-split with LegacyWorkspaceRuntimeGate so it does not enter the V2 CSS path.
 
 type OanixUpdateWindow = Window & {
   __oanixApplyUpdate?: () => Promise<void>
