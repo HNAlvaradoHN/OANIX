@@ -398,7 +398,7 @@ export function WorkspaceV2Sidebar({
                       if (event.target !== event.currentTarget) return
                       if (event.key === 'Enter' || event.key === ' ') {
                         event.preventDefault()
-                        onSelectNote(note.id)
+                        event.currentTarget.click()
                       }
                     }}
                   >
