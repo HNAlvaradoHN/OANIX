@@ -17,7 +17,6 @@ import './styles/classic-theme-surfaces.css'
 import './styles/web-brand-logo.css'
 import './styles/vault-touch-motion-guard.css'
 import './styles/vaultCloudProgress.css'
-import './features/images/pwa-image-no-name.css'
 
 // Workspace V2 is the default authority. Legacy v38.3-only presentation
 // is code-split with the lazy fallback so it does not enter the V2 CSS path.
