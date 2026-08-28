@@ -21,7 +21,10 @@ test('note menus measure their real height and flip toward available space', () 
 
 test('note menu fitting reacts to interactions and viewport changes without a global DOM observer', () => {
   assert.doesNotMatch(runtimeSource, /MutationObserver/)
-  assert.match(runtimeSource, /document\.addEventListener\('click', scheduleFit\)/)
+  assert.match(runtimeSource, /const handleNoteMenuClick = \(event: MouseEvent\) =>/)
+  assert.match(runtimeSource, /target\.closest\('\.note-row__menu-wrap'\)/)
+  assert.match(runtimeSource, /document\.addEventListener\('click', handleNoteMenuClick\)/)
+  assert.doesNotMatch(runtimeSource, /document\.addEventListener\('click', scheduleFit\)/)
   assert.match(runtimeSource, /window\.addEventListener\('resize', scheduleFit\)/)
   assert.match(runtimeSource, /visualViewport\?\.addEventListener\('resize', scheduleFit\)/)
   assert.match(runtimeSource, /visualViewport\?\.addEventListener\('scroll', scheduleFit\)/)
