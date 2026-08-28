@@ -6,6 +6,7 @@ import {
   type CSSProperties,
   type RefObject,
 } from 'react'
+import { createPortal } from 'react-dom'
 import {
   DEFAULT_FOLDER_COLOR,
   DEFAULT_FOLDER_ICON,
@@ -319,7 +320,7 @@ export function WorkspaceV2Sidebar({
         </div>
       </header>
 
-      {workspaceMenuOpen && (
+      {workspaceMenuOpen && createPortal(
         <div
           className="oanix-workspace-v2__menu-backdrop"
           role="presentation"
@@ -347,7 +348,8 @@ export function WorkspaceV2Sidebar({
               <OanixIcon name="close" /> Cerrar
             </button>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
 
       {searchOpen && (
