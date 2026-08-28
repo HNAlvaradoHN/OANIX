@@ -5,6 +5,7 @@ import { App } from './app/App'
 import { ThemeMenu } from './features/personalization/ThemeMenu'
 import { applyOanixTheme, readSavedOanixTheme } from './features/personalization/themeCatalog'
 import { PwaImagePreviewRuntime } from './features/images/PwaImagePreviewRuntime'
+import { WORKSPACE_V2_ENABLED } from './app/workspaceExperience'
 import './features/folders/folderNavigationState.css'
 import './styles/global.css'
 import './styles/midnight-violet.css'
@@ -37,10 +38,16 @@ type OanixUpdateWindow = Window & {
 const oanixWindow = window as OanixUpdateWindow
 const isCapacitorBuild = import.meta.env.MODE === 'capacitor'
 
-// The approved workspace class must exist before React's first paint. Leaving this
-// to V383WorkspaceVisualRuntime.useEffect exposes the legacy card geometry for a frame.
-document.documentElement.classList.add('oanix-v383-visual')
-document.body.classList.add('oanix-v383-visual')
+// Apply exactly one pre-paint workspace visual authority. V2 deliberately does
+// not inherit the legacy v38.3 !important geometry, while the current workspace
+// keeps its existing no-flash contract until the migration switch is enabled.
+if (WORKSPACE_V2_ENABLED) {
+  document.documentElement.classList.add('oanix-workspace-v2-active')
+  document.body.classList.add('oanix-workspace-v2-active')
+} else {
+  document.documentElement.classList.add('oanix-v383-visual')
+  document.body.classList.add('oanix-v383-visual')
+}
 
 // PWA uses the selected OANIX brand image.
 // Capacitor keeps the approved native identity until Android launcher assets are regenerated separately.
