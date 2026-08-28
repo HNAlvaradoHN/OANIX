@@ -211,7 +211,7 @@ export function VersionHistoryCenter({ onRestored }: VersionHistoryCenterProps) 
       aria-label="Historial de versiones"
       title="Historial de versiones"
     >
-      <OanixIcon name="backup" />
+      <OanixIcon name="history" />
     </button>,
     host,
   )
