@@ -176,6 +176,6 @@ body:has(#oanix-note-delete-feedback) {
 @media (prefers-reduced-motion: reduce) {
   .oanix-editor-operation-feedback__spinner,
   #oanix-note-delete-feedback > span:first-child {
-    animation-duration: 1.8s;
+    animation: none;
   }
 }
