@@ -14,7 +14,9 @@ interface WorkspaceRuntimeGateProps {
   workspaceRevision: number
 }
 
-export function WorkspaceRuntimeGate({ workspaceRevision }: WorkspaceRuntimeGateProps) {
+export function WorkspaceRuntimeGate({
+  workspaceRevision,
+}: WorkspaceRuntimeGateProps) {
   return (
     <>
       <EditorOperationRuntime />
