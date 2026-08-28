@@ -25,7 +25,6 @@ interface WorkspaceV2FolderActionsProps {
   cover: string
   flags: FolderAppearanceFlags | undefined
   onClose: () => void
-  onOpen: () => void
   onRename: (folder: FolderRecord, name: string) => Promise<void>
   onDelete: (folder: FolderRecord) => Promise<void>
 }
@@ -37,7 +36,6 @@ export function WorkspaceV2FolderActions({
   cover,
   flags,
   onClose,
-  onOpen,
   onRename,
   onDelete,
 }: WorkspaceV2FolderActionsProps) {
@@ -172,7 +170,6 @@ export function WorkspaceV2FolderActions({
 
         {mode === 'menu' && (
           <div className="oanix-workspace-v2__folder-action-grid">
-            <button type="button" onClick={() => { onOpen(); onClose() }} disabled={busy}>↗ Abrir carpeta</button>
             <button type="button" onClick={() => void togglePinned()} disabled={busy}>
               {flags?.pinned ? '📌 Desfijar' : '📌 Fijar'}
             </button>
