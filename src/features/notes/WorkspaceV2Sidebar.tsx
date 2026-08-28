@@ -261,7 +261,7 @@ export function WorkspaceV2Sidebar({
       {activeFolderCover && (
         <span
           className="oanix-workspace-v2__wallpaper"
-          style={{ backgroundImage: `url(${JSON.stringify(activeFolderCover)})` }}
+          style={{ '--v2-folder-wallpaper': `url("${activeFolderCover}")` } as CSSProperties}
           aria-hidden="true"
         />
       )}
@@ -565,10 +565,11 @@ export function WorkspaceV2Sidebar({
         onClick={onCreateNote}
         disabled={creating || Boolean(searchQuery.trim())}
         aria-label={creating ? 'Creando nota' : 'Crear nueva nota'}
+        title={creating ? 'Creando…' : 'Nueva nota'}
+        aria-busy={creating}
         data-v2-drag-ignore="true"
       >
-        <span>＋</span>
-        {creating ? 'Creando…' : 'Nueva nota'}
+        {creating ? <span aria-hidden="true">…</span> : <OanixIcon name="plus" size={23} />}
       </button>
 
       <footer className="oanix-workspace-v2__folder-dock" aria-label="Carpetas">
