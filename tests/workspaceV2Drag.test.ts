@@ -6,6 +6,7 @@ const drag = readFileSync('src/features/notes/WorkspaceV2DragRuntime.tsx', 'utf8
 const css = readFileSync('src/features/notes/workspaceV2.css', 'utf8')
 
 test('workspace v2 drag keeps the proven long-press ghost and edge-autoscroll model', () => {
+  assert.match(drag, /performance\.now\(\) \+ 520/)
   assert.match(drag, /folder:\s*500/)
   assert.match(drag, /tag:\s*400/)
   assert.match(drag, /note:\s*400/)
