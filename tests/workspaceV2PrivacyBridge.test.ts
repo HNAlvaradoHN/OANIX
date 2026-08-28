@@ -29,3 +29,9 @@ test('legacy compatibility classes are visually reset under the v2 namespace', (
   assert.match(css, /\.oanix-workspace-v2 \.oanix-workspace-v2__notes-scroll\.notes-list/)
   assert.match(css, /\.oanix-workspace-v2__timeline-item > \.oanix-note-row-lock/)
 })
+
+test('workspace v2 nested note actions are not mistaken for note-open clicks by privacy capture', () => {
+  assert.match(sidebar, /data-v2-note-actions="true"/)
+  assert.match(privacy, /target\.closest<HTMLElement>\('\[data-v2-note-actions="true"\]'\)/)
+  assert.match(privacy, /const openButton = isV2NoteAction[\s\S]*\? null[\s\S]*: target\.closest<HTMLElement>\('\.note-row__open'\)/)
+})
