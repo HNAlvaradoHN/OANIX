@@ -11,6 +11,24 @@ const noteMenuViewportFit = readFileSync('src/features/notes/NoteMenuViewportFit
 const v383WorkspaceVisualRuntime = readFileSync('src/features/notes/V383WorkspaceVisualRuntime.tsx', 'utf8')
 const noteBulkPrivacy = readFileSync('src/features/privacy/NoteBulkPrivacyRuntime.tsx', 'utf8')
 
+const LEGACY_WORKSPACE_RUNTIMES = [
+  'FolderScopedManagerRuntime',
+  'OrganicWorkspaceRuntime',
+  'WorkspacePersonalizationRuntime',
+  'NoteVisualIdentityRuntime',
+  'NoteMenuScrollDismiss',
+  'NoteMenuViewportFit',
+  'WorkspaceInputCompatibilityRuntime',
+  'WorkspaceQuickPolishRuntime',
+  'FolderOperationFeedbackRuntime',
+  'FolderCreationRuntime',
+  'FolderMobileDragRuntime',
+  'TagMobileGestureRuntime',
+  'V383WorkspaceVisualRuntime',
+  'NoteListReorderGestureRuntime',
+  'FolderGridRuntime',
+] as const
+
 test('workspace v2 has one switch and legacy visual authorities live behind a lazy boundary', () => {
   assert.match(experience, /export const WORKSPACE_V2_ENABLED = true/)
   assert.match(app, /<WorkspaceRuntimeGate workspaceRevision=\{workspaceRevision\} \/>/)
@@ -18,18 +36,9 @@ test('workspace v2 has one switch and legacy visual authorities live behind a la
   assert.match(gate, /lazy\(\(\) =>[\s\S]*import\('\.\/LegacyWorkspaceRuntimeGate'\)/)
   assert.match(gate, /!WORKSPACE_V2_ENABLED && \(/)
 
-  for (const legacy of [
-    'FolderGridRuntime',
-    'NoteListReorderGestureRuntime',
-    'FolderMobileDragRuntime',
-    'TagMobileGestureRuntime',
-    'OrganicWorkspaceRuntime',
-    'V383WorkspaceVisualRuntime',
-    'NoteVisualIdentityRuntime',
-    'WorkspaceQuickPolishRuntime',
-  ]) {
+  for (const legacy of LEGACY_WORKSPACE_RUNTIMES) {
     assert.ok(legacyGate.includes('<' + legacy), 'missing lazy legacy authority for ' + legacy)
-    assert.ok(!gate.includes(`../features/${legacy}`), 'legacy authority is still eagerly imported: ' + legacy)
+    assert.ok(!gate.includes(legacy), 'legacy authority is still eagerly referenced: ' + legacy)
   }
 })
 
@@ -47,12 +56,7 @@ test('legacy workspace css is not eagerly loaded when v2 is authoritative', () =
     /import ['"]\.\.\/features\/notes\/(?:v383WorkspaceVisual|workspaceStateContract|workspaceRefinements|compactNoteContract|responsiveCompactNoteContract|organicWorkspaceTouchMotion|folderDockContract)\.css['"]/,
   )
   assert.match(v383WorkspaceVisualRuntime, /import '\.\.\/editor\/editorTrailingWorkspace\.css'[\s\S]*import '\.\.\/folders\/folderNavigationState\.css'[\s\S]*import '\.\/v383WorkspaceVisual\.css'[\s\S]*import '\.\/workspaceStateContract\.css'[\s\S]*import '\.\/workspaceRefinements\.css'[\s\S]*import '\.\/compactNoteContract\.css'[\s\S]*import '\.\/responsiveCompactNoteContract\.css'[\s\S]*import '\.\/organicWorkspaceTouchMotion\.css'[\s\S]*import '\.\/folderDockContract\.css'/)
-  assert.match(legacyGate, /V383WorkspaceVisualRuntime/)
   assert.doesNotMatch(legacyGate, /organicWorkspaceTouchMotion\.css|folderDockContract\.css/)
-  assert.match(legacyGate, /OrganicWorkspaceRuntime/)
-  assert.match(legacyGate, /WorkspacePersonalizationRuntime/)
-  assert.match(legacyGate, /FolderMobileDragRuntime/)
-  assert.match(legacyGate, /TagMobileGestureRuntime/)
 })
 
 test('functional editor and privacy runtimes remain outside the legacy-only block', () => {
