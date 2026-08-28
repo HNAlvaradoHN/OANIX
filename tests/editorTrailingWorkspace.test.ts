@@ -4,6 +4,7 @@ import test from 'node:test'
 
 const trailing = readFileSync('src/features/editor/editorTrailingWorkspace.css', 'utf8')
 const legacyGate = readFileSync('src/app/LegacyWorkspaceRuntimeGate.tsx', 'utf8')
+const visualRuntime = readFileSync('src/features/notes/V383WorkspaceVisualRuntime.tsx', 'utf8')
 const workspaceGate = readFileSync('src/app/WorkspaceRuntimeGate.tsx', 'utf8')
 
 test('mobile note extends the real document flow below large editor blocks', () => {
@@ -28,6 +29,7 @@ test('mobile note keeps physical runway separate from automatic focus clearance'
 })
 
 test('legacy trailing workspace styles stay in the lazy fallback and out of Workspace V2', () => {
-  assert.match(legacyGate, /import '\.\.\/features\/editor\/editorTrailingWorkspace\.css'/)
+  assert.doesNotMatch(legacyGate, /editorTrailingWorkspace\.css/)
+  assert.match(visualRuntime, /import '\.\.\/editor\/editorTrailingWorkspace\.css'/)
   assert.doesNotMatch(workspaceGate, /editorTrailingWorkspace\.css/)
 })

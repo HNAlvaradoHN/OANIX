@@ -1,4 +1,6 @@
 import { useEffect } from 'react'
+// Keep legacy-only visual contracts together in their original cascade order.
+import '../editor/editorTrailingWorkspace.css'
 import '../folders/folderNavigationState.css'
 import './v383WorkspaceVisual.css'
 import './workspaceStateContract.css'
