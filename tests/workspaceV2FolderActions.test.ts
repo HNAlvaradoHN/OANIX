@@ -5,6 +5,7 @@ import test from 'node:test'
 const actions = readFileSync('src/features/notes/WorkspaceV2FolderActions.tsx', 'utf8')
 const sidebar = readFileSync('src/features/notes/WorkspaceV2Sidebar.tsx', 'utf8')
 const workspace = readFileSync('src/features/notes/NotesWorkspace.tsx', 'utf8')
+const creator = readFileSync('src/features/notes/WorkspaceV2FolderCreator.tsx', 'utf8')
 
 test('workspace v2 folder menu reuses encrypted appearance and cover services', () => {
   for (const required of [
@@ -46,4 +47,18 @@ test('successful folder appearance actions close the focused menu instead of lea
   assert.match(actions, /togglePinned\(\)[\s\S]*saveFolderPinned[\s\S]*onClose\(\)/)
   assert.match(actions, /toggleFavorite\(\)[\s\S]*saveFolderFavorite[\s\S]*onClose\(\)/)
   assert.match(actions, /applyCover\(file: File \| null\)[\s\S]*saveFolderCover[\s\S]*onClose\(\)/)
+})
+
+
+test('workspace v2 add-folder control opens the focused creator instead of the legacy manager', () => {
+  assert.match(sidebar, /setFolderCreatorOpen\(true\)/)
+  assert.match(sidebar, /<WorkspaceV2FolderCreator/)
+  assert.match(sidebar, /onCreate=\{onCreateFolder\}/)
+  assert.match(creator, /aria-label="Nueva carpeta"/)
+  assert.match(creator, /FOLDER_COLOR_PRESETS/)
+  assert.match(creator, /FOLDER_ICON_OPTIONS/)
+  assert.match(workspace, /onCreateFolder=\{handleV2CreateFolder\}/)
+  assert.match(workspace, /saveFolderColor\(folder\.id, appearance\.color\)/)
+  assert.match(workspace, /saveFolderIcon\(folder\.id, appearance\.icon\)/)
+  assert.match(workspace, /!WORKSPACE_V2_ENABLED && \(/)
 })
