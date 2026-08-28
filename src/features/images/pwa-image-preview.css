@@ -294,3 +294,8 @@ html.oanix-pwa-image-preview-v1 .image-lightbox__viewport img {
     padding: 0.75rem;
   }
 }
+
+html.oanix-pwa-image-preview-v1 .image-note-editor-root .editor-image-block[data-pwa-image-card='true'] .editor-image-block__name-toggle,
+html.oanix-pwa-image-preview-v1 .image-note-editor-root .editor-image-block[data-pwa-image-card='true'] [data-image-name='true'] {
+  display: none !important;
+}
