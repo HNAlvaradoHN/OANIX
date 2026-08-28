@@ -416,7 +416,7 @@ export function WorkspaceV2Sidebar({
                       </strong>
                     </span>
                     <p className="oanix-workspace-v2__note-description">{noteDescription(note)}</p>
-                    <div className="oanix-workspace-v2__note-actions">
+                    <div className="oanix-workspace-v2__note-actions" data-v2-note-actions="true">
                       <button
                         type="button"
                         onClick={(event) => {
