@@ -1383,6 +1383,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
           onSelectNote={(noteId) => void handleSelectNote(noteId)}
           onTogglePinned={(note) => void handleTogglePinned(note)}
           onOpenTagEditor={openTagEditor}
+          onOpenMoveNote={(note) => setMoveNoteId(note.id)}
           onDeleteNote={(note) => void handleDeleteNote(note)}
           onCreateTag={handleV2CreateTag}
           onDeleteTag={handleDeleteTag}
