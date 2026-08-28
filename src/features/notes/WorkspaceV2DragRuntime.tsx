@@ -22,6 +22,9 @@ type ActiveGesture = {
   startY: number
   lastX: number
   lastY: number
+  startScroll: number
+  moved: boolean
+  dragBlocked: boolean
   timer: number | null
   dragging: boolean
   ghost: HTMLElement | null
@@ -151,7 +154,7 @@ export function WorkspaceV2DragRuntime({
     }
 
     function beginDrag() {
-      if (!gesture || gesture.dragging) return
+      if (!gesture || gesture.dragging || gesture.moved || gesture.dragBlocked) return
       gesture.timer = null
       gesture.dragging = true
       gesture.initialOrder = orderOf(gesture.container, gesture.kind)
@@ -172,6 +175,13 @@ export function WorkspaceV2DragRuntime({
       gesture.item.classList.add('is-v2-drag-source')
       gesture.container.classList.add('is-v2-dragging')
       document.documentElement.classList.add(`oanix-v2-${gesture.kind}-dragging`)
+      document.body.classList.add(`oanix-v2-${gesture.kind}-dragging`)
+      window.getSelection()?.removeAllRanges()
+      try {
+        gesture.item.setPointerCapture(gesture.pointerId)
+      } catch {
+        // Pointer capture is best effort on Android WebView/PWA implementations.
+      }
       moveGhost(gesture.lastX, gesture.lastY)
       startAutoScroll()
       navigator.vibrate?.(gesture.kind === 'folder' ? 45 : 28)
@@ -181,9 +191,17 @@ export function WorkspaceV2DragRuntime({
       if (!gesture) return
       stopAutoScroll()
       gesture.ghost?.remove()
+      try {
+        if (gesture.item.hasPointerCapture(gesture.pointerId)) {
+          gesture.item.releasePointerCapture(gesture.pointerId)
+        }
+      } catch {
+        // Pointer capture may already be gone after cancel/blur.
+      }
       gesture.item.classList.remove('is-v2-drag-source')
       gesture.container.classList.remove('is-v2-dragging')
       document.documentElement.classList.remove(`oanix-v2-${gesture.kind}-dragging`)
+      document.body.classList.remove(`oanix-v2-${gesture.kind}-dragging`)
     }
 
     function cancelGesture(restore = false) {
@@ -207,12 +225,13 @@ export function WorkspaceV2DragRuntime({
       if (!gesture) return
       if (gesture.timer !== null) window.clearTimeout(gesture.timer)
       const wasDragging = gesture.dragging
+      const wasMoved = gesture.moved
       const kind = gesture.kind
       const nextOrder = orderOf(gesture.container, kind)
       const changed = wasDragging && nextOrder.join(',') !== gesture.initialOrder.join(',')
 
       clearGestureVisuals()
-      if (wasDragging) suppressClicks(activeRoot)
+      if (wasDragging || wasMoved) suppressClicks(activeRoot)
       gesture = null
 
       if (!changed) return
@@ -227,9 +246,21 @@ export function WorkspaceV2DragRuntime({
       gesture.lastY = event.clientY
 
       if (!gesture.dragging) {
-        if (Math.hypot(event.clientX - gesture.startX, event.clientY - gesture.startY) > 10) {
-          if (gesture.timer !== null) window.clearTimeout(gesture.timer)
-          gesture.timer = null
+        const dx = event.clientX - gesture.startX
+        const dy = event.clientY - gesture.startY
+        if (Math.hypot(dx, dy) <= 10) return
+
+        gesture.moved = true
+        if (gesture.timer !== null) window.clearTimeout(gesture.timer)
+        gesture.timer = null
+
+        if (event.pointerType !== 'mouse') {
+          event.preventDefault()
+          if (gesture.kind === 'note') {
+            gesture.container.scrollTop = gesture.startScroll - dy
+          } else {
+            gesture.container.scrollLeft = gesture.startScroll - dx
+          }
         }
         return
       }
@@ -259,10 +290,13 @@ export function WorkspaceV2DragRuntime({
       if (event.button !== 0 || gesture) return
       const target = event.target
       if (!(target instanceof Element)) return
-      if (target.closest('button[data-v2-drag-ignore="true"], a, input, textarea, select, [contenteditable="true"]')) return
+      const dragBlocked = Boolean(
+        target.closest('button[data-v2-drag-ignore="true"], a, input, textarea, select, [contenteditable="true"]'),
+      )
 
       const item = target.closest<HTMLElement>('[data-v2-drag-kind][data-v2-id]')
       if (!item || !activeRoot.contains(item)) return
+      if (dragBlocked && event.pointerType === 'mouse') return
       const kind = item.dataset.v2DragKind as WorkspaceV2DragKind | undefined
       if (kind !== 'folder' && kind !== 'tag' && kind !== 'note') return
       const container = item.parentElement
@@ -277,6 +311,9 @@ export function WorkspaceV2DragRuntime({
         startY: event.clientY,
         lastX: event.clientX,
         lastY: event.clientY,
+        startScroll: kind === 'note' ? container.scrollTop : container.scrollLeft,
+        moved: false,
+        dragBlocked,
         timer: null,
         dragging: false,
         ghost: null,
@@ -286,7 +323,9 @@ export function WorkspaceV2DragRuntime({
         initialOrder: [],
         group: item.dataset.v2Group ?? '',
       }
-      gesture.timer = window.setTimeout(beginDrag, LONG_PRESS_MS[kind])
+      if (!dragBlocked) {
+        gesture.timer = window.setTimeout(beginDrag, LONG_PRESS_MS[kind])
+      }
 
       document.addEventListener('pointermove', handlePointerMove, { capture: true, passive: false })
       document.addEventListener('pointerup', handlePointerUp, true)
@@ -299,12 +338,35 @@ export function WorkspaceV2DragRuntime({
       event.stopPropagation()
     }
 
+    function blockNativeLongPress(event: Event) {
+      const target = event.target
+      if (!(target instanceof Element)) return
+      if (!target.closest('[data-v2-drag-kind][data-v2-id]')) return
+      event.preventDefault()
+    }
+
+    function handleVisibilityChange() {
+      if (document.hidden) cancelGesture(true)
+    }
+
+    function handleBlur() {
+      cancelGesture(true)
+    }
+
     activeRoot.addEventListener('pointerdown', handlePointerDown, true)
     activeRoot.addEventListener('click', handleClick, true)
+    activeRoot.addEventListener('contextmenu', blockNativeLongPress, true)
+    activeRoot.addEventListener('selectstart', blockNativeLongPress, true)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('blur', handleBlur)
 
     return () => {
       activeRoot.removeEventListener('pointerdown', handlePointerDown, true)
       activeRoot.removeEventListener('click', handleClick, true)
+      activeRoot.removeEventListener('contextmenu', blockNativeLongPress, true)
+      activeRoot.removeEventListener('selectstart', blockNativeLongPress, true)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('blur', handleBlur)
       document.removeEventListener('pointermove', handlePointerMove, true)
       document.removeEventListener('pointerup', handlePointerUp, true)
       document.removeEventListener('pointercancel', handlePointerCancel, true)
