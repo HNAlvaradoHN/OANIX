@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import test from 'node:test'
 
 const gate = readFileSync('src/app/WorkspaceRuntimeGate.tsx', 'utf8')
+const legacyGate = readFileSync('src/app/LegacyWorkspaceRuntimeGate.tsx', 'utf8')
 const creation = readFileSync('src/features/folders/FolderCreationRuntime.tsx', 'utf8')
 const grid = readFileSync('src/features/folders/FolderGridRuntime.tsx', 'utf8')
 const personalization = readFileSync('src/features/notes/WorkspacePersonalizationRuntime.tsx', 'utf8')
@@ -44,7 +45,7 @@ test('folder manager opens by explicit folder event instead of scraping DOM', ()
 })
 
 test('workspace gate mounts only direct folder owners', () => {
-  assert.match(gate, /<FolderScopedManagerRuntime \/>/)
-  assert.match(gate, /<WorkspacePersonalizationRuntime \/>/)
-  assert.doesNotMatch(gate, /FolderCustomizerBridgeRuntime|FolderAppearanceRuntime/)
+  assert.match(legacyGate, /<FolderScopedManagerRuntime \/>/)
+  assert.match(legacyGate, /<WorkspacePersonalizationRuntime \/>/)
+  assert.doesNotMatch(legacyGate, /FolderCustomizerBridgeRuntime|FolderAppearanceRuntime/)
 })

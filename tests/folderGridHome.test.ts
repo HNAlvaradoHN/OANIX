@@ -8,6 +8,7 @@ const organicCss = readFileSync('src/features/notes/organicWorkspace.css', 'utf8
 const coverService = readFileSync('src/features/folders/folderCoverService.ts', 'utf8')
 const interactiveCss = readFileSync('src/features/folders/folderInteractive.css', 'utf8')
 const app = readFileSync('src/app/App.tsx', 'utf8')
+const legacyGate = readFileSync('src/app/LegacyWorkspaceRuntimeGate.tsx', 'utf8')
 
 test('el dock reutiliza carpetas y notas cifradas existentes con contadores reales', () => {
   assert.match(runtime, /loadFolders\(\)/)
@@ -83,7 +84,7 @@ test('el CSS de interacción no conserva controles retirados del personalizador'
 })
 
 test('FolderGridRuntime sigue dentro de la sesión desbloqueada como fuente de comportamiento real', () => {
-  assert.match(app, /<NotesWorkspace key=\{workspaceRevision\} onLock=\{lockVault\} \/>/)
-  assert.match(app, /<FolderGridRuntime \/>/)
+  assert.match(app, /<NotesWorkspace key=\{workspaceRevision\} onLock=\{lockVault\} \/>\s*<WorkspaceRuntimeGate workspaceRevision=\{workspaceRevision\} \/>/)
+  assert.match(legacyGate, /<FolderGridRuntime \/>/)
   assert.match(app, /renderUnlocked=\{\(lockVault\) => <UnlockedApp lockVault=\{lockVault\} \/>\}/)
 })

@@ -4,6 +4,7 @@ import test from 'node:test'
 
 const main = readFileSync('src/main.tsx', 'utf8')
 const gate = readFileSync('src/app/WorkspaceRuntimeGate.tsx', 'utf8')
+const legacyGate = readFileSync('src/app/LegacyWorkspaceRuntimeGate.tsx', 'utf8')
 const visual = readFileSync('src/features/notes/v383WorkspaceVisual.css', 'utf8')
 const notes = readFileSync('src/features/notes/NotesWorkspace.tsx', 'utf8')
 const app = readFileSync('src/app/App.tsx', 'utf8')
@@ -16,9 +17,9 @@ test('v38.3 is the final header visual authority and retired icon polish is abse
   const themeSurfaceIndex = main.indexOf("./styles/classic-theme-surfaces.css")
   assert.ok(themeSurfaceIndex >= 0)
   assert.ok(visualIndex > themeSurfaceIndex)
-  assert.match(app, /<WorkspaceRuntimeGate \/>/)
-  assert.match(gate, /<OrganicWorkspaceRuntime \/>/)
-  assert.match(gate, /<V383WorkspaceVisualRuntime \/>/)
+  assert.match(app, /<WorkspaceRuntimeGate workspaceRevision=\{workspaceRevision\} \/>/)
+  assert.match(legacyGate, /<OrganicWorkspaceRuntime \/>/)
+  assert.match(legacyGate, /<V383WorkspaceVisualRuntime \/>/)
 })
 
 test('visible header actions use one vector family in one non-wrapping row', () => {

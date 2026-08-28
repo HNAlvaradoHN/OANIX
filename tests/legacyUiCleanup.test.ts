@@ -30,7 +30,7 @@ test('retired notebook experiments and the hidden-view tilt runtime are physical
 
 test('workspace runtimes follow the unlocked app lifecycle instead of observing the whole document from main', () => {
   assert.doesNotMatch(main, /WorkspaceRuntimeGate/)
-  assert.match(app, /<WorkspaceRuntimeGate \/>/)
+  assert.match(app, /<WorkspaceRuntimeGate workspaceRevision=\{workspaceRevision\} \/>/)
   assert.doesNotMatch(workspaceGate, /MutationObserver/)
   assert.doesNotMatch(workspaceGate, /document\.querySelector/)
 })
