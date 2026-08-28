@@ -7,12 +7,13 @@ const main = readFileSync('src/main.tsx', 'utf8')
 const classicThemeSurfaces = readFileSync('src/styles/classic-theme-surfaces.css', 'utf8')
 const visual = readFileSync('src/features/notes/v383WorkspaceVisual.css', 'utf8')
 
-test('classic day pins a true white palette inline so dark legacy variables cannot win', () => {
+test('classic day pins a soft pastel palette inline so dark legacy variables cannot win', () => {
   assert.match(catalog, /CLASSIC_DAY_TOKENS/)
-  assert.match(catalog, /'--theme-bg': '#ffffff'/)
+  assert.match(catalog, /'--theme-bg': '#f5eaf1'/)
+  assert.match(catalog, /'--theme-accent-2': '#43b9b2'/)
   assert.match(catalog, /classList\.toggle\('oanix-classic-day', enabled\)/)
   assert.match(catalog, /applyClassicDayHardening\(theme\.id === 'classic-day'\)/)
-  assert.match(catalog, /swatches: \['#ffffff', '#f4f7fb', '#2563eb'\]/)
+  assert.match(catalog, /swatches: \['#f5eaf1', '#dff3e9', '#7f8fe8'\]/)
 })
 
 test('v38.3 contract is loaded after classic theme surfaces and owns workspace surfaces', () => {
