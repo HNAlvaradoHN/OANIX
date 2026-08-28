@@ -14,7 +14,8 @@ test('compact note rows reserve separate icon, text and metadata zones', () => {
   assert.match(compactContract, /max-width:\s*min\(30vw, 180px\) !important/)
   assert.match(compactContract, /place-items:\s*center !important/)
   assert.match(compactContract, /transform:\s*translateY\(-1px\) !important/)
-  assert.ok(main.includes("import './features/notes/compactNoteContract.css'"))
+  assert.ok(!main.includes("features/notes/compactNoteContract.css"))
+  assert.ok(legacyGate.includes("import '../features/notes/compactNoteContract.css'"))
   assert.ok(!main.includes('compactNotePolish.css'))
 })
 
