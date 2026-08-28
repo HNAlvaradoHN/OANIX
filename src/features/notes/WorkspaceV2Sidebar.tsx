@@ -604,7 +604,6 @@ export function WorkspaceV2Sidebar({
             cover={folderCovers.get(folder.id) ?? ''}
             flags={folderFlags.get(folder.id)}
             onClose={() => setFolderActionsId(null)}
-            onOpen={() => onSelectFolder(folder.id)}
             onRename={onRenameFolder}
             onDelete={onDeleteFolder}
           />
