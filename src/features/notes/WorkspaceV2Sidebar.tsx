@@ -107,8 +107,15 @@ function rgbFromHex(hex: string): [number, number, number] {
   ]
 }
 
-function contrastFor(hex: string): string {
-  const [red, green, blue] = rgbFromHex(hex)
+function contrastFor(hex: string, themeId: OanixThemePreset['id']): string {
+  const color = rgbFromHex(hex)
+  const night = themeId === 'classic-night'
+  const base: [number, number, number] = night ? [17, 24, 39] : [248, 250, 252]
+  const tintAlpha = night ? 0.5 : 0.42
+  const [red, green, blue] = color.map((channel, index) =>
+    Math.round(channel * tintAlpha + base[index] * (1 - tintAlpha)),
+  ) as [number, number, number]
+
   const linear = (channel: number) => {
     const normalized = channel / 255
     return normalized <= 0.04045
@@ -438,7 +445,7 @@ export function WorkspaceV2Sidebar({
               const category = categoryForNote(note)
               const color = note.visualColor ?? category?.color ?? DEFAULT_NOTE_VISUAL_COLOR
               const [red, green, blue] = rgbFromHex(color)
-              const textColor = contrastFor(color)
+              const textColor = contrastFor(color, themeId)
               return (
                 <article
                   key={note.id}
