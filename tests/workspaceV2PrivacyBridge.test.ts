@@ -35,3 +35,8 @@ test('workspace v2 nested note actions are not mistaken for note-open clicks by 
   assert.match(privacy, /target\.closest<HTMLElement>\('\[data-v2-note-actions="true"\]'\)/)
   assert.match(privacy, /const openButton = isV2NoteAction[\s\S]*\? null[\s\S]*: target\.closest<HTMLElement>\('\.note-row__open'\)/)
 })
+
+test('workspace v2 keyboard note opening crosses the same privacy click gate as pointer input', () => {
+  assert.match(sidebar, /event\.currentTarget\.click\(\)/)
+  assert.match(privacy, /document\.addEventListener\('click', captureWorkspaceClick, true\)/)
+})
