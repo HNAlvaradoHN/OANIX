@@ -68,6 +68,7 @@ interface WorkspaceV2SidebarProps {
   onSelectNote: (noteId: string) => void
   onTogglePinned: (note: NoteRecord) => void
   onOpenTagEditor: (note: NoteRecord) => void
+  onOpenMoveNote: (note: NoteRecord) => void
   onDeleteNote: (note: NoteRecord) => void
   onCreateTag: (name: string, appearance: { icon: string; color: string }) => Promise<void>
   onDeleteTag: (tag: TagRecord) => Promise<void>
@@ -138,6 +139,7 @@ export function WorkspaceV2Sidebar({
   onSelectNote,
   onTogglePinned,
   onOpenTagEditor,
+  onOpenMoveNote,
   onDeleteNote,
   onCreateTag,
   onDeleteTag,
@@ -435,6 +437,17 @@ export function WorkspaceV2Sidebar({
                         data-v2-drag-ignore="true"
                       >
                         🏷
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          onOpenMoveNote(note)
+                        }}
+                        title="Mover a carpeta"
+                        data-v2-drag-ignore="true"
+                      >
+                        📁
                       </button>
                       <button
                         type="button"
