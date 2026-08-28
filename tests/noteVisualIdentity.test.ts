@@ -5,6 +5,7 @@ import test from 'node:test'
 const runtime = readFileSync('src/features/notes/NoteVisualIdentityRuntime.tsx', 'utf8')
 const personalization = readFileSync('src/features/notes/WorkspacePersonalizationRuntime.tsx', 'utf8')
 const gate = readFileSync('src/app/WorkspaceRuntimeGate.tsx', 'utf8')
+const legacyGate = readFileSync('src/app/LegacyWorkspaceRuntimeGate.tsx', 'utf8')
 
 test('fallback visual de nota es estable por id y no por indice DOM', () => {
   assert.match(runtime, /function fallbackColorForNote\(noteId: string\)/)
@@ -48,9 +49,9 @@ test('workspace personalization no compite con la autoridad visual de notas', ()
 })
 
 test('capa autoritativa monta despues de los dos decoradores existentes', () => {
-  const organicIndex = gate.indexOf('<OrganicWorkspaceRuntime />')
-  const personalizationIndex = gate.indexOf('<WorkspacePersonalizationRuntime />')
-  const identityIndex = gate.indexOf('<NoteVisualIdentityRuntime />')
+  const organicIndex = legacyGate.indexOf('<OrganicWorkspaceRuntime />')
+  const personalizationIndex = legacyGate.indexOf('<WorkspacePersonalizationRuntime />')
+  const identityIndex = legacyGate.indexOf('<NoteVisualIdentityRuntime />')
   assert.ok(organicIndex >= 0)
   assert.ok(personalizationIndex > organicIndex)
   assert.ok(identityIndex > personalizationIndex)

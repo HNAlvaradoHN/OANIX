@@ -9,7 +9,7 @@ const helpSource = readFileSync('src/features/privacy/PrivacyStatusHelp.tsx', 'u
 const polishCss = readFileSync('src/styles/privacy-status-polish.css', 'utf8')
 
 test('privacy manager removes redundant status rows and keeps help beside real actions', () => {
-  assert.match(appSource, /<WorkspaceRuntimeGate \/>/)
+  assert.match(appSource, /<WorkspaceRuntimeGate workspaceRevision=\{workspaceRevision\} \/>/)
   assert.match(gateSource, /<PrivacyStatusHelp \/>/)
   assert.match(mainSource, /privacy-status-polish\.css/)
   assert.match(polishCss, /\.oanix-privacy-status \{\s*display: none !important;/s)

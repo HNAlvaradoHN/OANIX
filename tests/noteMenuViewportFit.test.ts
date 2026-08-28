@@ -4,12 +4,13 @@ import test from 'node:test'
 
 const mainSource = readFileSync('src/main.tsx', 'utf8')
 const gateSource = readFileSync('src/app/WorkspaceRuntimeGate.tsx', 'utf8')
+const legacyGate = readFileSync('src/app/LegacyWorkspaceRuntimeGate.tsx', 'utf8')
 const runtimeSource = readFileSync('src/features/notes/NoteMenuViewportFit.tsx', 'utf8')
 const fitCss = readFileSync('src/styles/note-menu-viewport-fit.css', 'utf8')
 
 test('note menus measure their real height and flip toward available space', () => {
   assert.doesNotMatch(mainSource, /NoteMenuViewportFit/)
-  assert.match(gateSource, /<NoteMenuViewportFit \/>/)
+  assert.match(legacyGate, /<NoteMenuViewportFit \/>/)
   assert.match(mainSource, /note-menu-viewport-fit\.css/)
   assert.match(runtimeSource, /menu\.scrollHeight/)
   assert.match(runtimeSource, /spaceBelow/)

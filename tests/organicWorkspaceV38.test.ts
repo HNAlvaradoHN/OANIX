@@ -7,6 +7,7 @@ test('organic workspace uses real OANIX data and no external prototype dependenc
   const css = readFileSync('src/features/notes/organicWorkspace.css', 'utf8')
   const app = readFileSync('src/app/App.tsx', 'utf8')
   const gate = readFileSync('src/app/WorkspaceRuntimeGate.tsx', 'utf8')
+  const legacyGate = readFileSync('src/app/LegacyWorkspaceRuntimeGate.tsx', 'utf8')
 
   assert.match(runtime, /loadFolders/)
   assert.doesNotMatch(runtime, /loadNotes|loadNote\(/)
@@ -15,9 +16,9 @@ test('organic workspace uses real OANIX data and no external prototype dependenc
   assert.match(runtime, /loadFolderColors/)
   assert.doesNotMatch(runtime, /NOTE_TAB_COLORS|row\.dataset\.oanixNoteCategory|--oanix-note-tab-color/)
   assert.match(runtime, /persistTagOrder/)
-  assert.match(app, /<WorkspaceRuntimeGate \/>/)
-  assert.match(gate, /<OrganicWorkspaceRuntime \/>/)
-  assert.doesNotMatch(runtime + css + gate, /cdn\.tailwindcss|unpkg\.com|@phosphor-icons/)
+  assert.match(app, /<WorkspaceRuntimeGate workspaceRevision=\{workspaceRevision\} \/>/)
+  assert.match(legacyGate, /<OrganicWorkspaceRuntime \/>/)
+  assert.doesNotMatch(runtime + css + legacyGate, /cdn\.tailwindcss|unpkg\.com|@phosphor-icons/)
 })
 
 test('folders become a bottom dock and deterministic selection replaces the old hidden click bridge', () => {
