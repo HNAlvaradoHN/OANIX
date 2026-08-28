@@ -7,6 +7,7 @@ const app = readFileSync('src/app/App.tsx', 'utf8')
 const gate = readFileSync('src/app/WorkspaceRuntimeGate.tsx', 'utf8')
 const legacyGate = readFileSync('src/app/LegacyWorkspaceRuntimeGate.tsx', 'utf8')
 const experience = readFileSync('src/app/workspaceExperience.ts', 'utf8')
+const noteMenuViewportFit = readFileSync('src/features/notes/NoteMenuViewportFit.tsx', 'utf8')
 const noteBulkPrivacy = readFileSync('src/features/privacy/NoteBulkPrivacyRuntime.tsx', 'utf8')
 
 test('workspace v2 has one switch and legacy visual authorities live behind a lazy boundary', () => {
@@ -35,7 +36,9 @@ test('legacy workspace css is not eagerly loaded when v2 is authoritative', () =
   assert.doesNotMatch(main, /folderNavigationState\.css|note-menu-viewport-fit\.css/)
   assert.doesNotMatch(gate, /folderDockContract\.css|organicWorkspace\.css|workspacePersonalization\.css|folderMobileDrag\.css|tagMobileGesture\.css/)
   assert.match(legacyGate, /folderNavigationState\.css/)
-  assert.match(legacyGate, /note-menu-viewport-fit\.css/)
+  assert.doesNotMatch(legacyGate, /note-menu-viewport-fit\.css/)
+  assert.match(legacyGate, /<NoteMenuViewportFit \/>/)
+  assert.match(noteMenuViewportFit, /note-menu-viewport-fit\.css/)
   assert.match(legacyGate, /folderDockContract\.css/)
   assert.match(legacyGate, /OrganicWorkspaceRuntime/)
   assert.match(legacyGate, /WorkspacePersonalizationRuntime/)
