@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { loadNotes, restoreNoteVersion } from '../notes/noteService'
 import { noteBlocksToPlainText, type NoteRecord } from '../notes/noteTypes'
+import { OanixIcon } from '../../shared/OanixIcon'
 import {
   listNoteVersionHistory,
   NOTE_HISTORY_MAX_SNAPSHOTS_PER_NOTE,
@@ -210,7 +211,7 @@ export function VersionHistoryCenter({ onRestored }: VersionHistoryCenterProps) 
       aria-label="Historial de versiones"
       title="Historial de versiones"
     >
-      🕘
+      <OanixIcon name="backup" />
     </button>,
     host,
   )
