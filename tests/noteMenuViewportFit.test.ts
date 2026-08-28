@@ -3,7 +3,6 @@ import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
 const mainSource = readFileSync('src/main.tsx', 'utf8')
-const gateSource = readFileSync('src/app/WorkspaceRuntimeGate.tsx', 'utf8')
 const legacyGate = readFileSync('src/app/LegacyWorkspaceRuntimeGate.tsx', 'utf8')
 const runtimeSource = readFileSync('src/features/notes/NoteMenuViewportFit.tsx', 'utf8')
 const fitCss = readFileSync('src/features/notes/NoteMenuViewportFit.css', 'utf8')
