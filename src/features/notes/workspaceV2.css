@@ -604,6 +604,26 @@
   user-select: none;
 }
 
+html.oanix-v2-folder-dragging,
+html.oanix-v2-tag-dragging,
+html.oanix-v2-note-dragging,
+body.oanix-v2-folder-dragging,
+body.oanix-v2-tag-dragging,
+body.oanix-v2-note-dragging {
+  overscroll-behavior: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+@media (pointer: coarse) {
+  .oanix-workspace-v2 [data-v2-drag-kind][data-v2-id] {
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+}
+
 @media (hover: hover) and (pointer: fine) {
   .oanix-workspace-v2__header-actions .icon-button:hover,
   .oanix-workspace-v2__chip-add:hover,
