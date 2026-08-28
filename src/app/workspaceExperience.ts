@@ -1,6 +1,6 @@
-// Single switch for the workspace migration.
+// Single authority switch for the workspace migration.
 //
-// Keep this false until WorkspaceV2ListPane is fully wired on the integration branch.
-// Once enabled, legacy visual/drag authorities are deliberately unmounted instead
-// of running in parallel with the new interface.
-export const WORKSPACE_V2_ENABLED = false
+// V2 is now the active list/dashboard surface. App and WorkspaceRuntimeGate use
+// this same flag to keep every legacy visual/drag authority unmounted rather
+// than letting old and new interactions run in parallel.
+export const WORKSPACE_V2_ENABLED = true
