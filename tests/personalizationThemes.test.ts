@@ -107,7 +107,7 @@ test('classic day explicitly opts out of mobile forced dark and hardens the shar
   assert.match(classicThemeContract, /data-oanix-theme='classic-day'[^\n]*\{[\s\S]*color-scheme: only light !important/)
   assert.match(catalog, /const colorScheme = theme\.mode === 'light' \? 'only light' : 'dark'/)
   assert.match(catalog, /setProperty\('color-scheme', colorScheme, 'important'\)/)
-  assert.match(catalog, /'--oanix-organic-card': 'rgba\(241,245,249,\.86\)'/)
+  assert.match(catalog, /'--oanix-organic-card': 'rgba\(255,250,253,\.58\)'/)
   assert.match(classicSurfacesCss, /data-oanix-theme='classic-day'[\s\S]*--theme-bg: #f4f7fb/)
 })
 
@@ -131,6 +131,12 @@ test('legacy v38 fallback keeps one organic workspace surface authority', () => 
   assert.ok(themeSurfaceIndex >= 0 && visualIndex > themeSurfaceIndex)
   assert.match(app, /<WorkspaceRuntimeGate workspaceRevision=\{workspaceRevision\} \/>/)
   assert.match(legacyGate, /<OrganicWorkspaceRuntime \/>/)
+})
+
+test('day and night presentation names describe the calm gradient direction', () => {
+  assert.match(catalog, /description: 'Luz suave, pastel y degradados relajantes'/)
+  assert.match(catalog, /description: 'Noche profunda con violeta, teal y azul calmado'/)
+  assert.match(catalog, /swatches: \['#171323', '#0d2830', '#6375c9'\]/)
 })
 
 test('selected theme also controls browser and Android system chrome', () => {
