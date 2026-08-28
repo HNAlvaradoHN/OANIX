@@ -42,11 +42,11 @@ test('legacy workspace css is not eagerly loaded when v2 is authoritative', () =
   assert.match(noteMenuViewportFit, /note-menu-viewport-fit\.css/)
   assert.doesNotMatch(
     legacyGate,
-    /import ['"]\.\.\/features\/notes\/(?:v383WorkspaceVisual|workspaceStateContract|workspaceRefinements|compactNoteContract|responsiveCompactNoteContract)\.css['"]/,
+    /import ['"]\.\.\/features\/notes\/(?:v383WorkspaceVisual|workspaceStateContract|workspaceRefinements|compactNoteContract|responsiveCompactNoteContract|organicWorkspaceTouchMotion|folderDockContract)\.css['"]/,
   )
-  assert.match(v383WorkspaceVisualRuntime, /import '\.\/v383WorkspaceVisual\.css'[\s\S]*import '\.\/workspaceStateContract\.css'[\s\S]*import '\.\/workspaceRefinements\.css'[\s\S]*import '\.\/compactNoteContract\.css'[\s\S]*import '\.\/responsiveCompactNoteContract\.css'/)
-  assert.match(legacyGate, /editorTrailingWorkspace\.css'[\s\S]*V383WorkspaceVisualRuntime[\s\S]*organicWorkspaceTouchMotion\.css'/)
-  assert.match(legacyGate, /folderDockContract\.css/)
+  assert.match(v383WorkspaceVisualRuntime, /import '\.\/v383WorkspaceVisual\.css'[\s\S]*import '\.\/workspaceStateContract\.css'[\s\S]*import '\.\/workspaceRefinements\.css'[\s\S]*import '\.\/compactNoteContract\.css'[\s\S]*import '\.\/responsiveCompactNoteContract\.css'[\s\S]*import '\.\/organicWorkspaceTouchMotion\.css'[\s\S]*import '\.\/folderDockContract\.css'/)
+  assert.match(legacyGate, /editorTrailingWorkspace\.css'[\s\S]*V383WorkspaceVisualRuntime/)
+  assert.doesNotMatch(legacyGate, /organicWorkspaceTouchMotion\.css|folderDockContract\.css/)
   assert.match(legacyGate, /OrganicWorkspaceRuntime/)
   assert.match(legacyGate, /WorkspacePersonalizationRuntime/)
   assert.match(legacyGate, /FolderMobileDragRuntime/)
