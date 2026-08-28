@@ -2,7 +2,6 @@ import assert from 'node:assert/strict'
 import { existsSync, readFileSync } from 'node:fs'
 import test from 'node:test'
 
-const gate = readFileSync('src/app/WorkspaceRuntimeGate.tsx', 'utf8')
 const legacyGate = readFileSync('src/app/LegacyWorkspaceRuntimeGate.tsx', 'utf8')
 const creation = readFileSync('src/features/folders/FolderCreationRuntime.tsx', 'utf8')
 const grid = readFileSync('src/features/folders/FolderGridRuntime.tsx', 'utf8')

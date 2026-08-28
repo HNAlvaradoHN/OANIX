@@ -5,7 +5,6 @@ import test from 'node:test'
 const runtime = readFileSync('src/features/tags/TagMobileGestureRuntime.tsx', 'utf8')
 const css = readFileSync('src/features/tags/tagMobileGesture.css', 'utf8')
 const organic = readFileSync('src/features/notes/OrganicWorkspaceRuntime.tsx', 'utf8')
-const gate = readFileSync('src/app/WorkspaceRuntimeGate.tsx', 'utf8')
 const legacyGate = readFileSync('src/app/LegacyWorkspaceRuntimeGate.tsx', 'utf8')
 
 test('las etiquetas conservan el reordenamiento persistente existente', () => {

@@ -5,7 +5,6 @@ import test from 'node:test'
 const main = readFileSync('src/main.tsx', 'utf8')
 const themeVisualStyles = readFileSync('src/app/ThemeVisualStyles.ts', 'utf8')
 const app = readFileSync('src/app/App.tsx', 'utf8')
-const gate = readFileSync('src/app/WorkspaceRuntimeGate.tsx', 'utf8')
 const legacyGate = readFileSync('src/app/LegacyWorkspaceRuntimeGate.tsx', 'utf8')
 const visualRuntime = readFileSync('src/features/notes/V383WorkspaceVisualRuntime.tsx', 'utf8')
 const catalog = readFileSync('src/features/personalization/themeCatalog.ts', 'utf8')

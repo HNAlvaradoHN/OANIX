@@ -2,7 +2,6 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
-const gate = readFileSync('src/app/WorkspaceRuntimeGate.tsx', 'utf8')
 const legacyGate = readFileSync('src/app/LegacyWorkspaceRuntimeGate.tsx', 'utf8')
 const folderManager = readFileSync('src/features/folders/FolderScopedManagerRuntime.tsx', 'utf8')
 const folderDrag = readFileSync('src/features/folders/FolderMobileDragRuntime.tsx', 'utf8')
