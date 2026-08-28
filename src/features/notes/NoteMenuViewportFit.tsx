@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import '../../styles/note-menu-viewport-fit.css'
 
 const EDGE_GAP = 10
 const MIN_SCROLL_HEIGHT = 72
