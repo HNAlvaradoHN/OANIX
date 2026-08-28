@@ -38,7 +38,7 @@ test('note deletion feedback blocks interaction behind the delete operation', ()
 })
 
 test('editor operation runtime mounts with the unlocked app lifecycle', () => {
-  assert.match(app, /<WorkspaceRuntimeGate \/>/)
+  assert.match(app, /<WorkspaceRuntimeGate workspaceRevision=\{workspaceRevision\} \/>/)
   assert.match(gate, /import \{ EditorOperationRuntime \}/)
   assert.match(gate, /<EditorOperationRuntime \/>/)
   assert.doesNotMatch(gate, /if \(!active\) return null/)

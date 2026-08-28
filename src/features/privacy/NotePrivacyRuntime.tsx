@@ -325,7 +325,10 @@ export function NotePrivacyRuntime() {
       const target = event.target
       if (!(target instanceof Element)) return
 
-      const openButton = target.closest<HTMLButtonElement>('.note-row__open')
+      const isV2NoteAction = Boolean(target.closest<HTMLElement>('[data-v2-note-actions="true"]'))
+      const openButton = isV2NoteAction
+        ? null
+        : target.closest<HTMLElement>('.note-row__open')
       if (openButton) {
         const noteId = openButton.closest<HTMLElement>('.note-row[data-reorder-note-id]')?.dataset.reorderNoteId
         if (!noteId) return
@@ -365,6 +368,20 @@ export function NotePrivacyRuntime() {
     document.addEventListener('click', captureWorkspaceClick, true)
     return () => document.removeEventListener('click', captureWorkspaceClick, true)
   }, [privacyById, privateSession, selectedNoteId, unlockedNoteIds, visiblePrivateNoteId])
+
+  useEffect(() => {
+    function handleOpenNotePrivacy(event: Event) {
+      const detail = event instanceof CustomEvent
+        ? event.detail as { noteId?: unknown } | null
+        : null
+      if (typeof detail?.noteId !== 'string' || !detail.noteId) return
+      if (!noteById.has(detail.noteId)) return
+      setPrivacyManagerNoteId(detail.noteId)
+    }
+
+    window.addEventListener('oanix:open-note-privacy', handleOpenNotePrivacy)
+    return () => window.removeEventListener('oanix:open-note-privacy', handleOpenNotePrivacy)
+  }, [noteById])
 
   function manuallyRelockNote(noteId: string) {
     const focused = document.activeElement

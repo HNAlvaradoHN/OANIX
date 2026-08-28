@@ -5,6 +5,7 @@ import test from 'node:test'
 const main = readFileSync('src/main.tsx', 'utf8')
 const app = readFileSync('src/app/App.tsx', 'utf8')
 const gate = readFileSync('src/app/WorkspaceRuntimeGate.tsx', 'utf8')
+const legacyGate = readFileSync('src/app/LegacyWorkspaceRuntimeGate.tsx', 'utf8')
 const createRuntime = readFileSync('src/features/folders/FolderCreationRuntime.tsx', 'utf8')
 const createCss = readFileSync('src/features/folders/folderCreation.css', 'utf8')
 const dragRuntime = readFileSync('src/features/folders/FolderMobileDragRuntime.tsx', 'utf8')
@@ -21,13 +22,13 @@ test('approved workspace class is present before the first React paint', () => {
 
 test('workspace-dependent runtimes mount with the unlocked app instead of observing the lock screen DOM', () => {
   assert.doesNotMatch(main, /WorkspaceRuntimeGate/)
-  assert.match(app, /<WorkspaceRuntimeGate \/>/)
+  assert.match(app, /<WorkspaceRuntimeGate workspaceRevision=\{workspaceRevision\} \/>/)
   assert.doesNotMatch(gate, /MutationObserver/)
   assert.doesNotMatch(gate, /document\.querySelector/)
-  assert.match(gate, /<OrganicWorkspaceRuntime \/>/)
-  assert.doesNotMatch(gate, /FolderAppearanceRuntime|FolderCustomizerBridgeRuntime/)
-  assert.match(gate, /<FolderScopedManagerRuntime \/>/)
-  assert.match(gate, /<FolderMobileDragRuntime \/>/)
+  assert.match(legacyGate, /<OrganicWorkspaceRuntime \/>/)
+  assert.doesNotMatch(legacyGate, /FolderAppearanceRuntime|FolderCustomizerBridgeRuntime/)
+  assert.match(legacyGate, /<FolderScopedManagerRuntime \/>/)
+  assert.match(legacyGate, /<FolderMobileDragRuntime \/>/)
 })
 
 test('legacy folder manager is visually replaced by the focused Nueva carpeta dialog', () => {

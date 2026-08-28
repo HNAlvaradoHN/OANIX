@@ -8,6 +8,7 @@ const workspace = readFileSync('src/features/notes/NotesWorkspace.tsx', 'utf8')
 const avatar = readFileSync('src/features/notes/NoteAvatar.tsx', 'utf8')
 const privacyRuntime = readFileSync('src/features/privacy/NoteBulkPrivacyRuntime.tsx', 'utf8')
 const app = readFileSync('src/app/App.tsx', 'utf8')
+const legacyGate = readFileSync('src/app/LegacyWorkspaceRuntimeGate.tsx', 'utf8')
 const pkg = readFileSync('package.json', 'utf8')
 
 test('reorder móvil queda bajo Pointer Events y SortableJS se reserva para escritorio', () => {
@@ -174,5 +175,5 @@ test('runtime queda ligado a la lista actual y React lo remonta con cada revisio
   assert.match(runtime, /list\?\.classList\.contains\('notes-list'\)/)
   assert.match(runtime, /sortable\.destroy\(\)/)
   assert.doesNotMatch(runtime, /new MutationObserver/)
-  assert.match(app, /<NoteListReorderGestureRuntime key=\{`note-reorder-\$\{workspaceRevision\}`\} \/>/)
+  assert.match(legacyGate, /<NoteListReorderGestureRuntime key=\{`note-reorder-\$\{workspaceRevision\}`\} \/>/)
 })

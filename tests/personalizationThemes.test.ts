@@ -5,6 +5,7 @@ import test from 'node:test'
 const main = readFileSync('src/main.tsx', 'utf8')
 const app = readFileSync('src/app/App.tsx', 'utf8')
 const gate = readFileSync('src/app/WorkspaceRuntimeGate.tsx', 'utf8')
+const legacyGate = readFileSync('src/app/LegacyWorkspaceRuntimeGate.tsx', 'utf8')
 const catalog = readFileSync('src/features/personalization/themeCatalog.ts', 'utf8')
 const systemBridge = readFileSync('src/features/personalization/systemThemeBridge.ts', 'utf8')
 const menu = readFileSync('src/features/personalization/ThemeMenu.tsx', 'utf8')
@@ -110,7 +111,7 @@ test('classic day explicitly opts out of mobile forced dark and hardens the shar
   assert.match(classicSurfacesCss, /data-oanix-theme='classic-day'[\s\S]*--theme-bg: #f4f7fb/)
 })
 
-test('v38 organic CSS owns workspace surfaces instead of competing Day overrides', () => {
+test('legacy v38 fallback keeps one organic workspace surface authority', () => {
   assert.doesNotMatch(classicThemeContract, /data-oanix-theme='classic-day'[^\n]*\][\s\S]*\.notes-shell/)
   assert.doesNotMatch(classicThemeContract, /data-oanix-theme='classic-day'[^\n]*\][\s\S]*\.notes-sidebar/)
   assert.doesNotMatch(classicThemeContract, /data-oanix-theme='classic-day'[^\n]*\][\s\S]*\.notes-header/)
@@ -128,8 +129,8 @@ test('v38 organic CSS owns workspace surfaces instead of competing Day overrides
   const themeSurfaceIndex = main.indexOf("./styles/classic-theme-surfaces.css")
   const visualIndex = main.indexOf("./features/notes/v383WorkspaceVisual.css")
   assert.ok(themeSurfaceIndex >= 0 && visualIndex > themeSurfaceIndex)
-  assert.match(app, /<WorkspaceRuntimeGate \/>/)
-  assert.match(gate, /<OrganicWorkspaceRuntime \/>/)
+  assert.match(app, /<WorkspaceRuntimeGate workspaceRevision=\{workspaceRevision\} \/>/)
+  assert.match(legacyGate, /<OrganicWorkspaceRuntime \/>/)
 })
 
 test('selected theme also controls browser and Android system chrome', () => {

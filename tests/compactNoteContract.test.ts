@@ -6,6 +6,7 @@ const compactContract = readFileSync('src/features/notes/compactNoteContract.css
 const feedbackRuntime = readFileSync('src/features/folders/FolderOperationFeedbackRuntime.tsx', 'utf8')
 const feedbackCss = readFileSync('src/features/folders/folderOperationFeedback.css', 'utf8')
 const gate = readFileSync('src/app/WorkspaceRuntimeGate.tsx', 'utf8')
+const legacyGate = readFileSync('src/app/LegacyWorkspaceRuntimeGate.tsx', 'utf8')
 const main = readFileSync('src/main.tsx', 'utf8')
 
 test('compact note rows reserve separate icon, text and metadata zones', () => {
@@ -28,5 +29,5 @@ test('folder customization stays quiet during appearance preview and confirms on
   assert.doesNotMatch(feedbackRuntime, /✓ Color guardado|✓ Icono guardado/)
   assert.match(feedbackCss, /data-oanix-operation-state='busy'/)
   assert.match(feedbackCss, /\.oanix-folder-customizer__actions\[hidden\]\s*\{[\s\S]*display:\s*none\s*!important/)
-  assert.ok(gate.includes('<FolderOperationFeedbackRuntime />'))
+  assert.ok(legacyGate.includes('<FolderOperationFeedbackRuntime />'))
 })

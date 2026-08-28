@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
 const gate = readFileSync('src/app/WorkspaceRuntimeGate.tsx', 'utf8')
+const legacyGate = readFileSync('src/app/LegacyWorkspaceRuntimeGate.tsx', 'utf8')
 const folderManager = readFileSync('src/features/folders/FolderScopedManagerRuntime.tsx', 'utf8')
 const folderDrag = readFileSync('src/features/folders/FolderMobileDragRuntime.tsx', 'utf8')
 const noteFeedback = readFileSync('src/features/notes/NoteCreationFeedbackRuntime.tsx', 'utf8')
@@ -17,8 +18,8 @@ test('folder manager is scoped by explicit event and bypasses hidden DOM bridges
   assert.match(folderManager, /moveNoteToFolder\(note\.id, null\)/)
   assert.match(folderManager, /oanix:open-folder-manager/)
   assert.doesNotMatch(folderManager, /oanix-folder-focus|oanix-folder-customizer__actions|stopImmediatePropagation/)
-  assert.match(gate, /<FolderScopedManagerRuntime \/>/)
-  assert.doesNotMatch(gate, /FolderCustomizerBridgeRuntime/)
+  assert.match(legacyGate, /<FolderScopedManagerRuntime \/>/)
+  assert.doesNotMatch(legacyGate, /FolderCustomizerBridgeRuntime/)
 })
 
 test('folder wheel supports the vertical desktop rail and horizontal variants', () => {

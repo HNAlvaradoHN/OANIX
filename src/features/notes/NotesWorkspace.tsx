@@ -22,12 +22,21 @@ import {
   moveNoteToFolder,
   renameNote,
   replaceNoteContent,
+  setNoteListAppearance,
   setNotePinned,
   setNoteTags,
+  type NoteListAppearanceInput,
 } from './noteService'
 import { searchItemsByLocalFields, type LocalSearchField } from '../search/localSearch'
 import { prepareDailyEntriesForEditing } from './dailyEntries'
+import { WORKSPACE_V2_ENABLED } from '../../app/workspaceExperience'
 import { NoteAvatar } from './NoteAvatar'
+import { WorkspaceV2Sidebar } from './WorkspaceV2Sidebar'
+import {
+  saveWorkspaceV2FolderOrder,
+  saveWorkspaceV2NoteOrder,
+  saveWorkspaceV2TagOrder,
+} from './workspaceV2OrderService'
 import { compareNotesForList, noteBlocksToPlainText, type NoteRecord, type StoredNoteBlock } from './noteTypes'
 import './notes.css'
 
@@ -266,6 +275,12 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
   const activeFolderIdRef = useRef<string | 'all'>('all')
   const activeTagIdRef = useRef<string | 'all'>('all')
   const notesRef = useRef<NoteRecord[]>([])
+  const pendingV2FolderOrderRef = useRef<string[] | null>(null)
+  const v2FolderOrderLoopRef = useRef<Promise<void> | null>(null)
+  const pendingV2TagOrderRef = useRef<string[] | null>(null)
+  const v2TagOrderLoopRef = useRef<Promise<void> | null>(null)
+  const pendingV2NoteOrderRef = useRef<string[] | null>(null)
+  const v2NoteOrderLoopRef = useRef<Promise<void> | null>(null)
   const historyBackAlreadySavedRef = useRef(false)
   const pendingImageDeletesRef = useRef(new Set<string>())
 
@@ -871,6 +886,19 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     }
   }
 
+  async function handleV2RenameFolder(folder: FolderRecord, nextName: string) {
+    const name = nextName.trim().replace(/\s+/g, ' ')
+    if (!name) throw new Error('El nombre de la carpeta no puede estar vacío.')
+    if (folderNameExists(name, folder.id)) throw new Error('Ya existe una carpeta con ese nombre.')
+    if (name === folder.name) return
+
+    const updated = await renameFolder(folder.id, name)
+    setFolders((current) => current.map((item) => item.id === updated.id ? updated : item))
+    window.dispatchEvent(new CustomEvent('oanix:local-data-changed', {
+      detail: { recordType: 'folder', recordId: updated.id },
+    }))
+  }
+
   async function handleReorderFolder(folder: FolderRecord, direction: 'up' | 'down') {
     setFolderBusyId(folder.id)
     setError('')
@@ -976,6 +1004,21 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     } finally {
       setCreatingTag(false)
     }
+  }
+
+  async function handleV2CreateTag(
+    name: string,
+    appearance: { icon: string; color: string },
+  ) {
+    const normalized = name.trim().replace(/\s+/g, ' ')
+    if (!normalized) throw new Error('Escribe un nombre para la etiqueta.')
+    if (tagNameExists(normalized)) throw new Error('Ya existe una etiqueta con ese nombre.')
+
+    const tag = await createTag(normalized, appearance)
+    setTags((current) => sortTagState([...current, tag]))
+    window.dispatchEvent(new CustomEvent('oanix:local-data-changed', {
+      detail: { recordType: 'tag', recordId: tag.id },
+    }))
   }
 
   function beginTagRename(tag: TagRecord) {
@@ -1227,6 +1270,123 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     setNoteMenuId(noteId)
   }
 
+  async function handleV2CustomizeNote(noteId: string, input: NoteListAppearanceInput) {
+    if (noteId === selectedIdRef.current && !(await flushPendingContent())) {
+      throw new Error('No se pudo confirmar el guardado actual antes de personalizar.')
+    }
+
+    const updated = await setNoteListAppearance(noteId, input)
+    replaceNoteInState(updated)
+    if (updated.id === selectedIdRef.current) {
+      setDraftTitle(updated.title)
+      setSaveState('saved')
+    }
+    window.dispatchEvent(new CustomEvent('oanix:note-visual-changed', {
+      detail: { note: updated },
+    }))
+    window.dispatchEvent(new CustomEvent('oanix:local-data-changed', {
+      detail: { recordType: 'note', recordId: updated.id },
+    }))
+  }
+
+  function handleV2FolderOrder(folderIds: string[]) {
+    if (folderIds.length !== folders.length) return
+    pendingV2FolderOrderRef.current = [...folderIds]
+    if (v2FolderOrderLoopRef.current) return
+
+    v2FolderOrderLoopRef.current = (async () => {
+      while (pendingV2FolderOrderRef.current) {
+        const orderToPersist = pendingV2FolderOrderRef.current
+        pendingV2FolderOrderRef.current = null
+        try {
+          const persisted = await saveWorkspaceV2FolderOrder(orderToPersist)
+          if (pendingV2FolderOrderRef.current) continue
+          setFolders(persisted)
+          window.dispatchEvent(new CustomEvent('oanix:local-data-changed', {
+            detail: { recordType: 'folder' },
+          }))
+        } catch {
+          if (!pendingV2FolderOrderRef.current) {
+            setError('No se pudo guardar el nuevo orden de las carpetas.')
+            window.dispatchEvent(new Event('oanix:workspace-refresh'))
+          }
+        }
+      }
+    })().finally(() => {
+      v2FolderOrderLoopRef.current = null
+      const pending = pendingV2FolderOrderRef.current
+      if (pending) handleV2FolderOrder(pending)
+    })
+  }
+
+  function handleV2TagOrder(tagIds: string[]) {
+    if (tagIds.length !== tags.length) return
+    pendingV2TagOrderRef.current = [...tagIds]
+    if (v2TagOrderLoopRef.current) return
+
+    v2TagOrderLoopRef.current = (async () => {
+      while (pendingV2TagOrderRef.current) {
+        const orderToPersist = pendingV2TagOrderRef.current
+        pendingV2TagOrderRef.current = null
+        try {
+          const persisted = await saveWorkspaceV2TagOrder(orderToPersist)
+          if (pendingV2TagOrderRef.current) continue
+          setTags(persisted)
+          window.dispatchEvent(new CustomEvent('oanix:local-data-changed', {
+            detail: { recordType: 'tag' },
+          }))
+        } catch {
+          if (!pendingV2TagOrderRef.current) {
+            setError('No se pudo guardar el nuevo orden de las etiquetas.')
+            window.dispatchEvent(new Event('oanix:workspace-refresh'))
+          }
+        }
+      }
+    })().finally(() => {
+      v2TagOrderLoopRef.current = null
+      const pending = pendingV2TagOrderRef.current
+      if (pending) handleV2TagOrder(pending)
+    })
+  }
+
+  function handleV2NoteOrder(noteIds: string[]) {
+    if (noteIds.length === 0 || hasSearchQuery) return
+    pendingV2NoteOrderRef.current = [...noteIds]
+    if (v2NoteOrderLoopRef.current) return
+
+    v2NoteOrderLoopRef.current = (async () => {
+      while (pendingV2NoteOrderRef.current) {
+        const orderToPersist = pendingV2NoteOrderRef.current
+        pendingV2NoteOrderRef.current = null
+        try {
+          const persisted = await saveWorkspaceV2NoteOrder(
+            orderToPersist,
+            () => pendingV2NoteOrderRef.current === null,
+          )
+          if (pendingV2NoteOrderRef.current) continue
+          const manualOrderById = new Map(persisted.map((note) => [note.id, note.manualOrder]))
+          setNotes((current) => current
+            .map((note) => manualOrderById.has(note.id)
+              ? { ...note, manualOrder: manualOrderById.get(note.id) }
+              : note)
+            .sort(compareNotesForList))
+          window.dispatchEvent(new CustomEvent('oanix:local-data-changed', {
+            detail: { recordType: 'note' },
+          }))
+        } catch {
+          if (!pendingV2NoteOrderRef.current) {
+            setError('No se pudo guardar el nuevo orden de las notas.')
+            window.dispatchEvent(new Event('oanix:workspace-refresh'))
+          }
+        }
+      }
+    })().finally(() => {
+      v2NoteOrderLoopRef.current = null
+      const pending = pendingV2NoteOrderRef.current
+      if (pending) handleV2NoteOrder(pending)
+    })
+  }
+
   function scrollFolderTabs(direction: 'left' | 'right') {
     const tabs = folderTabsRef.current
     if (!tabs) return
@@ -1238,7 +1398,60 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
   }
 
   return (
-    <main className={`notes-shell${selectedNote ? ' notes-shell--open' : ''}${hasSearchQuery ? ' notes-shell--searching' : ''}`}>
+    <main className={`notes-shell${WORKSPACE_V2_ENABLED ? ' oanix-workspace-v2-shell' : ''}${selectedNote ? ' notes-shell--open' : ''}${hasSearchQuery ? ' notes-shell--searching' : ''}`}>
+      {WORKSPACE_V2_ENABLED ? (
+        <WorkspaceV2Sidebar
+          folders={folders}
+          tags={tags}
+          notes={notes}
+          visibleNotes={visibleNotes}
+          loading={loading}
+          creating={creating}
+          deletingId={deletingId}
+          error={error}
+          selectedId={selectedId}
+          activeFolderId={activeFolderId}
+          activeTagId={activeTagId}
+          searchOpen={searchOpen}
+          searchQuery={searchQuery}
+          searchInputRef={searchInputRef}
+          workspaceMenuOpen={workspaceMenuOpen}
+          backupBusy={backupBusy}
+          onSearchToggle={() => void handleToggleSearch()}
+          onSearchQueryChange={setSearchQuery}
+          onClearSearch={() => {
+            setSearchQuery('')
+            window.requestAnimationFrame(() => searchInputRef.current?.focus())
+          }}
+          onLock={() => void handleLockWorkspace()}
+          onWorkspaceMenuToggle={() => setWorkspaceMenuOpen((open) => !open)}
+          onOpenFolderManager={() => {
+            setWorkspaceMenuOpen(false)
+            setFolderManagerOpen(true)
+          }}
+          onOpenTagManager={() => {
+            setWorkspaceMenuOpen(false)
+            setTagManagerOpen(true)
+          }}
+          onExportBackup={() => void handleExportBackup()}
+          onSelectFolder={handleSelectFolder}
+          onSelectTag={(tagId) => void handleSelectTag(tagId)}
+          onCreateNote={() => void handleCreateNote()}
+          onSelectNote={(noteId) => void handleSelectNote(noteId)}
+          onTogglePinned={(note) => void handleTogglePinned(note)}
+          onOpenTagEditor={openTagEditor}
+          onOpenMoveNote={(note) => setMoveNoteId(note.id)}
+          onDeleteNote={(note) => void handleDeleteNote(note)}
+          onCreateTag={handleV2CreateTag}
+          onDeleteTag={handleDeleteTag}
+          onRenameFolder={handleV2RenameFolder}
+          onDeleteFolder={handleDeleteFolder}
+          onCustomizeNote={handleV2CustomizeNote}
+          onFolderOrder={(ids) => void handleV2FolderOrder(ids)}
+          onTagOrder={(ids) => void handleV2TagOrder(ids)}
+          onNoteOrder={(ids) => void handleV2NoteOrder(ids)}
+        />
+      ) : (
       <aside className="notes-sidebar" aria-label="Lista de notas">
         <header className="notes-header">
           <div className="notes-brand">
@@ -1621,6 +1834,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
           </button>
         )}
       </aside>
+      )}
 
       <section className="note-view" aria-label="Nota abierta">
         {selectedNote ? (

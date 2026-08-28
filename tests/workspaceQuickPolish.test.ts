@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
 const gate = readFileSync('src/app/WorkspaceRuntimeGate.tsx', 'utf8')
+const legacyGate = readFileSync('src/app/LegacyWorkspaceRuntimeGate.tsx', 'utf8')
 const runtime = readFileSync('src/app/WorkspaceQuickPolishRuntime.tsx', 'utf8')
 const css = readFileSync('src/app/workspaceQuickPolish.css', 'utf8')
 
@@ -35,6 +36,6 @@ test('compact icon controls use explicit centering without inherited padding dri
 })
 
 test('quick polish remains mounted without the retired folder appearance runtime', () => {
-  assert.match(gate, /<WorkspaceQuickPolishRuntime \/>/)
-  assert.doesNotMatch(gate, /FolderAppearanceRuntime/)
+  assert.match(legacyGate, /<WorkspaceQuickPolishRuntime \/>/)
+  assert.doesNotMatch(legacyGate, /FolderAppearanceRuntime/)
 })

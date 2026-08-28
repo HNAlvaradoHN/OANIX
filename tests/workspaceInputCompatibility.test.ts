@@ -5,6 +5,7 @@ import test from 'node:test'
 const runtime = readFileSync('src/features/notes/WorkspaceInputCompatibilityRuntime.tsx', 'utf8')
 const main = readFileSync('src/main.tsx', 'utf8')
 const gate = readFileSync('src/app/WorkspaceRuntimeGate.tsx', 'utf8')
+const legacyGate = readFileSync('src/app/LegacyWorkspaceRuntimeGate.tsx', 'utf8')
 
 test('el runtime global ya no compite por el estado de Sortable de notas', () => {
   assert.doesNotMatch(runtime, /sortablejs|sortableApi|sortable\.option|NOTE_LIST_SELECTOR/)
@@ -28,6 +29,6 @@ test('el runtime de compatibilidad deja la persistencia del drag al runtime de c
 
 test('el runtime de compatibilidad solo monta dentro del workspace desbloqueado', () => {
   assert.doesNotMatch(main, /WorkspaceInputCompatibilityRuntime/)
-  assert.match(gate, /WorkspaceInputCompatibilityRuntime/)
-  assert.match(gate, /<WorkspaceInputCompatibilityRuntime \/>/)
+  assert.match(legacyGate, /WorkspaceInputCompatibilityRuntime/)
+  assert.match(legacyGate, /<WorkspaceInputCompatibilityRuntime \/>/)
 })

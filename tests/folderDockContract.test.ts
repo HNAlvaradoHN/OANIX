@@ -5,6 +5,7 @@ import test from 'node:test'
 const main = readFileSync('src/main.tsx', 'utf8')
 const app = readFileSync('src/app/App.tsx', 'utf8')
 const gate = readFileSync('src/app/WorkspaceRuntimeGate.tsx', 'utf8')
+const legacyGate = readFileSync('src/app/LegacyWorkspaceRuntimeGate.tsx', 'utf8')
 const organic = readFileSync('src/features/notes/OrganicWorkspaceRuntime.tsx', 'utf8')
 const css = readFileSync('src/features/notes/folderDockContract.css', 'utf8')
 const grid = readFileSync('src/features/folders/FolderGridRuntime.tsx', 'utf8')
@@ -33,10 +34,10 @@ test('folder appearance is rendered directly without observer repaint', () => {
 })
 
 test('folder dock contract is loaded by the unlocked runtime gate before the v38.3 visual authority', () => {
-  assert.match(app, /<WorkspaceRuntimeGate \/>/)
-  assert.match(gate, /features\/notes\/folderDockContract\.css/)
-  assert.match(gate, /<OrganicWorkspaceRuntime \/>/)
-  assert.match(gate, /<V383WorkspaceVisualRuntime \/>/)
+  assert.match(app, /<WorkspaceRuntimeGate workspaceRevision=\{workspaceRevision\} \/>/)
+  assert.match(legacyGate, /features\/notes\/folderDockContract\.css/)
+  assert.match(legacyGate, /<OrganicWorkspaceRuntime \/>/)
+  assert.match(legacyGate, /<V383WorkspaceVisualRuntime \/>/)
   const finalCssIndex = main.indexOf("./features/notes/v383WorkspaceVisual.css")
   assert.ok(finalCssIndex >= 0)
 })

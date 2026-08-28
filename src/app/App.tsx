@@ -3,8 +3,6 @@ import { createPortal } from 'react-dom'
 import { VaultGate } from './VaultGate'
 import { WorkspaceRuntimeGate } from './WorkspaceRuntimeGate'
 import { NotesWorkspace } from '../features/notes/NotesWorkspace'
-import { NoteListReorderGestureRuntime } from '../features/notes/NoteListReorderGestureRuntime'
-import { FolderGridRuntime } from '../features/folders/FolderGridRuntime'
 import { AccountPanel } from '../features/account/AccountPanel'
 import { AutoSyncRuntime } from '../features/sync/AutoSyncRuntime'
 import { ConflictCenter } from '../features/sync/ConflictCenter'
@@ -94,10 +92,8 @@ function UnlockedApp({ lockVault }: { lockVault: () => void }) {
       <NativeNoteShareRuntime />
       <AndroidKeystoreDiagnosticRuntime />
       <NotesWorkspace key={workspaceRevision} onLock={lockVault} />
-      <WorkspaceRuntimeGate />
-      <NoteListReorderGestureRuntime key={`note-reorder-${workspaceRevision}`} />
+      <WorkspaceRuntimeGate workspaceRevision={workspaceRevision} />
       <NoteAttachmentsRuntime key={`attachments-${workspaceRevision}`} />
-      <FolderGridRuntime />
       <NotePrivacyRuntime key={`privacy-${workspaceRevision}-${privacyRevision}`} />
       <NoteBulkPrivacyRuntime key={`privacy-bulk-${workspaceRevision}`} />
       <PrivateBoxListHint key={`private-hint-${workspaceRevision}`} />
