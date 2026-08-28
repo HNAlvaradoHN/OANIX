@@ -12,6 +12,7 @@ export type OanixIconName =
   | 'sun'
   | 'moon'
   | 'plus'
+  | 'noteAdd'
   | 'sliders'
   | 'star'
   | 'edit'
@@ -152,6 +153,14 @@ export function OanixIcon({ name, className, size = 18 }: OanixIconProps) {
       return (
         <svg {...common}>
           <path d="M12 5v14M5 12h14" />
+        </svg>
+      )
+    case 'noteAdd':
+      return (
+        <svg {...common}>
+          <path d="M6 3.5h8l4 4V20a1.5 1.5 0 0 1-1.5 1.5h-10A1.5 1.5 0 0 1 5 20V5A1.5 1.5 0 0 1 6.5 3.5Z" />
+          <path d="M14 3.5V8h4" />
+          <path d="M9 14h6M12 11v6" />
         </svg>
       )
     case 'sliders':
