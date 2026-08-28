@@ -18,3 +18,12 @@ test('image editor high-frequency pointer listeners exist only during drag or re
     /root\.addEventListener\('paste', handlePaste, true\)\s*document\.addEventListener\('keydown', handleKeyDown\)/,
   )
 })
+
+test('image hydration observer ignores unrelated editor DOM churn', () => {
+  assert.match(editor, /function elementTouchesStoredImage\(element: Element\)/)
+  assert.match(editor, /imagesRef\.current\.has\(directBlockId\)/)
+  assert.match(editor, /function mutationTouchesImageEditorStructure\(record: MutationRecord\)/)
+  assert.match(editor, /node\.matches\('\.editor-toolbar, \.editor-surface'\)/)
+  assert.match(editor, /records\.some\(mutationTouchesImageEditorStructure\)/)
+  assert.doesNotMatch(editor, /new MutationObserver\(\(\) => \{\s*\/\/ Hydration mutates image controls/)
+})
