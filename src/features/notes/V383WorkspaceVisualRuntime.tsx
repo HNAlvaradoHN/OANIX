@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import '../folders/folderNavigationState.css'
 import './v383WorkspaceVisual.css'
 import './workspaceStateContract.css'
 import './workspaceRefinements.css'
