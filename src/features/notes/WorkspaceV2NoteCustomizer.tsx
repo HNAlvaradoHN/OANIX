@@ -1,4 +1,5 @@
 import { useState, type CSSProperties } from 'react'
+import { OanixIcon } from '../../shared/OanixIcon'
 import type { TagRecord } from '../tags/tagTypes'
 import type { NoteListAppearanceInput } from './noteService'
 import {
@@ -69,7 +70,7 @@ export function WorkspaceV2NoteCustomizer({
       >
         <header>
           <div><span>NOTA</span><strong>Editar tarjeta</strong></div>
-          <button type="button" onClick={onClose} disabled={busy} aria-label="Cerrar">×</button>
+          <button type="button" onClick={onClose} disabled={busy} aria-label="Cerrar"><OanixIcon name="close" size={17} /></button>
         </header>
 
         <label className="oanix-workspace-v2__modal-field">
