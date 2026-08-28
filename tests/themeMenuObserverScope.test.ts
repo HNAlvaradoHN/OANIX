@@ -22,3 +22,10 @@ test('ThemeMenu filters workspace mutations down to menu mount changes', () => {
   assert.doesNotMatch(source, /new MutationObserver\(syncWorkspaceMenu\)/)
   assert.doesNotMatch(source, /observe\(document\.body/)
 })
+
+test('ThemeMenu installs global dismiss listeners only while the security panel is open', () => {
+  assert.match(
+    source,
+    /useEffect\(\(\) => \{\s*if \(!open\) return[\s\S]*window\.addEventListener\('pointerdown', handlePointerDown\)[\s\S]*window\.addEventListener\('keydown', handleKeyDown\)[\s\S]*\}, \[open\]\)/,
+  )
+})
