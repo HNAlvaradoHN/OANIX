@@ -109,8 +109,17 @@ function rgbFromHex(hex: string): [number, number, number] {
 
 function contrastFor(hex: string): string {
   const [red, green, blue] = rgbFromHex(hex)
-  const luminance = (red * 0.299 + green * 0.587 + blue * 0.114) / 255
-  return luminance > 0.6 ? '#172033' : '#ffffff'
+  const linear = (channel: number) => {
+    const normalized = channel / 255
+    return normalized <= 0.04045
+      ? normalized / 12.92
+      : ((normalized + 0.055) / 1.055) ** 2.4
+  }
+  const luminance = linear(red) * 0.2126 + linear(green) * 0.7152 + linear(blue) * 0.0722
+  const whiteContrast = 1.05 / (luminance + 0.05)
+  const inkLuminance = 0.014
+  const inkContrast = (luminance + 0.05) / (inkLuminance + 0.05)
+  return inkContrast >= whiteContrast ? '#172033' : '#ffffff'
 }
 
 function noteDescription(note: NoteRecord): string {
