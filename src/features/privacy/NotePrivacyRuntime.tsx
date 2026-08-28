@@ -325,7 +325,10 @@ export function NotePrivacyRuntime() {
       const target = event.target
       if (!(target instanceof Element)) return
 
-      const openButton = target.closest<HTMLButtonElement>('.note-row__open')
+      const isV2NoteAction = Boolean(target.closest<HTMLElement>('[data-v2-note-actions="true"]'))
+      const openButton = isV2NoteAction
+        ? null
+        : target.closest<HTMLElement>('.note-row__open')
       if (openButton) {
         const noteId = openButton.closest<HTMLElement>('.note-row[data-reorder-note-id]')?.dataset.reorderNoteId
         if (!noteId) return
