@@ -812,8 +812,31 @@ export function ImageNoteEditor({
     decorateToolbar(root)
     hydrateStoredImages(root)
 
+    function elementTouchesStoredImage(element: Element): boolean {
+      if (element.matches('[data-image-block="true"]')) return true
+      const directBlockId = element.getAttribute('data-block-id')
+      if (directBlockId && imagesRef.current.has(directBlockId)) return true
+
+      return Array.from(element.querySelectorAll<HTMLElement>('[data-block-id]'))
+        .some((block) => Boolean(block.dataset.blockId && imagesRef.current.has(block.dataset.blockId)))
+    }
+
+    function mutationTouchesImageEditorStructure(record: MutationRecord): boolean {
+      const nodes = [...Array.from(record.addedNodes), ...Array.from(record.removedNodes)]
+      return nodes.some((node) => {
+        if (!(node instanceof Element)) return false
+        if (
+          node.matches('.editor-toolbar, .editor-surface')
+          || node.querySelector('.editor-toolbar, .editor-surface') !== null
+        ) return true
+        return elementTouchesStoredImage(node)
+      })
+    }
+
     const observerOptions: MutationObserverInit = { childList: true, subtree: true }
-    const observer = new MutationObserver(() => {
+    const observer = new MutationObserver((records) => {
+      if (!records.some(mutationTouchesImageEditorStructure)) return
+
       // Hydration mutates image controls (labels, loading state, etc.).
       // Disconnect while applying those internal changes so the observer
       // cannot recursively react to mutations caused by its own callback.
