@@ -53,17 +53,23 @@ export function NoteMenuViewportFit() {
       })
     }
 
-    // Note menus only need a fresh measurement after user interaction can open or
-    // close them, or when the viewport changes. Watching every DOM mutation made
-    // the whole application pay for an operation that belongs to this one control.
-    document.addEventListener('click', scheduleFit)
+    const handleNoteMenuClick = (event: MouseEvent) => {
+      const target = event.target
+      if (!(target instanceof Element) || !target.closest('.note-row__menu-wrap')) return
+      scheduleFit()
+    }
+
+    // Note menus only need a fresh measurement after interaction with their own
+    // controls or when the viewport changes. Unrelated workspace clicks stay off
+    // this layout-measurement path.
+    document.addEventListener('click', handleNoteMenuClick)
     window.addEventListener('resize', scheduleFit)
     window.visualViewport?.addEventListener('resize', scheduleFit)
     window.visualViewport?.addEventListener('scroll', scheduleFit)
     scheduleFit()
 
     return () => {
-      document.removeEventListener('click', scheduleFit)
+      document.removeEventListener('click', handleNoteMenuClick)
       window.removeEventListener('resize', scheduleFit)
       window.visualViewport?.removeEventListener('resize', scheduleFit)
       window.visualViewport?.removeEventListener('scroll', scheduleFit)
