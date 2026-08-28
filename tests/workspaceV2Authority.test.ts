@@ -7,6 +7,7 @@ const app = readFileSync('src/app/App.tsx', 'utf8')
 const gate = readFileSync('src/app/WorkspaceRuntimeGate.tsx', 'utf8')
 const legacyGate = readFileSync('src/app/LegacyWorkspaceRuntimeGate.tsx', 'utf8')
 const experience = readFileSync('src/app/workspaceExperience.ts', 'utf8')
+const noteBulkPrivacy = readFileSync('src/features/privacy/NoteBulkPrivacyRuntime.tsx', 'utf8')
 
 test('workspace v2 has one switch and legacy visual authorities live behind a lazy boundary', () => {
   assert.match(experience, /export const WORKSPACE_V2_ENABLED = true/)
@@ -47,7 +48,8 @@ test('functional editor and privacy runtimes remain outside the legacy-only bloc
   assert.match(beforeLegacy, /<EditorOperationRuntime \/>/)
   assert.match(beforeLegacy, /<NoteCreationFeedbackRuntime \/>/)
   assert.match(beforeLegacy, /<PrivacyStatusHelp \/>/)
-  assert.match(gate, /noteBulkPrivacyOverrides\.css/)
+  assert.doesNotMatch(gate, /noteBulkPrivacyOverrides\.css/)
+  assert.match(noteBulkPrivacy, /import '\.\/noteBulkPrivacy\.css'/)
 })
 
 test('workspace v2 never inherits the legacy v38.3 prepaint class', () => {
