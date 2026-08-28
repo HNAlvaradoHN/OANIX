@@ -33,6 +33,8 @@ import {
 import { WorkspaceV2DragRuntime } from './WorkspaceV2DragRuntime'
 import { WorkspaceV2TagActions } from './WorkspaceV2TagActions'
 import { WorkspaceV2FolderActions } from './WorkspaceV2FolderActions'
+import { WorkspaceV2NoteCustomizer } from './WorkspaceV2NoteCustomizer'
+import type { NoteListAppearanceInput } from './noteService'
 import './workspaceV2.css'
 
 interface WorkspaceV2SidebarProps {
@@ -71,6 +73,7 @@ interface WorkspaceV2SidebarProps {
   onDeleteTag: (tag: TagRecord) => Promise<void>
   onRenameFolder: (folder: FolderRecord, name: string) => Promise<void>
   onDeleteFolder: (folder: FolderRecord) => Promise<void>
+  onCustomizeNote: (noteId: string, input: NoteListAppearanceInput) => Promise<void>
   onFolderOrder: (ids: string[]) => void
   onTagOrder: (ids: string[]) => void
   onNoteOrder: (ids: string[]) => void
@@ -140,6 +143,7 @@ export function WorkspaceV2Sidebar({
   onDeleteTag,
   onRenameFolder,
   onDeleteFolder,
+  onCustomizeNote,
   onFolderOrder,
   onTagOrder,
   onNoteOrder,
@@ -150,6 +154,7 @@ export function WorkspaceV2Sidebar({
   const [folderCovers, setFolderCovers] = useState(new Map<string, string>())
   const [folderFlags, setFolderFlags] = useState(new Map<string, FolderAppearanceFlags>())
   const [folderActionsId, setFolderActionsId] = useState<string | null>(null)
+  const [noteCustomizerId, setNoteCustomizerId] = useState<string | null>(null)
 
   useEffect(() => {
     let disposed = false
@@ -427,6 +432,17 @@ export function WorkspaceV2Sidebar({
                       </button>
                       <button
                         type="button"
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          setNoteCustomizerId(note.id)
+                        }}
+                        title="Personalizar tarjeta"
+                        data-v2-drag-ignore="true"
+                      >
+                        🎨
+                      </button>
+                      <button
+                        type="button"
                         className="is-danger"
                         disabled={deletingId !== null}
                         onClick={(event) => {
@@ -529,6 +545,20 @@ export function WorkspaceV2Sidebar({
           </button>
         </div>
       </footer>
+
+      {noteCustomizerId && (() => {
+        const note = notes.find((candidate) => candidate.id === noteCustomizerId)
+        if (!note) return null
+        return (
+          <WorkspaceV2NoteCustomizer
+            key={note.id}
+            note={note}
+            tags={tags}
+            onClose={() => setNoteCustomizerId(null)}
+            onSave={onCustomizeNote}
+          />
+        )
+      })()}
 
       {folderActionsId && (() => {
         const folder = folders.find((candidate) => candidate.id === folderActionsId)
