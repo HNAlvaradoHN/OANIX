@@ -17,6 +17,12 @@ test('protected note session lock lives in the note row and reuses the existing 
   assert.doesNotMatch(runtimeSource, /className=\{`oanix-note-session-lock/)
 })
 
+test('workspace v2 mounts the lock inside the existing note action row instead of over metadata', () => {
+  assert.match(runtimeSource, /row\.querySelector<HTMLElement>\('\[data-v2-note-actions="true"\]'\)/)
+  assert.match(runtimeSource, /inV2Actions: Boolean\(actionHost\)/)
+  assert.match(runtimeSource, /oanix-note-row-lock--v2-action/)
+})
+
 test('row lock click cannot accidentally open the note and locked state uses the existing dialog', () => {
   assert.match(runtimeSource, /event\.preventDefault\(\)/)
   assert.match(runtimeSource, /event\.stopPropagation\(\)/)
