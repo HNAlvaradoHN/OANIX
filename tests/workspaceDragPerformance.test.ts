@@ -42,3 +42,16 @@ test('folder appearance is direct React state instead of observer repaint work',
   assert.match(folderGrid, /--oanix-folder-color/)
   assert.doesNotMatch(folderGrid, /paintFolders|decorateCustomizer/)
 })
+
+test('note drag high-frequency listeners exist only during an active touch gesture', () => {
+  assert.match(noteDrag, /let touchGestureListenersAttached = false/)
+  assert.match(noteDrag, /function attachTouchGestureListeners\(\)/)
+  assert.match(noteDrag, /document\.addEventListener\('pointermove', onTouchPointerMove, \{ capture: true, passive: false \}\)/)
+  assert.match(noteDrag, /function detachTouchGestureListeners\(\)/)
+  assert.match(noteDrag, /touchGesture = \{[\s\S]*scrollFrame: null,[\s\S]*\}\s*attachTouchGestureListeners\(\)/)
+  assert.match(noteDrag, /touchGesture = null\s*detachTouchGestureListeners\(\)/)
+  assert.match(
+    noteDrag,
+    /document\.addEventListener\('pointerdown', onTouchPointerDown, true\)\s*document\.addEventListener\('click', onClick, true\)/,
+  )
+})

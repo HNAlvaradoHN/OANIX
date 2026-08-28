@@ -162,6 +162,7 @@ export function NoteListReorderGestureRuntime() {
     let dragOverlayOffset: ClientPoint | null = null
     let lastPointer: ClientPoint | null = null
     let touchGesture: TouchGesture | null = null
+    let touchGestureListenersAttached = false
     const dragIdentityById = new Map<string, DragIdentity>()
     const list = document.querySelector<HTMLElement>('.notes-list')
     if (!list?.classList.contains('notes-list')) return
@@ -389,7 +390,10 @@ export function NoteListReorderGestureRuntime() {
       }
     }
     const cancelTouchGesture = (restoreOrder = true) => {
-      if (!touchGesture) return
+      if (!touchGesture) {
+        detachTouchGestureListeners()
+        return
+      }
       clearTouchTimer()
       stopTouchAutoScroll()
       if (restoreOrder && touchGesture.dragging && touchGesture.orderBefore.length) restoreDomOrder(list, touchGesture.orderBefore)
@@ -402,7 +406,24 @@ export function NoteListReorderGestureRuntime() {
       }
       touchGesture = null
       clearDragVisuals()
+      detachTouchGestureListeners()
     }
+    function attachTouchGestureListeners() {
+      if (touchGestureListenersAttached) return
+      touchGestureListenersAttached = true
+      document.addEventListener('pointermove', onTouchPointerMove, { capture: true, passive: false })
+      document.addEventListener('pointerup', finishPointerGesture, true)
+      document.addEventListener('pointercancel', onTouchPointerCancel, true)
+    }
+
+    function detachTouchGestureListeners() {
+      if (!touchGestureListenersAttached) return
+      touchGestureListenersAttached = false
+      document.removeEventListener('pointermove', onTouchPointerMove, true)
+      document.removeEventListener('pointerup', finishPointerGesture, true)
+      document.removeEventListener('pointercancel', onTouchPointerCancel, true)
+    }
+
     const beginGesture = (pointerId: number, item: HTMLElement, clientX: number, clientY: number) => {
       const rect = item.getBoundingClientRect()
       lastPointer = { x: clientX, y: clientY }
@@ -426,6 +447,7 @@ export function NoteListReorderGestureRuntime() {
         timer: window.setTimeout(beginTouchDrag, LONG_PRESS_MS),
         scrollFrame: null,
       }
+      attachTouchGestureListeners()
     }
     const advanceGesture = (clientX: number, clientY: number, preventDefault: () => void) => {
       if (!touchGesture) return
@@ -492,6 +514,7 @@ export function NoteListReorderGestureRuntime() {
           startScrollMomentum(finished.scrollVelocityY)
         }
         touchGesture = null
+        detachTouchGestureListeners()
         return
       }
 
@@ -501,6 +524,7 @@ export function NoteListReorderGestureRuntime() {
       const changed = nextOrder.join('|') !== finished.orderBefore.join('|')
       touchGesture = null
       clearDragVisuals()
+      detachTouchGestureListeners()
       if (changed) persistCurrentOrder(nextOrder)
     }
 
@@ -608,9 +632,6 @@ export function NoteListReorderGestureRuntime() {
 
     document.addEventListener('pointerdown', syncSortableWithPointer, { capture: true, passive: true })
     document.addEventListener('pointerdown', onTouchPointerDown, true)
-    document.addEventListener('pointermove', onTouchPointerMove, { capture: true, passive: false })
-    document.addEventListener('pointerup', finishPointerGesture, true)
-    document.addEventListener('pointercancel', onTouchPointerCancel, true)
     document.addEventListener('click', onClick, true)
     document.addEventListener('contextmenu', blockNativeLongPress, true)
     document.addEventListener('selectstart', blockNativeLongPress, true)
@@ -626,9 +647,6 @@ export function NoteListReorderGestureRuntime() {
       clearDragVisuals()
       document.removeEventListener('pointerdown', syncSortableWithPointer, true)
       document.removeEventListener('pointerdown', onTouchPointerDown, true)
-      document.removeEventListener('pointermove', onTouchPointerMove, true)
-      document.removeEventListener('pointerup', finishPointerGesture, true)
-      document.removeEventListener('pointercancel', onTouchPointerCancel, true)
       document.removeEventListener('click', onClick, true)
       document.removeEventListener('contextmenu', blockNativeLongPress, true)
       document.removeEventListener('selectstart', blockNativeLongPress, true)
