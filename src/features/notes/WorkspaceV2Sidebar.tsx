@@ -395,6 +395,7 @@ export function WorkspaceV2Sidebar({
                     tabIndex={0}
                     onClick={() => onSelectNote(note.id)}
                     onKeyDown={(event) => {
+                      if (event.target !== event.currentTarget) return
                       if (event.key === 'Enter' || event.key === ' ') {
                         event.preventDefault()
                         onSelectNote(note.id)
