@@ -1,7 +1,6 @@
 import { lazy, Suspense } from 'react'
 import { EditorOperationRuntime } from '../features/editor/EditorOperationRuntime'
 import { NoteCreationFeedbackRuntime } from '../features/notes/NoteCreationFeedbackRuntime'
-import '../features/privacy/noteBulkPrivacyOverrides.css'
 import { PrivacyStatusHelp } from '../features/privacy/PrivacyStatusHelp'
 import { WORKSPACE_V2_ENABLED } from './workspaceExperience'
 
