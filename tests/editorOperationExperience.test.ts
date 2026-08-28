@@ -43,3 +43,12 @@ test('editor operation runtime mounts with the unlocked app lifecycle', () => {
   assert.match(gate, /<EditorOperationRuntime \/>/)
   assert.doesNotMatch(gate, /if \(!active\) return null/)
 })
+
+test('reduced motion makes editor and delete feedback static instead of endlessly animated', () => {
+  assert.match(polish, /@media \(prefers-reduced-motion: reduce\)/)
+  assert.match(
+    polish,
+    /\.oanix-editor-operation-feedback__spinner,[\s\S]*#oanix-note-delete-feedback > span:first-child[\s\S]*animation: none;/,
+  )
+  assert.doesNotMatch(polish, /prefers-reduced-motion:[\s\S]*animation-duration: 1\.8s/)
+})
