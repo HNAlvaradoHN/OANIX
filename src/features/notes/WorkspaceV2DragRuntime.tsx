@@ -73,6 +73,10 @@ export function workspaceV2ClickSuppressed(root: HTMLElement | null): boolean {
   return root ? clickSuppressed(root) : false
 }
 
+function bulkSelectionActive(): boolean {
+  return document.documentElement.classList.contains('oanix-note-bulk-selecting')
+}
+
 export function WorkspaceV2DragRuntime({
   rootRef,
   onFolderOrder,
@@ -154,7 +158,7 @@ export function WorkspaceV2DragRuntime({
     }
 
     function beginDrag() {
-      if (!gesture || gesture.dragging || gesture.moved || gesture.dragBlocked) return
+      if (!gesture || gesture.dragging || gesture.moved || gesture.dragBlocked || bulkSelectionActive()) return
       gesture.timer = null
       gesture.dragging = true
       gesture.initialOrder = orderOf(gesture.container, gesture.kind)
@@ -290,7 +294,7 @@ export function WorkspaceV2DragRuntime({
       if (event.button !== 0 || gesture) return
       const target = event.target
       if (!(target instanceof Element)) return
-      const dragBlocked = Boolean(
+      const dragBlocked = bulkSelectionActive() || Boolean(
         target.closest('button[data-v2-drag-ignore="true"], a, input, textarea, select, [contenteditable="true"]'),
       )
 
