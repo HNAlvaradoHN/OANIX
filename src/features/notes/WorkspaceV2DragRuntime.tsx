@@ -62,7 +62,7 @@ function orderOf(container: HTMLElement, kind: WorkspaceV2DragKind): string[] {
 }
 
 function suppressClicks(root: HTMLElement) {
-  root.dataset.v2SuppressClickUntil = String(performance.now() + 180)
+  root.dataset.v2SuppressClickUntil = String(performance.now() + 520)
 }
 
 function clickSuppressed(root: HTMLElement): boolean {
