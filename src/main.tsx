@@ -7,14 +7,7 @@ import { applyOanixTheme, readSavedOanixTheme } from './features/personalization
 import { PwaImagePreviewRuntime } from './features/images/PwaImagePreviewRuntime'
 import { WORKSPACE_V2_ENABLED } from './app/workspaceExperience'
 import './styles/global.css'
-import './styles/midnight-violet.css'
-import './styles/theme-surfaces.css'
-import './styles/classic-theme-contract.css'
-// Notebook rules remain below the shared theme tokens. Classic theme surfaces are
-// consolidated in one authority before the v38.3 workspace contract takes over.
-import './styles/notebook-contract.css'
-import './styles/classic-theme-surfaces.css'
-import './styles/web-brand-logo.css'
+import './app/ThemeVisualStyles'
 import './app/VaultVisualStyles'
 
 // Workspace V2 is the default authority. Legacy v38.3-only presentation
