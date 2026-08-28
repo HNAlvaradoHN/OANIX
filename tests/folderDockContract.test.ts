@@ -9,6 +9,7 @@ const legacyGate = readFileSync('src/app/LegacyWorkspaceRuntimeGate.tsx', 'utf8'
 const visualRuntime = readFileSync('src/features/notes/V383WorkspaceVisualRuntime.tsx', 'utf8')
 const organic = readFileSync('src/features/notes/OrganicWorkspaceRuntime.tsx', 'utf8')
 const css = readFileSync('src/features/notes/folderDockContract.css', 'utf8')
+const quickPolishCss = readFileSync('src/app/workspaceQuickPolish.css', 'utf8')
 const grid = readFileSync('src/features/folders/FolderGridRuntime.tsx', 'utf8')
 
 test('folder dock renders names from the existing organic dataset without a second DOM runtime', () => {
@@ -21,10 +22,12 @@ test('folder dock renders names from the existing organic dataset without a seco
   assert.doesNotMatch(gate, /folderDockFinishing\.css/)
 })
 
-test('folder options gear remains centered below the name and uses a vector mask', () => {
+test('folder options gear remains centered below the name and uses a single vector-mask authority', () => {
   assert.match(css, /\.oanix-folder-card__gear[\s\S]*left: 50% !important[\s\S]*bottom: 5px !important[\s\S]*transform: translateX\(-50%\) !important/)
   assert.match(css, /\.oanix-folder-card__gear::before[\s\S]*mask-image:/)
   assert.match(css, /\.oanix-folder-card__gear:hover[\s\S]*transform: translate\(-50%,-1px\) !important/)
+  assert.doesNotMatch(quickPolishCss, /\.oanix-folder-card__gear::before/)
+  assert.doesNotMatch(quickPolishCss, /\.oanix-folder-card__gear\s*\{[\s\S]*?font-size:\s*0 !important/)
 })
 
 test('folder appearance is rendered directly without observer repaint', () => {
