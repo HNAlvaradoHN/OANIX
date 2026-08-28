@@ -68,10 +68,13 @@ test('workspace v2 dock keeps Todas and utility controls fixed around user folde
   assert.match(css, /oanix-workspace-v2__menu-backdrop/)
 })
 
-test('workspace v2 desktop timeline isolates shared note-row rules and keeps compact cards around center', () => {
+test('workspace v2 desktop timeline owns the exact center axis and compact card geometry', () => {
+  assert.match(css, /oanix-workspace-v2__timeline::before[\s\S]*left: 50%/)
   assert.match(css, /html\[data-oanix-theme\] \.oanix-workspace-v2 \.oanix-workspace-v2__timeline-item\.note-row[\s\S]*width: 50% !important/)
   assert.match(css, /oanix-workspace-v2__timeline-item\.note-row:nth-child\(even\)[\s\S]*left: 50% !important/)
-  assert.match(css, /oanix-workspace-v2__note-card[\s\S]*width: min\(100%, 22rem\)/)
+  assert.match(css, /oanix-workspace-v2__note-card\.note-row__open[\s\S]*width: min\(100%, 22rem\) !important/)
+  assert.match(css, /note-row:not\(:nth-child\(even\)\)[\s\S]*margin-left: auto !important/)
+  assert.match(css, /note-row:nth-child\(even\)[\s\S]*margin-right: auto !important/)
 })
 
 test('workspace v2 note card keyboard activation does not hijack nested action buttons', () => {
