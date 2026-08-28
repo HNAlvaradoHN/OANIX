@@ -712,3 +712,264 @@
 .notes-shell.oanix-workspace-v2-shell.notes-shell--open .back-button {
   display: grid;
 }
+
+.oanix-workspace-v2__tag-actions-root {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+
+.oanix-workspace-v2__tag-actions-menu {
+  position: absolute;
+  top: calc(100% + .42rem);
+  right: 0;
+  z-index: 32;
+  width: max-content;
+  min-width: 10.8rem;
+  display: grid;
+  gap: .2rem;
+  padding: .35rem;
+  border: 1px solid var(--v2-border);
+  border-radius: .85rem;
+  background: var(--v2-surface-strong);
+  box-shadow: var(--v2-shadow);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+}
+
+.oanix-workspace-v2__tag-actions-menu button {
+  min-height: 2.35rem;
+  padding: .45rem .65rem;
+  border: 0;
+  border-radius: .65rem;
+  background: transparent;
+  color: var(--v2-text);
+  text-align: left;
+  font: inherit;
+  font-size: .78rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.oanix-workspace-v2__modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  display: grid;
+  place-items: center;
+  padding: max(1rem, env(safe-area-inset-top)) 1rem max(1rem, env(safe-area-inset-bottom));
+  background: rgba(2, 6, 23, .52);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+.oanix-workspace-v2__modal {
+  width: min(31rem, 100%);
+  max-height: min(82dvh, 42rem);
+  display: grid;
+  gap: .9rem;
+  overflow: auto;
+  padding: 1rem;
+  border: 1px solid var(--v2-border);
+  border-radius: 1.25rem;
+  background: color-mix(in srgb, var(--v2-surface-strong) 92%, #0f172a 8%);
+  color: var(--v2-text);
+  box-shadow: 0 28px 80px rgba(0,0,0,.32);
+}
+
+.oanix-workspace-v2__modal > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: .8rem;
+}
+
+.oanix-workspace-v2__modal > header > div {
+  min-width: 0;
+  display: grid;
+  gap: .18rem;
+}
+
+.oanix-workspace-v2__modal > header span,
+.oanix-workspace-v2__modal-field > span,
+.oanix-workspace-v2__picker-section legend {
+  color: var(--v2-muted);
+  font-size: .66rem;
+  font-weight: 900;
+  letter-spacing: .11em;
+}
+
+.oanix-workspace-v2__modal > header strong {
+  font-size: 1.05rem;
+}
+
+.oanix-workspace-v2__modal > header > button {
+  width: 2.1rem;
+  height: 2.1rem;
+  border: 1px solid var(--v2-border);
+  border-radius: .7rem;
+  background: transparent;
+  color: var(--v2-text);
+  cursor: pointer;
+}
+
+.oanix-workspace-v2__modal-field {
+  display: grid;
+  gap: .35rem;
+}
+
+.oanix-workspace-v2__modal-field input {
+  width: 100%;
+  min-height: 2.7rem;
+  padding: .5rem .68rem;
+  border: 1px solid var(--v2-border);
+  border-radius: .8rem;
+  outline: 0;
+  background: rgba(15,23,42,.12);
+  color: var(--v2-text);
+  font: inherit;
+}
+
+.oanix-workspace-v2__picker-section {
+  min-width: 0;
+  margin: 0;
+  padding: .75rem;
+  border: 1px solid var(--v2-border);
+  border-radius: .9rem;
+}
+
+.oanix-workspace-v2__picker-section legend {
+  padding: 0 .25rem;
+}
+
+.oanix-workspace-v2__icon-picker,
+.oanix-workspace-v2__color-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .42rem;
+}
+
+.oanix-workspace-v2__icon-picker button,
+.oanix-workspace-v2__color-picker button {
+  width: 2.35rem;
+  height: 2.35rem;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--v2-border);
+  border-radius: .72rem;
+  background: rgba(255,255,255,.09);
+  color: var(--v2-text);
+  cursor: pointer;
+}
+
+.oanix-workspace-v2__icon-picker button.is-selected {
+  border-color: #60a5fa;
+  background: rgba(59,130,246,.18);
+  box-shadow: 0 0 0 2px rgba(59,130,246,.14);
+}
+
+.oanix-workspace-v2__color-picker button {
+  border-radius: 999px;
+  background: var(--v2-picker-color);
+}
+
+.oanix-workspace-v2__color-picker button.is-selected {
+  box-shadow: 0 0 0 3px var(--v2-surface-strong), 0 0 0 5px #60a5fa;
+}
+
+.oanix-workspace-v2__modal-error {
+  margin: 0;
+  padding: .5rem .6rem;
+  border-radius: .7rem;
+  background: rgba(239,68,68,.12);
+  color: #f87171;
+  font-size: .76rem;
+}
+
+.oanix-workspace-v2__modal > footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: .5rem;
+}
+
+.oanix-workspace-v2__modal > footer button,
+.oanix-workspace-v2__delete-tag-row button {
+  min-height: 2.35rem;
+  padding: .45rem .72rem;
+  border: 1px solid var(--v2-border);
+  border-radius: .72rem;
+  background: rgba(255,255,255,.08);
+  color: var(--v2-text);
+  font: inherit;
+  font-size: .76rem;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.oanix-workspace-v2__modal > footer button.is-primary {
+  border-color: rgba(59,130,246,.4);
+  background: #2563eb;
+  color: #fff;
+}
+
+.oanix-workspace-v2__delete-tag-list {
+  display: grid;
+  gap: .45rem;
+  overflow: auto;
+}
+
+.oanix-workspace-v2__delete-tag-list > p {
+  margin: 0;
+  padding: 1rem;
+  color: var(--v2-muted);
+  text-align: center;
+}
+
+.oanix-workspace-v2__delete-tag-row {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .6rem;
+  padding: .55rem;
+  border: 1px solid var(--v2-border);
+  border-radius: .82rem;
+  background: rgba(255,255,255,.06);
+}
+
+.oanix-workspace-v2__delete-tag-row strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.oanix-workspace-v2__delete-tag-icon {
+  width: 2rem;
+  height: 2rem;
+  display: grid;
+  place-items: center;
+  border-radius: .65rem;
+  background: color-mix(in srgb, var(--v2-tag-color) 22%, transparent);
+}
+
+.oanix-workspace-v2__delete-tag-row button.is-danger {
+  border-color: rgba(239,68,68,.3);
+  color: #ef4444;
+}
+
+@media (max-width: 520px) {
+  .oanix-workspace-v2__modal-backdrop {
+    place-items: end center;
+    padding: 0;
+  }
+
+  .oanix-workspace-v2__modal {
+    width: 100%;
+    max-height: min(82dvh, 42rem);
+    border-right: 0;
+    border-bottom: 0;
+    border-left: 0;
+    border-radius: 1.2rem 1.2rem 0 0;
+  }
+}
