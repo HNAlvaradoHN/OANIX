@@ -2040,19 +2040,21 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
               <div><strong>Carpetas</strong><span>Organización cifrada de tus notas</span></div>
               <button type="button" onClick={() => setFolderManagerOpen(false)} aria-label="Cerrar">×</button>
             </div>
-            <div className="folder-create-row">
-              <input
-                value={newFolderName}
-                onChange={(event) => setNewFolderName(event.target.value)}
-                onKeyDown={(event) => { if (event.key === 'Enter') void handleCreateFolder() }}
-                maxLength={60}
-                placeholder="Nueva carpeta"
-                aria-label="Nombre de nueva carpeta"
-              />
-              <button type="button" onClick={() => void handleCreateFolder()} disabled={creatingFolder}>
-                {creatingFolder ? 'Creando…' : 'Crear'}
-              </button>
-            </div>
+            {!WORKSPACE_V2_ENABLED && (
+              <div className="folder-create-row">
+                <input
+                  value={newFolderName}
+                  onChange={(event) => setNewFolderName(event.target.value)}
+                  onKeyDown={(event) => { if (event.key === 'Enter') void handleCreateFolder() }}
+                  maxLength={60}
+                  placeholder="Nueva carpeta"
+                  aria-label="Nombre de nueva carpeta"
+                />
+                <button type="button" onClick={() => void handleCreateFolder()} disabled={creatingFolder}>
+                  {creatingFolder ? 'Creando…' : 'Crear'}
+                </button>
+              </div>
+            )}
             <div className="folder-list">
               {folders.length === 0 ? (
                 <p className="folder-list__empty">Aún no has creado carpetas.</p>
