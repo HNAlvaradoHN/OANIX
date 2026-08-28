@@ -275,6 +275,12 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
   const activeFolderIdRef = useRef<string | 'all'>('all')
   const activeTagIdRef = useRef<string | 'all'>('all')
   const notesRef = useRef<NoteRecord[]>([])
+  const pendingV2FolderOrderRef = useRef<string[] | null>(null)
+  const v2FolderOrderLoopRef = useRef<Promise<void> | null>(null)
+  const pendingV2TagOrderRef = useRef<string[] | null>(null)
+  const v2TagOrderLoopRef = useRef<Promise<void> | null>(null)
+  const pendingV2NoteOrderRef = useRef<string[] | null>(null)
+  const v2NoteOrderLoopRef = useRef<Promise<void> | null>(null)
   const historyBackAlreadySavedRef = useRef(false)
   const pendingImageDeletesRef = useRef(new Set<string>())
 
@@ -1283,51 +1289,102 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     }))
   }
 
-  async function handleV2FolderOrder(folderIds: string[]) {
+  function handleV2FolderOrder(folderIds: string[]) {
     if (folderIds.length !== folders.length) return
-    try {
-      const persisted = await saveWorkspaceV2FolderOrder(folderIds)
-      setFolders(persisted)
-      window.dispatchEvent(new CustomEvent('oanix:local-data-changed', {
-        detail: { recordType: 'folder' },
-      }))
-    } catch {
-      setError('No se pudo guardar el nuevo orden de las carpetas.')
-      window.dispatchEvent(new Event('oanix:workspace-refresh'))
-    }
+    pendingV2FolderOrderRef.current = [...folderIds]
+    if (v2FolderOrderLoopRef.current) return
+
+    v2FolderOrderLoopRef.current = (async () => {
+      while (pendingV2FolderOrderRef.current) {
+        const orderToPersist = pendingV2FolderOrderRef.current
+        pendingV2FolderOrderRef.current = null
+        try {
+          const persisted = await saveWorkspaceV2FolderOrder(orderToPersist)
+          if (pendingV2FolderOrderRef.current) continue
+          setFolders(persisted)
+          window.dispatchEvent(new CustomEvent('oanix:local-data-changed', {
+            detail: { recordType: 'folder' },
+          }))
+        } catch {
+          if (!pendingV2FolderOrderRef.current) {
+            setError('No se pudo guardar el nuevo orden de las carpetas.')
+            window.dispatchEvent(new Event('oanix:workspace-refresh'))
+          }
+        }
+      }
+    })().finally(() => {
+      v2FolderOrderLoopRef.current = null
+      const pending = pendingV2FolderOrderRef.current
+      if (pending) handleV2FolderOrder(pending)
+    })
   }
 
-  async function handleV2TagOrder(tagIds: string[]) {
+  function handleV2TagOrder(tagIds: string[]) {
     if (tagIds.length !== tags.length) return
-    try {
-      const persisted = await saveWorkspaceV2TagOrder(tagIds)
-      setTags(persisted)
-      window.dispatchEvent(new CustomEvent('oanix:local-data-changed', {
-        detail: { recordType: 'tag' },
-      }))
-    } catch {
-      setError('No se pudo guardar el nuevo orden de las etiquetas.')
-      window.dispatchEvent(new Event('oanix:workspace-refresh'))
-    }
+    pendingV2TagOrderRef.current = [...tagIds]
+    if (v2TagOrderLoopRef.current) return
+
+    v2TagOrderLoopRef.current = (async () => {
+      while (pendingV2TagOrderRef.current) {
+        const orderToPersist = pendingV2TagOrderRef.current
+        pendingV2TagOrderRef.current = null
+        try {
+          const persisted = await saveWorkspaceV2TagOrder(orderToPersist)
+          if (pendingV2TagOrderRef.current) continue
+          setTags(persisted)
+          window.dispatchEvent(new CustomEvent('oanix:local-data-changed', {
+            detail: { recordType: 'tag' },
+          }))
+        } catch {
+          if (!pendingV2TagOrderRef.current) {
+            setError('No se pudo guardar el nuevo orden de las etiquetas.')
+            window.dispatchEvent(new Event('oanix:workspace-refresh'))
+          }
+        }
+      }
+    })().finally(() => {
+      v2TagOrderLoopRef.current = null
+      const pending = pendingV2TagOrderRef.current
+      if (pending) handleV2TagOrder(pending)
+    })
   }
 
-  async function handleV2NoteOrder(noteIds: string[]) {
+  function handleV2NoteOrder(noteIds: string[]) {
     if (noteIds.length === 0 || hasSearchQuery) return
-    try {
-      const persisted = await saveWorkspaceV2NoteOrder(noteIds)
-      const manualOrderById = new Map(persisted.map((note) => [note.id, note.manualOrder]))
-      setNotes((current) => current
-        .map((note) => manualOrderById.has(note.id)
-          ? { ...note, manualOrder: manualOrderById.get(note.id) }
-          : note)
-        .sort(compareNotesForList))
-      window.dispatchEvent(new CustomEvent('oanix:local-data-changed', {
-        detail: { recordType: 'note' },
-      }))
-    } catch {
-      setError('No se pudo guardar el nuevo orden de las notas.')
-      window.dispatchEvent(new Event('oanix:workspace-refresh'))
-    }
+    pendingV2NoteOrderRef.current = [...noteIds]
+    if (v2NoteOrderLoopRef.current) return
+
+    v2NoteOrderLoopRef.current = (async () => {
+      while (pendingV2NoteOrderRef.current) {
+        const orderToPersist = pendingV2NoteOrderRef.current
+        pendingV2NoteOrderRef.current = null
+        try {
+          const persisted = await saveWorkspaceV2NoteOrder(
+            orderToPersist,
+            () => pendingV2NoteOrderRef.current === null,
+          )
+          if (pendingV2NoteOrderRef.current) continue
+          const manualOrderById = new Map(persisted.map((note) => [note.id, note.manualOrder]))
+          setNotes((current) => current
+            .map((note) => manualOrderById.has(note.id)
+              ? { ...note, manualOrder: manualOrderById.get(note.id) }
+              : note)
+            .sort(compareNotesForList))
+          window.dispatchEvent(new CustomEvent('oanix:local-data-changed', {
+            detail: { recordType: 'note' },
+          }))
+        } catch {
+          if (!pendingV2NoteOrderRef.current) {
+            setError('No se pudo guardar el nuevo orden de las notas.')
+            window.dispatchEvent(new Event('oanix:workspace-refresh'))
+          }
+        }
+      }
+    })().finally(() => {
+      v2NoteOrderLoopRef.current = null
+      const pending = pendingV2NoteOrderRef.current
+      if (pending) handleV2NoteOrder(pending)
+    })
   }
 
   function scrollFolderTabs(direction: 'left' | 'right') {
