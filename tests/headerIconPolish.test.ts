@@ -31,7 +31,7 @@ test('workspace v2 visible header actions use the shared lightweight vector fami
   assert.match(history, /<OanixIcon name="history"/)
   assert.match(app, /<OanixIcon name="user"/)
   for (const iconName of ['search', 'lock', 'menu', 'history', 'user']) {
-    assert.ok(icons.includes(`'\${iconName}'`), `missing shared icon ${iconName}`)
+    assert.ok(icons.includes(`'${iconName}'`), `missing shared icon ${iconName}`)
   }
   assert.match(visual, /\.notes-header__actions[\s\S]*flex-flow: row nowrap !important/)
   assert.match(visual, /\.version-history-launcher \{ order: 3 !important; \}/)
