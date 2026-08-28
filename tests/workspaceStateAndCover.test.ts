@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
 const main = readFileSync('src/main.tsx', 'utf8')
+const legacyGate = readFileSync('src/app/LegacyWorkspaceRuntimeGate.tsx', 'utf8')
 const visualRuntime = readFileSync('src/features/notes/V383WorkspaceVisualRuntime.tsx', 'utf8')
 const organicRuntime = readFileSync('src/features/notes/OrganicWorkspaceRuntime.tsx', 'utf8')
 const stateCss = readFileSync('src/features/notes/workspaceStateContract.css', 'utf8')
@@ -55,8 +56,9 @@ test('folder appearance writes are serialized per folder so rapid personalizatio
   assert.match(appearanceService, /saveFolderFavorite[\s\S]*serializeAppearanceWrite\(folderId/)
 })
 
-test('exclusive state contract loads after the v38.3 base contract', () => {
-  const baseIndex = main.indexOf("./features/notes/v383WorkspaceVisual.css")
-  const stateIndex = main.indexOf("./features/notes/workspaceStateContract.css")
+test('exclusive legacy state contract loads after the v38.3 base inside the lazy fallback', () => {
+  const baseIndex = legacyGate.indexOf("../features/notes/v383WorkspaceVisual.css")
+  const stateIndex = legacyGate.indexOf("../features/notes/workspaceStateContract.css")
   assert.ok(baseIndex >= 0 && stateIndex > baseIndex)
+  assert.doesNotMatch(main, /features\/notes\/(?:v383WorkspaceVisual|workspaceStateContract)\.css/)
 })
