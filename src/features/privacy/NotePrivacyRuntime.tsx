@@ -250,9 +250,15 @@ export function NotePrivacyRuntime() {
 
   const rowPrivacyHosts = useMemo(() => {
     void domRevision
-    return Array.from(document.querySelectorAll<HTMLElement>('.note-row[data-reorder-note-id]')).flatMap((host) => {
-      const noteId = host.dataset.reorderNoteId
-      return noteId ? [{ host, noteId }] : []
+    return Array.from(document.querySelectorAll<HTMLElement>('.note-row[data-reorder-note-id]')).flatMap((row) => {
+      const noteId = row.dataset.reorderNoteId
+      if (!noteId) return []
+      const actionHost = row.querySelector<HTMLElement>('[data-v2-note-actions="true"]')
+      return [{
+        host: actionHost ?? row,
+        noteId,
+        inV2Actions: Boolean(actionHost),
+      }]
     })
   }, [domRevision])
 
@@ -642,13 +648,13 @@ export function NotePrivacyRuntime() {
         workspaceMenuHost,
       )}
 
-      {rowPrivacyHosts.map(({ host, noteId }) => {
+      {rowPrivacyHosts.map(({ host, noteId, inV2Actions }) => {
         const privacy = privacyById.get(noteId)
         if (!privacy?.lock) return null
         const isUnlocked = unlockedNoteIds.has(noteId)
         return createPortal(
           <button
-            className={`oanix-note-row-lock${isUnlocked ? ' oanix-note-row-lock--unlocked' : ''}`}
+            className={`oanix-note-row-lock${inV2Actions ? ' oanix-note-row-lock--v2-action' : ''}${isUnlocked ? ' oanix-note-row-lock--unlocked' : ''}`}
             type="button"
             aria-label={isUnlocked ? 'Bloquear esta nota ahora' : 'Desbloquear esta nota'}
             title={isUnlocked ? 'Bloquear nota ahora' : 'Desbloquear nota'}
