@@ -8,7 +8,6 @@ import '../features/folders/folderNavigationState.css'
 // are scoped to html.oanix-v383-visual and are not needed by Workspace V2.
 import '../features/editor/editorTrailingWorkspace.css'
 import { V383WorkspaceVisualRuntime } from '../features/notes/V383WorkspaceVisualRuntime'
-import '../features/notes/workspaceStateContract.css'
 import '../features/notes/workspaceRefinements.css'
 import '../features/notes/compactNoteContract.css'
 import '../features/notes/responsiveCompactNoteContract.css'
