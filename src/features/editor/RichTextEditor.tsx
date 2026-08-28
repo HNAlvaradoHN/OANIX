@@ -775,8 +775,6 @@ function RichTextEditorComponent({
 
     observer.observe(editor, {
       childList: true,
-      subtree: true,
-      characterData: true,
     })
 
     return () => observer.disconnect()
