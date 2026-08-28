@@ -13,6 +13,9 @@ export function saveWorkspaceV2TagOrder(ids: string[]): Promise<TagRecord[]> {
   return persistTagOrder(ids)
 }
 
-export function saveWorkspaceV2NoteOrder(ids: string[]): Promise<NoteRecord[]> {
-  return persistNoteOrder(ids)
+export function saveWorkspaceV2NoteOrder(
+  ids: string[],
+  shouldContinue: () => boolean = () => true,
+): Promise<NoteRecord[]> {
+  return persistNoteOrder(ids, shouldContinue)
 }
