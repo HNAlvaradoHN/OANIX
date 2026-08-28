@@ -3,7 +3,8 @@ import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
 const trailing = readFileSync('src/features/editor/editorTrailingWorkspace.css', 'utf8')
-const gate = readFileSync('src/app/WorkspaceRuntimeGate.tsx', 'utf8')
+const legacyGate = readFileSync('src/app/LegacyWorkspaceRuntimeGate.tsx', 'utf8')
+const workspaceGate = readFileSync('src/app/WorkspaceRuntimeGate.tsx', 'utf8')
 
 test('mobile note extends the real document flow below large editor blocks', () => {
   assert.match(trailing, /\.note-canvas::after[\s\S]*display: block/)
@@ -26,6 +27,7 @@ test('mobile note keeps physical runway separate from automatic focus clearance'
   assert.match(trailing, /data-oanix-trailing-caret/)
 })
 
-test('trailing workspace styles load with the unlocked workspace runtime', () => {
-  assert.match(gate, /import '\.\.\/features\/editor\/editorTrailingWorkspace\.css'/)
+test('legacy trailing workspace styles stay in the lazy fallback and out of Workspace V2', () => {
+  assert.match(legacyGate, /import '\.\.\/features\/editor\/editorTrailingWorkspace\.css'/)
+  assert.doesNotMatch(workspaceGate, /editorTrailingWorkspace\.css/)
 })
