@@ -878,6 +878,19 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     }
   }
 
+  async function handleV2RenameFolder(folder: FolderRecord, nextName: string) {
+    const name = nextName.trim().replace(/\s+/g, ' ')
+    if (!name) throw new Error('El nombre de la carpeta no puede estar vacío.')
+    if (folderNameExists(name, folder.id)) throw new Error('Ya existe una carpeta con ese nombre.')
+    if (name === folder.name) return
+
+    const updated = await renameFolder(folder.id, name)
+    setFolders((current) => current.map((item) => item.id === updated.id ? updated : item))
+    window.dispatchEvent(new CustomEvent('oanix:local-data-changed', {
+      detail: { recordType: 'folder', recordId: updated.id },
+    }))
+  }
+
   async function handleReorderFolder(folder: FolderRecord, direction: 'up' | 'down') {
     setFolderBusyId(folder.id)
     setError('')
@@ -1352,6 +1365,8 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
           onDeleteNote={(note) => void handleDeleteNote(note)}
           onCreateTag={handleV2CreateTag}
           onDeleteTag={handleDeleteTag}
+          onRenameFolder={handleV2RenameFolder}
+          onDeleteFolder={handleDeleteFolder}
           onFolderOrder={(ids) => void handleV2FolderOrder(ids)}
           onTagOrder={(ids) => void handleV2TagOrder(ids)}
           onNoteOrder={(ids) => void handleV2NoteOrder(ids)}
