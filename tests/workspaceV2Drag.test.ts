@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
 const drag = readFileSync('src/features/notes/WorkspaceV2DragRuntime.tsx', 'utf8')
+const css = readFileSync('src/features/notes/workspaceV2.css', 'utf8')
 
 test('workspace v2 drag keeps the proven long-press ghost and edge-autoscroll model', () => {
   assert.match(drag, /folder:\s*500/)
@@ -33,4 +34,21 @@ test('workspace v2 drag installs high-frequency document listeners only after po
 test('workspace v2 note drag cannot cross pinned and unpinned groups', () => {
   assert.match(drag, /group: item\.dataset\.v2Group \?\? ''/)
   assert.match(drag, /target\.dataset\.v2Group \?\? ''\) !== gesture\.group/)
+})
+
+test('workspace v2 drag owns coarse-pointer scrolling without native gesture cancellation', () => {
+  assert.match(drag, /gesture\.container\.scrollTop = gesture\.startScroll - dy/)
+  assert.match(drag, /gesture\.container\.scrollLeft = gesture\.startScroll - dx/)
+  assert.match(drag, /gesture\.item\.setPointerCapture\(gesture\.pointerId\)/)
+  assert.match(drag, /activeRoot\.addEventListener\('contextmenu', blockNativeLongPress, true\)/)
+  assert.match(drag, /activeRoot\.addEventListener\('selectstart', blockNativeLongPress, true\)/)
+  assert.match(drag, /document\.addEventListener\('visibilitychange', handleVisibilityChange\)/)
+  assert.match(drag, /window\.addEventListener\('blur', handleBlur\)/)
+  assert.match(css, /@media \(pointer: coarse\) \{[\s\S]*\[data-v2-drag-kind\]\[data-v2-id\][\s\S]*touch-action: none/)
+})
+
+test('workspace v2 action buttons can still scroll on touch without arming a drag', () => {
+  assert.match(drag, /const dragBlocked = Boolean/)
+  assert.match(drag, /if \(dragBlocked && event\.pointerType === 'mouse'\) return/)
+  assert.match(drag, /if \(!dragBlocked\) \{[\s\S]*window\.setTimeout\(beginDrag, LONG_PRESS_MS\[kind\]\)/)
 })
