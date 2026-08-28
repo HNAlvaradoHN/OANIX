@@ -33,11 +33,14 @@ test('folder appearance is rendered directly without observer repaint', () => {
   assert.doesNotMatch(grid, /paintFolders|decorateCustomizer/)
 })
 
-test('folder dock contract is loaded by the unlocked runtime gate before the v38.3 visual authority', () => {
+test('legacy folder dock and v38.3 CSS stay in the lazy fallback chunk with stable override order', () => {
   assert.match(app, /<WorkspaceRuntimeGate workspaceRevision=\{workspaceRevision\} \/>/)
+  assert.match(legacyGate, /features\/notes\/v383WorkspaceVisual\.css/)
   assert.match(legacyGate, /features\/notes\/folderDockContract\.css/)
   assert.match(legacyGate, /<OrganicWorkspaceRuntime \/>/)
   assert.match(legacyGate, /<V383WorkspaceVisualRuntime \/>/)
-  const finalCssIndex = main.indexOf("./features/notes/v383WorkspaceVisual.css")
-  assert.ok(finalCssIndex >= 0)
+  assert.doesNotMatch(main, /features\/notes\/v383WorkspaceVisual\.css/)
+  const visualIndex = legacyGate.indexOf("../features/notes/v383WorkspaceVisual.css")
+  const dockIndex = legacyGate.indexOf("../features/notes/folderDockContract.css")
+  assert.ok(visualIndex >= 0 && dockIndex > visualIndex)
 })
