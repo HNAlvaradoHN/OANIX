@@ -13,13 +13,12 @@ const sidebar = readFileSync('src/features/notes/WorkspaceV2Sidebar.tsx', 'utf8'
 const icons = readFileSync('src/shared/OanixIcon.tsx', 'utf8')
 const v2Css = readFileSync('src/features/notes/workspaceV2.css', 'utf8')
 
-test('v38.3 is the final header visual authority and retired icon polish is absent', () => {
+test('v38.3 header authority is isolated to the lazy fallback and retired icon polish is absent', () => {
   assert.equal(existsSync('src/styles/header-icon-polish.css'), false)
   assert.doesNotMatch(main, /\.\/styles\/header-icon-polish\.css/)
-  const visualIndex = main.indexOf("./features/notes/v383WorkspaceVisual.css")
-  const themeSurfaceIndex = main.indexOf("./styles/classic-theme-surfaces.css")
-  assert.ok(themeSurfaceIndex >= 0)
-  assert.ok(visualIndex > themeSurfaceIndex)
+  assert.match(main, /\.\/styles\/classic-theme-surfaces\.css/)
+  assert.doesNotMatch(main, /features\/notes\/v383WorkspaceVisual\.css/)
+  assert.match(legacyGate, /features\/notes\/v383WorkspaceVisual\.css/)
   assert.match(app, /<WorkspaceRuntimeGate workspaceRevision=\{workspaceRevision\} \/>/)
   assert.match(legacyGate, /<OrganicWorkspaceRuntime \/>/)
   assert.match(legacyGate, /<V383WorkspaceVisualRuntime \/>/)
