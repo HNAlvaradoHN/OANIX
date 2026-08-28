@@ -36,7 +36,8 @@ test('workspace v2 has one switch and legacy visual authorities live behind a la
 test('legacy workspace css is not eagerly loaded when v2 is authoritative', () => {
   assert.doesNotMatch(main, /folderNavigationState\.css|note-menu-viewport-fit\.css/)
   assert.doesNotMatch(gate, /folderDockContract\.css|organicWorkspace\.css|workspacePersonalization\.css|folderMobileDrag\.css|tagMobileGesture\.css/)
-  assert.match(legacyGate, /folderNavigationState\.css/)
+  assert.doesNotMatch(legacyGate, /folderNavigationState\.css/)
+  assert.match(v383WorkspaceVisualRuntime, /import '\.\.\/folders\/folderNavigationState\.css'/)
   assert.doesNotMatch(legacyGate, /note-menu-viewport-fit\.css/)
   assert.match(legacyGate, /<NoteMenuViewportFit \/>/)
   assert.match(noteMenuViewportFit, /note-menu-viewport-fit\.css/)
@@ -44,7 +45,7 @@ test('legacy workspace css is not eagerly loaded when v2 is authoritative', () =
     legacyGate,
     /import ['"]\.\.\/features\/notes\/(?:v383WorkspaceVisual|workspaceStateContract|workspaceRefinements|compactNoteContract|responsiveCompactNoteContract|organicWorkspaceTouchMotion|folderDockContract)\.css['"]/,
   )
-  assert.match(v383WorkspaceVisualRuntime, /import '\.\/v383WorkspaceVisual\.css'[\s\S]*import '\.\/workspaceStateContract\.css'[\s\S]*import '\.\/workspaceRefinements\.css'[\s\S]*import '\.\/compactNoteContract\.css'[\s\S]*import '\.\/responsiveCompactNoteContract\.css'[\s\S]*import '\.\/organicWorkspaceTouchMotion\.css'[\s\S]*import '\.\/folderDockContract\.css'/)
+  assert.match(v383WorkspaceVisualRuntime, /import '\.\.\/folders\/folderNavigationState\.css'[\s\S]*import '\.\/v383WorkspaceVisual\.css'[\s\S]*import '\.\/workspaceStateContract\.css'[\s\S]*import '\.\/workspaceRefinements\.css'[\s\S]*import '\.\/compactNoteContract\.css'[\s\S]*import '\.\/responsiveCompactNoteContract\.css'[\s\S]*import '\.\/organicWorkspaceTouchMotion\.css'[\s\S]*import '\.\/folderDockContract\.css'/)
   assert.match(legacyGate, /editorTrailingWorkspace\.css'[\s\S]*V383WorkspaceVisualRuntime/)
   assert.doesNotMatch(legacyGate, /organicWorkspaceTouchMotion\.css|folderDockContract\.css/)
   assert.match(legacyGate, /OrganicWorkspaceRuntime/)
