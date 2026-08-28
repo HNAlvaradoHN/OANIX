@@ -5,7 +5,6 @@ import test from 'node:test'
 const compactContract = readFileSync('src/features/notes/compactNoteContract.css', 'utf8')
 const feedbackRuntime = readFileSync('src/features/folders/FolderOperationFeedbackRuntime.tsx', 'utf8')
 const feedbackCss = readFileSync('src/features/folders/folderOperationFeedback.css', 'utf8')
-const gate = readFileSync('src/app/WorkspaceRuntimeGate.tsx', 'utf8')
 const legacyGate = readFileSync('src/app/LegacyWorkspaceRuntimeGate.tsx', 'utf8')
 const visualRuntime = readFileSync('src/features/notes/V383WorkspaceVisualRuntime.tsx', 'utf8')
 const main = readFileSync('src/main.tsx', 'utf8')
