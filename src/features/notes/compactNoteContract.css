@@ -4,7 +4,9 @@
 
 @media (max-width: 760px) {
   html.oanix-v383-visual .notes-shell:not(.notes-shell--searching)
-  .note-row:not(.note-row--selected):not(.note-row--menu-open) {
+  .note-row:not(.note-row--selected):not(.note-row--menu-open),
+  html.oanix-v383-visual .notes-shell:not(.notes-shell--searching)
+  .note-row.note-row--menu-open:not(.note-row--selected) {
     min-height: 72px !important;
     margin: 8px 0 0 !important;
     border-radius: 16px !important;
@@ -12,19 +14,25 @@
   }
 
   html.oanix-v383-visual .notes-shell:not(.notes-shell--searching)
-  .notes-list > .note-row:not(.note-row--selected):not(.note-row--menu-open):first-child {
+  .notes-list > .note-row:not(.note-row--selected):not(.note-row--menu-open):first-child,
+  html.oanix-v383-visual .notes-shell:not(.notes-shell--searching)
+  .notes-list > .note-row.note-row--menu-open:not(.note-row--selected):first-child {
     margin-top: 0 !important;
   }
 
   html.oanix-v383-visual .notes-shell:not(.notes-shell--searching)
-  .note-row:not(.note-row--selected):not(.note-row--menu-open)::before {
+  .note-row:not(.note-row--selected):not(.note-row--menu-open)::before,
+  html.oanix-v383-visual .notes-shell:not(.notes-shell--searching)
+  .note-row.note-row--menu-open:not(.note-row--selected)::before {
     display: none !important;
     content: none !important;
   }
 
   html.oanix-v383-visual .notes-shell:not(.notes-shell--searching)
   .note-row:not(.note-row--selected):not(.note-row--menu-open)
-  .note-row__open {
+  .note-row__open,
+  html.oanix-v383-visual .notes-shell:not(.notes-shell--searching)
+  .note-row.note-row--menu-open:not(.note-row--selected) .note-row__open {
     min-height: 72px !important;
     padding: 12px clamp(160px, 44vw, 230px) 10px 64px !important;
     border-radius: 16px !important;
@@ -38,120 +46,19 @@
   .note-row__topline,
   html.oanix-v383-visual .notes-shell:not(.notes-shell--searching)
   .note-row:not(.note-row--selected):not(.note-row--menu-open)
-  .note-row__topline strong {
+  .note-row__topline strong,
+  html.oanix-v383-visual .notes-shell:not(.notes-shell--searching)
+  .note-row.note-row--menu-open:not(.note-row--selected) .note-row__body,
+  html.oanix-v383-visual .notes-shell:not(.notes-shell--searching)
+  .note-row.note-row--menu-open:not(.note-row--selected) .note-row__topline,
+  html.oanix-v383-visual .notes-shell:not(.notes-shell--searching)
+  .note-row.note-row--menu-open:not(.note-row--selected) .note-row__topline strong {
     min-width: 0 !important;
     max-width: 100% !important;
   }
 
   html.oanix-v383-visual .notes-shell:not(.notes-shell--searching)
-  .note-row:not(.note-row--selected):not(.note-row--menu-open)::after {
-    top: 10px !important;
-    right: 45px !important;
-    max-width: min(30vw, 180px) !important;
-    padding: 2px 7px !important;
-    border-radius: 7px !important;
-    font-size: 8px !important;
-  }
-
-  html.oanix-v383-visual .notes-shell:not(.notes-shell--searching)
-  .note-row:not(.note-row--selected):not(.note-row--menu-open)
-  .note-row__avatar[data-oanix-note-icon] {
-    left: 14px !important;
-    top: 50% !important;
-    width: 36px !important;
-    height: 36px !important;
-    display: grid !important;
-    place-items: center !important;
-    padding: 0 !important;
-    transform: translateY(-50%) !important;
-    overflow: hidden !important;
-    border: 1px solid color-mix(in srgb,var(--oanix-note-tab-color,#f59e0b) 66%,rgba(255,255,255,.35)) !important;
-    border-radius: 12px !important;
-    background: color-mix(in srgb,var(--oanix-note-tab-color,#f59e0b) 34%,transparent) !important;
-    box-shadow: 0 4px 12px rgba(2,6,23,.16), inset 0 1px 1px rgba(255,255,255,.18) !important;
-  }
-
-  html.oanix-v383-visual .notes-shell:not(.notes-shell--searching)
-  .note-row:not(.note-row--selected):not(.note-row--menu-open)
-  .note-row__avatar[data-oanix-note-icon]::after {
-    position: absolute !important;
-    inset: 0 !important;
-    width: auto !important;
-    height: auto !important;
-    display: grid !important;
-    place-items: center !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    font-size: 17px !important;
-    line-height: 1 !important;
-    transform: translateY(-1px) !important;
-  }
-
-  html.oanix-v383-visual .notes-shell:not(.notes-shell--searching)
-  .note-row:not(.note-row--selected):not(.note-row--menu-open)
-  .note-row__topline strong {
-    font-size: 12px !important;
-    line-height: 1.15 !important;
-  }
-
-  html.oanix-v383-visual .notes-shell:not(.notes-shell--searching)
-  .note-row:not(.note-row--selected):not(.note-row--menu-open)
-  .note-row__preview,
-  html.oanix-v383-visual .notes-shell:not(.notes-shell--searching)
-  .note-row:not(.note-row--selected):not(.note-row--menu-open)
-  .note-row__preview[data-oanix-note-description]::after {
-    margin-top: 4px !important;
-    font-size: 9.5px !important;
-    line-height: 1.2 !important;
-    -webkit-line-clamp: 1 !important;
-  }
-
-  html.oanix-v383-visual .notes-shell:not(.notes-shell--searching)
-  .note-row:not(.note-row--selected):not(.note-row--menu-open)
-  .note-row__topline time {
-    right: 47px !important;
-    bottom: 9px !important;
-    max-width: 102px !important;
-    overflow: hidden !important;
-    font-size: 8.5px !important;
-    text-overflow: ellipsis !important;
-    white-space: nowrap !important;
-  }
-
-  html.oanix-v383-visual .notes-shell:not(.notes-shell--searching)
-  .note-row:not(.note-row--selected):not(.note-row--menu-open) .note-row__menu-wrap {
-    top: 22px !important;
-    right: 8px !important;
-  }
-
-  html.oanix-v383-visual .notes-shell:not(.notes-shell--searching)
-  .note-row:not(.note-row--selected):not(.note-row--menu-open) .oanix-note-row-lock {
-    top: 22px !important;
-    right: 39px !important;
-  }
-
-  /* Opening the action menu must not switch the row back to the old expanded
-     v38.3 card. Keep exactly the same compact geometry while the menu is open;
-     only the menu itself is elevated by the existing note-row--menu-open state. */
-  html.oanix-v383-visual .notes-shell:not(.notes-shell--searching)
-  .note-row.note-row--menu-open:not(.note-row--selected) {
-    min-height: 72px !important;
-    margin: 8px 0 0 !important;
-    border-radius: 16px !important;
-    box-shadow: 0 5px 16px var(--v383-shadow), inset 0 1px 1px rgba(255,255,255,.22) !important;
-  }
-
-  html.oanix-v383-visual .notes-shell:not(.notes-shell--searching)
-  .notes-list > .note-row.note-row--menu-open:not(.note-row--selected):first-child {
-    margin-top: 0 !important;
-  }
-
-  html.oanix-v383-visual .notes-shell:not(.notes-shell--searching)
-  .note-row.note-row--menu-open:not(.note-row--selected)::before {
-    display: none !important;
-    content: none !important;
-  }
-
+  .note-row:not(.note-row--selected):not(.note-row--menu-open)::after,
   html.oanix-v383-visual .notes-shell:not(.notes-shell--searching)
   .note-row.note-row--menu-open:not(.note-row--selected)::after {
     top: 10px !important;
@@ -163,12 +70,8 @@
   }
 
   html.oanix-v383-visual .notes-shell:not(.notes-shell--searching)
-  .note-row.note-row--menu-open:not(.note-row--selected) .note-row__open {
-    min-height: 72px !important;
-    padding: 12px clamp(160px, 44vw, 230px) 10px 64px !important;
-    border-radius: 16px !important;
-  }
-
+  .note-row:not(.note-row--selected):not(.note-row--menu-open)
+  .note-row__avatar[data-oanix-note-icon],
   html.oanix-v383-visual .notes-shell:not(.notes-shell--searching)
   .note-row.note-row--menu-open:not(.note-row--selected) .note-row__avatar[data-oanix-note-icon] {
     left: 14px !important;
@@ -183,6 +86,17 @@
     border-radius: 12px !important;
   }
 
+  html.oanix-v383-visual .notes-shell:not(.notes-shell--searching)
+  .note-row:not(.note-row--selected):not(.note-row--menu-open)
+  .note-row__avatar[data-oanix-note-icon] {
+    border: 1px solid color-mix(in srgb,var(--oanix-note-tab-color,#f59e0b) 66%,rgba(255,255,255,.35)) !important;
+    background: color-mix(in srgb,var(--oanix-note-tab-color,#f59e0b) 34%,transparent) !important;
+    box-shadow: 0 4px 12px rgba(2,6,23,.16), inset 0 1px 1px rgba(255,255,255,.18) !important;
+  }
+
+  html.oanix-v383-visual .notes-shell:not(.notes-shell--searching)
+  .note-row:not(.note-row--selected):not(.note-row--menu-open)
+  .note-row__avatar[data-oanix-note-icon]::after,
   html.oanix-v383-visual .notes-shell:not(.notes-shell--searching)
   .note-row.note-row--menu-open:not(.note-row--selected) .note-row__avatar[data-oanix-note-icon]::after {
     position: absolute !important;
@@ -199,21 +113,20 @@
   }
 
   html.oanix-v383-visual .notes-shell:not(.notes-shell--searching)
-  .note-row.note-row--menu-open:not(.note-row--selected) .note-row__body,
-  html.oanix-v383-visual .notes-shell:not(.notes-shell--searching)
-  .note-row.note-row--menu-open:not(.note-row--selected) .note-row__topline,
-  html.oanix-v383-visual .notes-shell:not(.notes-shell--searching)
-  .note-row.note-row--menu-open:not(.note-row--selected) .note-row__topline strong {
-    min-width: 0 !important;
-    max-width: 100% !important;
-  }
-
+  .note-row:not(.note-row--selected):not(.note-row--menu-open)
+  .note-row__topline strong,
   html.oanix-v383-visual .notes-shell:not(.notes-shell--searching)
   .note-row.note-row--menu-open:not(.note-row--selected) .note-row__topline strong {
     font-size: 12px !important;
     line-height: 1.15 !important;
   }
 
+  html.oanix-v383-visual .notes-shell:not(.notes-shell--searching)
+  .note-row:not(.note-row--selected):not(.note-row--menu-open)
+  .note-row__preview,
+  html.oanix-v383-visual .notes-shell:not(.notes-shell--searching)
+  .note-row:not(.note-row--selected):not(.note-row--menu-open)
+  .note-row__preview[data-oanix-note-description]::after,
   html.oanix-v383-visual .notes-shell:not(.notes-shell--searching)
   .note-row.note-row--menu-open:not(.note-row--selected) .note-row__preview,
   html.oanix-v383-visual .notes-shell:not(.notes-shell--searching)
@@ -224,6 +137,9 @@
     -webkit-line-clamp: 1 !important;
   }
 
+  html.oanix-v383-visual .notes-shell:not(.notes-shell--searching)
+  .note-row:not(.note-row--selected):not(.note-row--menu-open)
+  .note-row__topline time,
   html.oanix-v383-visual .notes-shell:not(.notes-shell--searching)
   .note-row.note-row--menu-open:not(.note-row--selected) .note-row__topline time {
     right: 47px !important;
@@ -236,11 +152,15 @@
   }
 
   html.oanix-v383-visual .notes-shell:not(.notes-shell--searching)
+  .note-row:not(.note-row--selected):not(.note-row--menu-open) .note-row__menu-wrap,
+  html.oanix-v383-visual .notes-shell:not(.notes-shell--searching)
   .note-row.note-row--menu-open:not(.note-row--selected) .note-row__menu-wrap {
     top: 22px !important;
     right: 8px !important;
   }
 
+  html.oanix-v383-visual .notes-shell:not(.notes-shell--searching)
+  .note-row:not(.note-row--selected):not(.note-row--menu-open) .oanix-note-row-lock,
   html.oanix-v383-visual .notes-shell:not(.notes-shell--searching)
   .note-row.note-row--menu-open:not(.note-row--selected) .oanix-note-row-lock {
     top: 22px !important;
