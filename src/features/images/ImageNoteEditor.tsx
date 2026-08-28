@@ -789,6 +789,7 @@ export function ImageNoteEditor({
     const root: HTMLDivElement = currentRoot
     let resizeState: ResizeState | null = null
     let imageDragState: ImageDragState | null = null
+    let gestureListenersAttached = false
 
     function syncVisualViewportMetrics() {
       const visualViewport = window.visualViewport
@@ -837,6 +838,22 @@ export function ImageNoteEditor({
       event.preventDefault()
     }
 
+    function attachGestureListeners() {
+      if (gestureListenersAttached) return
+      gestureListenersAttached = true
+      document.addEventListener('pointermove', handlePointerMove, true)
+      document.addEventListener('pointerup', handlePointerUp, true)
+      document.addEventListener('pointercancel', handlePointerUp, true)
+    }
+
+    function detachGestureListeners() {
+      if (!gestureListenersAttached) return
+      gestureListenersAttached = false
+      document.removeEventListener('pointermove', handlePointerMove, true)
+      document.removeEventListener('pointerup', handlePointerUp, true)
+      document.removeEventListener('pointercancel', handlePointerUp, true)
+    }
+
     function handlePointerDown(event: PointerEvent) {
       const target = event.target
       if (!(target instanceof Element)) return
@@ -865,6 +882,7 @@ export function ImageNoteEditor({
             editorWidth: editorRect.width,
             dragging: false,
           }
+          attachGestureListeners()
         }
         return
       }
@@ -896,6 +914,7 @@ export function ImageNoteEditor({
         previewHeight: previewRect?.height ?? figure.getBoundingClientRect().height,
         direction: handle.dataset.imageResize ?? 'se',
       }
+      attachGestureListeners()
     }
 
     function handlePointerMove(event: PointerEvent) {
@@ -964,12 +983,14 @@ export function ImageNoteEditor({
           updateImageBlock(root, drag.blockId, (current) => ({ ...current, alignment }))
           selectImageFigure(root, drag.figure)
         }
+        detachGestureListeners()
         return
       }
 
       if (!resizeState || resizeState.pointerId !== event.pointerId) return
       resizeState = null
       emitEditorInput(root)
+      detachGestureListeners()
     }
 
     function handleClick(event: MouseEvent) {
@@ -1183,21 +1204,16 @@ export function ImageNoteEditor({
     root.addEventListener('click', handleClick, true)
     root.addEventListener('input', handleImageInput, true)
     root.addEventListener('paste', handlePaste, true)
-    document.addEventListener('pointermove', handlePointerMove, true)
-    document.addEventListener('pointerup', handlePointerUp, true)
-    document.addEventListener('pointercancel', handlePointerUp, true)
     document.addEventListener('keydown', handleKeyDown)
 
     return () => {
       observer.disconnect()
+      detachGestureListeners()
       root.removeEventListener('mousedown', handleMouseDown, true)
       root.removeEventListener('pointerdown', handlePointerDown, true)
       root.removeEventListener('click', handleClick, true)
       root.removeEventListener('input', handleImageInput, true)
       root.removeEventListener('paste', handlePaste, true)
-      document.removeEventListener('pointermove', handlePointerMove, true)
-      document.removeEventListener('pointerup', handlePointerUp, true)
-      document.removeEventListener('pointercancel', handlePointerUp, true)
       document.removeEventListener('keydown', handleKeyDown)
       window.visualViewport?.removeEventListener('resize', syncVisualViewportMetrics)
       window.visualViewport?.removeEventListener('scroll', syncVisualViewportMetrics)
