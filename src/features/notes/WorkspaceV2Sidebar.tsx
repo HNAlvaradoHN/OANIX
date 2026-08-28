@@ -40,6 +40,7 @@ import {
 import { WorkspaceV2DragRuntime } from './WorkspaceV2DragRuntime'
 import { WorkspaceV2TagActions } from './WorkspaceV2TagActions'
 import { WorkspaceV2FolderActions } from './WorkspaceV2FolderActions'
+import { WorkspaceV2FolderCreator } from './WorkspaceV2FolderCreator'
 import { WorkspaceV2NoteCustomizer } from './WorkspaceV2NoteCustomizer'
 import type { NoteListAppearanceInput } from './noteService'
 import './workspaceV2.css'
@@ -79,6 +80,7 @@ interface WorkspaceV2SidebarProps {
   onDeleteNote: (note: NoteRecord) => void
   onCreateTag: (name: string, appearance: { icon: string; color: string }) => Promise<void>
   onDeleteTag: (tag: TagRecord) => Promise<void>
+  onCreateFolder: (name: string, appearance: { icon: FolderIcon; color: string }) => Promise<void>
   onRenameFolder: (folder: FolderRecord, name: string) => Promise<void>
   onDeleteFolder: (folder: FolderRecord) => Promise<void>
   onCustomizeNote: (noteId: string, input: NoteListAppearanceInput) => Promise<void>
@@ -150,6 +152,7 @@ export function WorkspaceV2Sidebar({
   onDeleteNote,
   onCreateTag,
   onDeleteTag,
+  onCreateFolder,
   onRenameFolder,
   onDeleteFolder,
   onCustomizeNote,
@@ -163,6 +166,7 @@ export function WorkspaceV2Sidebar({
   const [folderCovers, setFolderCovers] = useState(new Map<string, string>())
   const [folderFlags, setFolderFlags] = useState(new Map<string, FolderAppearanceFlags>())
   const [folderActionsId, setFolderActionsId] = useState<string | null>(null)
+  const [folderCreatorOpen, setFolderCreatorOpen] = useState(false)
   const [noteCustomizerId, setNoteCustomizerId] = useState<string | null>(null)
   const [themeId, setThemeId] = useState<OanixThemePreset['id']>(() => readSavedOanixTheme())
 
@@ -647,7 +651,7 @@ export function WorkspaceV2Sidebar({
           <button
             type="button"
             className="oanix-workspace-v2__dock-action oanix-workspace-v2__dock-action--add"
-            onClick={onOpenFolderManager}
+            onClick={() => setFolderCreatorOpen(true)}
             aria-label="Agregar carpeta"
             title="Agregar carpeta"
             data-v2-drag-ignore="true"
@@ -656,6 +660,12 @@ export function WorkspaceV2Sidebar({
           </button>
         </div>
       </footer>
+
+      <WorkspaceV2FolderCreator
+        open={folderCreatorOpen}
+        onClose={() => setFolderCreatorOpen(false)}
+        onCreate={onCreateFolder}
+      />
 
       {noteCustomizerId && (() => {
         const note = notes.find((candidate) => candidate.id === noteCustomizerId)
