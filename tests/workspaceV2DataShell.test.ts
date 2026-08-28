@@ -78,6 +78,8 @@ test('workspace v2 desktop timeline owns the exact center axis and compact card 
 })
 
 test('workspace v2 custom note colors choose readable ink by contrast rather than a fixed threshold', () => {
+  assert.match(source, /contrastFor\(color, themeId\)/)
+  assert.match(source, /const tintAlpha = night \? 0\.5 : 0\.42/)
   assert.match(source, /whiteContrast = 1\.05 \/ \(luminance \+ 0\.05\)/)
   assert.match(source, /inkContrast = \(luminance \+ 0\.05\) \/ \(inkLuminance \+ 0\.05\)/)
   assert.match(source, /inkContrast >= whiteContrast \? '#172033' : '#ffffff'/)
