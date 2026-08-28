@@ -7,6 +7,7 @@ import '../features/folders/folderNavigationState.css'
 import '../styles/note-menu-viewport-fit.css'
 // Preserve the legacy cascade order inside the lazy fallback chunk. These files
 // are scoped to html.oanix-v383-visual and are not needed by Workspace V2.
+import '../features/editor/editorTrailingWorkspace.css'
 import '../features/notes/v383WorkspaceVisual.css'
 import '../features/notes/workspaceStateContract.css'
 import '../features/notes/workspaceRefinements.css'
