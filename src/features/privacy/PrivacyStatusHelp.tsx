@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import '../../styles/privacy-status-polish.css'
+import './PrivacyStatusHelp.css'
 
 type HelpTopic = 'lock' | 'box'
 
