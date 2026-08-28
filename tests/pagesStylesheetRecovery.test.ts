@@ -23,5 +23,5 @@ test('Pages deploy verifies the live HTML, CSS and JS shell', () => {
   assert.match(pagesWorkflow, /href="\/OANIX\/assets\/\[\^"\]\+\\\.css"/)
   assert.match(pagesWorkflow, /src="\/OANIX\/assets\/\[\^"\]\+\\\.js"/)
   assert.match(pagesWorkflow, /grep -q '\.vault-shell' \/tmp\/oanix\.css/)
-  assert.match(pagesWorkflow, /grep -q 'oanix-v383-visual' \/tmp\/oanix\.js/)
+  assert.match(pagesWorkflow, /grep -q 'data-oanix-workspace-v2' \/tmp\/oanix\.js/)
 })
