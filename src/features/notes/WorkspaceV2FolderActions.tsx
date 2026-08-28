@@ -83,7 +83,7 @@ export function WorkspaceV2FolderActions({
       window.dispatchEvent(new CustomEvent('oanix:local-data-changed', {
         detail: { recordType: 'folder-appearance', recordId: folder.id },
       }))
-      setMode('menu')
+      onClose()
     })
   }
 
@@ -95,6 +95,7 @@ export function WorkspaceV2FolderActions({
       window.dispatchEvent(new CustomEvent('oanix:local-data-changed', {
         detail: { recordType: 'folder-appearance', recordId: folder.id },
       }))
+      onClose()
     })
   }
 
@@ -106,6 +107,7 @@ export function WorkspaceV2FolderActions({
       window.dispatchEvent(new CustomEvent('oanix:local-data-changed', {
         detail: { recordType: 'folder-appearance', recordId: folder.id },
       }))
+      onClose()
     })
   }
 
@@ -117,6 +119,7 @@ export function WorkspaceV2FolderActions({
       window.dispatchEvent(new CustomEvent('oanix:local-data-changed', {
         detail: { recordType: 'folder-cover', recordId: folder.id },
       }))
+      onClose()
     })
     if (coverInputRef.current) coverInputRef.current.value = ''
   }
@@ -127,6 +130,7 @@ export function WorkspaceV2FolderActions({
       window.dispatchEvent(new CustomEvent('oanix:local-data-changed', {
         detail: { recordType: 'folder-cover', recordId: folder.id },
       }))
+      onClose()
     })
   }
 
