@@ -31,7 +31,10 @@ test('workspace v2 has one switch and legacy visual authorities live behind a la
 })
 
 test('legacy workspace css is not eagerly loaded when v2 is authoritative', () => {
+  assert.doesNotMatch(main, /folderNavigationState\.css|note-menu-viewport-fit\.css/)
   assert.doesNotMatch(gate, /folderDockContract\.css|organicWorkspace\.css|workspacePersonalization\.css|folderMobileDrag\.css|tagMobileGesture\.css/)
+  assert.match(legacyGate, /folderNavigationState\.css/)
+  assert.match(legacyGate, /note-menu-viewport-fit\.css/)
   assert.match(legacyGate, /folderDockContract\.css/)
   assert.match(legacyGate, /OrganicWorkspaceRuntime/)
   assert.match(legacyGate, /WorkspacePersonalizationRuntime/)
