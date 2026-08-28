@@ -589,7 +589,7 @@ export function WorkspaceV2Sidebar({
         aria-busy={creating}
         data-v2-drag-ignore="true"
       >
-        {creating ? <span aria-hidden="true">…</span> : <OanixIcon name="plus" size={23} />}
+        {creating ? <span aria-hidden="true">…</span> : <OanixIcon name="noteAdd" size={21} />}
       </button>
 
       <footer className="oanix-workspace-v2__folder-dock" aria-label="Carpetas">
