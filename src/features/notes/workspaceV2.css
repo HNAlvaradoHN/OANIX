@@ -270,8 +270,8 @@ html[data-oanix-theme='classic-night'] .notes-sidebar.oanix-workspace-v2,
 
 .oanix-workspace-v2__timeline {
   position: relative;
-  width: min(100%, 58rem);
-  margin: 0 auto;
+  width: min(calc(100% - clamp(1rem, 4vw, 3rem)), 60rem);
+  margin-inline: auto;
   padding: .45rem 0 1rem;
 }
 
@@ -281,17 +281,18 @@ html[data-oanix-theme='classic-night'] .notes-sidebar.oanix-workspace-v2,
   top: .25rem;
   bottom: .25rem;
   left: 50%;
-  width: 3px;
+  width: 2px;
   transform: translateX(-50%);
   border-radius: 999px;
   background: linear-gradient(
     180deg,
     transparent,
-    rgba(59,130,246,.34) 12%,
-    rgba(16,185,129,.32) 50%,
-    rgba(236,72,153,.3) 88%,
+    rgba(96,165,250,.62) 10%,
+    rgba(45,212,191,.66) 48%,
+    rgba(129,140,248,.58) 88%,
     transparent
   );
+  box-shadow: 0 0 18px rgba(45,212,191,.16);
 }
 
 .oanix-workspace-v2__timeline-item {
@@ -342,13 +343,18 @@ html[data-oanix-theme='classic-night'] .notes-sidebar.oanix-workspace-v2,
   outline: 0;
   color: var(--v2-note-text, #fff);
   background:
+    radial-gradient(circle at 18% 4%, rgba(255,255,255,.34), transparent 38%),
     linear-gradient(
-      135deg,
-      rgba(var(--v2-note-r, 37), var(--v2-note-g, 99), var(--v2-note-b, 235), .34),
-      rgba(var(--v2-note-r, 37), var(--v2-note-g, 99), var(--v2-note-b, 235), .15)
+      145deg,
+      rgba(var(--v2-note-r, 37), var(--v2-note-g, 99), var(--v2-note-b, 235), .46),
+      rgba(var(--v2-note-r, 37), var(--v2-note-g, 99), var(--v2-note-b, 235), .23) 52%,
+      rgba(var(--v2-note-r, 37), var(--v2-note-g, 99), var(--v2-note-b, 235), .14)
     ),
-    rgba(255,255,255,.18);
-  box-shadow: 0 8px 28px rgba(15,23,42,.09), inset 0 1px 1px rgba(255,255,255,.45);
+    rgba(18, 25, 40, .22);
+  box-shadow:
+    0 10px 30px rgba(15,23,42,.11),
+    inset 0 1px 0 rgba(255,255,255,.48),
+    inset 0 -1px 0 rgba(var(--v2-note-r, 37), var(--v2-note-g, 99), var(--v2-note-b, 235), .18);
   -webkit-backdrop-filter: blur(18px);
   backdrop-filter: blur(18px);
   cursor: grab;
@@ -395,8 +401,10 @@ html[data-oanix-theme='classic-night'] .notes-sidebar.oanix-workspace-v2,
   max-width: 68%;
   padding: .16rem .48rem;
   overflow: hidden;
+  border: 1px solid rgba(255,255,255,.16);
   border-radius: 999px;
-  background: rgba(15,23,42,.18);
+  background: rgba(255,255,255,.12);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.12);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -444,18 +452,19 @@ html[data-oanix-theme='classic-night'] .notes-sidebar.oanix-workspace-v2,
 }
 
 .oanix-workspace-v2__note-actions button {
-  width: 1.9rem;
-  height: 1.9rem;
+  width: 2rem;
+  height: 2rem;
   display: grid;
   place-items: center;
-  border: 1px solid rgba(255,255,255,.38);
-  border-radius: .68rem;
-  background: rgba(255,255,255,.22);
+  border: 1px solid rgba(255,255,255,.34);
+  border-radius: .72rem;
+  background:
+    radial-gradient(circle at 30% 18%, rgba(255,255,255,.38), transparent 38%),
+    linear-gradient(145deg, rgba(255,255,255,.24), rgba(255,255,255,.10));
   color: inherit;
+  box-shadow: 0 4px 12px rgba(10,18,32,.12), inset 0 1px 0 rgba(255,255,255,.3);
   cursor: pointer;
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
-  transition: transform .16s ease, background-color .16s ease;
+  transition: transform .16s ease, background-color .16s ease, box-shadow .16s ease;
 }
 
 .oanix-workspace-v2__note-actions button.is-danger {
@@ -1229,7 +1238,7 @@ body.oanix-v2-note-dragging {
 }
 
 .oanix-workspace-v2 .oanix-workspace-v2__note-card.note-row__open {
-  width: auto;
+  width: min(100%, 22rem);
   min-width: 0;
   display: block;
   align-items: initial;
@@ -1252,13 +1261,15 @@ body.oanix-v2-note-dragging {
 }
 
 .oanix-workspace-v2 .oanix-workspace-v2__create-note.notes-create-fab {
-  right: clamp(.8rem, 3vw, 1.35rem);
-  bottom: 7.25rem;
-  min-height: 2.8rem;
-  padding: .5rem .8rem;
-  border: 1px solid rgba(255,255,255,.44);
-  border-radius: 999px;
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  right: clamp(.82rem, 3vw, 1.4rem);
+  bottom: 7.2rem;
+  width: 3.25rem;
+  height: 3.25rem;
+  min-height: 0;
+  padding: 0;
+  border: 1px solid rgba(255,255,255,.52);
+  border-radius: 1.08rem;
+  background: linear-gradient(145deg, rgba(96,165,250,.94), rgba(79,70,229,.88));
 }
 
 .oanix-workspace-v2__timeline-item > .oanix-note-row-lock {
@@ -1315,23 +1326,27 @@ body.oanix-v2-note-dragging {
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
     background:
+      radial-gradient(circle at 18% 4%, rgba(255,255,255,.28), transparent 36%),
       linear-gradient(
-        135deg,
-        rgba(var(--v2-note-r, 37), var(--v2-note-g, 99), var(--v2-note-b, 235), .38),
-        rgba(var(--v2-note-r, 37), var(--v2-note-g, 99), var(--v2-note-b, 235), .19)
+        145deg,
+        rgba(var(--v2-note-r, 37), var(--v2-note-g, 99), var(--v2-note-b, 235), .48),
+        rgba(var(--v2-note-r, 37), var(--v2-note-g, 99), var(--v2-note-b, 235), .25) 54%,
+        rgba(var(--v2-note-r, 37), var(--v2-note-g, 99), var(--v2-note-b, 235), .16)
       ),
-      rgba(255, 255, 255, .28);
+      rgba(255, 255, 255, .20);
   }
 
   [data-oanix-theme="classic-night"] .oanix-workspace-v2__note-card,
   [data-oanix-theme="midnight-violet"] .oanix-workspace-v2__note-card {
     background:
+      radial-gradient(circle at 18% 4%, rgba(255,255,255,.16), transparent 36%),
       linear-gradient(
-        135deg,
-        rgba(var(--v2-note-r, 37), var(--v2-note-g, 99), var(--v2-note-b, 235), .34),
-        rgba(var(--v2-note-r, 37), var(--v2-note-g, 99), var(--v2-note-b, 235), .16)
+        145deg,
+        rgba(var(--v2-note-r, 37), var(--v2-note-g, 99), var(--v2-note-b, 235), .42),
+        rgba(var(--v2-note-r, 37), var(--v2-note-g, 99), var(--v2-note-b, 235), .22) 54%,
+        rgba(var(--v2-note-r, 37), var(--v2-note-g, 99), var(--v2-note-b, 235), .12)
       ),
-      rgba(15, 23, 42, .58);
+      rgba(11, 18, 32, .55);
   }
 }
 
@@ -1375,8 +1390,8 @@ body.oanix-v2-note-dragging {
 
 [data-oanix-theme="classic-day"] .oanix-workspace-v2.has-wallpaper::before {
   background:
-    linear-gradient(180deg, rgba(238, 244, 251, .22), rgba(223, 232, 243, .42)),
-    radial-gradient(circle at 50% 30%, rgba(255,255,255,.18), transparent 48%);
+    linear-gradient(180deg, rgba(248,250,252,.035), rgba(234,240,247,.10)),
+    radial-gradient(circle at 50% 24%, rgba(255,255,255,.07), transparent 46%);
 }
 
 .oanix-workspace-v2.has-wallpaper .oanix-workspace-v2__header,
@@ -1417,8 +1432,12 @@ html[data-oanix-theme] .oanix-workspace-v2 .oanix-workspace-v2__timeline-item.no
 }
 
 .oanix-workspace-v2__header-actions .icon-button {
-  border: 1px solid transparent;
+  border: 1px solid var(--v2-glass-edge);
   border-radius: .82rem;
+  background:
+    radial-gradient(circle at 30% 18%, rgba(255,255,255,.30), transparent 38%),
+    linear-gradient(145deg, rgba(255,255,255,.16), rgba(255,255,255,.05));
+  box-shadow: 0 5px 15px rgba(15,23,42,.08), inset 0 1px 0 rgba(255,255,255,.26);
 }
 
 .oanix-workspace-v2__header-actions .icon-button:hover,
@@ -1434,6 +1453,7 @@ html[data-oanix-theme] .oanix-workspace-v2 .oanix-workspace-v2__timeline-item.no
 .oanix-workspace-v2__folder-gear svg,
 .oanix-workspace-v2__dock-action svg {
   display: block;
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,.18));
 }
 
 /* Fixed mother folder + scrollable user folders + fixed utility controls. */
@@ -1762,9 +1782,34 @@ html[data-oanix-theme] .oanix-workspace-v2 .oanix-workspace-v2__note-card {
   border-color: rgba(255,255,255,.34) !important;
 }
 
+html[data-oanix-theme='classic-day'] .oanix-workspace-v2 .oanix-workspace-v2__note-card {
+  background:
+    radial-gradient(circle at 18% 4%, rgba(255,255,255,.42), transparent 38%),
+    linear-gradient(
+      145deg,
+      rgba(var(--v2-note-r, 37), var(--v2-note-g, 99), var(--v2-note-b, 235), .44),
+      rgba(var(--v2-note-r, 37), var(--v2-note-g, 99), var(--v2-note-b, 235), .22) 52%,
+      rgba(var(--v2-note-r, 37), var(--v2-note-g, 99), var(--v2-note-b, 235), .12)
+    ),
+    rgba(248,250,252,.30) !important;
+}
+
+html[data-oanix-theme='classic-night'] .oanix-workspace-v2 .oanix-workspace-v2__note-card {
+  background:
+    radial-gradient(circle at 18% 4%, rgba(255,255,255,.18), transparent 38%),
+    linear-gradient(
+      145deg,
+      rgba(var(--v2-note-r, 37), var(--v2-note-g, 99), var(--v2-note-b, 235), .48),
+      rgba(var(--v2-note-r, 37), var(--v2-note-g, 99), var(--v2-note-b, 235), .24) 52%,
+      rgba(var(--v2-note-r, 37), var(--v2-note-g, 99), var(--v2-note-b, 235), .12)
+    ),
+    rgba(11,18,32,.44) !important;
+}
+
+
 html[data-oanix-theme='classic-day'] .oanix-workspace-v2__header,
 html[data-oanix-theme='classic-day'] .oanix-workspace-v2__folder-dock {
-  background: rgba(255,255,255,.34) !important;
+  background: rgba(255,255,255,.23) !important;
 }
 
 html[data-oanix-theme='classic-night'] .oanix-workspace-v2__header,
@@ -1784,5 +1829,140 @@ html[data-oanix-theme='classic-night'] .oanix-workspace-v2__folder-dock {
   .oanix-workspace-v2__create-note {
     -webkit-backdrop-filter: blur(8px);
     backdrop-filter: blur(8px);
+  }
+}
+
+
+/* Workspace V2 polish 3: centered desktop axis, premium lightweight controls,
+   focused folder creation and readable color-tinted glass cards. */
+@media (min-width: 701px) {
+  html[data-oanix-theme] .oanix-workspace-v2 .oanix-workspace-v2__timeline {
+    width: min(calc(100% - clamp(1rem, 4vw, 3rem)), 60rem);
+    margin-inline: auto;
+  }
+
+  html[data-oanix-theme] .oanix-workspace-v2 .oanix-workspace-v2__note-card.note-row__open {
+    width: min(100%, 22rem) !important;
+    flex: 0 0 auto !important;
+  }
+
+  html[data-oanix-theme] .oanix-workspace-v2 .oanix-workspace-v2__timeline-item.note-row:not(:nth-child(even)) .oanix-workspace-v2__note-card {
+    margin-right: 0 !important;
+    margin-left: auto !important;
+  }
+
+  html[data-oanix-theme] .oanix-workspace-v2 .oanix-workspace-v2__timeline-item.note-row:nth-child(even) .oanix-workspace-v2__note-card {
+    margin-right: auto !important;
+    margin-left: 0 !important;
+  }
+}
+
+.oanix-workspace-v2__header-actions > :is(
+  .icon-button,
+  .version-history-launcher,
+  .account-header-action
+),
+.oanix-workspace-v2__header-actions > .workspace-menu-wrap > .icon-button {
+  border: 1px solid var(--v2-glass-edge) !important;
+  border-radius: .82rem !important;
+  background:
+    radial-gradient(circle at 30% 18%, rgba(255,255,255,.30), transparent 38%),
+    linear-gradient(145deg, rgba(255,255,255,.16), rgba(255,255,255,.05)) !important;
+  color: var(--v2-text) !important;
+  box-shadow: 0 5px 15px rgba(15,23,42,.08), inset 0 1px 0 rgba(255,255,255,.26) !important;
+  opacity: 1 !important;
+}
+
+html[data-oanix-theme='classic-night'] .oanix-workspace-v2__header-actions > :is(
+  .icon-button,
+  .version-history-launcher,
+  .account-header-action
+),
+html[data-oanix-theme='classic-night'] .oanix-workspace-v2__header-actions > .workspace-menu-wrap > .icon-button {
+  background:
+    radial-gradient(circle at 30% 18%, rgba(255,255,255,.14), transparent 38%),
+    linear-gradient(145deg, rgba(71,85,105,.24), rgba(15,23,42,.18)) !important;
+}
+
+.oanix-workspace-v2__header-actions > :is(
+  .icon-button,
+  .version-history-launcher,
+  .account-header-action
+) svg,
+.oanix-workspace-v2__header-actions > .workspace-menu-wrap > .icon-button svg,
+.oanix-workspace-v2__note-actions button svg {
+  stroke-width: 1.95;
+}
+
+.oanix-workspace-v2__note-actions button:hover,
+.oanix-workspace-v2__note-actions button:focus-visible {
+  background:
+    radial-gradient(circle at 30% 18%, rgba(255,255,255,.50), transparent 38%),
+    linear-gradient(145deg, rgba(255,255,255,.32), rgba(255,255,255,.14));
+  box-shadow: 0 6px 16px rgba(10,18,32,.15), inset 0 1px 0 rgba(255,255,255,.38);
+}
+
+.oanix-workspace-v2__folder-create-backdrop {
+  z-index: 12500;
+}
+
+.oanix-workspace-v2__folder-creator {
+  width: min(23rem, calc(100vw - 1.5rem));
+  gap: .78rem;
+  border-radius: 1.35rem;
+  background:
+    radial-gradient(circle at 88% 0%, rgba(99,102,241,.12), transparent 38%),
+    color-mix(in srgb, var(--v2-surface-strong) 90%, transparent);
+}
+
+.oanix-workspace-v2__folder-creator .oanix-workspace-v2__picker-section {
+  padding: .62rem;
+}
+
+.oanix-workspace-v2__color-picker--folders,
+.oanix-workspace-v2__icon-picker--folders {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: .38rem;
+}
+
+.oanix-workspace-v2__color-picker--folders button,
+.oanix-workspace-v2__icon-picker--folders button {
+  width: 100%;
+  aspect-ratio: 1;
+  height: auto;
+  min-height: 2.35rem;
+}
+
+.oanix-workspace-v2__color-picker--folders button {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.42), 0 4px 10px rgba(15,23,42,.08);
+}
+
+.oanix-workspace-v2__icon-picker--folders button {
+  background:
+    radial-gradient(circle at 30% 18%, rgba(255,255,255,.28), transparent 38%),
+    rgba(255,255,255,.07);
+}
+
+html[data-oanix-theme='classic-day'] .oanix-workspace-v2.has-wallpaper .oanix-workspace-v2__chip,
+html[data-oanix-theme='classic-day'] .oanix-workspace-v2.has-wallpaper .oanix-workspace-v2__search {
+  background: rgba(255,255,255,.38);
+}
+
+@media (max-width: 700px) {
+  html[data-oanix-theme] .oanix-workspace-v2 .oanix-workspace-v2__note-card.note-row__open {
+    width: 100% !important;
+    margin-inline: 0 !important;
+  }
+
+  .oanix-workspace-v2__color-picker--folders,
+  .oanix-workspace-v2__icon-picker--folders {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .oanix-workspace-v2__note-actions button {
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.24);
   }
 }

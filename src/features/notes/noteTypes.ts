@@ -58,13 +58,21 @@ export type NoteVisualIcon = (typeof NOTE_VISUAL_ICONS)[number]
 
 export const NOTE_VISUAL_COLORS = [
   '#2563eb',
-  '#ec4899',
-  '#10b981',
-  '#f59e0b',
+  '#6366f1',
   '#8b5cf6',
-  '#06b6d4',
+  '#a855f7',
+  '#ec4899',
+  '#e11d48',
   '#ef4444',
+  '#f97316',
+  '#f59e0b',
+  '#84cc16',
+  '#10b981',
+  '#14b8a6',
+  '#06b6d4',
+  '#0ea5e9',
   '#64748b',
+  '#475569',
 ] as const
 
 export const DEFAULT_NOTE_VISUAL_ICON: NoteVisualIcon = '📝'

@@ -9,7 +9,9 @@ import {
 import { deleteEncryptedImage } from '../images/imageService'
 import { downloadEncryptedBackup } from '../backup/backupService'
 import { createFolder, deleteFolder, loadFolders, renameFolder, reorderFolder } from '../folders/folderService'
+import { saveFolderColor, saveFolderIcon } from '../folders/folderAppearanceService'
 import type { FolderRecord } from '../folders/folderTypes'
+import type { FolderIcon } from '../folders/folderAppearanceCatalog'
 import { createTag, deleteTag, loadTags, renameTag } from '../tags/tagService'
 import type { TagRecord } from '../tags/tagTypes'
 import { storageSaveErrorMessage } from '../../storage/local/storageErrors'
@@ -887,6 +889,32 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     }
   }
 
+  async function handleV2CreateFolder(
+    nextName: string,
+    appearance: { icon: FolderIcon; color: string },
+  ) {
+    const name = nextName.trim().replace(/\s+/g, ' ')
+    if (!name) throw new Error('Escribe un nombre para la carpeta.')
+    if (folderNameExists(name)) throw new Error('Ya existe una carpeta con ese nombre.')
+
+    const folder = await createFolder(name)
+    setFolders((current) => [...current, folder])
+    handleSelectFolder(folder.id)
+
+    try {
+      await Promise.all([
+        saveFolderColor(folder.id, appearance.color),
+        saveFolderIcon(folder.id, appearance.icon),
+      ])
+    } catch {
+      setError('La carpeta se creó, pero no se pudo guardar toda su apariencia.')
+    }
+
+    window.dispatchEvent(new CustomEvent('oanix:local-data-changed', {
+      detail: { recordType: 'folder', recordId: folder.id },
+    }))
+  }
+
   async function handleV2RenameFolder(folder: FolderRecord, nextName: string) {
     const name = nextName.trim().replace(/\s+/g, ' ')
     if (!name) throw new Error('El nombre de la carpeta no puede estar vacío.')
@@ -1445,6 +1473,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
           onDeleteNote={(note) => void handleDeleteNote(note)}
           onCreateTag={handleV2CreateTag}
           onDeleteTag={handleDeleteTag}
+          onCreateFolder={handleV2CreateFolder}
           onRenameFolder={handleV2RenameFolder}
           onDeleteFolder={handleDeleteFolder}
           onCustomizeNote={handleV2CustomizeNote}
@@ -2011,19 +2040,21 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
               <div><strong>Carpetas</strong><span>Organización cifrada de tus notas</span></div>
               <button type="button" onClick={() => setFolderManagerOpen(false)} aria-label="Cerrar">×</button>
             </div>
-            <div className="folder-create-row">
-              <input
-                value={newFolderName}
-                onChange={(event) => setNewFolderName(event.target.value)}
-                onKeyDown={(event) => { if (event.key === 'Enter') void handleCreateFolder() }}
-                maxLength={60}
-                placeholder="Nueva carpeta"
-                aria-label="Nombre de nueva carpeta"
-              />
-              <button type="button" onClick={() => void handleCreateFolder()} disabled={creatingFolder}>
-                {creatingFolder ? 'Creando…' : 'Crear'}
-              </button>
-            </div>
+            {!WORKSPACE_V2_ENABLED && (
+              <div className="folder-create-row">
+                <input
+                  value={newFolderName}
+                  onChange={(event) => setNewFolderName(event.target.value)}
+                  onKeyDown={(event) => { if (event.key === 'Enter') void handleCreateFolder() }}
+                  maxLength={60}
+                  placeholder="Nueva carpeta"
+                  aria-label="Nombre de nueva carpeta"
+                />
+                <button type="button" onClick={() => void handleCreateFolder()} disabled={creatingFolder}>
+                  {creatingFolder ? 'Creando…' : 'Crear'}
+                </button>
+              </div>
+            )}
             <div className="folder-list">
               {folders.length === 0 ? (
                 <p className="folder-list__empty">Aún no has creado carpetas.</p>

@@ -40,6 +40,7 @@ import {
 import { WorkspaceV2DragRuntime } from './WorkspaceV2DragRuntime'
 import { WorkspaceV2TagActions } from './WorkspaceV2TagActions'
 import { WorkspaceV2FolderActions } from './WorkspaceV2FolderActions'
+import { WorkspaceV2FolderCreator } from './WorkspaceV2FolderCreator'
 import { WorkspaceV2NoteCustomizer } from './WorkspaceV2NoteCustomizer'
 import type { NoteListAppearanceInput } from './noteService'
 import './workspaceV2.css'
@@ -79,6 +80,7 @@ interface WorkspaceV2SidebarProps {
   onDeleteNote: (note: NoteRecord) => void
   onCreateTag: (name: string, appearance: { icon: string; color: string }) => Promise<void>
   onDeleteTag: (tag: TagRecord) => Promise<void>
+  onCreateFolder: (name: string, appearance: { icon: FolderIcon; color: string }) => Promise<void>
   onRenameFolder: (folder: FolderRecord, name: string) => Promise<void>
   onDeleteFolder: (folder: FolderRecord) => Promise<void>
   onCustomizeNote: (noteId: string, input: NoteListAppearanceInput) => Promise<void>
@@ -105,10 +107,26 @@ function rgbFromHex(hex: string): [number, number, number] {
   ]
 }
 
-function contrastFor(hex: string): string {
-  const [red, green, blue] = rgbFromHex(hex)
-  const luminance = (red * 0.299 + green * 0.587 + blue * 0.114) / 255
-  return luminance > 0.6 ? '#172033' : '#ffffff'
+function contrastFor(hex: string, themeId: OanixThemePreset['id']): string {
+  const color = rgbFromHex(hex)
+  const night = themeId === 'classic-night'
+  const base: [number, number, number] = night ? [17, 24, 39] : [248, 250, 252]
+  const tintAlpha = night ? 0.5 : 0.42
+  const [red, green, blue] = color.map((channel, index) =>
+    Math.round(channel * tintAlpha + base[index] * (1 - tintAlpha)),
+  ) as [number, number, number]
+
+  const linear = (channel: number) => {
+    const normalized = channel / 255
+    return normalized <= 0.04045
+      ? normalized / 12.92
+      : ((normalized + 0.055) / 1.055) ** 2.4
+  }
+  const luminance = linear(red) * 0.2126 + linear(green) * 0.7152 + linear(blue) * 0.0722
+  const whiteContrast = 1.05 / (luminance + 0.05)
+  const inkLuminance = 0.014
+  const inkContrast = (luminance + 0.05) / (inkLuminance + 0.05)
+  return inkContrast >= whiteContrast ? '#172033' : '#ffffff'
 }
 
 function noteDescription(note: NoteRecord): string {
@@ -150,6 +168,7 @@ export function WorkspaceV2Sidebar({
   onDeleteNote,
   onCreateTag,
   onDeleteTag,
+  onCreateFolder,
   onRenameFolder,
   onDeleteFolder,
   onCustomizeNote,
@@ -163,6 +182,7 @@ export function WorkspaceV2Sidebar({
   const [folderCovers, setFolderCovers] = useState(new Map<string, string>())
   const [folderFlags, setFolderFlags] = useState(new Map<string, FolderAppearanceFlags>())
   const [folderActionsId, setFolderActionsId] = useState<string | null>(null)
+  const [folderCreatorOpen, setFolderCreatorOpen] = useState(false)
   const [noteCustomizerId, setNoteCustomizerId] = useState<string | null>(null)
   const [themeId, setThemeId] = useState<OanixThemePreset['id']>(() => readSavedOanixTheme())
 
@@ -425,7 +445,7 @@ export function WorkspaceV2Sidebar({
               const category = categoryForNote(note)
               const color = note.visualColor ?? category?.color ?? DEFAULT_NOTE_VISUAL_COLOR
               const [red, green, blue] = rgbFromHex(color)
-              const textColor = contrastFor(color)
+              const textColor = contrastFor(color, themeId)
               return (
                 <article
                   key={note.id}
@@ -647,7 +667,7 @@ export function WorkspaceV2Sidebar({
           <button
             type="button"
             className="oanix-workspace-v2__dock-action oanix-workspace-v2__dock-action--add"
-            onClick={onOpenFolderManager}
+            onClick={() => setFolderCreatorOpen(true)}
             aria-label="Agregar carpeta"
             title="Agregar carpeta"
             data-v2-drag-ignore="true"
@@ -656,6 +676,12 @@ export function WorkspaceV2Sidebar({
           </button>
         </div>
       </footer>
+
+      <WorkspaceV2FolderCreator
+        open={folderCreatorOpen}
+        onClose={() => setFolderCreatorOpen(false)}
+        onCreate={onCreateFolder}
+      />
 
       {noteCustomizerId && (() => {
         const note = notes.find((candidate) => candidate.id === noteCustomizerId)
