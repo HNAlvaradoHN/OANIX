@@ -8,9 +8,9 @@ import {
 } from 'react'
 import { deleteEncryptedImage } from '../images/imageService'
 import { downloadEncryptedBackup } from '../backup/backupService'
-import { createFolder, deleteFolder, loadFolders, renameFolder, reorderFolder } from '../folders/folderService'
+import { createFolder, deleteFolder, loadFolders, persistFolderOrder, renameFolder, reorderFolder } from '../folders/folderService'
 import type { FolderRecord } from '../folders/folderTypes'
-import { createTag, deleteTag, loadTags, renameTag } from '../tags/tagService'
+import { createTag, deleteTag, loadTags, persistTagOrder, renameTag } from '../tags/tagService'
 import type { TagRecord } from '../tags/tagTypes'
 import { storageSaveErrorMessage } from '../../storage/local/storageErrors'
 import { usesSinglePaneLayout } from '../../shared/responsiveLayout'
@@ -22,12 +22,15 @@ import {
   moveNoteToFolder,
   renameNote,
   replaceNoteContent,
+  persistNoteOrder,
   setNotePinned,
   setNoteTags,
 } from './noteService'
 import { searchItemsByLocalFields, type LocalSearchField } from '../search/localSearch'
 import { prepareDailyEntriesForEditing } from './dailyEntries'
+import { WORKSPACE_V2_ENABLED } from '../../app/workspaceExperience'
 import { NoteAvatar } from './NoteAvatar'
+import { WorkspaceV2Sidebar } from './WorkspaceV2Sidebar'
 import { compareNotesForList, noteBlocksToPlainText, type NoteRecord, type StoredNoteBlock } from './noteTypes'
 import './notes.css'
 
@@ -1227,6 +1230,53 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     setNoteMenuId(noteId)
   }
 
+  async function handleV2FolderOrder(folderIds: string[]) {
+    if (folderIds.length !== folders.length) return
+    try {
+      const persisted = await persistFolderOrder(folderIds)
+      setFolders(persisted)
+      window.dispatchEvent(new CustomEvent('oanix:local-data-changed', {
+        detail: { recordType: 'folder' },
+      }))
+    } catch {
+      setError('No se pudo guardar el nuevo orden de las carpetas.')
+      window.dispatchEvent(new Event('oanix:workspace-refresh'))
+    }
+  }
+
+  async function handleV2TagOrder(tagIds: string[]) {
+    if (tagIds.length !== tags.length) return
+    try {
+      const persisted = await persistTagOrder(tagIds)
+      setTags(persisted)
+      window.dispatchEvent(new CustomEvent('oanix:local-data-changed', {
+        detail: { recordType: 'tag' },
+      }))
+    } catch {
+      setError('No se pudo guardar el nuevo orden de las etiquetas.')
+      window.dispatchEvent(new Event('oanix:workspace-refresh'))
+    }
+  }
+
+  async function handleV2NoteOrder(noteIds: string[]) {
+    if (noteIds.length === 0 || hasSearchQuery) return
+    try {
+      const persisted = await persistNoteOrder(noteIds)
+      const manualOrderById = new Map(persisted.map((note) => [note.id, note.manualOrder]))
+      setNotes((current) => current
+        .map((note) => manualOrderById.has(note.id)
+          ? { ...note, manualOrder: manualOrderById.get(note.id) }
+          : note)
+        .sort(compareNotesForList))
+      window.dispatchEvent(new CustomEvent('oanix:local-data-changed', {
+        detail: { recordType: 'note' },
+      }))
+    } catch {
+      setError('No se pudo guardar el nuevo orden de las notas.')
+      window.dispatchEvent(new Event('oanix:workspace-refresh'))
+    }
+  }
+
   function scrollFolderTabs(direction: 'left' | 'right') {
     const tabs = folderTabsRef.current
     if (!tabs) return
@@ -1238,7 +1288,54 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
   }
 
   return (
-    <main className={`notes-shell${selectedNote ? ' notes-shell--open' : ''}${hasSearchQuery ? ' notes-shell--searching' : ''}`}>
+    <main className={`notes-shell${WORKSPACE_V2_ENABLED ? ' oanix-workspace-v2-shell' : ''}${selectedNote ? ' notes-shell--open' : ''}${hasSearchQuery ? ' notes-shell--searching' : ''}`}>
+      {WORKSPACE_V2_ENABLED ? (
+        <WorkspaceV2Sidebar
+          folders={folders}
+          tags={tags}
+          notes={notes}
+          visibleNotes={visibleNotes}
+          loading={loading}
+          creating={creating}
+          deletingId={deletingId}
+          error={error}
+          selectedId={selectedId}
+          activeFolderId={activeFolderId}
+          activeTagId={activeTagId}
+          searchOpen={searchOpen}
+          searchQuery={searchQuery}
+          searchInputRef={searchInputRef}
+          workspaceMenuOpen={workspaceMenuOpen}
+          backupBusy={backupBusy}
+          onSearchToggle={() => void handleToggleSearch()}
+          onSearchQueryChange={setSearchQuery}
+          onClearSearch={() => {
+            setSearchQuery('')
+            window.requestAnimationFrame(() => searchInputRef.current?.focus())
+          }}
+          onLock={() => void handleLockWorkspace()}
+          onWorkspaceMenuToggle={() => setWorkspaceMenuOpen((open) => !open)}
+          onOpenFolderManager={() => {
+            setWorkspaceMenuOpen(false)
+            setFolderManagerOpen(true)
+          }}
+          onOpenTagManager={() => {
+            setWorkspaceMenuOpen(false)
+            setTagManagerOpen(true)
+          }}
+          onExportBackup={() => void handleExportBackup()}
+          onSelectFolder={handleSelectFolder}
+          onSelectTag={(tagId) => void handleSelectTag(tagId)}
+          onCreateNote={() => void handleCreateNote()}
+          onSelectNote={(noteId) => void handleSelectNote(noteId)}
+          onTogglePinned={(note) => void handleTogglePinned(note)}
+          onOpenTagEditor={openTagEditor}
+          onDeleteNote={(note) => void handleDeleteNote(note)}
+          onFolderOrder={(ids) => void handleV2FolderOrder(ids)}
+          onTagOrder={(ids) => void handleV2TagOrder(ids)}
+          onNoteOrder={(ids) => void handleV2NoteOrder(ids)}
+        />
+      ) : (
       <aside className="notes-sidebar" aria-label="Lista de notas">
         <header className="notes-header">
           <div className="notes-brand">
@@ -1621,6 +1718,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
           </button>
         )}
       </aside>
+      )}
 
       <section className="note-view" aria-label="Nota abierta">
         {selectedNote ? (
