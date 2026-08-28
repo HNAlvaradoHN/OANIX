@@ -7,6 +7,7 @@ const feedbackRuntime = readFileSync('src/features/folders/FolderOperationFeedba
 const feedbackCss = readFileSync('src/features/folders/folderOperationFeedback.css', 'utf8')
 const gate = readFileSync('src/app/WorkspaceRuntimeGate.tsx', 'utf8')
 const legacyGate = readFileSync('src/app/LegacyWorkspaceRuntimeGate.tsx', 'utf8')
+const visualRuntime = readFileSync('src/features/notes/V383WorkspaceVisualRuntime.tsx', 'utf8')
 const main = readFileSync('src/main.tsx', 'utf8')
 
 test('compact note rows reserve separate icon, text and metadata zones', () => {
@@ -15,7 +16,7 @@ test('compact note rows reserve separate icon, text and metadata zones', () => {
   assert.match(compactContract, /place-items:\s*center !important/)
   assert.match(compactContract, /transform:\s*translateY\(-1px\) !important/)
   assert.ok(!main.includes("features/notes/compactNoteContract.css"))
-  assert.ok(legacyGate.includes("import '../features/notes/compactNoteContract.css'"))
+  assert.ok(visualRuntime.includes("import './compactNoteContract.css'"))
   assert.ok(!main.includes('compactNotePolish.css'))
 })
 
