@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import './v383WorkspaceVisual.css'
+import './workspaceStateContract.css'
 
 /**
  * Final visual contract marker for the unlocked notes workspace.
