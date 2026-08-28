@@ -77,4 +77,4 @@ jobs:
           test "$(wc -c < /tmp/oanix.css)" -gt 10000
           test "$(wc -c < /tmp/oanix.js)" -gt 10000
           grep -q '.vault-shell' /tmp/oanix.css
-          grep -q 'oanix-v383-visual' /tmp/oanix.js
+          grep -q '.oanix-workspace-v2' /tmp/oanix.css
