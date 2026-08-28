@@ -30,6 +30,7 @@ import {
 import { searchItemsByLocalFields, type LocalSearchField } from '../search/localSearch'
 import { prepareDailyEntriesForEditing } from './dailyEntries'
 import { WORKSPACE_V2_ENABLED } from '../../app/workspaceExperience'
+import { OanixIcon } from '../../shared/OanixIcon'
 import { NoteAvatar } from './NoteAvatar'
 import { WorkspaceV2Sidebar } from './WorkspaceV2Sidebar'
 import {
@@ -1847,7 +1848,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
                 aria-label="Volver a la lista de notas"
                 title="Volver"
               >
-                ←
+                <OanixIcon name="back" size={20} />
               </button>
               <div className="note-view__identity">
                 <NoteAvatar note={selectedNote} className="note-view__avatar" />
@@ -1868,7 +1869,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
                   title="Acciones de la nota"
                   onClick={() => setActiveNoteMenuOpen((open) => !open)}
                 >
-                  ⋮
+                  <OanixIcon name="menu" />
                 </button>
                 {activeNoteMenuOpen && (
                   <div className="note-view__menu" role="menu" aria-label="Acciones de la nota">
@@ -1877,14 +1878,14 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
                       role="menuitem"
                       onClick={() => void handleTogglePinned(selectedNote)}
                     >
-                      <span aria-hidden="true">📌</span> {selectedNote.pinned === true ? 'Desfijar nota' : 'Fijar nota'}
+                      <OanixIcon name="pin" /> {selectedNote.pinned === true ? 'Desfijar nota' : 'Fijar nota'}
                     </button>
                     <button
                       type="button"
                       role="menuitem"
                       onClick={() => openTagEditor(selectedNote)}
                     >
-                      <span aria-hidden="true">🏷</span> Etiquetas
+                      <OanixIcon name="tag" /> Etiquetas
                     </button>
                     <button
                       type="button"
@@ -1894,7 +1895,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
                         setMoveNoteId(selectedNote.id)
                       }}
                     >
-                      <span aria-hidden="true">📁</span> Mover a carpeta
+                      <OanixIcon name="folder" /> Mover a carpeta
                     </button>
                     <button
                       type="button"
@@ -1904,7 +1905,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
                         setNoteInfoOpen(true)
                       }}
                     >
-                      <span aria-hidden="true">ⓘ</span> Información
+                      <OanixIcon name="shield" /> Información y privacidad
                     </button>
                     <button
                       className="note-view__menu-danger"
@@ -1916,7 +1917,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
                         void handleDeleteNote(selectedNote)
                       }}
                     >
-                      <span aria-hidden="true">🗑</span> {deletingSelected ? 'Eliminando…' : 'Eliminar nota'}
+                      <OanixIcon name="trash" /> {deletingSelected ? 'Eliminando…' : 'Eliminar nota'}
                     </button>
                   </div>
                 )}
