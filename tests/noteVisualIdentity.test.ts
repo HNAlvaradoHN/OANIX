@@ -4,7 +4,6 @@ import test from 'node:test'
 
 const runtime = readFileSync('src/features/notes/NoteVisualIdentityRuntime.tsx', 'utf8')
 const personalization = readFileSync('src/features/notes/WorkspacePersonalizationRuntime.tsx', 'utf8')
-const gate = readFileSync('src/app/WorkspaceRuntimeGate.tsx', 'utf8')
 const legacyGate = readFileSync('src/app/LegacyWorkspaceRuntimeGate.tsx', 'utf8')
 
 test('fallback visual de nota es estable por id y no por indice DOM', () => {
