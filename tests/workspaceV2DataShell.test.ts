@@ -77,6 +77,20 @@ test('workspace v2 desktop timeline owns the exact center axis and compact card 
   assert.match(css, /note-row:nth-child\(even\)[\s\S]*margin-right: auto !important/)
 })
 
+test('workspace v2 responsive geometry overrides desktop half-columns on phones and tablets', () => {
+  assert.match(css, /@media \(min-width: 821px\)[\s\S]*oanix-workspace-v2__timeline[\s\S]*left: 50%[\s\S]*transform: translateX\(-50%\)/)
+  assert.match(css, /@media \(max-width: 820px\)[\s\S]*oanix-workspace-v2__timeline-item\.note-row,[\s\S]*nth-child\(even\)[\s\S]*left: 0 !important[\s\S]*width: 100% !important/)
+  assert.match(css, /@media \(max-width: 820px\)[\s\S]*oanix-workspace-v2__note-card\.note-row__open[\s\S]*width: 100% !important[\s\S]*max-width: none !important/)
+  assert.match(css, /@media \(max-width: 820px\)[\s\S]*grid-template-columns: repeat\(6, minmax\(0, 1fr\)\)/)
+  assert.match(css, /@media \(max-width: 480px\)[\s\S]*oanix-workspace-v2__folder-shape[\s\S]*width: 2\.55rem[\s\S]*height: 2\.55rem/)
+})
+
+test('workspace v2 reduces timeline spacing instead of wasting vertical viewport', () => {
+  assert.match(css, /@media \(min-width: 821px\)[\s\S]*padding: clamp\(\.26rem, \.62vh, \.38rem\)/)
+  assert.match(css, /@media \(max-width: 820px\)[\s\S]*padding: \.28rem \.1rem \.28rem 1\.62rem !important/)
+  assert.match(css, /oanix-workspace-v2__note-description[\s\S]*-webkit-line-clamp: 1/)
+})
+
 test('workspace v2 custom note colors choose readable ink by contrast rather than a fixed threshold', () => {
   assert.match(source, /contrastFor\(color, themeId\)/)
   assert.match(source, /const tintAlpha = night \? 0\.5 : 0\.42/)
