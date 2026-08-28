@@ -6,13 +6,16 @@ test('synchronized vault restore exposes a visible moving progress bar while clo
   const progressCss = readFileSync('src/styles/vaultCloudProgress.css', 'utf8')
   const gateSource = readFileSync('src/app/VaultGate.tsx', 'utf8')
   const mainSource = readFileSync('src/main.tsx', 'utf8')
+  const authoritySource = readFileSync('src/app/VaultVisualStyles.ts', 'utf8')
 
   assert.match(gateSource, /id="cloud-master-password"/)
   assert.match(gateSource, /disabled=\{busy \|\| restoreBusy \|\| cloudBusy\}/)
   assert.match(progressCss, /:has\(#cloud-master-password:disabled\)/)
   assert.match(progressCss, /oanixCloudProgressSweep/)
   assert.match(progressCss, /prefers-reduced-motion/)
-  assert.match(mainSource, /vaultCloudProgress\.css/)
+  assert.doesNotMatch(mainSource, /styles\/vaultCloudProgress\.css/)
+  assert.match(mainSource, /app\/VaultVisualStyles/)
+  assert.match(authoritySource, /vaultCloudProgress\.css/)
 })
 
 test('tablet and desktop keep the compact note card geometry instead of reviving the centered V383 tab', () => {
