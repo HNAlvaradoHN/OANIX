@@ -17,6 +17,7 @@ import {
   saveFolderCover,
 } from '../folders/folderCoverService'
 import type { FolderRecord } from '../folders/folderTypes'
+import { OanixIcon } from '../../shared/OanixIcon'
 
 interface WorkspaceV2FolderActionsProps {
   folder: FolderRecord
@@ -144,15 +145,14 @@ export function WorkspaceV2FolderActions({
         aria-label={`Opciones de ${folder.name}`}
         onPointerDown={(event) => event.stopPropagation()}
       >
-        <header>
+        <header className="oanix-workspace-v2__folder-actions-header">
           <div>
             <span>CARPETA</span>
             <strong>{folder.name}</strong>
           </div>
-          <button type="button" onClick={onClose} disabled={busy} aria-label="Cerrar">×</button>
         </header>
 
-        <div className="oanix-workspace-v2__folder-preview">
+        {mode !== 'menu' && <div className="oanix-workspace-v2__folder-preview">
           <span
             className="oanix-workspace-v2__folder-preview-shape"
             style={{ '--v2-folder-color': draftColor } as CSSProperties}
@@ -162,24 +162,40 @@ export function WorkspaceV2FolderActions({
           <div>
             <strong>{name || folder.name}</strong>
             <small>
-              {flags?.pinned ? '📌 Fijada · ' : ''}
-              {flags?.favorite ? '⭐ Favorita' : 'Privada y cifrada'}
+              {flags?.pinned ? 'Fijada · ' : ''}
+              {flags?.favorite ? 'Favorita' : 'Privada y cifrada'}
             </small>
           </div>
-        </div>
+        </div>}
 
         {mode === 'menu' && (
-          <div className="oanix-workspace-v2__folder-action-grid">
+          <div className="oanix-workspace-v2__folder-action-list">
             <button type="button" onClick={() => void togglePinned()} disabled={busy}>
-              {flags?.pinned ? '📌 Desfijar' : '📌 Fijar'}
+              <OanixIcon name="pin" />
+              <span>{flags?.pinned ? 'Desfijar' : 'Fijar'}</span>
             </button>
             <button type="button" onClick={() => void toggleFavorite()} disabled={busy}>
-              {flags?.favorite ? '★ Quitar favorita' : '☆ Favorita'}
+              <OanixIcon name="star" />
+              <span>{flags?.favorite ? 'Quitar de favoritas' : 'Favorita'}</span>
             </button>
-            <button type="button" onClick={() => setMode('rename')} disabled={busy}>✎ Renombrar</button>
-            <button type="button" onClick={() => setMode('appearance')} disabled={busy}>🎨 Color / icono</button>
-            <button type="button" onClick={() => coverInputRef.current?.click()} disabled={busy}>🖼 {cover ? 'Cambiar imagen' : 'Poner imagen'}</button>
-            {cover && <button type="button" onClick={() => void clearCover()} disabled={busy}>⌫ Quitar imagen</button>}
+            <button type="button" onClick={() => setMode('rename')} disabled={busy}>
+              <OanixIcon name="edit" />
+              <span>Renombrar</span>
+            </button>
+            <button type="button" onClick={() => setMode('appearance')} disabled={busy}>
+              <OanixIcon name="palette" />
+              <span>Personalizar</span>
+            </button>
+            <button type="button" onClick={() => coverInputRef.current?.click()} disabled={busy}>
+              <OanixIcon name="image" />
+              <span>{cover ? 'Cambiar imagen' : 'Poner imagen'}</span>
+            </button>
+            {cover && (
+              <button type="button" onClick={() => void clearCover()} disabled={busy}>
+                <OanixIcon name="imageOff" />
+                <span>Quitar imagen</span>
+              </button>
+            )}
             <button
               type="button"
               className="is-danger"
@@ -189,7 +205,12 @@ export function WorkspaceV2FolderActions({
               })}
               disabled={busy}
             >
-              🗑 Eliminar carpeta
+              <OanixIcon name="trash" />
+              <span>Eliminar carpeta</span>
+            </button>
+            <button type="button" className="is-cancel" onClick={onClose} disabled={busy}>
+              <OanixIcon name="close" />
+              <span>Cancelar</span>
             </button>
           </div>
         )}
