@@ -39,3 +39,11 @@ test('workspace v2 folder menu does not reintroduce the redundant open-folder ac
   assert.doesNotMatch(actions, /Abrir carpeta/)
   assert.doesNotMatch(actions, /onOpen/)
 })
+
+
+test('successful folder appearance actions close the focused menu instead of leaving stale UI open', () => {
+  assert.match(actions, /saveAppearance\(\)[\s\S]*saveFolderColor[\s\S]*onClose\(\)/)
+  assert.match(actions, /togglePinned\(\)[\s\S]*saveFolderPinned[\s\S]*onClose\(\)/)
+  assert.match(actions, /toggleFavorite\(\)[\s\S]*saveFolderFavorite[\s\S]*onClose\(\)/)
+  assert.match(actions, /applyCover\(file: File \| null\)[\s\S]*saveFolderCover[\s\S]*onClose\(\)/)
+})
