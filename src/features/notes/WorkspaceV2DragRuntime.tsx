@@ -67,7 +67,7 @@ function clickSuppressed(root: HTMLElement): boolean {
 }
 
 export function workspaceV2ClickSuppressed(root: HTMLElement | null): boolean {
-  return root ? clickSuppressed(activeRoot) : false
+  return root ? clickSuppressed(root) : false
 }
 
 export function WorkspaceV2DragRuntime({
@@ -78,8 +78,9 @@ export function WorkspaceV2DragRuntime({
   disabled = false,
 }: WorkspaceV2DragRuntimeProps) {
   useEffect(() => {
-    const activeRoot = rootRef.current
-    if (!activeRoot || disabled) return
+    const candidateRoot = rootRef.current
+    if (!candidateRoot || disabled) return
+    const activeRoot: HTMLElement = candidateRoot
 
     let gesture: ActiveGesture | null = null
 
