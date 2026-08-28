@@ -6,6 +6,7 @@ import {
   type CSSProperties,
   type RefObject,
 } from 'react'
+import { createPortal } from 'react-dom'
 import {
   DEFAULT_FOLDER_COLOR,
   DEFAULT_FOLDER_ICON,
@@ -19,6 +20,12 @@ import {
 } from '../folders/folderAppearanceService'
 import { loadFolderCovers } from '../folders/folderCoverService'
 import type { FolderRecord } from '../folders/folderTypes'
+import {
+  applyOanixTheme,
+  readSavedOanixTheme,
+  type OanixThemePreset,
+} from '../personalization/themeCatalog'
+import { OanixIcon } from '../../shared/OanixIcon'
 import {
   DEFAULT_TAG_COLOR,
   DEFAULT_TAG_ICON,
@@ -157,6 +164,7 @@ export function WorkspaceV2Sidebar({
   const [folderFlags, setFolderFlags] = useState(new Map<string, FolderAppearanceFlags>())
   const [folderActionsId, setFolderActionsId] = useState<string | null>(null)
   const [noteCustomizerId, setNoteCustomizerId] = useState<string | null>(null)
+  const [themeId, setThemeId] = useState<OanixThemePreset['id']>(() => readSavedOanixTheme())
 
   useEffect(() => {
     let disposed = false
@@ -203,6 +211,15 @@ export function WorkspaceV2Sidebar({
     }
   }, [])
 
+  useEffect(() => {
+    const handleThemeChange = (event: Event) => {
+      const detail = event instanceof CustomEvent ? event.detail : null
+      if (detail === 'classic-day' || detail === 'classic-night') setThemeId(detail)
+    }
+    window.addEventListener('oanix:theme-change', handleThemeChange)
+    return () => window.removeEventListener('oanix:theme-change', handleThemeChange)
+  }, [])
+
   const noteCountByFolder = useMemo(() => {
     const counts = new Map<string, number>()
     for (const note of notes) {
@@ -216,6 +233,15 @@ export function WorkspaceV2Sidebar({
     ? 'Todas las notas'
     : folders.find((folder) => folder.id === activeFolderId)?.name ?? 'Notas'
 
+  const activeFolderCover = activeFolderId === 'all'
+    ? ''
+    : folderCovers.get(activeFolderId) ?? ''
+
+  function toggleTheme() {
+    const nextTheme = themeId === 'classic-night' ? 'classic-day' : 'classic-night'
+    setThemeId(applyOanixTheme(nextTheme))
+  }
+
   const activeTag = activeTagId === 'all'
     ? null
     : tags.find((tag) => tag.id === activeTagId) ?? null
@@ -228,10 +254,18 @@ export function WorkspaceV2Sidebar({
   return (
     <aside
       ref={rootRef}
-      className="notes-sidebar oanix-workspace-v2"
+      className={`notes-sidebar oanix-workspace-v2${activeFolderCover ? ' has-wallpaper' : ''}`}
       aria-label="Lista de notas"
       data-oanix-workspace-v2="true"
     >
+      {activeFolderCover && (
+        <span
+          className="oanix-workspace-v2__wallpaper"
+          style={{ backgroundImage: `url(${JSON.stringify(activeFolderCover)})` }}
+          aria-hidden="true"
+        />
+      )}
+
       <WorkspaceV2DragRuntime
         rootRef={rootRef}
         disabled={searchOpen}
@@ -258,7 +292,7 @@ export function WorkspaceV2Sidebar({
             title={searchOpen ? 'Cerrar búsqueda' : 'Buscar'}
             data-v2-drag-ignore="true"
           >
-            ⌕
+            <OanixIcon name="search" />
           </button>
           <button
             className="icon-button"
@@ -268,7 +302,7 @@ export function WorkspaceV2Sidebar({
             title="Bloquear OANIX"
             data-v2-drag-ignore="true"
           >
-            ◈
+            <OanixIcon name="lock" />
           </button>
           <div className="workspace-menu-wrap">
             <button
@@ -280,20 +314,43 @@ export function WorkspaceV2Sidebar({
               aria-expanded={workspaceMenuOpen}
               data-v2-drag-ignore="true"
             >
-              ⋮
+              <OanixIcon name="menu" />
             </button>
-            {workspaceMenuOpen && (
-              <div className="workspace-menu" role="menu" aria-label="Acciones de OANIX">
-                <button type="button" role="menuitem" onClick={onOpenFolderManager}>📁 Administrar carpetas</button>
-                <button type="button" role="menuitem" onClick={onOpenTagManager}>🏷 Administrar etiquetas</button>
-                <button type="button" role="menuitem" disabled={backupBusy} onClick={onExportBackup}>
-                  🛡 {backupBusy ? 'Creando backup…' : 'Exportar backup cifrado'}
-                </button>
-              </div>
-            )}
           </div>
         </div>
       </header>
+
+      {workspaceMenuOpen && createPortal(
+        <div
+          className="oanix-workspace-v2__menu-backdrop"
+          role="presentation"
+          onPointerDown={(event) => {
+            if (event.target === event.currentTarget) onWorkspaceMenuToggle()
+          }}
+        >
+          <div
+            className="workspace-menu oanix-workspace-v2__focus-menu"
+            role="menu"
+            aria-label="Acciones de OANIX"
+            onPointerDown={(event) => event.stopPropagation()}
+          >
+            <strong>OANIX</strong>
+            <button type="button" role="menuitem" onClick={onOpenFolderManager}>
+              <OanixIcon name="folder" /> Administrar carpetas
+            </button>
+            <button type="button" role="menuitem" onClick={onOpenTagManager}>
+              <OanixIcon name="tag" /> Administrar etiquetas
+            </button>
+            <button type="button" role="menuitem" disabled={backupBusy} onClick={onExportBackup}>
+              <OanixIcon name="backup" /> {backupBusy ? 'Creando backup…' : 'Exportar backup cifrado'}
+            </button>
+            <button type="button" role="menuitem" onClick={onWorkspaceMenuToggle}>
+              <OanixIcon name="close" /> Cerrar
+            </button>
+          </div>
+        </div>,
+        document.body,
+      )}
 
       {searchOpen && (
         <div className="notes-search oanix-workspace-v2__search" role="search">
@@ -424,9 +481,10 @@ export function WorkspaceV2Sidebar({
                           onTogglePinned(note)
                         }}
                         title={note.pinned ? 'Desfijar' : 'Fijar'}
+                        aria-label={note.pinned ? 'Desfijar nota' : 'Fijar nota'}
                         data-v2-drag-ignore="true"
                       >
-                        {note.pinned ? '📌' : '⌁'}
+                        <OanixIcon name="pin" />
                       </button>
                       <button
                         type="button"
@@ -435,9 +493,10 @@ export function WorkspaceV2Sidebar({
                           onOpenTagEditor(note)
                         }}
                         title="Etiquetas"
+                        aria-label="Editar etiquetas"
                         data-v2-drag-ignore="true"
                       >
-                        🏷
+                        <OanixIcon name="tag" />
                       </button>
                       <button
                         type="button"
@@ -446,9 +505,10 @@ export function WorkspaceV2Sidebar({
                           onOpenMoveNote(note)
                         }}
                         title="Mover a carpeta"
+                        aria-label="Mover a carpeta"
                         data-v2-drag-ignore="true"
                       >
-                        📁
+                        <OanixIcon name="folder" />
                       </button>
                       <button
                         type="button"
@@ -457,9 +517,10 @@ export function WorkspaceV2Sidebar({
                           setNoteCustomizerId(note.id)
                         }}
                         title="Personalizar tarjeta"
+                        aria-label="Personalizar tarjeta"
                         data-v2-drag-ignore="true"
                       >
-                        🎨
+                        <OanixIcon name="palette" />
                       </button>
                       <button
                         type="button"
@@ -470,9 +531,10 @@ export function WorkspaceV2Sidebar({
                           }))
                         }}
                         title="Privacidad"
+                        aria-label="Privacidad de la nota"
                         data-v2-drag-ignore="true"
                       >
-                        🔐
+                        <OanixIcon name="shield" />
                       </button>
                       <button
                         type="button"
@@ -483,9 +545,10 @@ export function WorkspaceV2Sidebar({
                           onDeleteNote(note)
                         }}
                         title="Eliminar"
+                        aria-label="Eliminar nota"
                         data-v2-drag-ignore="true"
                       >
-                        {deletingId === note.id ? '…' : '⌫'}
+                        {deletingId === note.id ? '…' : <OanixIcon name="trash" />}
                       </button>
                     </div>
                   </div>
@@ -509,18 +572,20 @@ export function WorkspaceV2Sidebar({
       </button>
 
       <footer className="oanix-workspace-v2__folder-dock" aria-label="Carpetas">
-        <div className="oanix-workspace-v2__folder-scroll" data-v2-scroll-kind="folder">
-          <button
-            type="button"
-            className={`oanix-workspace-v2__folder${activeFolderId === 'all' ? ' is-active' : ''}`}
-            onClick={() => onSelectFolder('all')}
-            data-v2-drag-ignore="true"
-          >
-            <span className="oanix-workspace-v2__folder-shape">▦</span>
-            <strong>Todas</strong>
-            <small>{notes.length}</small>
-          </button>
+        <button
+          type="button"
+          className={`oanix-workspace-v2__folder oanix-workspace-v2__folder--all${activeFolderId === 'all' ? ' is-active' : ''}`}
+          onClick={() => onSelectFolder('all')}
+          aria-label={`Todas las notas, ${notes.length}`}
+          title="Todas las notas"
+          data-v2-drag-ignore="true"
+        >
+          <span className="oanix-workspace-v2__folder-shape"><OanixIcon name="grid" size={20} /></span>
+          <strong>Todas</strong>
+          <small>{notes.length}</small>
+        </button>
 
+        <div className="oanix-workspace-v2__folder-scroll" data-v2-scroll-kind="folder">
           {folders.map((folder) => {
             const color = folderColors.get(folder.id) ?? DEFAULT_FOLDER_COLOR
             const icon = folderIcons.get(folder.id) ?? DEFAULT_FOLDER_ICON
@@ -560,21 +625,33 @@ export function WorkspaceV2Sidebar({
                   title="Opciones de carpeta"
                   data-v2-drag-ignore="true"
                 >
-                  ⚙
+                  <OanixIcon name="sliders" size={14} />
                 </button>
               </div>
             )
           })}
+        </div>
 
+        <div className="oanix-workspace-v2__dock-actions" aria-label="Controles del espacio">
           <button
             type="button"
-            className="oanix-workspace-v2__folder oanix-workspace-v2__folder--add"
-            onClick={onOpenFolderManager}
-            aria-label="Crear o administrar carpetas"
+            className="oanix-workspace-v2__dock-action"
+            onClick={toggleTheme}
+            aria-label={themeId === 'classic-night' ? 'Cambiar a modo día' : 'Cambiar a modo noche'}
+            title={themeId === 'classic-night' ? 'Modo día' : 'Modo noche'}
             data-v2-drag-ignore="true"
           >
-            <span className="oanix-workspace-v2__folder-shape">＋</span>
-            <strong>Nueva</strong>
+            <OanixIcon name={themeId === 'classic-night' ? 'sun' : 'moon'} size={20} />
+          </button>
+          <button
+            type="button"
+            className="oanix-workspace-v2__dock-action oanix-workspace-v2__dock-action--add"
+            onClick={onOpenFolderManager}
+            aria-label="Agregar carpeta"
+            title="Agregar carpeta"
+            data-v2-drag-ignore="true"
+          >
+            <OanixIcon name="plus" size={21} />
           </button>
         </div>
       </footer>

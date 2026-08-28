@@ -30,6 +30,7 @@ import {
   type AutoLockMinutes,
 } from '../security/session/autoLockPolicy'
 import { lockLocalVault } from '../security/vault/vaultService'
+import { OanixIcon } from '../shared/OanixIcon'
 
 type OanixUpdateWindow = Window & {
   __oanixApplyUpdate?: () => Promise<void>
@@ -108,7 +109,7 @@ function UnlockedApp({ lockVault }: { lockVault: () => void }) {
           aria-label="Cuenta de OANIX"
           title="Cuenta de OANIX"
         >
-          👤
+          <OanixIcon name="user" />
         </button>,
         accountHost,
       )}

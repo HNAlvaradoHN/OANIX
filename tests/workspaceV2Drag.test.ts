@@ -38,8 +38,10 @@ test('workspace v2 note drag cannot cross pinned and unpinned groups', () => {
 })
 
 test('workspace v2 drag owns coarse-pointer scrolling without native gesture cancellation', () => {
-  assert.match(drag, /gesture\.container\.scrollTop = gesture\.startScroll - dy/)
-  assert.match(drag, /gesture\.container\.scrollLeft = gesture\.startScroll - dx/)
+  assert.match(drag, /item\.closest<HTMLElement>\(\`\[data-v2-scroll-kind="/)
+  assert.match(drag, /gesture\.scrollContainer\.scrollTop = gesture\.startScroll - dy/)
+  assert.match(drag, /gesture\.scrollContainer\.scrollLeft = gesture\.startScroll - dx/)
+  assert.match(drag, /startMomentumScroll/)
   assert.match(drag, /gesture\.item\.setPointerCapture\(gesture\.pointerId\)/)
   assert.match(drag, /activeRoot\.addEventListener\('contextmenu', blockNativeLongPress, true\)/)
   assert.match(drag, /activeRoot\.addEventListener\('selectstart', blockNativeLongPress, true\)/)

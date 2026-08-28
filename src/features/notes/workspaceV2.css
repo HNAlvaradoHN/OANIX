@@ -1334,3 +1334,416 @@ body.oanix-v2-note-dragging {
       rgba(15, 23, 42, .58);
   }
 }
+
+
+/* Workspace V2 liquid glass/navigation pass.
+   Keep expensive blur on a few major surfaces only; cards on coarse pointers
+   retain the lightweight no-backdrop-filter path defined above. */
+.oanix-workspace-v2 {
+  --v2-glass-fill: rgba(255, 255, 255, .34);
+  --v2-glass-fill-strong: rgba(255, 255, 255, .5);
+  --v2-glass-edge: rgba(255, 255, 255, .58);
+  --v2-glass-shadow: 0 18px 50px rgba(15, 23, 42, .14);
+}
+
+[data-oanix-theme="classic-night"] .oanix-workspace-v2,
+[data-oanix-theme="midnight-violet"] .oanix-workspace-v2 {
+  --v2-glass-fill: rgba(15, 23, 42, .38);
+  --v2-glass-fill-strong: rgba(15, 23, 42, .54);
+  --v2-glass-edge: rgba(255, 255, 255, .13);
+  --v2-glass-shadow: 0 20px 54px rgba(0, 0, 0, .34);
+}
+
+.oanix-workspace-v2__wallpaper {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  opacity: .72;
+  pointer-events: none;
+}
+
+.oanix-workspace-v2.has-wallpaper::before {
+  z-index: -1;
+  background:
+    linear-gradient(180deg, rgba(7, 12, 24, .18), rgba(7, 12, 24, .34)),
+    radial-gradient(circle at 50% 30%, rgba(255,255,255,.05), transparent 48%);
+}
+
+[data-oanix-theme="classic-day"] .oanix-workspace-v2.has-wallpaper::before {
+  background:
+    linear-gradient(180deg, rgba(238, 244, 251, .22), rgba(223, 232, 243, .42)),
+    radial-gradient(circle at 50% 30%, rgba(255,255,255,.18), transparent 48%);
+}
+
+.oanix-workspace-v2.has-wallpaper .oanix-workspace-v2__header,
+.oanix-workspace-v2.has-wallpaper .oanix-workspace-v2__folder-dock {
+  background: var(--v2-glass-fill);
+  border-color: var(--v2-glass-edge);
+}
+
+.oanix-workspace-v2.has-wallpaper .oanix-workspace-v2__search,
+.oanix-workspace-v2.has-wallpaper .oanix-workspace-v2__chip {
+  background: var(--v2-glass-fill-strong);
+}
+
+/* Legacy .note-row rules load after the V2 component CSS. Reassert the
+   timeline geometry with stronger selectors so desktop cards remain centered. */
+.oanix-workspace-v2 .oanix-workspace-v2__timeline {
+  width: min(100%, 64rem);
+  margin-inline: auto;
+}
+
+.oanix-workspace-v2 .oanix-workspace-v2__timeline-item.note-row {
+  left: 0;
+  width: 50%;
+  padding: .62rem 1.85rem .62rem .2rem;
+  text-align: right;
+}
+
+.oanix-workspace-v2 .oanix-workspace-v2__timeline-item.note-row:nth-child(even) {
+  left: 50%;
+  width: 50%;
+  padding: .62rem .2rem .62rem 1.85rem;
+  text-align: left;
+}
+
+.oanix-workspace-v2__header-actions .icon-button {
+  border: 1px solid transparent;
+  border-radius: .82rem;
+}
+
+.oanix-workspace-v2__header-actions .icon-button:hover,
+.oanix-workspace-v2__header-actions .icon-button:focus-visible,
+.oanix-workspace-v2__header-actions .icon-button[aria-expanded="true"] {
+  border-color: var(--v2-glass-edge);
+  background: var(--v2-glass-fill-strong);
+  box-shadow: 0 7px 20px rgba(15,23,42,.1);
+}
+
+.oanix-workspace-v2__note-actions button svg,
+.oanix-workspace-v2__header-actions svg,
+.oanix-workspace-v2__folder-gear svg,
+.oanix-workspace-v2__dock-action svg {
+  display: block;
+}
+
+/* Fixed mother folder + scrollable user folders + fixed utility controls. */
+.oanix-workspace-v2__folder-dock {
+  display: grid;
+  grid-template-columns: 4.65rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .48rem;
+  padding: .5rem .58rem .44rem;
+  background: var(--v2-glass-fill);
+  border-color: var(--v2-glass-edge);
+  box-shadow: var(--v2-glass-shadow);
+}
+
+.oanix-workspace-v2__folder-scroll {
+  min-width: 0;
+  overscroll-behavior-inline: contain;
+  scroll-behavior: auto;
+}
+
+.oanix-workspace-v2__folder--all {
+  align-self: stretch;
+  flex: none;
+  width: 4.65rem;
+  border-right: 1px solid color-mix(in srgb, var(--v2-border) 72%, transparent);
+  padding-right: .34rem;
+}
+
+.oanix-workspace-v2__folder--all .oanix-workspace-v2__folder-shape {
+  background:
+    linear-gradient(145deg, rgba(59,130,246,.34), rgba(29,78,216,.18)),
+    var(--v2-glass-fill-strong);
+  border-color: rgba(96,165,250,.4);
+  color: #60a5fa;
+}
+
+.oanix-workspace-v2__folder--all.is-active .oanix-workspace-v2__folder-shape {
+  color: #fff;
+  background: linear-gradient(145deg, #3b82f6, #1d4ed8);
+  box-shadow: 0 10px 25px rgba(37,99,235,.32);
+}
+
+.oanix-workspace-v2__dock-actions {
+  display: flex;
+  align-items: center;
+  gap: .38rem;
+  padding-left: .38rem;
+  border-left: 1px solid color-mix(in srgb, var(--v2-border) 72%, transparent);
+}
+
+.oanix-workspace-v2__dock-action {
+  width: 2.72rem;
+  height: 2.72rem;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 1px solid var(--v2-glass-edge);
+  border-radius: .92rem;
+  background: var(--v2-glass-fill-strong);
+  color: var(--v2-text);
+  box-shadow: 0 7px 18px rgba(15,23,42,.1), inset 0 1px 0 rgba(255,255,255,.3);
+  cursor: pointer;
+  transition: transform .16s ease, border-color .16s ease, background-color .16s ease;
+}
+
+.oanix-workspace-v2__dock-action--add {
+  border-color: rgba(96,165,250,.42);
+  background: linear-gradient(145deg, rgba(59,130,246,.88), rgba(29,78,216,.9));
+  color: #fff;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .oanix-workspace-v2__dock-action:hover {
+    transform: translateY(-2px);
+  }
+}
+
+/* Menus always own focus: portal to body, one blur layer, centered glass card. */
+.oanix-workspace-v2__menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 12000;
+  display: grid;
+  place-items: center;
+  padding: max(1rem, env(safe-area-inset-top)) 1rem max(1rem, env(safe-area-inset-bottom));
+  background: rgba(2, 6, 23, .5);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+}
+
+.workspace-menu.oanix-workspace-v2__focus-menu {
+  position: relative;
+  top: auto;
+  right: auto;
+  width: min(22rem, calc(100vw - 2rem));
+  display: grid;
+  gap: .32rem;
+  padding: .72rem;
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: 1.25rem;
+  background: color-mix(in srgb, var(--v2-surface-strong, rgba(15,23,42,.82)) 92%, transparent);
+  color: var(--v2-text, #f8fafc);
+  box-shadow: 0 28px 80px rgba(0,0,0,.38), inset 0 1px 0 rgba(255,255,255,.08);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+}
+
+.workspace-menu.oanix-workspace-v2__focus-menu > strong {
+  padding: .36rem .48rem .55rem;
+  font-size: .9rem;
+  letter-spacing: .01em;
+}
+
+.workspace-menu.oanix-workspace-v2__focus-menu button {
+  min-height: 3rem;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: .88rem;
+  background: rgba(255,255,255,.07);
+  color: inherit;
+}
+
+.workspace-menu.oanix-workspace-v2__focus-menu button:hover,
+.workspace-menu.oanix-workspace-v2__focus-menu button:focus-visible {
+  background: rgba(255,255,255,.13);
+}
+
+.workspace-menu.oanix-workspace-v2__focus-menu button svg {
+  flex: 0 0 auto;
+}
+
+/* Folder actions match the clean single-column menu language. */
+.oanix-workspace-v2__folder-actions {
+  width: min(24rem, 100%);
+}
+
+.oanix-workspace-v2__folder-actions-header {
+  padding: .12rem .08rem .18rem;
+}
+
+.oanix-workspace-v2__folder-action-list {
+  display: grid;
+  gap: .42rem;
+}
+
+.oanix-workspace-v2__folder-action-list button {
+  width: 100%;
+  min-height: 3rem;
+  display: grid;
+  grid-template-columns: 1.45rem minmax(0, 1fr);
+  align-items: center;
+  gap: .62rem;
+  padding: .62rem .78rem;
+  border: 1px solid var(--v2-border);
+  border-radius: .92rem;
+  background: rgba(255,255,255,.08);
+  color: var(--v2-text);
+  font: inherit;
+  font-size: .8rem;
+  font-weight: 820;
+  text-align: left;
+  cursor: pointer;
+}
+
+.oanix-workspace-v2__folder-action-list button svg {
+  justify-self: center;
+}
+
+.oanix-workspace-v2__folder-action-list button:hover,
+.oanix-workspace-v2__folder-action-list button:focus-visible {
+  background: rgba(255,255,255,.14);
+}
+
+.oanix-workspace-v2__folder-action-list button.is-danger {
+  border-color: rgba(239,68,68,.28);
+  color: #f87171;
+}
+
+.oanix-workspace-v2__folder-action-list button.is-cancel {
+  margin-top: .12rem;
+  color: var(--v2-muted);
+}
+
+.oanix-workspace-v2__modal-backdrop {
+  background: rgba(2, 6, 23, .5);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+}
+
+.oanix-workspace-v2__modal {
+  border-color: rgba(255,255,255,.14);
+  background: color-mix(in srgb, var(--v2-surface-strong) 92%, transparent);
+  box-shadow: 0 28px 80px rgba(0,0,0,.38), inset 0 1px 0 rgba(255,255,255,.08);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+}
+
+@media (max-width: 700px) {
+  .oanix-workspace-v2 .oanix-workspace-v2__timeline {
+    width: 100%;
+  }
+
+  .oanix-workspace-v2 .oanix-workspace-v2__timeline-item.note-row,
+  .oanix-workspace-v2 .oanix-workspace-v2__timeline-item.note-row:nth-child(even) {
+    left: 0;
+    width: 100%;
+    padding: .55rem .12rem .55rem 2rem;
+    text-align: left;
+  }
+
+  .oanix-workspace-v2__folder-dock {
+    grid-template-columns: 4.15rem minmax(0, 1fr) auto;
+    gap: .32rem;
+    padding-inline: .42rem;
+  }
+
+  .oanix-workspace-v2__folder--all {
+    width: 4.15rem;
+    padding-right: .18rem;
+  }
+
+  .oanix-workspace-v2__dock-actions {
+    gap: .28rem;
+    padding-left: .28rem;
+  }
+
+  .oanix-workspace-v2__dock-action {
+    width: 2.46rem;
+    height: 2.46rem;
+    border-radius: .82rem;
+  }
+
+  .oanix-workspace-v2__notes-scroll {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+@media (max-width: 430px) {
+  .oanix-workspace-v2__folder-dock {
+    grid-template-columns: 3.85rem minmax(0, 1fr) auto;
+  }
+
+  .oanix-workspace-v2__folder--all {
+    width: 3.85rem;
+  }
+
+  .oanix-workspace-v2__dock-action {
+    width: 2.3rem;
+    height: 2.3rem;
+  }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .oanix-workspace-v2__menu-backdrop,
+  .oanix-workspace-v2__modal-backdrop {
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+  }
+
+  .workspace-menu.oanix-workspace-v2__focus-menu,
+  .oanix-workspace-v2__modal {
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+  }
+}
+
+
+/* Workspace V2 follow-up fixes */
+.oanix-workspace-v2__folder--all > strong {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  font-size: .64rem;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.oanix-workspace-v2__folder--all > small {
+  display: grid;
+}
+
+.oanix-workspace-v2__header-actions > .icon-button[aria-label='Buscar en notas'],
+.oanix-workspace-v2__header-actions > .icon-button[aria-label='Cerrar búsqueda'] {
+  order: 1;
+}
+
+.oanix-workspace-v2__header-actions > .icon-button[aria-label='Bloquear OANIX'] {
+  order: 2;
+}
+
+.oanix-workspace-v2__header-actions > .version-history-launcher {
+  order: 3;
+}
+
+.oanix-workspace-v2__header-actions > .account-header-action {
+  order: 4;
+}
+
+.oanix-workspace-v2__header-actions > .workspace-menu-wrap {
+  order: 5;
+}
+
+html[data-oanix-theme='classic-day'] .workspace-menu.oanix-workspace-v2__focus-menu {
+  border-color: rgba(255,255,255,.62);
+  background: rgba(244, 248, 252, .82);
+  color: #172033;
+  box-shadow: 0 28px 80px rgba(15,23,42,.22), inset 0 1px 0 rgba(255,255,255,.86);
+}
+
+html[data-oanix-theme='classic-day'] .workspace-menu.oanix-workspace-v2__focus-menu button {
+  border-color: rgba(71,85,105,.11);
+  background: rgba(255,255,255,.5);
+}
+
+html[data-oanix-theme='classic-day'] .workspace-menu.oanix-workspace-v2__focus-menu button:hover,
+html[data-oanix-theme='classic-day'] .workspace-menu.oanix-workspace-v2__focus-menu button:focus-visible {
+  background: rgba(255,255,255,.82);
+}

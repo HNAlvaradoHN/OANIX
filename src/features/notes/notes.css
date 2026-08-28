@@ -764,3 +764,69 @@
   }
 }
 
+
+
+/* Workspace V2 editor navigation polish */
+.notes-shell.oanix-workspace-v2-shell .note-view__header {
+  background: color-mix(in srgb, var(--theme-surface, #0f172a) 78%, transparent);
+  border-bottom-color: color-mix(in srgb, var(--theme-border, rgba(148,163,184,.2)) 78%, transparent);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+}
+
+.notes-shell.oanix-workspace-v2-shell .back-button {
+  width: 2.7rem;
+  height: 2.7rem;
+  border: 1px solid color-mix(in srgb, var(--theme-border, rgba(148,163,184,.25)) 90%, transparent);
+  border-radius: .92rem;
+  background: color-mix(in srgb, var(--theme-surface-2, #1e293b) 72%, transparent);
+  color: var(--theme-text, #f8fafc);
+  box-shadow: 0 8px 22px rgba(15,23,42,.12), inset 0 1px 0 rgba(255,255,255,.08);
+  transition: transform .16s ease, background-color .16s ease, border-color .16s ease;
+}
+
+.notes-shell.oanix-workspace-v2-shell .back-button svg,
+.notes-shell.oanix-workspace-v2-shell .note-view__menu-button svg,
+.notes-shell.oanix-workspace-v2-shell .note-view__menu svg {
+  display: block;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .notes-shell.oanix-workspace-v2-shell .back-button:hover {
+    transform: translateX(-2px);
+    background: color-mix(in srgb, var(--theme-surface-hover, #334155) 82%, transparent);
+  }
+}
+
+.notes-shell.oanix-workspace-v2-shell .note-view__menu-button {
+  border: 1px solid transparent;
+  border-radius: .82rem;
+}
+
+.notes-shell.oanix-workspace-v2-shell .note-view__menu {
+  border-color: color-mix(in srgb, var(--theme-border, rgba(148,163,184,.22)) 82%, transparent);
+  background: color-mix(in srgb, var(--theme-surface, #0f172a) 88%, transparent);
+  color: var(--theme-text, #f8fafc);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+}
+
+.notes-shell.oanix-workspace-v2-shell .note-view__menu button {
+  color: inherit;
+}
+
+.notes-shell.oanix-workspace-v2-shell .note-view__menu button svg {
+  flex: 0 0 auto;
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .notes-shell.oanix-workspace-v2-shell .note-view__header {
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+  }
+
+  .notes-shell.oanix-workspace-v2-shell .note-view__menu {
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+  }
+}
