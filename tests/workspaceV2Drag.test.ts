@@ -52,3 +52,11 @@ test('workspace v2 action buttons can still scroll on touch without arming a dra
   assert.match(drag, /if \(dragBlocked && event\.pointerType === 'mouse'\) return/)
   assert.match(drag, /if \(!dragBlocked\) \{[\s\S]*window\.setTimeout\(beginDrag, LONG_PRESS_MS\[kind\]\)/)
 })
+
+test('workspace v2 reorder stays disabled while multi-select is active', () => {
+  assert.match(drag, /function bulkSelectionActive\(\): boolean/)
+  assert.match(drag, /classList\.contains\('oanix-note-bulk-selecting'\)/)
+  assert.match(drag, /gesture\.dragBlocked \|\| bulkSelectionActive\(\)/)
+  assert.match(drag, /const dragBlocked = bulkSelectionActive\(\) \|\| Boolean/)
+  assert.match(css, /html\.oanix-note-bulk-selecting \.oanix-workspace-v2__note-actions[\s\S]*pointer-events: none/)
+})
