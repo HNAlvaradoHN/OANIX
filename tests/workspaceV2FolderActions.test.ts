@@ -34,3 +34,8 @@ test('folder drag target and options button are separate controls', () => {
   assert.match(sidebar, /data-v2-drag-kind="folder"[\s\S]*className="oanix-workspace-v2__folder-main"/)
   assert.match(sidebar, /className="oanix-workspace-v2__folder-gear"[\s\S]*data-v2-drag-ignore="true"/)
 })
+
+test('workspace v2 folder menu does not reintroduce the redundant open-folder action', () => {
+  assert.doesNotMatch(actions, /Abrir carpeta/)
+  assert.doesNotMatch(actions, /onOpen/)
+})
