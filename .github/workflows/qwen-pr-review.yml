@@ -111,8 +111,8 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p qwen-artifacts
-          prompt="$(cat QWEN_REVIEW_PROMPT.txt)"
-          if ! qwen --yolo --prompt "$prompt" --channel=CI --output-format json \
+          if ! qwen --yolo --channel=CI --output-format json \
+            < QWEN_REVIEW_PROMPT.txt \
             > qwen-artifacts/stdout.log 2> qwen-artifacts/stderr.log; then
             echo "Qwen Code execution failed." >&2
             cat qwen-artifacts/stderr.log >&2
