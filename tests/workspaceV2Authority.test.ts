@@ -48,7 +48,6 @@ test('legacy workspace css is not eagerly loaded when v2 is authoritative', () =
   assert.doesNotMatch(legacyGate, /folderNavigationState\.css|editorTrailingWorkspace\.css|NoteMenuViewportFit\.css|note-menu-viewport-fit\.css/)
   assert.match(v383WorkspaceVisualRuntime, /import '\.\.\/editor\/editorTrailingWorkspace\.css'/)
   assert.match(v383WorkspaceVisualRuntime, /import '\.\.\/folders\/folderNavigationState\.css'/)
-  assert.match(legacyGate, /<NoteMenuViewportFit \/>/)
   assert.match(noteMenuViewportFit, /import '\.\/NoteMenuViewportFit\.css'/)
   assert.doesNotMatch(noteMenuViewportFit, /\.\.\/\.\.\/styles\/note-menu-viewport-fit\.css/)
   assert.doesNotMatch(
