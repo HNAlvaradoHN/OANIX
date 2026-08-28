@@ -150,6 +150,7 @@ export function FolderMobileDragRuntime() {
   useEffect(() => {
     let gesture: TouchGesture | null = null
     let suppressClickUntil = 0
+    let gestureListenersAttached = false
 
     const clearTimer = () => {
       if (!gesture || gesture.timer === null) return
@@ -208,6 +209,22 @@ export function FolderMobileDragRuntime() {
       }
     }
 
+    function attachGestureListeners() {
+      if (gestureListenersAttached) return
+      gestureListenersAttached = true
+      document.addEventListener('pointermove', onPointerMove, true)
+      document.addEventListener('pointerup', finishGesture, true)
+      document.addEventListener('pointercancel', cancelGesture, true)
+    }
+
+    function detachGestureListeners() {
+      if (!gestureListenersAttached) return
+      gestureListenersAttached = false
+      document.removeEventListener('pointermove', onPointerMove, true)
+      document.removeEventListener('pointerup', finishGesture, true)
+      document.removeEventListener('pointercancel', cancelGesture, true)
+    }
+
     const onPointerDown = (event: PointerEvent) => {
       if (event.pointerType === 'mouse' || event.button !== 0 || gesture) return
       const item = folderItem(event.target)
@@ -237,6 +254,7 @@ export function FolderMobileDragRuntime() {
         ghost: null,
         scrollFrame: null,
       }
+      attachGestureListeners()
     }
 
     const onPointerMove = (event: PointerEvent) => {
@@ -285,6 +303,7 @@ export function FolderMobileDragRuntime() {
       if (!finished.dragging) {
         if (finished.moved) suppressClickUntil = performance.now() + 380
         gesture = null
+        detachGestureListeners()
         return
       }
 
@@ -294,6 +313,7 @@ export function FolderMobileDragRuntime() {
       const changed = nextOrder.join('|') !== finished.orderBefore.join('|')
       cleanupVisuals()
       gesture = null
+      detachGestureListeners()
 
       if (changed) {
         window.dispatchEvent(new CustomEvent('oanix:folder-order-preview', {
@@ -304,12 +324,17 @@ export function FolderMobileDragRuntime() {
     }
 
     const cancelGesture = (event?: PointerEvent) => {
-      if (!gesture || (event && event.pointerId !== gesture.pointerId)) return
+      if (!gesture) {
+        detachGestureListeners()
+        return
+      }
+      if (event && event.pointerId !== gesture.pointerId) return
       if (event) event.stopPropagation()
       clearTimer()
       if (gesture.dragging && gesture.orderBefore.length) restoreDomOrder(gesture.rail, gesture.orderBefore)
       cleanupVisuals()
       gesture = null
+      detachGestureListeners()
     }
 
     const onWheel = (event: WheelEvent) => {
@@ -356,9 +381,6 @@ export function FolderMobileDragRuntime() {
     const onBlur = () => cancelGesture()
 
     document.addEventListener('pointerdown', onPointerDown, true)
-    document.addEventListener('pointermove', onPointerMove, true)
-    document.addEventListener('pointerup', finishGesture, true)
-    document.addEventListener('pointercancel', cancelGesture, true)
     document.addEventListener('wheel', onWheel, { capture: true, passive: false })
     document.addEventListener('click', onClick, true)
     document.addEventListener('contextmenu', onContextMenu, true)
@@ -368,9 +390,6 @@ export function FolderMobileDragRuntime() {
     return () => {
       cancelGesture()
       document.removeEventListener('pointerdown', onPointerDown, true)
-      document.removeEventListener('pointermove', onPointerMove, true)
-      document.removeEventListener('pointerup', finishGesture, true)
-      document.removeEventListener('pointercancel', cancelGesture, true)
       document.removeEventListener('wheel', onWheel, true)
       document.removeEventListener('click', onClick, true)
       document.removeEventListener('contextmenu', onContextMenu, true)
