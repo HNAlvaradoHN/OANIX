@@ -8,7 +8,7 @@ const gate = readFileSync('src/app/WorkspaceRuntimeGate.tsx', 'utf8')
 const experience = readFileSync('src/app/workspaceExperience.ts', 'utf8')
 
 test('workspace v2 has one switch that excludes legacy drag and folder-grid authorities', () => {
-  assert.match(experience, /export const WORKSPACE_V2_ENABLED = false/)
+  assert.match(experience, /export const WORKSPACE_V2_ENABLED = true/)
   assert.match(app, /!WORKSPACE_V2_ENABLED && <NoteListReorderGestureRuntime/)
   assert.match(app, /!WORKSPACE_V2_ENABLED && <FolderGridRuntime \/>/)
   assert.match(gate, /!WORKSPACE_V2_ENABLED && \(/)
