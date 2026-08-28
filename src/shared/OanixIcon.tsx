@@ -21,6 +21,7 @@ export type OanixIconName =
   | 'user'
   | 'backup'
   | 'history'
+  | 'info'
   | 'close'
 
 interface OanixIconProps {
@@ -211,6 +212,14 @@ export function OanixIcon({ name, className, size = 18 }: OanixIconProps) {
           <path d="M4.4 8.5A8.5 8.5 0 1 1 3.5 14" />
           <path d="M4.4 4.5v4h4" />
           <path d="M12 7.5V12l3 1.8" />
+        </svg>
+      )
+    case 'info':
+      return (
+        <svg {...common}>
+          <circle cx="12" cy="12" r="9" />
+          <path d="M12 10.5v6" />
+          <circle cx="12" cy="7.5" r=".9" fill="currentColor" stroke="none" />
         </svg>
       )
     case 'close':
