@@ -3,6 +3,8 @@ import { FolderGridRuntime } from '../features/folders/FolderGridRuntime'
 import { FolderMobileDragRuntime } from '../features/folders/FolderMobileDragRuntime'
 import { FolderOperationFeedbackRuntime } from '../features/folders/FolderOperationFeedbackRuntime'
 import { FolderScopedManagerRuntime } from '../features/folders/FolderScopedManagerRuntime'
+import '../features/folders/folderNavigationState.css'
+import '../styles/note-menu-viewport-fit.css'
 // Preserve the legacy cascade order inside the lazy fallback chunk. These files
 // are scoped to html.oanix-v383-visual and are not needed by Workspace V2.
 import '../features/notes/v383WorkspaceVisual.css'
