@@ -985,6 +985,21 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     }
   }
 
+  async function handleV2CreateTag(
+    name: string,
+    appearance: { icon: string; color: string },
+  ) {
+    const normalized = name.trim().replace(/\s+/g, ' ')
+    if (!normalized) throw new Error('Escribe un nombre para la etiqueta.')
+    if (tagNameExists(normalized)) throw new Error('Ya existe una etiqueta con ese nombre.')
+
+    const tag = await createTag(normalized, appearance)
+    setTags((current) => sortTagState([...current, tag]))
+    window.dispatchEvent(new CustomEvent('oanix:local-data-changed', {
+      detail: { recordType: 'tag', recordId: tag.id },
+    }))
+  }
+
   function beginTagRename(tag: TagRecord) {
     setEditingTagId(tag.id)
     setEditingTagName(tag.name)
@@ -1335,6 +1350,8 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
           onTogglePinned={(note) => void handleTogglePinned(note)}
           onOpenTagEditor={openTagEditor}
           onDeleteNote={(note) => void handleDeleteNote(note)}
+          onCreateTag={handleV2CreateTag}
+          onDeleteTag={handleDeleteTag}
           onFolderOrder={(ids) => void handleV2FolderOrder(ids)}
           onTagOrder={(ids) => void handleV2TagOrder(ids)}
           onNoteOrder={(ids) => void handleV2NoteOrder(ids)}
