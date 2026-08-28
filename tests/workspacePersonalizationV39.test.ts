@@ -89,7 +89,6 @@ test('los runtimes del workspace se montan con el ciclo de vida desbloqueado sin
   assert.doesNotMatch(gate, /document\.querySelector/)
   assert.doesNotMatch(gate, /MutationObserver/)
   assert.match(legacyGate, /<WorkspacePersonalizationRuntime \/>/)
-  assert.match(legacyGate, /<WorkspacePersonalizationRuntime \/>/)
   assert.doesNotMatch(legacyGate, /FolderCustomizerBridgeRuntime|FolderAppearanceRuntime/)
   assert.doesNotMatch(runtime + css + legacyGate, /cdn\.tailwindcss|unpkg\.com|unsplash|picsum/)
 })
