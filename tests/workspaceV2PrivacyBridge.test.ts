@@ -27,7 +27,9 @@ test('legacy compatibility classes are visually reset under the v2 namespace', (
   assert.match(css, /\.oanix-workspace-v2 \.oanix-workspace-v2__timeline-item\.note-row/)
   assert.match(css, /\.oanix-workspace-v2 \.oanix-workspace-v2__note-card\.note-row__open/)
   assert.match(css, /\.oanix-workspace-v2 \.oanix-workspace-v2__notes-scroll\.notes-list/)
-  assert.match(css, /\.oanix-workspace-v2__timeline-item > \.oanix-note-row-lock/)
+  assert.match(privacy, /row\.querySelector<HTMLElement>\('\[data-v2-note-actions="true"\]'\)/)
+  assert.match(privacy, /oanix-note-row-lock--v2-action/)
+  assert.match(css, /oanix-workspace-v2__note-actions > \.oanix-note-row-lock--v2-action/)
 })
 
 test('workspace v2 nested note actions are not mistaken for note-open clicks by privacy capture', () => {
@@ -39,4 +41,12 @@ test('workspace v2 nested note actions are not mistaken for note-open clicks by 
 test('workspace v2 keyboard note opening crosses the same privacy click gate as pointer input', () => {
   assert.match(sidebar, /event\.currentTarget\.click\(\)/)
   assert.match(privacy, /document\.addEventListener\('click', captureWorkspaceClick, true\)/)
+})
+
+
+test('workspace v2 create-note control has its own compact geometry and semantic icon', () => {
+  assert.match(sidebar, /<OanixIcon name="noteAdd" size=\{21\}/)
+  assert.match(css, /oanix-workspace-v2__create-note\.notes-create-fab[\s\S]*bottom: max\(5\.55rem/)
+  assert.match(css, /oanix-workspace-v2__create-note\.notes-create-fab[\s\S]*width: 2\.65rem !important/)
+  assert.match(css, /@media \(max-width: 480px\)[\s\S]*width: 2\.42rem !important/)
 })
