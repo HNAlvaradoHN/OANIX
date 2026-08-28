@@ -1,4 +1,6 @@
-import { useState, type CSSProperties } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
+import { createPortal } from 'react-dom'
+import { OanixIcon } from '../../shared/OanixIcon'
 import {
   DEFAULT_TAG_COLOR,
   DEFAULT_TAG_ICON,
@@ -11,6 +13,13 @@ interface WorkspaceV2TagActionsProps {
   tags: TagRecord[]
   onCreate: (name: string, appearance: { icon: string; color: string }) => Promise<void>
   onDelete: (tag: TagRecord) => Promise<void>
+}
+
+type TagDialogKind = 'create' | 'delete'
+const TAG_DIALOG_HISTORY_KEY = 'oanixWorkspaceV2TagDialog'
+
+function dialogHistoryValue(kind: TagDialogKind): string {
+  return `tag-${kind}`
 }
 
 export function WorkspaceV2TagActions({
@@ -34,6 +43,64 @@ export function WorkspaceV2TagActions({
     setError('')
   }
 
+  function openDialog(kind: TagDialogKind) {
+    const current = window.history.state && typeof window.history.state === 'object'
+      ? window.history.state as Record<string, unknown>
+      : {}
+    window.history.pushState({
+      ...current,
+      [TAG_DIALOG_HISTORY_KEY]: dialogHistoryValue(kind),
+    }, '')
+
+    setMenuOpen(false)
+    setError('')
+    if (kind === 'create') {
+      resetCreate()
+      setCreateOpen(true)
+      setDeleteOpen(false)
+    } else {
+      setDeleteOpen(true)
+      setCreateOpen(false)
+    }
+  }
+
+  function closeDialog(kind: TagDialogKind) {
+    const state = window.history.state && typeof window.history.state === 'object'
+      ? window.history.state as Record<string, unknown>
+      : {}
+    if (state[TAG_DIALOG_HISTORY_KEY] === dialogHistoryValue(kind)) {
+      window.history.back()
+      return
+    }
+
+    if (kind === 'create') {
+      setCreateOpen(false)
+      resetCreate()
+    } else {
+      setDeleteOpen(false)
+      setError('')
+    }
+  }
+
+  useEffect(() => {
+    function handlePopState() {
+      if (createOpen) {
+        setCreateOpen(false)
+        resetCreate()
+        return
+      }
+      if (deleteOpen) {
+        setDeleteOpen(false)
+        setError('')
+        return
+      }
+      if (menuOpen) setMenuOpen(false)
+    }
+
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [createOpen, deleteOpen, menuOpen])
+
   async function createTag() {
     if (busy) return
     const normalized = name.trim().replace(/\s+/g, ' ')
@@ -46,8 +113,7 @@ export function WorkspaceV2TagActions({
     setError('')
     try {
       await onCreate(normalized, { icon, color })
-      setCreateOpen(false)
-      resetCreate()
+      closeDialog('create')
     } catch (createError) {
       setError(createError instanceof Error ? createError.message : 'No se pudo crear la etiqueta.')
     } finally {
@@ -79,46 +145,30 @@ export function WorkspaceV2TagActions({
         aria-expanded={menuOpen}
         data-v2-drag-ignore="true"
       >
-        ＋
+        <OanixIcon name="plus" size={19} />
       </button>
 
       {menuOpen && (
         <div className="oanix-workspace-v2__tag-actions-menu" role="menu" aria-label="Acciones de etiquetas">
-          <button
-            type="button"
-            role="menuitem"
-            onClick={() => {
-              setMenuOpen(false)
-              resetCreate()
-              setCreateOpen(true)
-            }}
-          >
+          <button type="button" role="menuitem" onClick={() => openDialog('create')}>
             Agregar etiqueta
           </button>
-          <button
-            type="button"
-            role="menuitem"
-            onClick={() => {
-              setMenuOpen(false)
-              setError('')
-              setDeleteOpen(true)
-            }}
-          >
+          <button type="button" role="menuitem" onClick={() => openDialog('delete')}>
             Eliminar etiqueta
           </button>
         </div>
       )}
 
-      {createOpen && (
+      {createOpen && createPortal(
         <div
-          className="oanix-workspace-v2__modal-backdrop"
+          className="oanix-workspace-v2__modal-backdrop oanix-workspace-v2__modal-backdrop--tag"
           role="presentation"
           onPointerDown={(event) => {
-            if (event.target === event.currentTarget && !busy) setCreateOpen(false)
+            if (event.target === event.currentTarget && !busy) closeDialog('create')
           }}
         >
           <section
-            className="oanix-workspace-v2__modal"
+            className="oanix-workspace-v2__modal oanix-workspace-v2__modal--tag"
             role="dialog"
             aria-modal="true"
             aria-label="Nueva etiqueta"
@@ -126,7 +176,9 @@ export function WorkspaceV2TagActions({
           >
             <header>
               <div><span>ETIQUETA</span><strong>Nueva etiqueta</strong></div>
-              <button type="button" onClick={() => setCreateOpen(false)} disabled={busy} aria-label="Cerrar">×</button>
+              <button type="button" onClick={() => closeDialog('create')} disabled={busy} aria-label="Cerrar">
+                <OanixIcon name="close" size={17} />
+              </button>
             </header>
 
             <label className="oanix-workspace-v2__modal-field">
@@ -137,7 +189,7 @@ export function WorkspaceV2TagActions({
                 onChange={(event) => setName(event.target.value)}
                 onKeyDown={(event) => {
                   if (event.key === 'Enter') void createTag()
-                  if (event.key === 'Escape' && !busy) setCreateOpen(false)
+                  if (event.key === 'Escape' && !busy) closeDialog('create')
                 }}
                 maxLength={40}
                 placeholder="Ej. Proyectos 2026"
@@ -184,25 +236,26 @@ export function WorkspaceV2TagActions({
             {error && <p className="oanix-workspace-v2__modal-error" role="alert">{error}</p>}
 
             <footer>
-              <button type="button" onClick={() => setCreateOpen(false)} disabled={busy}>Cancelar</button>
+              <button type="button" onClick={() => closeDialog('create')} disabled={busy}>Cancelar</button>
               <button type="button" className="is-primary" onClick={() => void createTag()} disabled={busy}>
                 {busy ? 'Creando…' : 'Crear'}
               </button>
             </footer>
           </section>
-        </div>
+        </div>,
+        document.body,
       )}
 
-      {deleteOpen && (
+      {deleteOpen && createPortal(
         <div
-          className="oanix-workspace-v2__modal-backdrop"
+          className="oanix-workspace-v2__modal-backdrop oanix-workspace-v2__modal-backdrop--tag"
           role="presentation"
           onPointerDown={(event) => {
-            if (event.target === event.currentTarget && !busy) setDeleteOpen(false)
+            if (event.target === event.currentTarget && !busy) closeDialog('delete')
           }}
         >
           <section
-            className="oanix-workspace-v2__modal oanix-workspace-v2__modal--delete-tags"
+            className="oanix-workspace-v2__modal oanix-workspace-v2__modal--delete-tags oanix-workspace-v2__modal--tag"
             role="dialog"
             aria-modal="true"
             aria-label="Eliminar etiqueta"
@@ -210,7 +263,9 @@ export function WorkspaceV2TagActions({
           >
             <header>
               <div><span>ETIQUETAS</span><strong>Eliminar etiqueta</strong></div>
-              <button type="button" onClick={() => setDeleteOpen(false)} disabled={busy} aria-label="Cerrar">×</button>
+              <button type="button" onClick={() => closeDialog('delete')} disabled={busy} aria-label="Cerrar">
+                <OanixIcon name="close" size={17} />
+              </button>
             </header>
 
             <div className="oanix-workspace-v2__delete-tag-list">
@@ -241,10 +296,11 @@ export function WorkspaceV2TagActions({
             {error && <p className="oanix-workspace-v2__modal-error" role="alert">{error}</p>}
 
             <footer>
-              <button type="button" className="is-primary" onClick={() => setDeleteOpen(false)} disabled={busy}>Listo</button>
+              <button type="button" className="is-primary" onClick={() => closeDialog('delete')} disabled={busy}>Listo</button>
             </footer>
           </section>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   )

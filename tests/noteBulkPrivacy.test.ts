@@ -16,13 +16,18 @@ test('las notas nuevas mantienen el refresco aislado del runtime de privacidad',
   assert.match(app, /privacy-\$\{workspaceRevision\}-\$\{privacyRevision\}/)
 })
 
-test('el botón crear abre agregar o marcar y se transforma en terminar durante selección', () => {
+test('el botón crear abre agregar o marcar y marcar usa un selector dedicado de notas', () => {
   assert.match(runtime, /\.notes-create-fab/)
   assert.match(runtime, /Agregar nota/)
   assert.match(runtime, /Marcar notas/)
   assert.match(runtime, /data-oanix-bulk-mode/)
-  assert.match(runtime, /Terminar de marcar/)
+  assert.match(runtime, /selectableNotes\(\)/)
+  assert.match(runtime, /oanix-note-picker-sheet/)
+  assert.match(runtime, /Elegirlas dentro de un panel, sin tocar la lista/)
+  assert.match(runtime, /aria-pressed=\{selected\}/)
+  assert.match(runtime, /Continuar/)
   assert.match(css, /\.notes-create-fab\[data-oanix-bulk-mode\]/)
+  assert.match(css, /\.oanix-note-picker-sheet/)
   assert.doesNotMatch(runtime, /LONG_PRESS_MS|pointerdown|pointermove|suppressNextClickRef/)
 })
 

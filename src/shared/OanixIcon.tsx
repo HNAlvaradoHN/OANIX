@@ -22,6 +22,7 @@ export type OanixIconName =
   | 'backup'
   | 'history'
   | 'info'
+  | 'check'
   | 'close'
 
 interface OanixIconProps {
@@ -220,6 +221,12 @@ export function OanixIcon({ name, className, size = 18 }: OanixIconProps) {
           <circle cx="12" cy="12" r="9" />
           <path d="M12 10.5v6" />
           <circle cx="12" cy="7.5" r=".9" fill="currentColor" stroke="none" />
+        </svg>
+      )
+    case 'check':
+      return (
+        <svg {...common}>
+          <path d="m5 12.5 4.2 4.2L19 7" />
         </svg>
       )
     case 'close':
