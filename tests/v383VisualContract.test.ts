@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
 const main = readFileSync('src/main.tsx', 'utf8')
+const themeVisualStyles = readFileSync('src/app/ThemeVisualStyles.ts', 'utf8')
 const app = readFileSync('src/app/App.tsx', 'utf8')
 const gate = readFileSync('src/app/WorkspaceRuntimeGate.tsx', 'utf8')
 const legacyGate = readFileSync('src/app/LegacyWorkspaceRuntimeGate.tsx', 'utf8')
@@ -15,12 +16,15 @@ test('legacy fallback keeps one scoped v38.3 layer behind the unlocked runtime b
   assert.match(legacyGate, /<V383WorkspaceVisualRuntime \/>/)
   assert.match(runtime, /classList\.add\('oanix-v383-visual'\)/)
   assert.doesNotMatch(main, /\.\/styles\/header-icon-polish\.css/)
-  assert.match(main, /\.\/styles\/notebook-contract\.css/)
+  assert.match(main, /\.\/app\/ThemeVisualStyles/)
+  assert.match(themeVisualStyles, /\.\.\/styles\/notebook-contract\.css/)
+  assert.doesNotMatch(main, /\.\/styles\/notebook-contract\.css/)
   assert.doesNotMatch(main, /\.\/styles\/notebook-polish\.css/)
-  assert.match(main, /\.\/styles\/classic-theme-surfaces\.css/)
+  assert.match(themeVisualStyles, /\.\.\/styles\/classic-theme-surfaces\.css/)
+  assert.doesNotMatch(main, /\.\/styles\/classic-theme-surfaces\.css/)
 
-  const notebookIndex = main.indexOf("./styles/notebook-contract.css")
-  const themeSurfaceIndex = main.indexOf("./styles/classic-theme-surfaces.css")
+  const notebookIndex = themeVisualStyles.indexOf("../styles/notebook-contract.css")
+  const themeSurfaceIndex = themeVisualStyles.indexOf("../styles/classic-theme-surfaces.css")
   const visualIndex = runtime.indexOf("./v383WorkspaceVisual.css")
   const stateIndex = runtime.indexOf("./workspaceStateContract.css")
   const compactIndex = runtime.indexOf("./compactNoteContract.css")
