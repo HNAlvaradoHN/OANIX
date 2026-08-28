@@ -17,26 +17,31 @@ import '../features/privacy/noteBulkPrivacyOverrides.css'
 import { PrivacyStatusHelp } from '../features/privacy/PrivacyStatusHelp'
 import { TagMobileGestureRuntime } from '../features/tags/TagMobileGestureRuntime'
 import { WorkspaceQuickPolishRuntime } from './WorkspaceQuickPolishRuntime'
+import { WORKSPACE_V2_ENABLED } from './workspaceExperience'
 
 export function WorkspaceRuntimeGate() {
   return (
     <>
       <EditorOperationRuntime />
       <NoteCreationFeedbackRuntime />
-      <FolderScopedManagerRuntime />
-      <OrganicWorkspaceRuntime />
-      <WorkspacePersonalizationRuntime />
-      <NoteVisualIdentityRuntime />
-      <NoteMenuScrollDismiss />
-      <NoteMenuViewportFit />
-      <WorkspaceInputCompatibilityRuntime />
       <PrivacyStatusHelp />
-      <WorkspaceQuickPolishRuntime />
-      <FolderOperationFeedbackRuntime />
-      <FolderCreationRuntime />
-      <FolderMobileDragRuntime />
-      <TagMobileGestureRuntime />
-      <V383WorkspaceVisualRuntime />
+      {!WORKSPACE_V2_ENABLED && (
+        <>
+          <FolderScopedManagerRuntime />
+          <OrganicWorkspaceRuntime />
+          <WorkspacePersonalizationRuntime />
+          <NoteVisualIdentityRuntime />
+          <NoteMenuScrollDismiss />
+          <NoteMenuViewportFit />
+          <WorkspaceInputCompatibilityRuntime />
+          <WorkspaceQuickPolishRuntime />
+          <FolderOperationFeedbackRuntime />
+          <FolderCreationRuntime />
+          <FolderMobileDragRuntime />
+          <TagMobileGestureRuntime />
+          <V383WorkspaceVisualRuntime />
+        </>
+      )}
     </>
   )
 }
