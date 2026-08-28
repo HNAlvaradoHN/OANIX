@@ -93,6 +93,8 @@ export function ThemeMenu() {
   }, [workspaceMenu])
 
   useEffect(() => {
+    if (!open) return
+
     function handlePointerDown(event: PointerEvent) {
       const target = event.target
       if (!(target instanceof Node)) return
@@ -110,7 +112,7 @@ export function ThemeMenu() {
       window.removeEventListener('pointerdown', handlePointerDown)
       window.removeEventListener('keydown', handleKeyDown)
     }
-  }, [])
+  }, [open])
 
   function chooseAutoLock(nextMinutes: AutoLockMinutes) {
     setAutoLockMinutes(saveAutoLockMinutes(nextMinutes))
