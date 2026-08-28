@@ -8,9 +8,9 @@ import {
 } from 'react'
 import { deleteEncryptedImage } from '../images/imageService'
 import { downloadEncryptedBackup } from '../backup/backupService'
-import { createFolder, deleteFolder, loadFolders, persistFolderOrder, renameFolder, reorderFolder } from '../folders/folderService'
+import { createFolder, deleteFolder, loadFolders, renameFolder, reorderFolder } from '../folders/folderService'
 import type { FolderRecord } from '../folders/folderTypes'
-import { createTag, deleteTag, loadTags, persistTagOrder, renameTag } from '../tags/tagService'
+import { createTag, deleteTag, loadTags, renameTag } from '../tags/tagService'
 import type { TagRecord } from '../tags/tagTypes'
 import { storageSaveErrorMessage } from '../../storage/local/storageErrors'
 import { usesSinglePaneLayout } from '../../shared/responsiveLayout'
@@ -22,7 +22,6 @@ import {
   moveNoteToFolder,
   renameNote,
   replaceNoteContent,
-  persistNoteOrder,
   setNotePinned,
   setNoteTags,
 } from './noteService'
@@ -31,6 +30,11 @@ import { prepareDailyEntriesForEditing } from './dailyEntries'
 import { WORKSPACE_V2_ENABLED } from '../../app/workspaceExperience'
 import { NoteAvatar } from './NoteAvatar'
 import { WorkspaceV2Sidebar } from './WorkspaceV2Sidebar'
+import {
+  saveWorkspaceV2FolderOrder,
+  saveWorkspaceV2NoteOrder,
+  saveWorkspaceV2TagOrder,
+} from './workspaceV2OrderService'
 import { compareNotesForList, noteBlocksToPlainText, type NoteRecord, type StoredNoteBlock } from './noteTypes'
 import './notes.css'
 
@@ -1233,7 +1237,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
   async function handleV2FolderOrder(folderIds: string[]) {
     if (folderIds.length !== folders.length) return
     try {
-      const persisted = await persistFolderOrder(folderIds)
+      const persisted = await saveWorkspaceV2FolderOrder(folderIds)
       setFolders(persisted)
       window.dispatchEvent(new CustomEvent('oanix:local-data-changed', {
         detail: { recordType: 'folder' },
@@ -1247,7 +1251,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
   async function handleV2TagOrder(tagIds: string[]) {
     if (tagIds.length !== tags.length) return
     try {
-      const persisted = await persistTagOrder(tagIds)
+      const persisted = await saveWorkspaceV2TagOrder(tagIds)
       setTags(persisted)
       window.dispatchEvent(new CustomEvent('oanix:local-data-changed', {
         detail: { recordType: 'tag' },
@@ -1261,7 +1265,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
   async function handleV2NoteOrder(noteIds: string[]) {
     if (noteIds.length === 0 || hasSearchQuery) return
     try {
-      const persisted = await persistNoteOrder(noteIds)
+      const persisted = await saveWorkspaceV2NoteOrder(noteIds)
       const manualOrderById = new Map(persisted.map((note) => [note.id, note.manualOrder]))
       setNotes((current) => current
         .map((note) => manualOrderById.has(note.id)
