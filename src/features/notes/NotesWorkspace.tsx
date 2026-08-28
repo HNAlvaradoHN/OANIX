@@ -1905,7 +1905,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
                         setNoteInfoOpen(true)
                       }}
                     >
-                      <OanixIcon name="shield" /> Información y privacidad
+                      <OanixIcon name="info" /> Información
                     </button>
                     <button
                       className="note-view__menu-danger"
