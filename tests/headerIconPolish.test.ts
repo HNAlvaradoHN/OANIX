@@ -11,6 +11,7 @@ const app = readFileSync('src/app/App.tsx', 'utf8')
 const history = readFileSync('src/features/versionHistory/VersionHistoryCenter.tsx', 'utf8')
 const sidebar = readFileSync('src/features/notes/WorkspaceV2Sidebar.tsx', 'utf8')
 const icons = readFileSync('src/shared/OanixIcon.tsx', 'utf8')
+const v2Css = readFileSync('src/features/notes/workspaceV2.css', 'utf8')
 
 test('v38.3 is the final header visual authority and retired icon polish is absent', () => {
   assert.equal(existsSync('src/styles/header-icon-polish.css'), false)
@@ -49,4 +50,13 @@ test('icon replacement preserves the real accessible actions', () => {
   assert.match(notes, /aria-label="Bloquear OANIX"/)
   assert.match(history, /aria-label="Historial de versiones"/)
   assert.match(app, /aria-label="Cuenta de OANIX"/)
+})
+
+
+test('workspace v2 icon controls gain depth through lightweight glass surfaces rather than a new dependency', () => {
+  assert.match(icons, /'data-oanix-icon': name/)
+  assert.match(icons, /strokeWidth: 1\.9/)
+  assert.match(v2Css, /oanix-workspace-v2__header-actions > :is\([\s\S]*version-history-launcher[\s\S]*account-header-action/)
+  assert.match(v2Css, /radial-gradient\(circle at 30% 18%/)
+  assert.match(v2Css, /oanix-workspace-v2__note-actions button[\s\S]*inset 0 1px 0/)
 })
