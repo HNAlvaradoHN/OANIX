@@ -5,6 +5,7 @@ import test from 'node:test'
 const source = readFileSync('src/features/notes/WorkspaceV2Sidebar.tsx', 'utf8')
 const css = readFileSync('src/features/notes/workspaceV2.css', 'utf8')
 const orderService = readFileSync('src/features/notes/workspaceV2OrderService.ts', 'utf8')
+const workspace = readFileSync('src/features/notes/NotesWorkspace.tsx', 'utf8')
 
 test('workspace v2 consumes real note/folder/tag records instead of prototype storage', () => {
   for (const required of [
@@ -30,7 +31,7 @@ test('workspace v2 consumes real note/folder/tag records instead of prototype st
 test('workspace v2 owns persistence only through existing encrypted order services', () => {
   assert.match(orderService, /persistFolderOrder\(ids\)/)
   assert.match(orderService, /persistTagOrder\(ids\)/)
-  assert.match(orderService, /persistNoteOrder\(ids\)/)
+  assert.match(orderService, /persistNoteOrder\(ids, shouldContinue\)/)
   assert.doesNotMatch(orderService, /localStorage|sessionStorage|indexedDB/)
 })
 
@@ -45,4 +46,16 @@ test('workspace v2 visual surface is namespaced and reduced-motion aware', () =>
 
 test('workspace v2 note card keyboard activation does not hijack nested action buttons', () => {
   assert.match(source, /onKeyDown=\{\(event\) => \{[\s\S]*event\.target !== event\.currentTarget[\s\S]*event\.currentTarget\.click\(\)/)
+})
+
+
+test('workspace v2 coalesces rapid reorder persistence so the latest gesture wins', () => {
+  for (const kind of ['Folder', 'Tag', 'Note']) {
+    assert.match(workspace, new RegExp(`pendingV2${kind}OrderRef\\.current = \\[\\...`))
+    assert.match(workspace, new RegExp(`if \\(v2${kind}OrderLoopRef\\.current\\) return`))
+    assert.match(workspace, new RegExp(`while \\(pendingV2${kind}OrderRef\\.current\\)`))
+    assert.match(workspace, new RegExp(`if \\(pendingV2${kind}OrderRef\\.current\\) continue`))
+  }
+  assert.match(workspace, /saveWorkspaceV2NoteOrder\([\s\S]*\(\) => pendingV2NoteOrderRef\.current === null/)
+  assert.match(orderService, /shouldContinue: \(\) => boolean = \(\) => true/)
 })
