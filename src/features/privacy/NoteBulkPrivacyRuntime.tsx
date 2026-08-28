@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { deleteEncryptedImage } from '../images/imageService'
+import { OanixIcon } from '../../shared/OanixIcon'
 import { deleteNote } from '../notes/noteService'
 import {
   createNotePrivacyLock,
@@ -20,6 +21,22 @@ function noteIdFromElement(target: Element): string | null {
   return target.closest<HTMLElement>('.note-row[data-reorder-note-id]')?.dataset.reorderNoteId?.trim() || null
 }
 
+interface SelectableNote {
+  id: string
+  title: string
+}
+
+function selectableNotes(): SelectableNote[] {
+  return noteRows().flatMap((row) => {
+    const id = row.dataset.reorderNoteId?.trim()
+    if (!id) return []
+    const title = row.querySelector<HTMLElement>(
+      '.oanix-workspace-v2__note-title, .note-row__topline strong',
+    )?.textContent?.trim() || 'Nota sin título'
+    return [{ id, title }]
+  })
+}
+
 function dispatchPrivacyRefresh() {
   window.dispatchEvent(new Event(NOTE_PRIVACY_REFRESH_EVENT))
 }
@@ -32,6 +49,8 @@ export function NoteBulkPrivacyRuntime() {
   const [selectionMode, setSelectionMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set())
   const [launcherOpen, setLauncherOpen] = useState(false)
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const [pickerNotes, setPickerNotes] = useState<SelectableNote[]>([])
   const [finishMenuOpen, setFinishMenuOpen] = useState(false)
   const [protectedIds, setProtectedIds] = useState<Set<string>>(() => new Set())
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -95,6 +114,8 @@ export function NoteBulkPrivacyRuntime() {
     setSelectionMode(false)
     setSelectedIds(new Set())
     setLauncherOpen(false)
+    setPickerOpen(false)
+    setPickerNotes([])
     setFinishMenuOpen(false)
     setDialogOpen(false)
     setCode('')
@@ -104,13 +125,22 @@ export function NoteBulkPrivacyRuntime() {
   }
 
   function beginSelection() {
+    const availableNotes = selectableNotes()
     setLauncherOpen(false)
     setFinishMenuOpen(false)
+    setPickerNotes(availableNotes)
     setSelectedIds(new Set())
     setError('')
     setStatus('')
     setSelectionMode(true)
+    setPickerOpen(true)
     navigator.vibrate?.(12)
+  }
+
+  function continueSelection() {
+    if (selectedIdsRef.current.size === 0) return
+    setPickerOpen(false)
+    setFinishMenuOpen(true)
   }
 
   function toggleSelection(noteId: string) {
@@ -166,12 +196,9 @@ export function NoteBulkPrivacyRuntime() {
         event.preventDefault()
         event.stopImmediatePropagation()
         if (selectionModeRef.current) {
-          if (selectedIdsRef.current.size === 0) clearSelection()
-          else {
-            setError('')
-            setStatus('')
-            setFinishMenuOpen(true)
-          }
+          setPickerNotes(selectableNotes())
+          setPickerOpen(true)
+          setFinishMenuOpen(false)
         } else {
           setLauncherOpen(true)
         }
@@ -189,6 +216,10 @@ export function NoteBulkPrivacyRuntime() {
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key !== 'Escape') return
       if (dialogOpen) return
+      if (pickerOpen) {
+        clearSelection()
+        return
+      }
       if (launcherOpen) {
         setLauncherOpen(false)
         return
@@ -207,7 +238,7 @@ export function NoteBulkPrivacyRuntime() {
       document.removeEventListener('click', handleClick, true)
       document.removeEventListener('keydown', handleKeyDown)
     }
-  }, [dialogOpen, finishMenuOpen, launcherOpen])
+  }, [dialogOpen, finishMenuOpen, launcherOpen, pickerOpen])
 
   const protectableIds = useMemo(
     () => [...selectedIds].filter((noteId) => !protectedIds.has(noteId)),
@@ -329,14 +360,73 @@ export function NoteBulkPrivacyRuntime() {
             <span className="oanix-note-action-sheet__eyebrow">NOTAS</span>
             <strong>¿Qué quieres hacer?</strong>
             <button type="button" role="menuitem" onClick={createNoteFromLauncher}>
-              <span className="oanix-note-action-sheet__icon" aria-hidden="true">＋</span>
+              <span className="oanix-note-action-sheet__icon" aria-hidden="true"><OanixIcon name="plus" /></span>
               <span><b>Agregar nota</b><small>Crear una nota nueva y abrirla</small></span>
             </button>
             <button type="button" role="menuitem" onClick={beginSelection}>
-              <span className="oanix-note-action-sheet__icon" aria-hidden="true">✓</span>
-              <span><b>Marcar notas</b><small>Seleccionar varias para aplicar acciones</small></span>
+              <span className="oanix-note-action-sheet__icon" aria-hidden="true"><OanixIcon name="check" /></span>
+              <span><b>Marcar notas</b><small>Elegirlas dentro de un panel, sin tocar la lista</small></span>
             </button>
           </div>
+        </div>,
+        document.body,
+      )}
+
+      {pickerOpen && createPortal(
+        <div className="oanix-note-action-backdrop" role="presentation" onClick={clearSelection}>
+          <section
+            className="oanix-note-picker-sheet"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Marcar notas"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <header className="oanix-note-picker-sheet__header">
+              <div>
+                <span className="oanix-note-action-sheet__eyebrow">MARCAR NOTAS</span>
+                <strong>Elige las notas</strong>
+                <small>La lista principal queda intacta mientras seleccionas aquí.</small>
+              </div>
+              <button type="button" onClick={clearSelection} aria-label="Cancelar selección">
+                <OanixIcon name="close" />
+              </button>
+            </header>
+
+            <div className="oanix-note-picker-sheet__list" role="list">
+              {pickerNotes.length === 0 ? (
+                <p>No hay notas visibles para marcar.</p>
+              ) : pickerNotes.map((note) => {
+                const selected = selectedIds.has(note.id)
+                return (
+                  <button
+                    key={note.id}
+                    type="button"
+                    role="listitem"
+                    className={selected ? 'is-selected' : ''}
+                    aria-pressed={selected}
+                    onClick={() => toggleSelection(note.id)}
+                  >
+                    <span className="oanix-note-picker-sheet__check" aria-hidden="true">
+                      {selected ? <OanixIcon name="check" size={16} /> : ''}
+                    </span>
+                    <span>{note.title}</span>
+                  </button>
+                )
+              })}
+            </div>
+
+            <footer className="oanix-note-picker-sheet__footer">
+              <button type="button" onClick={clearSelection}>Cancelar</button>
+              <button
+                type="button"
+                className="is-primary"
+                disabled={selectedIds.size === 0}
+                onClick={continueSelection}
+              >
+                Continuar{selectedIds.size > 0 ? ` (${selectedIds.size})` : ''}
+              </button>
+            </footer>
+          </section>
         </div>,
         document.body,
       )}
@@ -344,6 +434,7 @@ export function NoteBulkPrivacyRuntime() {
       {finishMenuOpen && createPortal(
         <div className="oanix-note-action-backdrop" role="presentation" onClick={() => {
           setFinishMenuOpen(false)
+          setPickerOpen(true)
           setError('')
         }}>
           <div className="oanix-note-action-sheet oanix-note-action-sheet--finish" role="menu" aria-label="Acciones para notas seleccionadas" onClick={(event) => event.stopPropagation()}>
@@ -351,11 +442,11 @@ export function NoteBulkPrivacyRuntime() {
             <strong>Terminar selección</strong>
             {error && <p className="oanix-note-action-sheet__notice" role="alert">{error}</p>}
             <button type="button" role="menuitem" onClick={() => void openBulkDialog()}>
-              <span className="oanix-note-action-sheet__icon" aria-hidden="true">🔒</span>
+              <span className="oanix-note-action-sheet__icon" aria-hidden="true"><OanixIcon name="lock" /></span>
               <span><b>Aplicar código</b><small>Proteger las que todavía no tengan código</small></span>
             </button>
             <button className="oanix-note-action-sheet__danger" type="button" role="menuitem" onClick={() => void handleDeleteSelected()}>
-              <span className="oanix-note-action-sheet__icon" aria-hidden="true">🗑</span>
+              <span className="oanix-note-action-sheet__icon" aria-hidden="true"><OanixIcon name="trash" /></span>
               <span><b>Borrar</b><small>Eliminar permanentemente las seleccionadas</small></span>
             </button>
             <button className="oanix-note-action-sheet__cancel" type="button" role="menuitem" onClick={clearSelection}>
