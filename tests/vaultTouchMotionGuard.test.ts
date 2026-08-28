@@ -3,11 +3,14 @@ import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
 const main = readFileSync('src/main.tsx', 'utf8')
+const authority = readFileSync('src/app/VaultVisualStyles.ts', 'utf8')
 const guard = readFileSync('src/styles/vault-touch-motion-guard.css', 'utf8')
 const globalCss = readFileSync('src/styles/global.css', 'utf8')
 
 test('vault touch guard disables only ambient continuous motion on coarse pointers', () => {
-  assert.match(main, /import '\.\/styles\/vault-touch-motion-guard\.css'/)
+  assert.doesNotMatch(main, /styles\/vault-touch-motion-guard\.css/)
+  assert.match(main, /app\/VaultVisualStyles/)
+  assert.match(authority, /vault-touch-motion-guard\.css/)
   assert.match(guard, /@media \(pointer: coarse\)/)
   assert.match(guard, /\.vault-shell::after/)
   assert.match(guard, /\.vault-glow/)
