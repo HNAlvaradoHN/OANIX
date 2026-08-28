@@ -21,12 +21,15 @@ test('legacy fallback keeps one scoped v38.3 layer behind the unlocked runtime b
 
   const notebookIndex = main.indexOf("./styles/notebook-contract.css")
   const themeSurfaceIndex = main.indexOf("./styles/classic-theme-surfaces.css")
-  const brandIndex = main.indexOf("./styles/web-brand-logo.css")
-  const visualIndex = main.indexOf("./features/notes/v383WorkspaceVisual.css")
+  const visualIndex = legacyGate.indexOf("../features/notes/v383WorkspaceVisual.css")
+  const stateIndex = legacyGate.indexOf("../features/notes/workspaceStateContract.css")
+  const compactIndex = legacyGate.indexOf("../features/notes/compactNoteContract.css")
   assert.ok(notebookIndex >= 0)
   assert.ok(themeSurfaceIndex > notebookIndex)
-  assert.ok(visualIndex > themeSurfaceIndex)
-  assert.ok(visualIndex > brandIndex)
+  assert.doesNotMatch(main, /features\/notes\/v383WorkspaceVisual\.css/)
+  assert.ok(visualIndex >= 0)
+  assert.ok(stateIndex > visualIndex)
+  assert.ok(compactIndex > stateIndex)
 })
 
 test('approved v38.3 geometry is preserved for notes, chips and folder dock', () => {
