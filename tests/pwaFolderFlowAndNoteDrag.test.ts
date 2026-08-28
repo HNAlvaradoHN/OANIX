@@ -7,6 +7,7 @@ const folderFeedback = readFileSync('src/features/folders/FolderOperationFeedbac
 const folderFeedbackCss = readFileSync('src/features/folders/folderOperationFeedback.css', 'utf8')
 const polishRuntime = readFileSync('src/app/WorkspaceQuickPolishRuntime.tsx', 'utf8')
 const polishCss = readFileSync('src/app/workspaceQuickPolish.css', 'utf8')
+const folderDockCss = readFileSync('src/features/notes/folderDockContract.css', 'utf8')
 const noteDragRuntime = readFileSync('src/features/notes/NoteListReorderGestureRuntime.tsx', 'utf8')
 const noteDragCss = readFileSync('src/features/notes/noteReorderGesture.css', 'utf8')
 
@@ -36,11 +37,13 @@ test('coarse touch note drag owns vertical movement with one pointer engine and 
   assert.match(noteDragCss, /touch-action:\s*none\s*!important/)
 })
 
-test('folder gear uses an optically centered pseudo glyph', () => {
-  assert.match(polishCss, /\.oanix-folder-card__gear\s*\{[\s\S]*font-size:\s*0\s*!important/)
-  assert.match(polishCss, /\.oanix-folder-card__gear::before\s*\{[\s\S]*content:\s*'⚙'/)
+test('folder gear uses the centered vector-mask authority from the folder dock contract', () => {
+  assert.match(folderDockCss, /\.oanix-folder-card__gear[\s\S]*left:\s*50%\s*!important[\s\S]*transform:\s*translateX\(-50%\)\s*!important/)
+  assert.match(folderDockCss, /\.oanix-folder-card__gear::before[\s\S]*mask-image:/)
   assert.match(polishCss, /align-items:\s*center/)
   assert.match(polishCss, /justify-content:\s*center/)
+  assert.doesNotMatch(polishCss, /\.oanix-folder-card__gear::before/)
+  assert.doesNotMatch(polishCss, /\.oanix-folder-card__gear\s*\{[\s\S]*font-size:\s*0\s*!important/)
 })
 
 test('desktop note drag does not detach a legacy fallback card to body', () => {
