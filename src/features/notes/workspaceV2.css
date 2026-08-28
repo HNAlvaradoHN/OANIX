@@ -433,6 +433,11 @@
   color: #ef4444;
 }
 
+html.oanix-note-bulk-selecting .oanix-workspace-v2__note-actions {
+  pointer-events: none;
+  opacity: .28;
+}
+
 .oanix-workspace-v2__empty {
   min-height: 11rem;
   display: grid;
