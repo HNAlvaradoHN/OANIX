@@ -2,9 +2,9 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
-const gate = readFileSync('src/app/WorkspaceRuntimeGate.tsx', 'utf8')
 const legacyGate = readFileSync('src/app/LegacyWorkspaceRuntimeGate.tsx', 'utf8')
 const runtime = readFileSync('src/app/WorkspaceQuickPolishRuntime.tsx', 'utf8')
+const personalizationRuntime = readFileSync('src/features/notes/WorkspacePersonalizationRuntime.tsx', 'utf8')
 const css = readFileSync('src/app/workspaceQuickPolish.css', 'utf8')
 
 test('quick polish stays presentation-only and needs no folder observer', () => {
@@ -12,6 +12,7 @@ test('quick polish stays presentation-only and needs no folder observer', () => 
 })
 
 test('saving note personalization closes the originating three-dot row menu', () => {
+  assert.match(personalizationRuntime, /dispatchEvent\(new CustomEvent\('oanix:note-visual-changed'/)
   assert.match(runtime, /oanix:note-visual-changed/)
   assert.match(runtime, /\.note-row__menu-button\[aria-expanded="true"\]/)
   assert.match(runtime, /opener\?\.click\(\)/)
