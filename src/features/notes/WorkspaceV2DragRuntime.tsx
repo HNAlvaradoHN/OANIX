@@ -18,10 +18,14 @@ type ActiveGesture = {
   kind: WorkspaceV2DragKind
   item: HTMLElement
   container: HTMLElement
+  scrollContainer: HTMLElement
   startX: number
   startY: number
   lastX: number
   lastY: number
+  lastMoveAt: number
+  velocityX: number
+  velocityY: number
   startScroll: number
   moved: boolean
   dragBlocked: boolean
@@ -91,6 +95,45 @@ export function WorkspaceV2DragRuntime({
     const activeRoot: HTMLElement = candidateRoot
 
     let gesture: ActiveGesture | null = null
+    let momentumFrame: number | null = null
+
+    function stopMomentum() {
+      if (momentumFrame === null) return
+      window.cancelAnimationFrame(momentumFrame)
+      momentumFrame = null
+    }
+
+    function startMomentumScroll(
+      kind: WorkspaceV2DragKind,
+      scrollContainer: HTMLElement,
+      velocityX: number,
+      velocityY: number,
+    ) {
+      stopMomentum()
+      let velocity = kind === 'note' ? velocityY : velocityX
+      if (Math.abs(velocity) < 0.04) return
+
+      let lastFrame = performance.now()
+      const tick = (now: number) => {
+        const elapsed = Math.min(34, Math.max(1, now - lastFrame))
+        lastFrame = now
+        const before = kind === 'note' ? scrollContainer.scrollTop : scrollContainer.scrollLeft
+
+        if (kind === 'note') scrollContainer.scrollTop += velocity * elapsed
+        else scrollContainer.scrollLeft += velocity * elapsed
+
+        const after = kind === 'note' ? scrollContainer.scrollTop : scrollContainer.scrollLeft
+        velocity *= Math.pow(0.93, elapsed / 16.67)
+
+        if (Math.abs(velocity) < 0.02 || Math.abs(after - before) < 0.1) {
+          momentumFrame = null
+          return
+        }
+        momentumFrame = window.requestAnimationFrame(tick)
+      }
+
+      momentumFrame = window.requestAnimationFrame(tick)
+    }
 
     function stopAutoScroll() {
       if (!gesture || gesture.scrollFrame === null) return
@@ -132,7 +175,7 @@ export function WorkspaceV2DragRuntime({
       if (!gesture || gesture.scrollFrame !== null) return
       const tick = () => {
         if (!gesture?.dragging) return
-        const rect = gesture.container.getBoundingClientRect()
+        const rect = gesture.scrollContainer.getBoundingClientRect()
         const zone = EDGE_ZONE[gesture.kind]
         let speed = 0
 
@@ -142,14 +185,14 @@ export function WorkspaceV2DragRuntime({
           } else if (gesture.lastY > rect.bottom - zone) {
             speed = Math.min(20, (gesture.lastY - (rect.bottom - zone)) / 3 + 4)
           }
-          if (speed !== 0) gesture.container.scrollTop += speed
+          if (speed !== 0) gesture.scrollContainer.scrollTop += speed
         } else {
           if (gesture.lastX < rect.left + zone) {
             speed = -Math.min(18, (rect.left + zone - gesture.lastX) / 3 + 4)
           } else if (gesture.lastX > rect.right - zone) {
             speed = Math.min(18, (gesture.lastX - (rect.right - zone)) / 3 + 4)
           }
-          if (speed !== 0) gesture.container.scrollLeft += speed
+          if (speed !== 0) gesture.scrollContainer.scrollLeft += speed
         }
 
         if (speed !== 0) reorderAtPoint(gesture.lastX, gesture.lastY)
@@ -247,6 +290,14 @@ export function WorkspaceV2DragRuntime({
 
     function handlePointerMove(event: PointerEvent) {
       if (!gesture || event.pointerId !== gesture.pointerId) return
+
+      const now = performance.now()
+      const elapsed = Math.max(1, now - gesture.lastMoveAt)
+      const moveX = event.clientX - gesture.lastX
+      const moveY = event.clientY - gesture.lastY
+      gesture.velocityX = gesture.velocityX * 0.42 + (-moveX / elapsed) * 0.58
+      gesture.velocityY = gesture.velocityY * 0.42 + (-moveY / elapsed) * 0.58
+      gesture.lastMoveAt = now
       gesture.lastX = event.clientX
       gesture.lastY = event.clientY
 
@@ -262,9 +313,9 @@ export function WorkspaceV2DragRuntime({
         if (event.pointerType !== 'mouse') {
           event.preventDefault()
           if (gesture.kind === 'note') {
-            gesture.container.scrollTop = gesture.startScroll - dy
+            gesture.scrollContainer.scrollTop = gesture.startScroll - dy
           } else {
-            gesture.container.scrollLeft = gesture.startScroll - dx
+            gesture.scrollContainer.scrollLeft = gesture.startScroll - dx
           }
         }
         return
@@ -277,7 +328,23 @@ export function WorkspaceV2DragRuntime({
 
     function handlePointerUp(event: PointerEvent) {
       if (!gesture || event.pointerId !== gesture.pointerId) return
+      const momentum = gesture.moved && !gesture.dragging && event.pointerType !== 'mouse'
+        ? {
+            kind: gesture.kind,
+            scrollContainer: gesture.scrollContainer,
+            velocityX: gesture.velocityX,
+            velocityY: gesture.velocityY,
+          }
+        : null
       persistGesture()
+      if (momentum) {
+        startMomentumScroll(
+          momentum.kind,
+          momentum.scrollContainer,
+          momentum.velocityX,
+          momentum.velocityY,
+        )
+      }
       document.removeEventListener('pointermove', handlePointerMove, true)
       document.removeEventListener('pointerup', handlePointerUp, true)
       document.removeEventListener('pointercancel', handlePointerCancel, true)
@@ -306,6 +373,8 @@ export function WorkspaceV2DragRuntime({
       if (kind !== 'folder' && kind !== 'tag' && kind !== 'note') return
       const container = item.parentElement
       if (!container) return
+      const scrollContainer = item.closest<HTMLElement>(`[data-v2-scroll-kind="${kind}"]`) ?? container
+      stopMomentum()
 
       const initialItems = draggableItems(container, kind)
       const endAnchor = initialItems.at(-1)?.nextElementSibling ?? null
@@ -315,11 +384,15 @@ export function WorkspaceV2DragRuntime({
         kind,
         item,
         container,
+        scrollContainer,
         startX: event.clientX,
         startY: event.clientY,
         lastX: event.clientX,
         lastY: event.clientY,
-        startScroll: kind === 'note' ? container.scrollTop : container.scrollLeft,
+        lastMoveAt: performance.now(),
+        velocityX: 0,
+        velocityY: 0,
+        startScroll: kind === 'note' ? scrollContainer.scrollTop : scrollContainer.scrollLeft,
         moved: false,
         dragBlocked,
         timer: null,
@@ -379,6 +452,7 @@ export function WorkspaceV2DragRuntime({
       document.removeEventListener('pointermove', handlePointerMove, true)
       document.removeEventListener('pointerup', handlePointerUp, true)
       document.removeEventListener('pointercancel', handlePointerCancel, true)
+      stopMomentum()
       cancelGesture(true)
     }
   }, [disabled, onFolderOrder, onNoteOrder, onTagOrder, rootRef])
