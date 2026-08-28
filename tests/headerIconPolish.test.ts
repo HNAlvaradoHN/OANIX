@@ -9,6 +9,8 @@ const visual = readFileSync('src/features/notes/v383WorkspaceVisual.css', 'utf8'
 const notes = readFileSync('src/features/notes/NotesWorkspace.tsx', 'utf8')
 const app = readFileSync('src/app/App.tsx', 'utf8')
 const history = readFileSync('src/features/versionHistory/VersionHistoryCenter.tsx', 'utf8')
+const sidebar = readFileSync('src/features/notes/WorkspaceV2Sidebar.tsx', 'utf8')
+const icons = readFileSync('src/shared/OanixIcon.tsx', 'utf8')
 
 test('v38.3 is the final header visual authority and retired icon polish is absent', () => {
   assert.equal(existsSync('src/styles/header-icon-polish.css'), false)
@@ -22,18 +24,18 @@ test('v38.3 is the final header visual authority and retired icon polish is abse
   assert.match(legacyGate, /<V383WorkspaceVisualRuntime \/>/)
 })
 
-test('visible header actions use one vector family in one non-wrapping row', () => {
-  assert.match(notes, />\s*🔍\s*</)
-  assert.match(notes, />\s*🔒\s*</)
-  assert.match(history, />\s*🕘\s*</)
-  assert.match(app, />\s*👤\s*</)
+test('workspace v2 visible header actions use the shared lightweight vector family', () => {
+  assert.match(sidebar, /<OanixIcon name="search"/)
+  assert.match(sidebar, /<OanixIcon name="lock"/)
+  assert.match(sidebar, /<OanixIcon name="menu"/)
+  assert.match(history, /<OanixIcon name="history"/)
+  assert.match(app, /<OanixIcon name="user"/)
+  for (const iconName of ['search', 'lock', 'menu', 'history', 'user']) {
+    assert.ok(icons.includes(`'\${iconName}'`), `missing shared icon ${iconName}`)
+  }
   assert.match(visual, /\.notes-header__actions[\s\S]*flex-flow: row nowrap !important/)
   assert.match(visual, /\.version-history-launcher \{ order: 3 !important; \}/)
   assert.match(visual, /\.account-header-action \{ order: 4 !important; \}/)
-  assert.match(visual, /\.version-history-launcher::before/)
-  assert.match(visual, /\.account-header-action::before/)
-  assert.match(visual, /mask-image: url/)
-  assert.match(visual, /background-color: currentColor !important/)
 })
 
 test('history and account launchers cannot render a second ghost glyph', () => {
