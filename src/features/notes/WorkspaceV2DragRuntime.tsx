@@ -32,6 +32,7 @@ type ActiveGesture = {
   ghostHeight: number
   scrollFrame: number | null
   initialOrder: string[]
+  endAnchor: Element | null
   group: string
 }
 
@@ -218,7 +219,7 @@ export function WorkspaceV2DragRuntime({
         )
         gesture.initialOrder.forEach((id) => {
           const item = byId.get(id)
-          if (item) gesture?.container.appendChild(item)
+          if (item) gesture?.container.insertBefore(item, gesture.endAnchor)
         })
       }
       clearGestureVisuals()
@@ -306,6 +307,9 @@ export function WorkspaceV2DragRuntime({
       const container = item.parentElement
       if (!container) return
 
+      const initialItems = draggableItems(container, kind)
+      const endAnchor = initialItems.at(-1)?.nextElementSibling ?? null
+
       gesture = {
         pointerId: event.pointerId,
         kind,
@@ -325,6 +329,7 @@ export function WorkspaceV2DragRuntime({
         ghostHeight: 0,
         scrollFrame: null,
         initialOrder: [],
+        endAnchor,
         group: item.dataset.v2Group ?? '',
       }
       if (!dragBlocked) {
