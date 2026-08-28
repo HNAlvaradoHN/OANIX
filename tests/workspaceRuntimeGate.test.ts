@@ -6,6 +6,7 @@ const main = readFileSync('src/main.tsx', 'utf8')
 const app = readFileSync('src/app/App.tsx', 'utf8')
 const gate = readFileSync('src/app/WorkspaceRuntimeGate.tsx', 'utf8')
 const legacyGate = readFileSync('src/app/LegacyWorkspaceRuntimeGate.tsx', 'utf8')
+const visualRuntime = readFileSync('src/features/notes/V383WorkspaceVisualRuntime.tsx', 'utf8')
 
 test('workspace data runtimes mount only inside the unlocked app lifecycle', () => {
   assert.doesNotMatch(main, /WorkspaceRuntimeGate/)
@@ -18,7 +19,8 @@ test('workspace data runtimes mount only inside the unlocked app lifecycle', () 
 
 test('workspace-only runtimes hydrate together once the unlocked app mounts the gate', () => {
   assert.match(legacyGate, /<OrganicWorkspaceRuntime \/>/)
-  assert.match(legacyGate, /features\/notes\/folderDockContract\.css/)
+  assert.doesNotMatch(legacyGate, /folderDockContract\.css/)
+  assert.match(visualRuntime, /\.\/folderDockContract\.css/)
   assert.doesNotMatch(legacyGate, /FolderDockFinishingRuntime/)
   assert.match(legacyGate, /<WorkspacePersonalizationRuntime \/>/)
   assert.doesNotMatch(legacyGate, /FolderAppearanceRuntime|FolderCustomizerBridgeRuntime/)
