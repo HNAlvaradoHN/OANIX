@@ -61,3 +61,10 @@ test('workspace v2 reorder stays disabled while multi-select is active', () => {
   assert.match(drag, /const dragBlocked = bulkSelectionActive\(\) \|\| Boolean/)
   assert.match(css, /html\.oanix-note-bulk-selecting \.oanix-workspace-v2__note-actions[\s\S]*pointer-events: none/)
 })
+
+test('workspace v2 cancel restores draggable items before the original trailing control', () => {
+  assert.match(drag, /endAnchor: Element \| null/)
+  assert.match(drag, /const endAnchor = initialItems\.at\(-1\)\?\.nextElementSibling \?\? null/)
+  assert.match(drag, /gesture\?\.container\.insertBefore\(item, gesture\.endAnchor\)/)
+  assert.doesNotMatch(drag, /gesture\?\.container\.appendChild\(item\)/)
+})
