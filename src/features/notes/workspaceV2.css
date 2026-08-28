@@ -1,0 +1,714 @@
+.oanix-workspace-v2 {
+  --v2-bg: #e7edf4;
+  --v2-surface: rgba(255, 255, 255, .58);
+  --v2-surface-strong: rgba(255, 255, 255, .78);
+  --v2-border: rgba(255, 255, 255, .62);
+  --v2-text: #1f2937;
+  --v2-muted: #64748b;
+  --v2-shadow: 0 18px 45px rgba(15, 23, 42, .12);
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  height: 100dvh;
+  border-right: 0;
+  color: var(--v2-text);
+  background:
+    radial-gradient(circle at 14% 8%, rgba(59, 130, 246, .18), transparent 32%),
+    radial-gradient(circle at 84% 24%, rgba(236, 72, 153, .13), transparent 30%),
+    linear-gradient(180deg, #edf2f7 0%, #dce5ee 100%);
+}
+
+[data-oanix-theme="classic-night"] .oanix-workspace-v2,
+[data-oanix-theme="midnight-violet"] .oanix-workspace-v2 {
+  --v2-bg: #0f172a;
+  --v2-surface: rgba(15, 23, 42, .54);
+  --v2-surface-strong: rgba(30, 41, 59, .78);
+  --v2-border: rgba(255, 255, 255, .12);
+  --v2-text: #f8fafc;
+  --v2-muted: #a7b2c5;
+  --v2-shadow: 0 18px 50px rgba(0, 0, 0, .3);
+  background:
+    radial-gradient(circle at 14% 8%, rgba(59, 130, 246, .18), transparent 34%),
+    radial-gradient(circle at 82% 24%, rgba(168, 85, 247, .16), transparent 32%),
+    linear-gradient(180deg, #101827 0%, #0b1220 100%);
+}
+
+.oanix-workspace-v2::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255,255,255,.08), transparent 24%, transparent 72%, rgba(255,255,255,.08));
+}
+
+.oanix-workspace-v2__header {
+  flex: 0 0 auto;
+  min-height: 3.55rem;
+  padding: .48rem clamp(.7rem, 2vw, 1.1rem);
+  border-bottom: 1px solid var(--v2-border);
+  background: rgba(255, 255, 255, .32);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+}
+
+[data-oanix-theme="classic-night"] .oanix-workspace-v2__header,
+[data-oanix-theme="midnight-violet"] .oanix-workspace-v2__header {
+  background: rgba(15, 23, 42, .42);
+}
+
+.oanix-workspace-v2__brand {
+  min-width: 0;
+}
+
+.oanix-workspace-v2__brand .notes-brand__mark {
+  border-radius: .72rem;
+  background: linear-gradient(135deg, #f97316, #ea580c);
+  box-shadow: 0 6px 16px rgba(234, 88, 12, .28);
+}
+
+.oanix-workspace-v2__brand > div:last-child {
+  min-width: 0;
+}
+
+.oanix-workspace-v2__brand strong,
+.oanix-workspace-v2__brand span {
+  color: var(--v2-text);
+}
+
+.oanix-workspace-v2__brand span {
+  display: block;
+  max-width: min(48vw, 23rem);
+  overflow: hidden;
+  color: var(--v2-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.oanix-workspace-v2__header-actions .icon-button {
+  color: var(--v2-text);
+  background: transparent;
+  border-color: transparent;
+  transition: transform .18s ease, background-color .18s ease, border-color .18s ease;
+}
+
+.oanix-workspace-v2__header-actions .icon-button--active {
+  border-color: rgba(59, 130, 246, .3);
+  background: rgba(59, 130, 246, .12);
+}
+
+.oanix-workspace-v2__search {
+  flex: 0 0 auto;
+  min-height: 2.85rem;
+  margin: .55rem clamp(.7rem, 2vw, 1rem) 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .5rem;
+  padding: .4rem .55rem .4rem .75rem;
+  border: 1px solid var(--v2-border);
+  border-radius: 1rem;
+  background: var(--v2-surface-strong);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, .07);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+}
+
+.oanix-workspace-v2__search input {
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--v2-text);
+  font: inherit;
+}
+
+.oanix-workspace-v2__search input::placeholder {
+  color: var(--v2-muted);
+}
+
+.oanix-workspace-v2__search button {
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  border-radius: .7rem;
+  background: transparent;
+  color: var(--v2-muted);
+  cursor: pointer;
+}
+
+.oanix-workspace-v2__chips-shell {
+  position: relative;
+  flex: 0 0 auto;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 2.5rem;
+  align-items: center;
+  gap: .5rem;
+  padding: .7rem clamp(.7rem, 2vw, 1rem) .2rem;
+}
+
+.oanix-workspace-v2__chips {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: .48rem;
+  overflow-x: auto;
+  padding: .15rem .1rem .3rem;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;
+}
+
+.oanix-workspace-v2__chips::-webkit-scrollbar,
+.oanix-workspace-v2__folder-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.oanix-workspace-v2__chip {
+  flex: 0 0 auto;
+  min-height: 2.2rem;
+  display: inline-flex;
+  align-items: center;
+  gap: .38rem;
+  padding: .38rem .72rem;
+  border: 1px solid var(--v2-border);
+  border-radius: 999px;
+  background: var(--v2-surface);
+  color: var(--v2-text);
+  box-shadow: inset 0 1px 1px rgba(255,255,255,.35);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  cursor: grab;
+  touch-action: pan-x;
+  transition: background-color .18s ease, border-color .18s ease, transform .18s ease;
+  white-space: nowrap;
+}
+
+.oanix-workspace-v2__chip.is-active {
+  border-color: transparent;
+  background: var(--v2-tag-color, #2563eb);
+  color: #fff;
+  box-shadow: 0 5px 16px color-mix(in srgb, var(--v2-tag-color, #2563eb) 38%, transparent);
+}
+
+.oanix-workspace-v2__chip:first-child.is-active {
+  --v2-tag-color: #2563eb;
+}
+
+.oanix-workspace-v2__chip-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--v2-tag-color, #2563eb);
+  color: #fff;
+  font-size: .72rem;
+}
+
+.oanix-workspace-v2__chip.is-active .oanix-workspace-v2__chip-icon {
+  background: rgba(255,255,255,.2);
+}
+
+.oanix-workspace-v2__chip-add {
+  width: 2.35rem;
+  height: 2.35rem;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255,255,255,.44);
+  border-radius: 999px;
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(37,99,235,.32);
+  cursor: pointer;
+  transition: transform .16s ease;
+}
+
+.oanix-workspace-v2__error {
+  flex: 0 0 auto;
+  margin: .35rem clamp(.7rem, 2vw, 1rem) 0;
+  padding: .55rem .7rem;
+  border: 1px solid rgba(239,68,68,.24);
+  border-radius: .8rem;
+  background: rgba(239,68,68,.08);
+  color: #b42318;
+  font-size: .78rem;
+}
+
+.oanix-workspace-v2__notes-scroll {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: .65rem clamp(.55rem, 2vw, 1rem) 9.4rem;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(100,116,139,.35) transparent;
+  touch-action: pan-y;
+  overscroll-behavior: contain;
+}
+
+.oanix-workspace-v2__timeline {
+  position: relative;
+  width: min(100%, 58rem);
+  margin: 0 auto;
+  padding: .45rem 0 1rem;
+}
+
+.oanix-workspace-v2__timeline::before {
+  content: "";
+  position: absolute;
+  top: .25rem;
+  bottom: .25rem;
+  left: 50%;
+  width: 3px;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    rgba(59,130,246,.34) 12%,
+    rgba(16,185,129,.32) 50%,
+    rgba(236,72,153,.3) 88%,
+    transparent
+  );
+}
+
+.oanix-workspace-v2__timeline-item {
+  position: relative;
+  left: 0;
+  width: 50%;
+  padding: .62rem 1.85rem .62rem .2rem;
+  box-sizing: border-box;
+  text-align: right;
+}
+
+.oanix-workspace-v2__timeline-item:nth-child(even) {
+  left: 50%;
+  padding: .62rem .2rem .62rem 1.85rem;
+  text-align: left;
+}
+
+.oanix-workspace-v2__timeline-dot {
+  position: absolute;
+  top: 1.1rem;
+  right: -.48rem;
+  z-index: 2;
+  width: .98rem;
+  height: .98rem;
+  border: 3px solid var(--v2-note-color, #2563eb);
+  border-radius: 999px;
+  background: rgba(255,255,255,.92);
+  box-shadow: 0 0 0 4px rgba(255,255,255,.25), 0 4px 12px rgba(15,23,42,.14);
+}
+
+.oanix-workspace-v2__timeline-item:nth-child(even) .oanix-workspace-v2__timeline-dot {
+  right: auto;
+  left: -.48rem;
+}
+
+.oanix-workspace-v2__note-card {
+  position: relative;
+  min-width: 0;
+  padding: .88rem .95rem;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.42);
+  border-radius: 1.1rem;
+  outline: 0;
+  color: var(--v2-note-text, #fff);
+  background:
+    linear-gradient(
+      135deg,
+      rgba(var(--v2-note-r, 37), var(--v2-note-g, 99), var(--v2-note-b, 235), .34),
+      rgba(var(--v2-note-r, 37), var(--v2-note-g, 99), var(--v2-note-b, 235), .15)
+    ),
+    rgba(255,255,255,.18);
+  box-shadow: 0 8px 28px rgba(15,23,42,.09), inset 0 1px 1px rgba(255,255,255,.45);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+  cursor: grab;
+  backface-visibility: hidden;
+  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+}
+
+.oanix-workspace-v2__note-card::before {
+  content: "";
+  position: absolute;
+  top: -70%;
+  right: -44%;
+  width: 90%;
+  height: 120%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,.38), transparent 62%);
+  pointer-events: none;
+}
+
+.oanix-workspace-v2__timeline-item.is-selected .oanix-workspace-v2__note-card {
+  border-color: rgba(59,130,246,.55);
+  box-shadow: 0 12px 34px rgba(37,99,235,.16), inset 0 1px 1px rgba(255,255,255,.48);
+}
+
+.oanix-workspace-v2__note-meta,
+.oanix-workspace-v2__note-actions {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+}
+
+.oanix-workspace-v2__note-meta {
+  justify-content: space-between;
+  gap: .5rem;
+  margin-bottom: .35rem;
+  font-size: .68rem;
+  font-weight: 750;
+  letter-spacing: .02em;
+  opacity: .8;
+}
+
+.oanix-workspace-v2__note-category {
+  max-width: 68%;
+  padding: .16rem .48rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(15,23,42,.18);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.oanix-workspace-v2__note-title,
+.oanix-workspace-v2__note-description {
+  position: relative;
+  z-index: 1;
+  display: block;
+}
+
+.oanix-workspace-v2__note-title {
+  margin-bottom: .28rem;
+  overflow: hidden;
+  font-size: clamp(.9rem, 2vw, 1.06rem);
+  font-weight: 900;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.oanix-workspace-v2__note-description {
+  margin: 0 0 .55rem;
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: .76rem;
+  line-height: 1.35;
+  opacity: .84;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.oanix-workspace-v2__note-actions {
+  justify-content: flex-end;
+  gap: .32rem;
+}
+
+.oanix-workspace-v2__timeline-item:nth-child(even) .oanix-workspace-v2__note-actions {
+  justify-content: flex-start;
+}
+
+.oanix-workspace-v2__note-actions button {
+  width: 1.9rem;
+  height: 1.9rem;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255,255,255,.38);
+  border-radius: .68rem;
+  background: rgba(255,255,255,.22);
+  color: inherit;
+  cursor: pointer;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  transition: transform .16s ease, background-color .16s ease;
+}
+
+.oanix-workspace-v2__note-actions button.is-danger {
+  color: #ef4444;
+}
+
+.oanix-workspace-v2__empty {
+  min-height: 11rem;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: .35rem;
+  color: var(--v2-muted);
+  text-align: center;
+}
+
+.oanix-workspace-v2__empty strong {
+  color: var(--v2-text);
+}
+
+.oanix-workspace-v2__create-note {
+  position: absolute;
+  right: clamp(.8rem, 3vw, 1.35rem);
+  bottom: 7.25rem;
+  z-index: 8;
+  min-height: 2.8rem;
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  padding: .5rem .8rem;
+  border: 1px solid rgba(255,255,255,.44);
+  border-radius: 999px;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: #fff;
+  box-shadow: 0 10px 28px rgba(37,99,235,.3);
+  font-weight: 850;
+  cursor: pointer;
+  transition: transform .16s ease, box-shadow .16s ease;
+}
+
+.oanix-workspace-v2__create-note:disabled {
+  opacity: .48;
+  cursor: default;
+}
+
+.oanix-workspace-v2__folder-dock {
+  position: absolute;
+  right: clamp(.55rem, 1.5vw, 1rem);
+  bottom: max(.55rem, env(safe-area-inset-bottom));
+  left: clamp(.55rem, 1.5vw, 1rem);
+  z-index: 7;
+  min-width: 0;
+  padding: .52rem .6rem .45rem;
+  border: 1px solid var(--v2-border);
+  border-radius: 1.35rem;
+  background: rgba(255,255,255,.34);
+  box-shadow: var(--v2-shadow);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+}
+
+[data-oanix-theme="classic-night"] .oanix-workspace-v2__folder-dock,
+[data-oanix-theme="midnight-violet"] .oanix-workspace-v2__folder-dock {
+  background: rgba(15,23,42,.46);
+}
+
+.oanix-workspace-v2__folder-scroll {
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: .42rem;
+  overflow-x: auto;
+  padding: .08rem .05rem;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;
+}
+
+.oanix-workspace-v2__folder {
+  position: relative;
+  flex: 0 0 4.45rem;
+  min-width: 0;
+  display: grid;
+  justify-items: center;
+  gap: .14rem;
+  padding: .16rem .15rem .2rem;
+  border: 0;
+  background: transparent;
+  color: var(--v2-text);
+  cursor: grab;
+  touch-action: pan-x;
+}
+
+.oanix-workspace-v2__folder-shape {
+  width: 2.95rem;
+  height: 2.95rem;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.45);
+  border-radius: 1rem 1rem .72rem .72rem;
+  background:
+    linear-gradient(145deg, color-mix(in srgb, var(--v2-folder-color, #111b31) 78%, #fff 22%), var(--v2-folder-color, #111b31));
+  box-shadow: 0 7px 18px color-mix(in srgb, var(--v2-folder-color, #111b31) 34%, transparent);
+  font-size: 1.38rem;
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+
+.oanix-workspace-v2__folder-shape img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.oanix-workspace-v2__folder strong {
+  width: 100%;
+  overflow: hidden;
+  font-size: .64rem;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.oanix-workspace-v2__folder small {
+  position: absolute;
+  top: .05rem;
+  right: .18rem;
+  min-width: 1.18rem;
+  height: 1.18rem;
+  display: grid;
+  place-items: center;
+  padding: 0 .2rem;
+  border: 2px solid rgba(255,255,255,.7);
+  border-radius: 999px;
+  background: #2563eb;
+  color: #fff;
+  font-size: .56rem;
+  font-weight: 900;
+}
+
+.oanix-workspace-v2__folder-flags {
+  position: absolute;
+  top: 2.42rem;
+  right: .22rem;
+  font-size: .58rem;
+}
+
+.oanix-workspace-v2__folder.is-active .oanix-workspace-v2__folder-shape {
+  transform: translateY(-.2rem) scale(1.04);
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--v2-folder-color, #2563eb) 42%, transparent);
+}
+
+.oanix-workspace-v2__folder--add .oanix-workspace-v2__folder-shape {
+  border-style: dashed;
+  background: rgba(37,99,235,.14);
+  color: #2563eb;
+  box-shadow: none;
+}
+
+.oanix-workspace-v2__drag-ghost {
+  position: fixed;
+  z-index: 9999;
+  pointer-events: none;
+  opacity: .94;
+  transform: scale(1.055);
+  filter: drop-shadow(0 18px 28px rgba(0,0,0,.25));
+}
+
+.oanix-workspace-v2 .is-v2-drag-source {
+  opacity: .18;
+}
+
+.oanix-workspace-v2 .is-v2-dragging {
+  scroll-behavior: auto;
+  user-select: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .oanix-workspace-v2__header-actions .icon-button:hover,
+  .oanix-workspace-v2__chip-add:hover,
+  .oanix-workspace-v2__create-note:hover,
+  .oanix-workspace-v2__note-actions button:hover {
+    transform: translateY(-2px) scale(1.04);
+  }
+
+  .oanix-workspace-v2__folder:hover .oanix-workspace-v2__folder-shape {
+    transform: translateY(-.22rem);
+  }
+
+  .oanix-workspace-v2__note-card:hover {
+    transform: translateY(-.18rem) scale(1.012);
+    box-shadow: 0 13px 34px rgba(15,23,42,.14), inset 0 1px 1px rgba(255,255,255,.48);
+  }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .oanix-workspace-v2__header-actions .icon-button:active,
+  .oanix-workspace-v2__chip-add:active,
+  .oanix-workspace-v2__create-note:active,
+  .oanix-workspace-v2__note-actions button:active {
+    transform: scale(.95);
+  }
+
+  .oanix-workspace-v2__folder:active .oanix-workspace-v2__folder-shape {
+    transform: scale(.95);
+  }
+}
+
+@media (max-width: 700px) {
+  .oanix-workspace-v2__timeline {
+    padding-inline: .2rem;
+  }
+
+  .oanix-workspace-v2__timeline::before {
+    left: .72rem;
+    transform: none;
+  }
+
+  .oanix-workspace-v2__timeline-item,
+  .oanix-workspace-v2__timeline-item:nth-child(even) {
+    left: 0;
+    width: 100%;
+    padding: .55rem .12rem .55rem 2rem;
+    text-align: left;
+  }
+
+  .oanix-workspace-v2__timeline-dot,
+  .oanix-workspace-v2__timeline-item:nth-child(even) .oanix-workspace-v2__timeline-dot {
+    right: auto;
+    left: .25rem;
+  }
+
+  .oanix-workspace-v2__note-actions,
+  .oanix-workspace-v2__timeline-item:nth-child(even) .oanix-workspace-v2__note-actions {
+    justify-content: flex-end;
+  }
+
+  .oanix-workspace-v2__folder {
+    flex-basis: 4.15rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .oanix-workspace-v2 *,
+  .oanix-workspace-v2 *::before,
+  .oanix-workspace-v2 *::after {
+    scroll-behavior: auto;
+    animation: none;
+    transition-duration: .001ms;
+  }
+
+  .oanix-workspace-v2__drag-ghost {
+    transform: none;
+  }
+}
+
+/* V2 is a full dashboard. The editor becomes the only visible surface once a
+   note opens, so legacy list visuals never sit underneath the new dashboard. */
+.notes-shell.oanix-workspace-v2-shell {
+  display: block;
+  min-height: 100dvh;
+  background: var(--v2-bg, #e7edf4);
+}
+
+.notes-shell.oanix-workspace-v2-shell > .oanix-workspace-v2 {
+  display: flex;
+}
+
+.notes-shell.oanix-workspace-v2-shell > .note-view {
+  display: none;
+}
+
+.notes-shell.oanix-workspace-v2-shell.notes-shell--open > .oanix-workspace-v2 {
+  display: none;
+}
+
+.notes-shell.oanix-workspace-v2-shell.notes-shell--open > .note-view {
+  display: flex;
+  width: 100%;
+  min-height: 100dvh;
+}
+
+.notes-shell.oanix-workspace-v2-shell.notes-shell--open .back-button {
+  display: grid;
+}
