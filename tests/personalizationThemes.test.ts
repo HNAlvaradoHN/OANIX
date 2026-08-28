@@ -127,8 +127,10 @@ test('legacy v38 fallback keeps one organic workspace surface authority', () => 
   assert.match(organicWorkspaceCss, /backdrop-filter: blur\(15px\)/)
 
   const themeSurfaceIndex = main.indexOf("./styles/classic-theme-surfaces.css")
-  const visualIndex = main.indexOf("./features/notes/v383WorkspaceVisual.css")
-  assert.ok(themeSurfaceIndex >= 0 && visualIndex > themeSurfaceIndex)
+  const visualIndex = legacyGate.indexOf("../features/notes/v383WorkspaceVisual.css")
+  assert.ok(themeSurfaceIndex >= 0)
+  assert.ok(visualIndex >= 0)
+  assert.doesNotMatch(main, /features\/notes\/v383WorkspaceVisual\.css/)
   assert.match(app, /<WorkspaceRuntimeGate workspaceRevision=\{workspaceRevision\} \/>/)
   assert.match(legacyGate, /<OrganicWorkspaceRuntime \/>/)
 })
