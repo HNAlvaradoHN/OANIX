@@ -4,6 +4,8 @@ import './workspaceStateContract.css'
 import './workspaceRefinements.css'
 import './compactNoteContract.css'
 import './responsiveCompactNoteContract.css'
+import './organicWorkspaceTouchMotion.css'
+import './folderDockContract.css'
 
 /**
  * Final visual contract marker for the unlocked notes workspace.
