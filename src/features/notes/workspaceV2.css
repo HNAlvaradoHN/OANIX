@@ -1390,8 +1390,12 @@ body.oanix-v2-note-dragging {
 
 [data-oanix-theme="classic-day"] .oanix-workspace-v2.has-wallpaper::before {
   background:
-    linear-gradient(180deg, rgba(248,250,252,.035), rgba(234,240,247,.10)),
-    radial-gradient(circle at 50% 24%, rgba(255,255,255,.07), transparent 46%);
+    linear-gradient(180deg, rgba(8, 13, 23, .10), rgba(8, 13, 23, .22)),
+    radial-gradient(circle at 50% 24%, rgba(32, 48, 68, .04), transparent 46%);
+}
+
+[data-oanix-theme="classic-day"] .oanix-workspace-v2.has-wallpaper .oanix-workspace-v2__wallpaper {
+  opacity: .96;
 }
 
 .oanix-workspace-v2.has-wallpaper .oanix-workspace-v2__header,
@@ -2062,7 +2066,6 @@ html[data-oanix-theme='classic-day'] .oanix-workspace-v2.has-wallpaper .oanix-wo
   .oanix-workspace-v2__timeline-item:nth-child(even) .oanix-workspace-v2__note-actions {
     width: 100%;
     display: grid;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
     justify-content: stretch;
     gap: .28rem;
   }
@@ -2079,10 +2082,6 @@ html[data-oanix-theme='classic-day'] .oanix-workspace-v2.has-wallpaper .oanix-wo
     padding-bottom: max(7rem, calc(6.25rem + env(safe-area-inset-bottom)));
   }
 
-  .oanix-workspace-v2__create-note,
-  .oanix-workspace-v2 .oanix-workspace-v2__create-note.notes-create-fab {
-    bottom: max(5.95rem, calc(5.25rem + env(safe-area-inset-bottom)));
-  }
 }
 
 @media (max-width: 480px) {
@@ -2164,12 +2163,6 @@ html[data-oanix-theme='classic-day'] .oanix-workspace-v2.has-wallpaper .oanix-wo
     border-radius: .68rem;
   }
 
-  .oanix-workspace-v2__create-note,
-  .oanix-workspace-v2 .oanix-workspace-v2__create-note.notes-create-fab {
-    width: 2.9rem;
-    height: 2.9rem;
-    bottom: max(5.35rem, calc(4.8rem + env(safe-area-inset-bottom)));
-  }
 }
 
 
@@ -2206,8 +2199,8 @@ html[data-oanix-theme='classic-day'] .oanix-workspace-v2.has-wallpaper .oanix-wo
 
 .oanix-workspace-v2 .oanix-workspace-v2__create-note.notes-create-fab {
   position: absolute !important;
-  right: max(.72rem, env(safe-area-inset-right)) !important;
-  bottom: max(5.55rem, calc(5rem + env(safe-area-inset-bottom))) !important;
+  right: .1rem !important;
+  bottom: calc(100% + .62rem) !important;
   width: 2.65rem !important;
   height: 2.65rem !important;
   min-width: 2.65rem !important;
@@ -2251,8 +2244,7 @@ html[data-oanix-theme='classic-day'] .oanix-workspace-v2.has-wallpaper .oanix-wo
   }
 
   .oanix-workspace-v2 .oanix-workspace-v2__create-note.notes-create-fab {
-    right: max(.62rem, env(safe-area-inset-right)) !important;
-    bottom: max(5.35rem, calc(4.85rem + env(safe-area-inset-bottom))) !important;
+    right: .08rem !important;
     width: 2.55rem !important;
     height: 2.55rem !important;
     min-width: 2.55rem !important;
@@ -2269,8 +2261,7 @@ html[data-oanix-theme='classic-day'] .oanix-workspace-v2.has-wallpaper .oanix-wo
   }
 
   .oanix-workspace-v2 .oanix-workspace-v2__create-note.notes-create-fab {
-    right: max(.56rem, env(safe-area-inset-right)) !important;
-    bottom: max(5rem, calc(4.55rem + env(safe-area-inset-bottom))) !important;
+    right: .05rem !important;
     width: 2.42rem !important;
     height: 2.42rem !important;
     min-width: 2.42rem !important;

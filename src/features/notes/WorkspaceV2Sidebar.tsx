@@ -579,20 +579,20 @@ export function WorkspaceV2Sidebar({
         )}
       </div>
 
-      <button
-        className="notes-create-fab oanix-workspace-v2__create-note"
-        type="button"
-        onClick={onCreateNote}
-        disabled={creating || Boolean(searchQuery.trim())}
-        aria-label={creating ? 'Creando nota' : 'Crear nueva nota'}
-        title={creating ? 'Creando…' : 'Nueva nota'}
-        aria-busy={creating}
-        data-v2-drag-ignore="true"
-      >
-        {creating ? <span aria-hidden="true">…</span> : <OanixIcon name="noteAdd" size={21} />}
-      </button>
-
       <footer className="oanix-workspace-v2__folder-dock" aria-label="Carpetas">
+        <button
+          className="notes-create-fab oanix-workspace-v2__create-note"
+          type="button"
+          onClick={onCreateNote}
+          disabled={creating || Boolean(searchQuery.trim())}
+          aria-label={creating ? 'Creando nota' : 'Crear nueva nota'}
+          title={creating ? 'Creando…' : 'Nueva nota'}
+          aria-busy={creating}
+          data-v2-drag-ignore="true"
+        >
+          {creating ? <span aria-hidden="true">…</span> : <OanixIcon name="noteAdd" size={21} />}
+        </button>
+
         <button
           type="button"
           className={`oanix-workspace-v2__folder oanix-workspace-v2__folder--all${activeFolderId === 'all' ? ' is-active' : ''}`}

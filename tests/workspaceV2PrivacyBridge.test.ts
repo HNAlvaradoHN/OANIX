@@ -46,7 +46,8 @@ test('workspace v2 keyboard note opening crosses the same privacy click gate as 
 
 test('workspace v2 create-note control has its own compact geometry and semantic icon', () => {
   assert.match(sidebar, /<OanixIcon name="noteAdd" size=\{21\}/)
-  assert.match(css, /oanix-workspace-v2__create-note\.notes-create-fab[\s\S]*bottom: max\(5\.55rem/)
+  assert.match(sidebar, /<footer className="oanix-workspace-v2__folder-dock"[\s\S]*notes-create-fab oanix-workspace-v2__create-note/)
+  assert.match(css, /oanix-workspace-v2__create-note\.notes-create-fab[\s\S]*bottom: calc\(100% \+ \.62rem\) !important/)
   assert.match(css, /oanix-workspace-v2__create-note\.notes-create-fab[\s\S]*width: 2\.65rem !important/)
   assert.match(css, /@media \(max-width: 480px\)[\s\S]*width: 2\.42rem !important/)
 })
