@@ -11,6 +11,7 @@ const css = readFileSync('src/features/notes/workspacePersonalization.css', 'utf
 const main = readFileSync('src/main.tsx', 'utf8')
 const app = readFileSync('src/app/App.tsx', 'utf8')
 const gate = readFileSync('src/app/WorkspaceRuntimeGate.tsx', 'utf8')
+const legacyGate = readFileSync('src/app/LegacyWorkspaceRuntimeGate.tsx', 'utf8')
 
 test('la personalización de lista vive dentro del mismo registro cifrado de la nota', () => {
   assert.match(noteTypes, /visualDescription\?: string/)
@@ -84,11 +85,11 @@ test('la nueva presentación usa el logo real y mantiene fondo legible con Día 
 
 test('los runtimes del workspace se montan con el ciclo de vida desbloqueado sin observar notes-sidebar', () => {
   assert.doesNotMatch(main, /WorkspaceRuntimeGate/)
-  assert.match(app, /<WorkspaceRuntimeGate \/>/)
+  assert.match(app, /<WorkspaceRuntimeGate workspaceRevision=\{workspaceRevision\} \/>/)
   assert.doesNotMatch(gate, /document\.querySelector/)
   assert.doesNotMatch(gate, /MutationObserver/)
-  assert.match(gate, /<WorkspacePersonalizationRuntime \/>/)
-  assert.match(gate, /<WorkspacePersonalizationRuntime \/>/)
-  assert.doesNotMatch(gate, /FolderCustomizerBridgeRuntime|FolderAppearanceRuntime/)
-  assert.doesNotMatch(runtime + css + gate, /cdn\.tailwindcss|unpkg\.com|unsplash|picsum/)
+  assert.match(legacyGate, /<WorkspacePersonalizationRuntime \/>/)
+  assert.match(legacyGate, /<WorkspacePersonalizationRuntime \/>/)
+  assert.doesNotMatch(legacyGate, /FolderCustomizerBridgeRuntime|FolderAppearanceRuntime/)
+  assert.doesNotMatch(runtime + css + legacyGate, /cdn\.tailwindcss|unpkg\.com|unsplash|picsum/)
 })

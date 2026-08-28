@@ -5,13 +5,14 @@ import test from 'node:test'
 const main = readFileSync('src/main.tsx', 'utf8')
 const app = readFileSync('src/app/App.tsx', 'utf8')
 const gate = readFileSync('src/app/WorkspaceRuntimeGate.tsx', 'utf8')
+const legacyGate = readFileSync('src/app/LegacyWorkspaceRuntimeGate.tsx', 'utf8')
 const runtime = readFileSync('src/features/notes/V383WorkspaceVisualRuntime.tsx', 'utf8')
 const css = readFileSync('src/features/notes/v383WorkspaceVisual.css', 'utf8')
 const personalization = readFileSync('src/features/notes/WorkspacePersonalizationRuntime.tsx', 'utf8')
 
-test('one scoped v38.3 layer is mounted only for the unlocked workspace above editor contracts', () => {
-  assert.match(app, /<WorkspaceRuntimeGate \/>/)
-  assert.match(gate, /<V383WorkspaceVisualRuntime \/>/)
+test('legacy fallback keeps one scoped v38.3 layer behind the unlocked runtime boundary', () => {
+  assert.match(app, /<WorkspaceRuntimeGate workspaceRevision=\{workspaceRevision\} \/>/)
+  assert.match(legacyGate, /<V383WorkspaceVisualRuntime \/>/)
   assert.match(runtime, /classList\.add\('oanix-v383-visual'\)/)
   assert.doesNotMatch(main, /\.\/styles\/header-icon-polish\.css/)
   assert.match(main, /\.\/styles\/notebook-contract\.css/)

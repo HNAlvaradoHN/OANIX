@@ -6,6 +6,7 @@ const runtime = readFileSync('src/features/tags/TagMobileGestureRuntime.tsx', 'u
 const css = readFileSync('src/features/tags/tagMobileGesture.css', 'utf8')
 const organic = readFileSync('src/features/notes/OrganicWorkspaceRuntime.tsx', 'utf8')
 const gate = readFileSync('src/app/WorkspaceRuntimeGate.tsx', 'utf8')
+const legacyGate = readFileSync('src/app/LegacyWorkspaceRuntimeGate.tsx', 'utf8')
 
 test('las etiquetas conservan el reordenamiento persistente existente', () => {
   assert.match(organic, /persistTagOrder/)
@@ -120,7 +121,7 @@ test('el helper limpia overlays si la app pierde foco durante un gesto', () => {
 test('un swipe no abre accidentalmente la etiqueta y el runtime se monta desbloqueado', () => {
   assert.match(runtime, /suppressClickForId/)
   assert.match(runtime, /event\.stopImmediatePropagation\(\)/)
-  assert.match(gate, /<TagMobileGestureRuntime \/>/)
+  assert.match(legacyGate, /<TagMobileGestureRuntime \/>/)
 })
 
 test('los listeners de alta frecuencia solo viven durante un gesto táctil activo', () => {

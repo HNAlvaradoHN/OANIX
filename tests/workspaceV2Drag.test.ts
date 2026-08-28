@@ -49,7 +49,7 @@ test('workspace v2 drag owns coarse-pointer scrolling without native gesture can
 })
 
 test('workspace v2 action buttons can still scroll on touch without arming a drag', () => {
-  assert.match(drag, /const dragBlocked = Boolean/)
+  assert.match(drag, /const dragBlocked = bulkSelectionActive\(\) \|\| Boolean/)
   assert.match(drag, /if \(dragBlocked && event\.pointerType === 'mouse'\) return/)
   assert.match(drag, /if \(!dragBlocked\) \{[\s\S]*window\.setTimeout\(beginDrag, LONG_PRESS_MS\[kind\]\)/)
 })

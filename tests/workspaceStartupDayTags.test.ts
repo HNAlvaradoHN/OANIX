@@ -5,6 +5,7 @@ import test from 'node:test'
 const main = readFileSync('src/main.tsx', 'utf8')
 const app = readFileSync('src/app/App.tsx', 'utf8')
 const gate = readFileSync('src/app/WorkspaceRuntimeGate.tsx', 'utf8')
+const legacyGate = readFileSync('src/app/LegacyWorkspaceRuntimeGate.tsx', 'utf8')
 const folderCreator = readFileSync('src/features/folders/FolderCreationRuntime.tsx', 'utf8')
 const organic = readFileSync('src/features/notes/OrganicWorkspaceRuntime.tsx', 'utf8')
 const tagService = readFileSync('src/features/tags/tagService.ts', 'utf8')
@@ -31,8 +32,8 @@ test('touch startup keeps large blurred vault ambience static while preserving s
 })
 
 test('top tag plus owns professional tag creation with persisted icon and color after unlock', () => {
-  assert.match(app, /<WorkspaceRuntimeGate \/>/)
-  assert.doesNotMatch(gate, /TagCreationRuntime/)
+  assert.match(app, /<WorkspaceRuntimeGate workspaceRevision=\{workspaceRevision\} \/>/)
+  assert.doesNotMatch(legacyGate, /TagCreationRuntime/)
   assert.match(organic, /Agregar etiqueta/)
   assert.match(organic, /Eliminar etiqueta/)
   assert.match(organic, /Nueva etiqueta/)
