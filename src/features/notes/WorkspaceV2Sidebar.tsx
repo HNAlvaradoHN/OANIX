@@ -32,6 +32,7 @@ import {
 } from './noteTypes'
 import { WorkspaceV2DragRuntime } from './WorkspaceV2DragRuntime'
 import { WorkspaceV2TagActions } from './WorkspaceV2TagActions'
+import { WorkspaceV2FolderActions } from './WorkspaceV2FolderActions'
 import './workspaceV2.css'
 
 interface WorkspaceV2SidebarProps {
@@ -68,6 +69,8 @@ interface WorkspaceV2SidebarProps {
   onDeleteNote: (note: NoteRecord) => void
   onCreateTag: (name: string, appearance: { icon: string; color: string }) => Promise<void>
   onDeleteTag: (tag: TagRecord) => Promise<void>
+  onRenameFolder: (folder: FolderRecord, name: string) => Promise<void>
+  onDeleteFolder: (folder: FolderRecord) => Promise<void>
   onFolderOrder: (ids: string[]) => void
   onTagOrder: (ids: string[]) => void
   onNoteOrder: (ids: string[]) => void
@@ -135,6 +138,8 @@ export function WorkspaceV2Sidebar({
   onDeleteNote,
   onCreateTag,
   onDeleteTag,
+  onRenameFolder,
+  onDeleteFolder,
   onFolderOrder,
   onTagOrder,
   onNoteOrder,
@@ -144,6 +149,7 @@ export function WorkspaceV2Sidebar({
   const [folderIcons, setFolderIcons] = useState(new Map<string, FolderIcon>())
   const [folderCovers, setFolderCovers] = useState(new Map<string, string>())
   const [folderFlags, setFolderFlags] = useState(new Map<string, FolderAppearanceFlags>())
+  const [folderActionsId, setFolderActionsId] = useState<string | null>(null)
 
   useEffect(() => {
     let disposed = false
@@ -472,27 +478,42 @@ export function WorkspaceV2Sidebar({
             const cover = folderCovers.get(folder.id) ?? ''
             const flags = folderFlags.get(folder.id)
             return (
-              <button
+              <div
                 key={folder.id}
-                type="button"
                 className={`oanix-workspace-v2__folder${activeFolderId === folder.id ? ' is-active' : ''}`}
                 data-v2-drag-kind="folder"
                 data-v2-id={folder.id}
-                onClick={() => onSelectFolder(folder.id)}
                 style={{ '--v2-folder-color': color } as CSSProperties}
-                title={folder.name}
               >
-                <span className="oanix-workspace-v2__folder-shape">
-                  {cover ? <img src={cover} alt="" draggable={false} /> : <span>{icon}</span>}
-                </span>
-                <strong>{folder.name}</strong>
-                <small>{noteCountByFolder.get(folder.id) ?? 0}</small>
-                {(flags?.pinned || flags?.favorite) && (
-                  <span className="oanix-workspace-v2__folder-flags" aria-hidden="true">
-                    {flags.pinned ? '📌' : ''}{flags.favorite ? '⭐' : ''}
+                <button
+                  type="button"
+                  className="oanix-workspace-v2__folder-main"
+                  onClick={() => onSelectFolder(folder.id)}
+                  title={folder.name}
+                  aria-label={`Abrir carpeta ${folder.name}`}
+                >
+                  <span className="oanix-workspace-v2__folder-shape">
+                    {cover ? <img src={cover} alt="" draggable={false} /> : <span>{icon}</span>}
                   </span>
-                )}
-              </button>
+                  <strong>{folder.name}</strong>
+                  <small>{noteCountByFolder.get(folder.id) ?? 0}</small>
+                  {(flags?.pinned || flags?.favorite) && (
+                    <span className="oanix-workspace-v2__folder-flags" aria-hidden="true">
+                      {flags.pinned ? '📌' : ''}{flags.favorite ? '⭐' : ''}
+                    </span>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  className="oanix-workspace-v2__folder-gear"
+                  onClick={() => setFolderActionsId(folder.id)}
+                  aria-label={`Opciones de ${folder.name}`}
+                  title="Opciones de carpeta"
+                  data-v2-drag-ignore="true"
+                >
+                  ⚙
+                </button>
+              </div>
             )
           })}
 
@@ -508,6 +529,24 @@ export function WorkspaceV2Sidebar({
           </button>
         </div>
       </footer>
+
+      {folderActionsId && (() => {
+        const folder = folders.find((candidate) => candidate.id === folderActionsId)
+        if (!folder) return null
+        return (
+          <WorkspaceV2FolderActions
+            folder={folder}
+            color={folderColors.get(folder.id) ?? DEFAULT_FOLDER_COLOR}
+            icon={folderIcons.get(folder.id) ?? DEFAULT_FOLDER_ICON}
+            cover={folderCovers.get(folder.id) ?? ''}
+            flags={folderFlags.get(folder.id)}
+            onClose={() => setFolderActionsId(null)}
+            onOpen={() => onSelectFolder(folder.id)}
+            onRename={onRenameFolder}
+            onDelete={onDeleteFolder}
+          />
+        )
+      })()}
     </aside>
   )
 }
