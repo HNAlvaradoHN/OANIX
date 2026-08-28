@@ -366,6 +366,20 @@ export function NotePrivacyRuntime() {
     return () => document.removeEventListener('click', captureWorkspaceClick, true)
   }, [privacyById, privateSession, selectedNoteId, unlockedNoteIds, visiblePrivateNoteId])
 
+  useEffect(() => {
+    function handleOpenNotePrivacy(event: Event) {
+      const detail = event instanceof CustomEvent
+        ? event.detail as { noteId?: unknown } | null
+        : null
+      if (typeof detail?.noteId !== 'string' || !detail.noteId) return
+      if (!noteById.has(detail.noteId)) return
+      setPrivacyManagerNoteId(detail.noteId)
+    }
+
+    window.addEventListener('oanix:open-note-privacy', handleOpenNotePrivacy)
+    return () => window.removeEventListener('oanix:open-note-privacy', handleOpenNotePrivacy)
+  }, [noteById])
+
   function manuallyRelockNote(noteId: string) {
     const focused = document.activeElement
     const noteView = document.querySelector<HTMLElement>('.note-view')
