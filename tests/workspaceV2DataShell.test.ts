@@ -77,6 +77,12 @@ test('workspace v2 desktop timeline owns the exact center axis and compact card 
   assert.match(css, /note-row:nth-child\(even\)[\s\S]*margin-right: auto !important/)
 })
 
+test('workspace v2 custom note colors choose readable ink by contrast rather than a fixed threshold', () => {
+  assert.match(source, /whiteContrast = 1\.05 \/ \(luminance \+ 0\.05\)/)
+  assert.match(source, /inkContrast = \(luminance \+ 0\.05\) \/ \(inkLuminance \+ 0\.05\)/)
+  assert.match(source, /inkContrast >= whiteContrast \? '#172033' : '#ffffff'/)
+})
+
 test('workspace v2 note card keyboard activation does not hijack nested action buttons', () => {
   assert.match(source, /onKeyDown=\{\(event\) => \{[\s\S]*event\.target !== event\.currentTarget[\s\S]*event\.currentTarget\.click\(\)/)
 })
