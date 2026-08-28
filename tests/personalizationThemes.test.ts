@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
 const main = readFileSync('src/main.tsx', 'utf8')
+const themeVisualStyles = readFileSync('src/app/ThemeVisualStyles.ts', 'utf8')
 const app = readFileSync('src/app/App.tsx', 'utf8')
 const gate = readFileSync('src/app/WorkspaceRuntimeGate.tsx', 'utf8')
 const legacyGate = readFileSync('src/app/LegacyWorkspaceRuntimeGate.tsx', 'utf8')
@@ -47,10 +48,12 @@ test('theme choice is only a local UI preference and applies before React paints
   assert.doesNotMatch(catalog, /supabase|encrypted_records|sync_records/i)
   assert.match(main, /applyOanixTheme\(readSavedOanixTheme\(\), false\)/)
   assert.match(main, /<ThemeMenu \/>/)
-  assert.match(main, /styles\/theme-surfaces\.css/)
-  assert.match(main, /styles\/classic-theme-contract\.css/)
-  assert.match(main, /styles\/notebook-contract\.css/)
-  assert.match(main, /styles\/classic-theme-surfaces\.css/)
+  assert.match(main, /\.\/app\/ThemeVisualStyles/)
+  assert.match(themeVisualStyles, /styles\/theme-surfaces\.css/)
+  assert.match(themeVisualStyles, /styles\/classic-theme-contract\.css/)
+  assert.match(themeVisualStyles, /styles\/notebook-contract\.css/)
+  assert.match(themeVisualStyles, /styles\/classic-theme-surfaces\.css/)
+  assert.doesNotMatch(main, /styles\/(?:theme-surfaces|classic-theme-contract|notebook-contract|classic-theme-surfaces)\.css/)
   assert.doesNotMatch(main, /styles\/themes\.css|base-themes\.css|notebook-polish\.css|final-visual-polish|classic-day-hard-fix/)
 })
 
@@ -127,7 +130,7 @@ test('legacy v38 fallback keeps one organic workspace surface authority', () => 
   assert.match(organicWorkspaceCss, /\.note-row[\s\S]*background: var\(--oanix-organic-card\) !important/)
   assert.match(organicWorkspaceCss, /backdrop-filter: blur\(15px\)/)
 
-  const themeSurfaceIndex = main.indexOf("./styles/classic-theme-surfaces.css")
+  const themeSurfaceIndex = themeVisualStyles.indexOf("../styles/classic-theme-surfaces.css")
   const visualIndex = visualRuntime.indexOf("./v383WorkspaceVisual.css")
   assert.ok(themeSurfaceIndex >= 0)
   assert.ok(visualIndex >= 0)
