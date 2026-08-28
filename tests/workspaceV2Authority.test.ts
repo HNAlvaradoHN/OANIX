@@ -34,14 +34,14 @@ test('workspace v2 has one switch and legacy visual authorities live behind a la
 })
 
 test('legacy workspace css is not eagerly loaded when v2 is authoritative', () => {
-  assert.doesNotMatch(main, /folderNavigationState\.css|note-menu-viewport-fit\.css|editorTrailingWorkspace\.css/)
+  assert.doesNotMatch(main, /folderNavigationState\.css|NoteMenuViewportFit\.css|note-menu-viewport-fit\.css|editorTrailingWorkspace\.css/)
   assert.doesNotMatch(gate, /folderDockContract\.css|organicWorkspace\.css|workspacePersonalization\.css|folderMobileDrag\.css|tagMobileGesture\.css|editorTrailingWorkspace\.css/)
-  assert.doesNotMatch(legacyGate, /folderNavigationState\.css|editorTrailingWorkspace\.css/)
+  assert.doesNotMatch(legacyGate, /folderNavigationState\.css|editorTrailingWorkspace\.css|NoteMenuViewportFit\.css|note-menu-viewport-fit\.css/)
   assert.match(v383WorkspaceVisualRuntime, /import '\.\.\/editor\/editorTrailingWorkspace\.css'/)
   assert.match(v383WorkspaceVisualRuntime, /import '\.\.\/folders\/folderNavigationState\.css'/)
-  assert.doesNotMatch(legacyGate, /note-menu-viewport-fit\.css/)
   assert.match(legacyGate, /<NoteMenuViewportFit \/>/)
-  assert.match(noteMenuViewportFit, /note-menu-viewport-fit\.css/)
+  assert.match(noteMenuViewportFit, /import '\.\/NoteMenuViewportFit\.css'/)
+  assert.doesNotMatch(noteMenuViewportFit, /\.\.\/\.\.\/styles\/note-menu-viewport-fit\.css/)
   assert.doesNotMatch(
     legacyGate,
     /import ['"]\.\.\/features\/notes\/(?:v383WorkspaceVisual|workspaceStateContract|workspaceRefinements|compactNoteContract|responsiveCompactNoteContract|organicWorkspaceTouchMotion|folderDockContract)\.css['"]/,
