@@ -1129,3 +1129,32 @@
     grid-template-columns: 1fr;
   }
 }
+
+.oanix-workspace-v2__modal-field textarea,
+.oanix-workspace-v2__modal-field select {
+  width: 100%;
+  min-height: 2.7rem;
+  padding: .55rem .68rem;
+  border: 1px solid var(--v2-border);
+  border-radius: .8rem;
+  outline: 0;
+  background: rgba(15,23,42,.12);
+  color: var(--v2-text);
+  font: inherit;
+}
+
+.oanix-workspace-v2__modal-field textarea {
+  min-height: 4.3rem;
+  resize: vertical;
+}
+
+.oanix-workspace-v2__modal-field small {
+  justify-self: end;
+  color: var(--v2-muted);
+  font-size: .66rem;
+}
+
+.oanix-workspace-v2__modal-field select option {
+  color: #111827;
+  background: #fff;
+}
