@@ -31,6 +31,7 @@ import {
   type NoteRecord,
 } from './noteTypes'
 import { WorkspaceV2DragRuntime } from './WorkspaceV2DragRuntime'
+import { WorkspaceV2TagActions } from './WorkspaceV2TagActions'
 import './workspaceV2.css'
 
 interface WorkspaceV2SidebarProps {
@@ -65,6 +66,8 @@ interface WorkspaceV2SidebarProps {
   onTogglePinned: (note: NoteRecord) => void
   onOpenTagEditor: (note: NoteRecord) => void
   onDeleteNote: (note: NoteRecord) => void
+  onCreateTag: (name: string, appearance: { icon: string; color: string }) => Promise<void>
+  onDeleteTag: (tag: TagRecord) => Promise<void>
   onFolderOrder: (ids: string[]) => void
   onTagOrder: (ids: string[]) => void
   onNoteOrder: (ids: string[]) => void
@@ -130,6 +133,8 @@ export function WorkspaceV2Sidebar({
   onTogglePinned,
   onOpenTagEditor,
   onDeleteNote,
+  onCreateTag,
+  onDeleteTag,
   onFolderOrder,
   onTagOrder,
   onNoteOrder,
@@ -324,16 +329,11 @@ export function WorkspaceV2Sidebar({
             </button>
           ))}
         </div>
-        <button
-          type="button"
-          className="oanix-workspace-v2__chip-add"
-          onClick={onOpenTagManager}
-          aria-label="Agregar o eliminar etiqueta"
-          title="Etiquetas"
-          data-v2-drag-ignore="true"
-        >
-          ＋
-        </button>
+        <WorkspaceV2TagActions
+          tags={tags}
+          onCreate={onCreateTag}
+          onDelete={onDeleteTag}
+        />
       </section>
 
       {error && <p className="oanix-workspace-v2__error" role="alert">{error}</p>}
