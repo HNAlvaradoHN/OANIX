@@ -57,8 +57,9 @@ test('folder appearance writes are serialized per folder so rapid personalizatio
 })
 
 test('exclusive legacy state contract loads after the v38.3 base inside the lazy fallback', () => {
-  const baseIndex = legacyGate.indexOf("../features/notes/v383WorkspaceVisual.css")
-  const stateIndex = legacyGate.indexOf("../features/notes/workspaceStateContract.css")
+  const baseIndex = visualRuntime.indexOf("./v383WorkspaceVisual.css")
+  const stateIndex = visualRuntime.indexOf("./workspaceStateContract.css")
   assert.ok(baseIndex >= 0 && stateIndex > baseIndex)
+  assert.doesNotMatch(legacyGate, /import ['"]\.\.\/features\/notes\/(?:v383WorkspaceVisual|workspaceStateContract)\.css['"]/)
   assert.doesNotMatch(main, /features\/notes\/(?:v383WorkspaceVisual|workspaceStateContract)\.css/)
 })
