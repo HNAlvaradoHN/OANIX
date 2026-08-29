@@ -8,6 +8,14 @@ const workspace = readFileSync('src/features/notes/NotesWorkspace.tsx', 'utf8')
 const creator = readFileSync('src/features/notes/WorkspaceV2FolderCreator.tsx', 'utf8')
 const encryptedRecords = readFileSync('src/storage/repositories/encryptedRecordRepository.ts', 'utf8')
 
+function functionSection(source: string, start: string, end: string): string {
+  const startIndex = source.indexOf(start)
+  const endIndex = source.indexOf(end, startIndex + start.length)
+  assert.ok(startIndex >= 0, `missing ${start}`)
+  assert.ok(endIndex > startIndex, `missing ${end} after ${start}`)
+  return source.slice(startIndex, endIndex)
+}
+
 test('workspace v2 folder menu reuses encrypted appearance and cover services', () => {
   for (const required of [
     'saveFolderPinned',
@@ -30,6 +38,28 @@ test('workspace v2 folder actions leave encrypted refresh ownership to storage a
   assert.match(encryptedRecords, /oanix:local-data-changed/)
   assert.match(encryptedRecords, /if \(notify\) notifyLocalEncryptedChange\(recordType, recordId\)/)
   assert.match(encryptedRecords, /notifyLocalEncryptedChange\(recordType, recordId\)/)
+})
+
+test('workspace v2 sidebar refreshes folder appearance from storage events only', () => {
+  assert.match(sidebar, /oanix:local-data-changed/)
+  assert.doesNotMatch(sidebar, /oanix:folder-appearance-saved/)
+})
+
+test('workspace v2 write handlers leave generic refresh ownership to persistence except batched note order', () => {
+  const sections = [
+    functionSection(workspace, 'async function handleV2CreateFolder', 'async function handleV2RenameFolder'),
+    functionSection(workspace, 'async function handleV2RenameFolder', 'async function handleReorderFolder'),
+    functionSection(workspace, 'async function handleV2CreateTag', 'function beginTagRename'),
+    functionSection(workspace, 'async function handleV2CustomizeNote', 'function handleV2FolderOrder'),
+    functionSection(workspace, 'function handleV2FolderOrder', 'function handleV2TagOrder'),
+    functionSection(workspace, 'function handleV2TagOrder', 'function handleV2NoteOrder'),
+  ]
+
+  for (const section of sections) assert.doesNotMatch(section, /oanix:local-data-changed/)
+
+  const noteOrder = functionSection(workspace, 'function handleV2NoteOrder', 'function scrollFolderTabs')
+  assert.match(noteOrder, /oanix:local-data-changed/)
+  assert.match(noteOrder, /saveWorkspaceV2NoteOrder/)
 })
 
 test('workspace v2 folder menu owns rename/delete UI but delegates data-safe mutations', () => {

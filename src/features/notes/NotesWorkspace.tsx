@@ -909,10 +909,6 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     } catch {
       setError('La carpeta se creó, pero no se pudo guardar toda su apariencia.')
     }
-
-    window.dispatchEvent(new CustomEvent('oanix:local-data-changed', {
-      detail: { recordType: 'folder', recordId: folder.id },
-    }))
   }
 
   async function handleV2RenameFolder(folder: FolderRecord, nextName: string) {
@@ -923,9 +919,6 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
 
     const updated = await renameFolder(folder.id, name)
     setFolders((current) => current.map((item) => item.id === updated.id ? updated : item))
-    window.dispatchEvent(new CustomEvent('oanix:local-data-changed', {
-      detail: { recordType: 'folder', recordId: updated.id },
-    }))
   }
 
   async function handleReorderFolder(folder: FolderRecord, direction: 'up' | 'down') {
@@ -1045,9 +1038,6 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
 
     const tag = await createTag(normalized, appearance)
     setTags((current) => sortTagState([...current, tag]))
-    window.dispatchEvent(new CustomEvent('oanix:local-data-changed', {
-      detail: { recordType: 'tag', recordId: tag.id },
-    }))
   }
 
   function beginTagRename(tag: TagRecord) {
@@ -1313,9 +1303,6 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     window.dispatchEvent(new CustomEvent('oanix:note-visual-changed', {
       detail: { note: updated },
     }))
-    window.dispatchEvent(new CustomEvent('oanix:local-data-changed', {
-      detail: { recordType: 'note', recordId: updated.id },
-    }))
   }
 
   function handleV2FolderOrder(folderIds: string[]) {
@@ -1331,9 +1318,6 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
           const persisted = await saveWorkspaceV2FolderOrder(orderToPersist)
           if (pendingV2FolderOrderRef.current) continue
           setFolders(persisted)
-          window.dispatchEvent(new CustomEvent('oanix:local-data-changed', {
-            detail: { recordType: 'folder' },
-          }))
         } catch {
           if (!pendingV2FolderOrderRef.current) {
             setError('No se pudo guardar el nuevo orden de las carpetas.')
@@ -1361,9 +1345,6 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
           const persisted = await saveWorkspaceV2TagOrder(orderToPersist)
           if (pendingV2TagOrderRef.current) continue
           setTags(persisted)
-          window.dispatchEvent(new CustomEvent('oanix:local-data-changed', {
-            detail: { recordType: 'tag' },
-          }))
         } catch {
           if (!pendingV2TagOrderRef.current) {
             setError('No se pudo guardar el nuevo orden de las etiquetas.')

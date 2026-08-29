@@ -237,7 +237,6 @@ export function FolderGridRuntime() {
         ? event.detail as { orderedIds?: unknown } | null
         : null
       if (!Array.isArray(detail?.orderedIds) || !detail.orderedIds.every((id) => typeof id === 'string')) return
-
       const orderedIds = detail.orderedIds as string[]
       const currentFolders = foldersRef.current
       if (orderedIds.length !== currentFolders.length) return
@@ -658,9 +657,6 @@ export function FolderGridRuntime() {
         return { ...current, colors, icons }
       })
       window.dispatchEvent(new CustomEvent('oanix:folder-appearance-saved'))
-      window.dispatchEvent(new CustomEvent('oanix:local-data-changed', {
-        detail: { recordType: 'folder-appearance', recordId: folderId },
-      }))
       setCustomFolder(null)
     } catch (appearanceError) {
       setCustomError(appearanceError instanceof Error ? appearanceError.message : 'No se pudo guardar el color o icono.')

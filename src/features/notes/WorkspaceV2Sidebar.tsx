@@ -223,11 +223,9 @@ export function WorkspaceV2Sidebar({
 
     void reloadAppearance()
     window.addEventListener('oanix:local-data-changed', handleLocalChange)
-    window.addEventListener('oanix:folder-appearance-saved', reloadAppearance)
     return () => {
       disposed = true
       window.removeEventListener('oanix:local-data-changed', handleLocalChange)
-      window.removeEventListener('oanix:folder-appearance-saved', reloadAppearance)
     }
   }, [])
 
