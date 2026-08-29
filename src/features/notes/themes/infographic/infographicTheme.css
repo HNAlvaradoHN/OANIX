@@ -343,6 +343,10 @@ html.oanix-note-bulk-selecting .oanix-infographic-theme .oanix-workspace-v2__not
   padding-bottom: calc(135px + env(safe-area-inset-bottom));
 }
 
+.oanix-infographic-theme.is-search-open .oanix-infographic-main {
+  padding-top: calc(118px + env(safe-area-inset-top));
+}
+
 .oanix-infographic-main__layer {
   height: 100%;
   min-height: 0;
