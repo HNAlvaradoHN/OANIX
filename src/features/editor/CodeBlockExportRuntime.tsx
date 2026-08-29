@@ -31,7 +31,7 @@ function decorateExportActions(root: ParentNode = document): void {
     delete convert.dataset.codeConvert
     convert.dataset.codeExportTxt = 'true'
     convert.textContent = 'Exportar TXT'
-    convert.title = 'Guardar todo el contenido como archivo .txt'
+    convert.title = 'Guardar o compartir todo el contenido como archivo .txt'
 
     const menu = convert.parentElement
     if (!menu || menu.querySelector('[data-code-export-pdf="true"]')) return
@@ -41,10 +41,36 @@ function decorateExportActions(root: ParentNode = document): void {
     exportPdf.className = 'editor-code-block__menu-action'
     exportPdf.dataset.codeExportPdf = 'true'
     exportPdf.textContent = 'Exportar PDF'
-    exportPdf.title = 'Preparar el contenido para guardarlo como PDF'
+    exportPdf.title = 'Guardar o compartir todo el contenido como archivo .pdf'
     exportPdf.setAttribute('role', 'menuitem')
     convert.after(exportPdf)
   })
+}
+
+function showExportStatus(message: string): () => void {
+  document.querySelector('[data-code-export-status="true"]')?.remove()
+  const status = document.createElement('div')
+  status.dataset.codeExportStatus = 'true'
+  status.setAttribute('role', 'status')
+  status.setAttribute('aria-live', 'polite')
+  status.textContent = message
+  Object.assign(status.style, {
+    position: 'fixed',
+    zIndex: '3600',
+    left: '50%',
+    bottom: 'max(1rem, env(safe-area-inset-bottom))',
+    transform: 'translateX(-50%)',
+    maxWidth: 'calc(100vw - 2rem)',
+    padding: '.7rem .9rem',
+    borderRadius: '.8rem',
+    background: 'rgba(15, 23, 42, .96)',
+    color: '#f8fafc',
+    boxShadow: '0 12px 36px rgba(0, 0, 0, .28)',
+    fontSize: '.86rem',
+    fontWeight: '650',
+  })
+  document.body.append(status)
+  return () => status.remove()
 }
 
 export function CodeBlockExportRuntime() {
@@ -60,14 +86,14 @@ export function CodeBlockExportRuntime() {
     })
     observer.observe(document.body, { childList: true, subtree: true })
 
-    function handleClick(event: MouseEvent) {
+    async function handleClick(event: MouseEvent) {
       const target = event.target
       if (!(target instanceof Element)) return
 
-      const txt = target.closest<HTMLElement>('[data-code-export-txt="true"]')
-      const pdf = target.closest<HTMLElement>('[data-code-export-pdf="true"]')
+      const txt = target.closest<HTMLButtonElement>('[data-code-export-txt="true"]')
+      const pdf = target.closest<HTMLButtonElement>('[data-code-export-pdf="true"]')
       const action = txt ?? pdf
-      if (!action) return
+      if (!action || action.dataset.exportBusy === 'true') return
 
       const block = action.closest<HTMLElement>('[data-code-block="true"]')
       if (!block) return
@@ -75,14 +101,23 @@ export function CodeBlockExportRuntime() {
       event.preventDefault()
       event.stopPropagation()
       closeMenu(action)
+      action.dataset.exportBusy = 'true'
+      action.disabled = true
+      const dismissStatus = showExportStatus(txt ? 'Preparando archivo TXT…' : 'Preparando archivo PDF…')
 
       try {
-        if (txt) exportCodeBlockAsTxt(codeText(block), block.dataset.language)
-        else exportCodeBlockAsPdf(codeText(block), block.dataset.language)
-      } catch {
-        window.alert(txt
-          ? 'No se pudo exportar el bloque como TXT.'
-          : 'No se pudo preparar el PDF en este navegador.')
+        if (txt) await exportCodeBlockAsTxt(codeText(block), block.dataset.language)
+        else await exportCodeBlockAsPdf(codeText(block), block.dataset.language)
+      } catch (error) {
+        window.alert(error instanceof Error
+          ? error.message
+          : txt
+            ? 'No se pudo exportar el bloque como TXT.'
+            : 'No se pudo exportar el bloque como PDF.')
+      } finally {
+        dismissStatus()
+        delete action.dataset.exportBusy
+        action.disabled = false
       }
     }
 
@@ -90,6 +125,7 @@ export function CodeBlockExportRuntime() {
     return () => {
       observer.disconnect()
       document.removeEventListener('click', handleClick, true)
+      document.querySelector('[data-code-export-status="true"]')?.remove()
     }
   }, [])
 

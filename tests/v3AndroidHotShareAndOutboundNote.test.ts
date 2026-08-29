@@ -48,10 +48,11 @@ test('the same share action is available from each note list overflow menu', () 
   assert.match(runtime, /listTarget\.element/)
 })
 
-test('PDF export remains outside this V3 sharing path', () => {
+test('note sharing remains text-only while the outbound bridge also supports explicit PDF export', () => {
   const runtime = readFileSync('src/platform/android/NativeNoteShareRuntime.tsx', 'utf8')
   const bridge = readFileSync('src/platform/android/outboundShare.ts', 'utf8')
 
   assert.doesNotMatch(runtime, /pdf/i)
-  assert.doesNotMatch(bridge, /pdf/i)
+  assert.match(bridge, /sharePlainText/)
+  assert.match(bridge, /sharePdfTextOnAndroid/)
 })

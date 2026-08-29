@@ -4,6 +4,7 @@ import { registerSW } from 'virtual:pwa-register'
 import { App } from './app/App'
 import { ThemeMenu } from './features/personalization/ThemeMenu'
 import { applyOanixTheme, readSavedOanixTheme } from './features/personalization/themeCatalog'
+import { DesktopImageViewportRuntime } from './features/images/DesktopImageViewportRuntime'
 import { PwaImagePreviewRuntime } from './features/images/PwaImagePreviewRuntime'
 import { WORKSPACE_V2_ENABLED } from './app/workspaceExperience'
 import './styles/global.css'
@@ -90,5 +91,6 @@ createRoot(document.getElementById('root')!).render(
     <App />
     <ThemeMenu />
     <PwaImagePreviewRuntime />
+    <DesktopImageViewportRuntime />
   </StrictMode>,
 )
