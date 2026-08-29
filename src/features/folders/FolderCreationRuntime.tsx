@@ -89,9 +89,6 @@ export function FolderCreationRuntime() {
 
       setOpen(false)
       resetDraft()
-      window.dispatchEvent(new CustomEvent('oanix:local-data-changed', {
-        detail: { recordType: 'folder', recordId: created.id },
-      }))
     } catch (createError) {
       setError(createError instanceof Error ? createError.message : 'No se pudo crear la carpeta.')
     } finally {
