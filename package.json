@@ -8,6 +8,7 @@
     "build": "tsc -b && vite build",
     "build:android": "tsc -b && vite build --mode capacitor",
     "audit:offline-bundle": "node scripts/audit-offline-bundle.mjs",
+    "verify:pages": "node scripts/verify-pages-deployment.mjs",
     "android:sync": "npm run build:android && npx cap sync android",
     "android:open": "npm run android:sync && npx cap open android",
     "test": "node --experimental-strip-types --test tests/*.test.ts",
