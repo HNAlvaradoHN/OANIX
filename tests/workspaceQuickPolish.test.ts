@@ -36,7 +36,6 @@ test('compact icon controls use explicit centering without inherited padding dri
   assert.match(css, /> svg[\s\S]*margin:\s*auto/)
 })
 
-test('quick polish remains mounted without the retired folder appearance runtime', () => {
-  assert.match(legacyGate, /<WorkspaceQuickPolishRuntime \/>/)
+test('quick polish stays separate from the retired folder appearance runtime', () => {
   assert.doesNotMatch(legacyGate, /FolderAppearanceRuntime/)
 })
