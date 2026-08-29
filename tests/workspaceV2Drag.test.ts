@@ -5,6 +5,7 @@ import test from 'node:test'
 const drag = readFileSync('src/features/notes/themes/infographic/InfographicThemeDragRuntime.tsx', 'utf8')
 const css = readFileSync('src/features/notes/themes/infographic/infographicTheme.css', 'utf8')
 const shell = readFileSync('src/features/notes/WorkspaceV2Sidebar.tsx', 'utf8')
+const theme = readFileSync('src/features/notes/themes/infographic/InfographicWorkspace.tsx', 'utf8')
 
 test('infographic drag keeps prototype long-press ghost jiggle and edge autoscroll', () => {
   assert.match(drag, /blockOwnClick\(root/)
@@ -69,6 +70,12 @@ test('cancel restores draggable items before the original trailing control', () 
   assert.match(drag, /const endAnchor = initialItems\.at\(-1\)\?\.nextElementSibling \?\? null/)
   assert.match(drag, /gesture\?\.container\.insertBefore\(item, gesture\.endAnchor\)/)
   assert.doesNotMatch(drag, /gesture\?\.container\.appendChild\(item\)/)
+})
+
+
+test('drag feedback callback stays stable so a toast render cannot cancel an active gesture', () => {
+  assert.match(theme, /const showToast = useCallback\(/)
+  assert.match(theme, /<InfographicThemeDragRuntime[\s\S]*onStatus=\{showToast\}/)
 })
 
 test('active workspace shell no longer mounts the old workspace v2 drag runtime', () => {
