@@ -49,7 +49,6 @@ export function FolderScopedManagerRuntime() {
     try {
       await renameFolder(managed.id, name)
       setManaged(null)
-      window.dispatchEvent(new CustomEvent('oanix:local-data-changed', { detail: { recordType: 'folder' } }))
       window.dispatchEvent(new Event('oanix:workspace-refresh'))
     } catch (renameError) {
       setError(renameError instanceof Error ? renameError.message : 'No se pudo renombrar la carpeta.')
@@ -81,7 +80,6 @@ export function FolderScopedManagerRuntime() {
       for (const note of affected) await moveNoteToFolder(note.id, null)
       await deleteFolder(managed.id)
       setManaged(null)
-      window.dispatchEvent(new CustomEvent('oanix:local-data-changed', { detail: { recordType: 'folder' } }))
       window.dispatchEvent(new Event('oanix:workspace-refresh'))
     } catch {
       setError('No se pudo completar la eliminación de la carpeta.')
