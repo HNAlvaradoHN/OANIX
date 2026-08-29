@@ -36,16 +36,22 @@
   }
 }
 
+/* The timeline has one horizontal authority at every width: normal flow plus
+   auto inline margins. Older desktop rules also apply left/translate centering;
+   neutralize that positional offset globally so tablet/desktop cannot combine
+   both systems. Width remains owned by the existing responsive rules below. */
+.oanix-workspace-v2 .oanix-workspace-v2__timeline {
+  margin-inline: auto !important;
+  left: auto !important;
+  transform: none !important;
+}
+
 /* Tablet/narrow-desktop contract: once two timeline columns no longer have
-   enough room for complete cards, collapse to one bounded column. The timeline
-   owns its centering with auto margins only; any older positional centering is
-   neutralized here so tablet and mobile cannot combine both techniques. */
+   enough room for complete cards, collapse to one bounded column. */
 @media (max-width: 1100px) {
   .oanix-workspace-v2 .oanix-workspace-v2__timeline {
     width: min(calc(100% - 2rem), 46rem);
     margin: 0 auto;
-    left: auto !important;
-    transform: none !important;
   }
 
   .oanix-workspace-v2 .oanix-workspace-v2__timeline::before,
