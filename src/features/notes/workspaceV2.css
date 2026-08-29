@@ -1381,24 +1381,12 @@ body.oanix-v2-note-dragging {
   background: var(--v2-glass-fill-strong);
 }
 
-/* Workspace V2 owns its timeline geometry even when shared note-row surfaces use !important. */
+/* Workspace V2 owns note-row visual isolation here; responsive geometry lives
+   in the authoritative timeline media queries below. */
 html[data-oanix-theme] .oanix-workspace-v2 .oanix-workspace-v2__timeline-item.note-row {
-  left: 0 !important;
-  width: 50% !important;
-  align-self: flex-start;
-  padding: .62rem 1.85rem .62rem .2rem !important;
   border: 0 !important;
   background: transparent !important;
   box-shadow: none !important;
-  text-align: right !important;
-}
-
-html[data-oanix-theme] .oanix-workspace-v2 .oanix-workspace-v2__timeline-item.note-row:nth-child(even) {
-  left: 50% !important;
-  width: 50% !important;
-  align-self: flex-end;
-  padding: .62rem .2rem .62rem 1.85rem !important;
-  text-align: left !important;
 }
 
 html[data-oanix-theme] .oanix-workspace-v2 .oanix-workspace-v2__timeline-item.note-row:hover {
@@ -1925,15 +1913,23 @@ html[data-oanix-theme='classic-day'] .oanix-workspace-v2.has-wallpaper .oanix-wo
 }
 
 
-/* Authoritative responsive timeline geometry. */
+/* Authoritative responsive timeline geometry.
+   Above the phone breakpoint, the divider is the master axis: it sits at the
+   exact center of the notes viewport and both note lanes hug that axis
+   symmetrically. The row box shrinks to card width + axis gap instead of
+   occupying an entire half of the timeline. */
 @media (min-width: 821px) {
   html[data-oanix-theme] .oanix-workspace-v2 .oanix-workspace-v2__timeline {
+    --v2-timeline-axis-gap: 1.45rem;
+    --v2-timeline-card-max: 22rem;
     position: relative;
-    left: 50%;
-    width: min(calc(100% - 2rem), 58rem);
-    margin: 0;
+    left: auto;
+    width: 100%;
+    max-width: none;
+    margin: 0 auto;
     padding: .24rem 0 .65rem;
-    transform: translateX(-50%);
+    transform: none;
+    box-sizing: border-box;
   }
 
   html[data-oanix-theme] .oanix-workspace-v2 .oanix-workspace-v2__timeline::before {
@@ -1942,16 +1938,20 @@ html[data-oanix-theme='classic-day'] .oanix-workspace-v2.has-wallpaper .oanix-wo
   }
 
   html[data-oanix-theme] .oanix-workspace-v2 .oanix-workspace-v2__timeline-item.note-row {
-    left: 0 !important;
-    width: 50% !important;
-    padding: clamp(.26rem, .62vh, .38rem) 1.45rem clamp(.26rem, .62vh, .38rem) .15rem !important;
+    left: auto !important;
+    width: min(50%, calc(var(--v2-timeline-card-max) + var(--v2-timeline-axis-gap))) !important;
+    margin-right: 50%;
+    margin-left: auto;
+    padding: clamp(.26rem, .62vh, .38rem) var(--v2-timeline-axis-gap) clamp(.26rem, .62vh, .38rem) 0 !important;
     text-align: right !important;
   }
 
   html[data-oanix-theme] .oanix-workspace-v2 .oanix-workspace-v2__timeline-item.note-row:nth-child(even) {
-    left: 50% !important;
-    width: 50% !important;
-    padding: clamp(.26rem, .62vh, .38rem) .15rem clamp(.26rem, .62vh, .38rem) 1.45rem !important;
+    left: auto !important;
+    width: min(50%, calc(var(--v2-timeline-card-max) + var(--v2-timeline-axis-gap))) !important;
+    margin-right: auto;
+    margin-left: 50%;
+    padding: clamp(.26rem, .62vh, .38rem) 0 clamp(.26rem, .62vh, .38rem) var(--v2-timeline-axis-gap) !important;
     text-align: left !important;
   }
 }
