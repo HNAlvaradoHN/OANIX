@@ -16,5 +16,5 @@ test('folder creation opens directly and persists through folderService', () => 
   assert.match(runtime, /createFolder\(normalizedName\)/)
   assert.match(runtime, /saveFolderColor\(created\.id, color\)/)
   assert.match(runtime, /saveFolderIcon\(created\.id, icon\)/)
-  assert.match(runtime, /oanix:local-data-changed/)
+  assert.doesNotMatch(runtime, /oanix:local-data-changed/)
 })
