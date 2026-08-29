@@ -86,6 +86,22 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+.oanix-infographic-theme :is(
+  button,
+  [role="button"],
+  input,
+  textarea,
+  select
+):focus-visible {
+  outline: 3px solid rgba(37, 99, 235, .88);
+  outline-offset: 3px;
+}
+
+html.oanix-note-bulk-selecting .oanix-infographic-theme .oanix-workspace-v2__note-actions {
+  pointer-events: none;
+  opacity: .28;
+}
+
 .oanix-infographic-theme__background {
   position: absolute;
   inset: 0;
