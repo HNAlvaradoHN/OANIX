@@ -1,6 +1,6 @@
 # OANIX — Estado actual para continuidad
 
-**Última actualización:** 2026-08-27
+**Última actualización:** 2026-08-29
 
 Checkpoint operativo corto. Antes de trabajar, verificar siempre el `main` real y PR recientes; GitHub es la fuente de verdad del código.
 
@@ -36,9 +36,11 @@ PR #170–#172 fijaron la experiencia compartida PWA/APK:
 
 No modificar ampliamente `ImageNoteEditor.tsx` ni el formato persistido de imágenes para ajustes menores.
 
-## Workspace orgánico v39 — dirección visual vigente
+## Workspace infográfico — dirección visual vigente
 
-El PR #250 integró la base `Organic Responsive 3D Folders v38.1`. La referencia `v38.3` entregada después por el usuario refina esa misma dirección; **no crea una segunda app ni vuelve al home de carpetas independiente**.
+El workspace visual se desacopló de la lógica de producto mediante un contrato estable de tema. El diseño infográfico suministrado por el usuario es ahora una capa visual aislada: puede sustituirse en el futuro sin duplicar notas, carpetas, etiquetas, privacidad, cifrado, sync o persistencia. El estado inmediatamente anterior se conserva en la rama de checkpoint `checkpoint/pre-theme-shell-refactor` desde `71774220f0a74bd816e284d91cc493691e8504f0`.
+
+La referencia anterior v38/v39 queda **SUPERSEDED como autoridad visual activa**, pero se conserva en el historial y en código no montado como referencia/rollback. La nueva capa mantiene los hooks DOM necesarios para privacidad e historial y usa handlers/servicios reales de OANIX.
 
 La superficie principal sigue siendo una sola experiencia compartida por PWA y APK:
 - cabecera compacta usando el logo real seleccionado de OANIX;
@@ -62,7 +64,7 @@ La tarjeta de lista usa icono central, no una foto. Estos datos son campos opcio
 
 ### Carpetas y Día/Noche
 
-- El control inferior izquierdo conserva `+` para carpetas y usa el segundo botón como alternancia directa **Día/Noche**, reutilizando `classic-day` y `classic-night`.
+- El control inferior izquierdo conserva `+` para carpetas y usa el segundo botón como alternancia visual **Día/Noche del tema infográfico**. El workspace ya no usa `classic-day` / `classic-night` como autoridad de esa superficie; el sistema compartido se conserva únicamente donde otras pantallas aún lo necesitan.
 - Cada tarjeta de carpeta expone un engranaje arriba a la derecha.
 - El engranaje concentra en un solo menú: Abrir, Fijar/Desfijar, Favorito, Renombrar, Color/Icono, Imagen local y Eliminar.
 - Nombre, eliminar, portada y color/icono reutilizan los handlers/servicios existentes.
@@ -86,12 +88,13 @@ Persistencia:
 - notas reutilizan `manualOrder`/`persistNoteOrder` existente;
 - etiquetas reutilizan la infraestructura cifrada con un registro `tag-order`, sin crear un store paralelo ni cambiar el formato v1 de cada etiqueta.
 
-Implementación vigente de notas desde PR #368:
-- ratón/escritorio conserva SortableJS;
-- coarse/mobile usa un único motor Pointer Events propio, con `touch-action: none`, scroll vertical manual antes del long press y pointer capture best-effort;
-- la antigua ruta paralela `TouchEvent` quedó retirada porque podía dejar el gesto vertical bajo control del navegador/WebView;
-- CI, Android y Pages de `main` pasaron tras la integración. La validación física del gesto continuo en dispositivo real sigue siendo **VALIDATION_DEBT** hasta que el usuario la ejecute.
-- Corrección posterior en validación: al soltar, React adopta inmediatamente el orden visible y la persistencia cifrada se ejecuta detrás sin notificaciones intermedias; un orden nuevo reemplaza trabajo pendiente. El primer toque tras desplazar la lista ya no hereda la supresión del gesto anterior, y las etiquetas tienen un tope antes del control `+`. Mantener como **VALIDATION_DEBT** hasta probar PC y PWA reales.
+Implementación vigente en el tema infográfico:
+- una sola autoridad Pointer Events aislada dentro del tema para carpetas, etiquetas y notas;
+- long-press de 500/400/400 ms, clon visible, jiggle de carpetas, autoscroll y momentum;
+- no usa una ruta paralela `TouchEvent`;
+- al soltar delega la persistencia a `onFolderOrder`, `onTagOrder` y `onNoteOrder`, que continúan usando los servicios cifrados existentes;
+- notas fijadas/no fijadas no se mezclan durante el drag;
+- la validación física continua en PWA/APK sigue siendo **VALIDATION_DEBT** hasta ejecutarla en dispositivo real.
 
 ## Archivos grandes — motor actual
 
@@ -147,10 +150,10 @@ No implementar todavía este bloque mientras se valida estabilidad del motor bas
 
 ## Próximo paso exacto
 
-1. Validar visualmente el workspace v39 en la PWA real con captura móvil y, después, PC: cabecera/logo, chips, iconos/colores de notas, dock, engranajes, modales y fondo por carpeta.
-2. Corregir únicamente diferencias reales detectadas en esa validación PWA y repetir hasta cerrar la dirección visual.
+1. Validar visualmente el nuevo tema infográfico en la PWA real, primero móvil/tablet y después PC: cabecera con botones reales OANIX, chips/controles de etiquetas, línea central y alternancia, colores de notas, dock, engranajes, modales y fondo por carpeta.
+2. Corregir únicamente diferencias reales detectadas en esa validación y mantener el contrato de tema estable.
 3. Validar físicamente el gesto continuo de reordenamiento en carpetas, etiquetas y notas: mantener → jiggle → arrastrar sin soltar → soltar → persistir → normalidad.
-4. Cuando la experiencia visual quede definida, hacer checkpoint físico en Android/APK sobre esa misma base compartida: safe areas, toque/long-press, teclado, Atrás, selector de imágenes y Día/Noche.
+4. Hacer checkpoint físico en Android/APK sobre la misma base: safe areas, toque/long-press, teclado, Atrás, selector de imágenes y Día/Noche local del tema.
 5. Repetir la prueba de ~818 MB con interrupción de red aproximadamente al 30–50%, cerrar/reabrir OANIX y confirmar reanudación sin empezar desde cero.
 6. Solo después aumentar gradualmente el tamaño; 5 GB es una meta posterior, no la siguiente prueba inmediata.
 7. Después de estabilizar transferencias: integrar archivos grandes al flujo normal de notas.

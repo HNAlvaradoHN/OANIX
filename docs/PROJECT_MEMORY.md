@@ -4,7 +4,7 @@ Este documento conserva **decisiones duraderas y restricciones de producto/arqui
 
 Antes de trabajar: leer `AGENTS.md` y `docs/CURRENT_STATE.md`, verificar `main` y PR recientes. GitHub es la fuente de verdad del código actual.
 
-**Última actualización:** 2026-08-27
+**Última actualización:** 2026-08-29
 
 ## 1. Principios permanentes
 
@@ -54,6 +54,22 @@ Reglas duraderas:
 - portada real de la carpeta activa puede ocupar el fondo del workspace, pero siempre con capas de contraste que mantengan legibles cabecera, chips, notas y dock;
 - no copiar datos demo, imágenes externas, Tailwind CDN, Phosphor CDN ni funciones simuladas del prototipo;
 - `+`, abrir, renombrar, eliminar, portada, color/icono, búsqueda, Atrás y reordenamiento reutilizan handlers/servicios existentes; un rediseño no justifica CRUD paralelo.
+
+### Tema de workspace intercambiable — IMPLEMENTED
+
+Decisión del usuario (2026-08-29): el diseño del workspace debe poder reemplazarse completo sin volver a conectar o reescribir la lógica de producto. El límite arquitectónico es un contrato de props/callbacks estable entre OANIX y la capa visual.
+
+- `WorkspaceThemeProps` define datos y acciones reales que recibe cualquier tema.
+- El tema infográfico suministrado por el usuario es la autoridad visual activa; su HTML/CSS/movimiento se adapta a React sin copiar `datos.js`, almacenamiento demo, CDN ni CRUD paralelo.
+- El header conserva **los botones reales actuales de OANIX y sus funciones**: Buscar, Bloquear, Historial, Cuenta y menú `⋮`. Un tema futuro solo debe reservar el host visual para esos controles.
+- Etiquetas, carpetas, notas, contadores, colores persistidos y acciones provienen de registros/handlers reales.
+- El selector de color de nota sigue persistiendo `visualColor` en el mismo `NoteRecord`; no crear un store visual paralelo.
+- Día/Noche del workspace pertenece al tema infográfico y no usa `classic-day` / `classic-night` como autoridad de esa superficie. El sistema compartido anterior no se elimina a ciegas porque otras superficies aún pueden depender de él.
+- El drag del workspace pertenece al tema activo: long-press, ghost, jiggle, autoscroll y movimiento visual pueden cambiar con el tema, pero al soltar deben delegar a los callbacks reales de persistencia. No crear persistencia de orden paralela.
+- Privacidad, cifrado, sincronización, historial y almacenamiento quedan fuera del tema y nunca se reemplazan al cambiar de diseño.
+- Punto de retorno previo al cambio: rama `checkpoint/pre-theme-shell-refactor` sobre `71774220f0a74bd816e284d91cc493691e8504f0`.
+
+La antigua afirmación de que el workspace debía reutilizar obligatoriamente la presentación v38/v39 y el toggle visual `classic-day/classic-night` queda **SUPERSEDED** por esta decisión. La persistencia y las fronteras de seguridad anteriores siguen vigentes.
 
 ### Notas en la lista
 

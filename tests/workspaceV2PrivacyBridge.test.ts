@@ -2,19 +2,19 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
-const sidebar = readFileSync('src/features/notes/WorkspaceV2Sidebar.tsx', 'utf8')
+const sidebar = readFileSync('src/features/notes/themes/infographic/InfographicWorkspace.tsx', 'utf8')
 const privacy = readFileSync('src/features/privacy/NotePrivacyRuntime.tsx', 'utf8')
-const css = readFileSync('src/features/notes/workspaceV2.css', 'utf8')
+const css = readFileSync('src/features/notes/themes/infographic/infographicTheme.css', 'utf8')
 
-test('workspace v2 exposes compatibility hooks to existing encrypted privacy runtimes', () => {
-  assert.match(sidebar, /className="notes-list oanix-workspace-v2__notes-scroll"/)
-  assert.match(sidebar, /note-row oanix-workspace-v2__timeline-item/)
+test('infographic theme exposes compatibility hooks to existing encrypted privacy runtimes', () => {
+  assert.match(sidebar, /className="notes-list oanix-infographic-notes-scroll"/)
+  assert.match(sidebar, /'note-row timeline-item'/)
   assert.match(sidebar, /data-reorder-note-id=\{note\.id\}/)
-  assert.match(sidebar, /note-row__open oanix-workspace-v2__note-card/)
-  assert.match(sidebar, /note-row__topline oanix-workspace-v2__note-title-line/)
-  assert.match(sidebar, /className="notes-search oanix-workspace-v2__search"/)
+  assert.match(sidebar, /className="note-row__open infographic-card glass-card"/)
+  assert.match(sidebar, /className="note-row__topline"/)
+  assert.match(sidebar, /className="notes-search oanix-infographic-search"/)
   assert.match(sidebar, /notes-search__meta/)
-  assert.match(sidebar, /notes-create-fab oanix-workspace-v2__create-note/)
+  assert.match(sidebar, /className="notes-create-fab fab-add-note"/)
 })
 
 test('workspace v2 privacy button opens the existing NotePrivacyRuntime manager', () => {
@@ -23,13 +23,13 @@ test('workspace v2 privacy button opens the existing NotePrivacyRuntime manager'
   assert.match(privacy, /setPrivacyManagerNoteId\(detail\.noteId\)/)
 })
 
-test('legacy compatibility classes are visually reset under the v2 namespace', () => {
-  assert.match(css, /\.oanix-workspace-v2 \.oanix-workspace-v2__timeline-item\.note-row/)
-  assert.match(css, /\.oanix-workspace-v2 \.oanix-workspace-v2__note-card\.note-row__open/)
-  assert.match(css, /\.oanix-workspace-v2 \.oanix-workspace-v2__notes-scroll\.notes-list/)
+test('privacy compatibility remains styled inside the infographic namespace', () => {
+  assert.match(css, /\.timeline-item\.note-row/)
+  assert.match(css, /\.infographic-card\.note-row__open/)
+  assert.match(css, /\.oanix-infographic-notes-scroll/)
   assert.match(privacy, /row\.querySelector<HTMLElement>\('\[data-v2-note-actions="true"\]'\)/)
   assert.match(privacy, /oanix-note-row-lock--v2-action/)
-  assert.match(css, /oanix-workspace-v2__note-actions > \.oanix-note-row-lock--v2-action/)
+  assert.match(css, /\.info-right-actions > \.oanix-note-row-lock/)
 })
 
 test('workspace v2 nested note actions are not mistaken for note-open clicks by privacy capture', () => {
@@ -44,10 +44,9 @@ test('workspace v2 keyboard note opening crosses the same privacy click gate as 
 })
 
 
-test('workspace v2 create-note control has its own compact geometry and semantic icon', () => {
-  assert.match(sidebar, /<OanixIcon name="noteAdd" size=\{21\}/)
-  assert.match(sidebar, /<footer className="oanix-workspace-v2__folder-dock"[\s\S]*notes-create-fab oanix-workspace-v2__create-note/)
-  assert.match(css, /oanix-workspace-v2__create-note\.notes-create-fab[\s\S]*bottom: calc\(100% \+ \.62rem\) !important/)
-  assert.match(css, /oanix-workspace-v2__create-note\.notes-create-fab[\s\S]*width: 2\.65rem !important/)
-  assert.match(css, /@media \(max-width: 480px\)[\s\S]*width: 2\.42rem !important/)
+test('infographic create-note control keeps the real OANIX create callback behind the prototype plus', () => {
+  assert.match(sidebar, /className="notes-create-fab fab-add-note"/)
+  assert.match(sidebar, /onClick=\{onCreateNote\}/)
+  assert.match(sidebar, /<OanixIcon name="plus" size=\{24\}/)
+  assert.match(css, /\.fab-add-note[\s\S]*width: 50px !important[\s\S]*height: 50px !important/)
 })

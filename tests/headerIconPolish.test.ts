@@ -10,9 +10,9 @@ const visual = readFileSync('src/features/notes/v383WorkspaceVisual.css', 'utf8'
 const notes = readFileSync('src/features/notes/NotesWorkspace.tsx', 'utf8')
 const app = readFileSync('src/app/App.tsx', 'utf8')
 const history = readFileSync('src/features/versionHistory/VersionHistoryCenter.tsx', 'utf8')
-const sidebar = readFileSync('src/features/notes/WorkspaceV2Sidebar.tsx', 'utf8')
+const sidebar = readFileSync('src/features/notes/themes/infographic/InfographicWorkspace.tsx', 'utf8')
 const icons = readFileSync('src/shared/OanixIcon.tsx', 'utf8')
-const v2Css = readFileSync('src/features/notes/workspaceV2.css', 'utf8')
+const v2Css = readFileSync('src/features/notes/themes/infographic/infographicTheme.css', 'utf8')
 
 test('v38.3 header authority is isolated to the lazy fallback and retired icon polish is absent', () => {
   assert.equal(existsSync('src/styles/header-icon-polish.css'), false)
@@ -55,10 +55,17 @@ test('icon replacement preserves the real accessible actions', () => {
 })
 
 
-test('workspace v2 icon controls gain depth through lightweight glass surfaces rather than a new dependency', () => {
+test('current OANIX header actions stay intact inside the isolated infographic theme', () => {
   assert.match(icons, /'data-oanix-icon': name/)
   assert.match(icons, /strokeWidth: 1\.9/)
-  assert.match(v2Css, /oanix-workspace-v2__header-actions > :is\([\s\S]*version-history-launcher[\s\S]*account-header-action/)
-  assert.match(v2Css, /radial-gradient\(circle at 30% 18%/)
-  assert.match(v2Css, /oanix-workspace-v2__note-actions button[\s\S]*inset 0 1px 0/)
+  assert.match(v2Css, /oanix-infographic-header__actions > :is\([\s\S]*version-history-launcher[\s\S]*account-header-action/)
+  assert.match(sidebar, /className="notes-header__actions oanix-infographic-header__actions"/)
+  assert.match(sidebar, /onClick=\{onSearchToggle\}/)
+  assert.match(sidebar, /onClick=\{onLock\}/)
+  assert.match(sidebar, /onClick=\{onWorkspaceMenuToggle\}/)
+  assert.match(v2Css, /aria-label="Buscar en notas"[\s\S]*order: 1/)
+  assert.match(v2Css, /aria-label="Bloquear OANIX"[\s\S]*order: 2/)
+  assert.match(v2Css, /version-history-launcher[\s\S]*order: 3/)
+  assert.match(v2Css, /account-header-action[\s\S]*order: 4/)
+  assert.match(v2Css, /workspace-menu-wrap[\s\S]*order: 5/)
 })
