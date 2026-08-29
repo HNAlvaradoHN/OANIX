@@ -43,6 +43,11 @@ test('folder manager opens by explicit folder event instead of scraping DOM', ()
   assert.doesNotMatch(creation, /folderManagementActive|data-oanix-manage-folder-id/)
 })
 
+test('scoped folder manager relies on repository change events but keeps workspace refresh', () => {
+  assert.doesNotMatch(scopedManager, /oanix:local-data-changed/)
+  assert.match(scopedManager, /oanix:workspace-refresh/)
+})
+
 test('workspace gate mounts only direct folder owners', () => {
   assert.match(legacyGate, /<FolderScopedManagerRuntime \/>/)
   assert.match(legacyGate, /<WorkspacePersonalizationRuntime \/>/)
