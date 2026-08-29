@@ -500,6 +500,7 @@ export function InfographicWorkspace({
                           <button
                             type="button"
                             className="action-icon-btn"
+                            data-infographic-drag-ignore="true"
                             onClick={(event) => {
                               event.stopPropagation()
                               onTogglePinned(note)
@@ -512,6 +513,7 @@ export function InfographicWorkspace({
                           <button
                             type="button"
                             className="action-icon-btn"
+                            data-infographic-drag-ignore="true"
                             onClick={(event) => {
                               event.stopPropagation()
                               onOpenTagEditor(note)
@@ -524,6 +526,7 @@ export function InfographicWorkspace({
                           <button
                             type="button"
                             className="action-icon-btn"
+                            data-infographic-drag-ignore="true"
                             onClick={(event) => {
                               event.stopPropagation()
                               onOpenMoveNote(note)
@@ -536,6 +539,7 @@ export function InfographicWorkspace({
                           <button
                             type="button"
                             className="action-icon-btn"
+                            data-infographic-drag-ignore="true"
                             onClick={(event) => {
                               event.stopPropagation()
                               setNoteCustomizerId(note.id)
@@ -548,6 +552,7 @@ export function InfographicWorkspace({
                           <button
                             type="button"
                             className="action-icon-btn"
+                            data-infographic-drag-ignore="true"
                             onClick={(event) => {
                               event.stopPropagation()
                               window.dispatchEvent(new CustomEvent('oanix:open-note-privacy', {
@@ -562,6 +567,7 @@ export function InfographicWorkspace({
                           <button
                             type="button"
                             className="action-icon-btn delete"
+                            data-infographic-drag-ignore="true"
                             disabled={deletingId !== null}
                             onClick={(event) => {
                               event.stopPropagation()
@@ -679,6 +685,7 @@ export function InfographicWorkspace({
                   <button
                     type="button"
                     className="side-gear-btn"
+                    data-infographic-drag-ignore="true"
                     onClick={() => setFolderActionsId(folder.id)}
                     aria-label={'Opciones de ' + folder.name}
                     title="Opciones"
