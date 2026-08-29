@@ -79,7 +79,6 @@ export function WorkspaceV2FolderActions({
         saveFolderColor(folder.id, draftColor),
         saveFolderIcon(folder.id, draftIcon),
       ])
-      window.dispatchEvent(new CustomEvent('oanix:folder-appearance-saved'))
       onClose()
     })
   }
@@ -88,7 +87,6 @@ export function WorkspaceV2FolderActions({
     const next = !(flags?.pinned === true)
     await run(async () => {
       await saveFolderPinned(folder.id, next)
-      window.dispatchEvent(new CustomEvent('oanix:folder-appearance-saved'))
       onClose()
     })
   }
@@ -97,7 +95,6 @@ export function WorkspaceV2FolderActions({
     const next = !(flags?.favorite === true)
     await run(async () => {
       await saveFolderFavorite(folder.id, next)
-      window.dispatchEvent(new CustomEvent('oanix:folder-appearance-saved'))
       onClose()
     })
   }
