@@ -88,14 +88,6 @@
   color: var(--inf-text-main) !important;
 }
 
-:root[data-oanix-theme] .oanix-infographic-theme .oanix-infographic-brand__text span {
-  color: #ff4000 !important;
-}
-
-:root[data-oanix-theme] .oanix-infographic-theme.dark-mode .oanix-infographic-brand__text span {
-  color: #60a5fa !important;
-}
-
 :root[data-oanix-theme] .oanix-infographic-theme .oanix-infographic-header__actions > :is(
   .icon-button,
   .version-history-launcher,
@@ -242,21 +234,6 @@ html.oanix-note-bulk-selecting .oanix-infographic-theme .oanix-workspace-v2__not
   font-weight: 900;
   letter-spacing: -.3px;
   line-height: 1.1;
-}
-
-.oanix-infographic-brand__text span {
-  max-width: min(38vw, 16rem);
-  margin-top: 1px;
-  overflow: hidden;
-  color: #ff4000;
-  font-size: 10px;
-  font-weight: 650;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.oanix-infographic-theme.dark-mode .oanix-infographic-brand__text span {
-  color: #60a5fa;
 }
 
 .oanix-infographic-header__actions {
@@ -1749,10 +1726,6 @@ body.oanix-infographic-dark .oanix-workspace-v2__modal-backdrop,
     width: 29px !important;
     height: 29px !important;
     flex-basis: 29px;
-  }
-
-  .oanix-infographic-brand__text span {
-    max-width: 8.5rem;
   }
 
   .oanix-infographic-header__actions {
