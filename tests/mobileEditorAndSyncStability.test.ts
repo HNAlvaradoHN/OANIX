@@ -8,7 +8,7 @@ const codeBlockEditorPath = new URL('../src/features/editor/CodeBlockEditor.tsx'
 const mobileEditorCssPath = new URL('../src/features/editor/mobileEditorStability.css', import.meta.url)
 const autoSyncRuntimePath = new URL('../src/features/sync/AutoSyncRuntime.tsx', import.meta.url)
 
-test('mobile large paste handles Android dual delivery, empty payloads, and bulk insertText', async () => {
+test('mobile large paste handles Android dual delivery and verifies bulk insertText against clipboard', async () => {
   const source = await readFile(largePasteRuntimePath, 'utf8')
 
   assert.match(source, /function ensureEditorSelection\(editor: HTMLElement, target: Element\)/)
@@ -21,6 +21,8 @@ test('mobile large paste handles Android dual delivery, empty payloads, and bulk
   assert.match(source, /if \(consumeDuplicate\(event, plainText\)\) return/)
   assert.match(source, /navigator\.clipboard/)
   assert.match(source, /await clipboard\.readText\(\)/)
+  assert.match(source, /clipboardText === bulkText/)
+  assert.match(source, /document\.execCommand\('insertText', false, bulkText\)/)
   assert.match(source, /document\.execCommand\('insertText', false, fallbackText\)/)
   assert.match(source, /document\.addEventListener\('paste', handlePaste, true\)/)
   assert.match(source, /document\.addEventListener\('beforeinput', handleBeforeInput, true\)/)
@@ -28,13 +30,16 @@ test('mobile large paste handles Android dual delivery, empty payloads, and bulk
   assert.match(source, /shouldEncapsulateClipboardPaste\(fallbackText\)/)
 })
 
-test('select-all stays inside the active editable unit and protected islands stay outside the range', async () => {
+test('select-all stays inside the active editable unit and native whole-editor selection is constrained', async () => {
   const source = await readFile(largePasteRuntimePath, 'utf8')
   const css = await readFile(mobileEditorCssPath, 'utf8')
 
   assert.match(source, /function editableSelectionUnit/)
   assert.match(source, /function selectionTouchesProtectedIsland/)
+  assert.match(source, /function selectionCoversEditorContents/)
   assert.match(source, /function constrainSelectionToUnit/)
+  assert.match(source, /compareBoundaryPoints\(Range\.START_TO_START, editorRange\)/)
+  assert.match(source, /compareBoundaryPoints\(Range\.END_TO_END, editorRange\)/)
   assert.match(source, /\[data-daily-entry-block="true"\]/)
   assert.match(source, /\[data-code-block="true"\]/)
   assert.match(source, /\[data-checklist-block="true"\]/)
