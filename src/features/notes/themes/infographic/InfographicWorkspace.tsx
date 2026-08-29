@@ -246,6 +246,7 @@ export function InfographicWorkspace({
       className={
         'notes-sidebar oanix-workspace-v2 oanix-infographic-theme'
         + (darkMode ? ' dark-mode' : '')
+        + (searchOpen ? ' is-search-open' : '')
         + (activeFolderCover ? ' has-wallpaper' : '')
       }
       aria-label="Lista de notas"
@@ -427,7 +428,13 @@ export function InfographicWorkspace({
               <div className="oanix-infographic-empty"><strong>Cargando notas…</strong></div>
             ) : visibleNotes.length === 0 ? (
               <div className="oanix-infographic-empty">
-                <strong>{searchQuery.trim() ? 'Sin resultados' : 'Carpeta vacía'}</strong>
+                <strong>{
+                  searchQuery.trim()
+                    ? 'Sin resultados'
+                    : activeTagId !== 'all'
+                      ? 'Sin notas con esta etiqueta'
+                      : 'Carpeta vacía'
+                }</strong>
                 <span>{searchQuery.trim() ? 'Prueba con otra búsqueda.' : 'Crea una nota para empezar.'}</span>
               </div>
             ) : (
