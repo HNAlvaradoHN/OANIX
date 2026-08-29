@@ -73,18 +73,11 @@ test('code menu keeps one toggle authority and promotes coarse pointerup into th
   assert.match(editorSource, /aria-expanded', 'true'/)
 })
 
-test('timeline uses one centered layout authority at every width and collapses on narrow tablet', async () => {
+test('editor stability css does not own workspace timeline geometry', async () => {
   const css = await readFile(mobileEditorCssPath, 'utf8')
 
-  assert.match(css, /\.oanix-workspace-v2 \.oanix-workspace-v2__timeline \{[\s\S]*margin-inline: auto !important;[\s\S]*left: auto !important;[\s\S]*transform: none !important;/)
-  assert.match(css, /@media \(max-width: 1100px\)/)
-  assert.match(css, /width: min\(calc\(100% - 2rem\), 46rem\)/)
-  assert.match(css, /margin: 0 auto/)
-  assert.match(css, /\.oanix-workspace-v2__timeline::before/)
-  assert.match(css, /display: none/)
-  assert.match(css, /left: 0 !important/)
-  assert.match(css, /width: 100% !important/)
-  assert.match(css, /width: min\(100%, 34rem\)/)
+  assert.doesNotMatch(css, /oanix-workspace-v2__timeline/)
+  assert.doesNotMatch(css, /oanix-workspace-v2__timeline-item/)
 })
 
 test('auto sync is event driven and does not poll the complete vault every 30 seconds while idle', async () => {
