@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
 const actions = readFileSync('src/features/notes/WorkspaceV2FolderActions.tsx', 'utf8')
-const sidebar = readFileSync('src/features/notes/WorkspaceV2Sidebar.tsx', 'utf8')
+const sidebar = readFileSync('src/features/notes/themes/infographic/InfographicWorkspace.tsx', 'utf8')
 const workspace = readFileSync('src/features/notes/NotesWorkspace.tsx', 'utf8')
 const creator = readFileSync('src/features/notes/WorkspaceV2FolderCreator.tsx', 'utf8')
 const encryptedRecords = readFileSync('src/storage/repositories/encryptedRecordRepository.ts', 'utf8')
@@ -72,8 +72,8 @@ test('workspace v2 folder menu owns rename/delete UI but delegates data-safe mut
 })
 
 test('folder drag target and options button are separate controls', () => {
-  assert.match(sidebar, /data-v2-drag-kind="folder"[\s\S]*className="oanix-workspace-v2__folder-main"/)
-  assert.match(sidebar, /className="oanix-workspace-v2__folder-gear"[\s\S]*data-v2-drag-ignore="true"/)
+  assert.match(sidebar, /data-infographic-drag-kind="folder"[\s\S]*className="folder-item-wrapper__open"/)
+  assert.match(sidebar, /className="side-gear-btn"[\s\S]*data-infographic-drag-ignore="true"/)
 })
 
 test('workspace v2 folder menu does not reintroduce the redundant open-folder action', () => {
