@@ -67,7 +67,7 @@ test('vault account callback remains stable so auth session events do not create
   assert.doesNotMatch(gateSource, /onSessionChange=\{\(session\) => void handleAccountSessionChange\(session\)\}/)
 })
 
-test('automatic sync reacts quickly to local and remote changes with a polling fallback', () => {
+test('automatic sync reacts quickly to local and remote changes without idle full-vault polling', () => {
   const runtime = readFileSync('src/features/sync/AutoSyncRuntime.tsx', 'utf8')
   const recordRepo = readFileSync('src/storage/repositories/encryptedRecordRepository.ts', 'utf8')
 
@@ -81,8 +81,10 @@ test('automatic sync reacts quickly to local and remote changes with a polling f
   assert.match(runtime, /table: 'sync_records'/)
   assert.match(runtime, /filter: `user_id=eq\.\$\{userId\}`/)
   assert.match(runtime, /removeChannel\(channel\)/)
-  assert.match(runtime, /30_000/)
+  assert.doesNotMatch(runtime, /30_000/)
+  assert.doesNotMatch(runtime, /setInterval/)
   assert.match(runtime, /syncEncryptedVaultBidirectional/)
+  assert.match(runtime, /syncEncryptedBinariesBidirectional/)
   assert.match(runtime, /onRemoteAppliedRef\.current\(\)/)
 })
 
