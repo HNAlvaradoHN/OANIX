@@ -41,6 +41,7 @@
   --inf-input: rgba(255, 255, 255, .85);
   --inf-chip-text: #475569;
   --inf-topbar: rgba(255, 255, 255, .65);
+  --inf-header-height: 52px;
   position: relative;
   isolation: isolate;
   width: 100%;
@@ -181,15 +182,16 @@ html.oanix-note-bulk-selecting .oanix-infographic-theme .oanix-workspace-v2__not
   left: 0;
   z-index: 40;
   width: 100%;
-  min-height: calc(50px + env(safe-area-inset-top));
+  height: calc(var(--inf-header-height) + env(safe-area-inset-top)) !important;
+  min-height: calc(var(--inf-header-height) + env(safe-area-inset-top)) !important;
   display: flex !important;
   align-items: center;
   justify-content: space-between;
   gap: .75rem;
   padding:
-    max(8px, env(safe-area-inset-top))
+    env(safe-area-inset-top)
     max(12px, env(safe-area-inset-right))
-    8px
+    0
     max(12px, env(safe-area-inset-left)) !important;
   border: 0 !important;
   border-bottom: 1px solid var(--inf-border) !important;
@@ -208,9 +210,9 @@ html.oanix-note-bulk-selecting .oanix-infographic-theme .oanix-workspace-v2__not
 }
 
 .oanix-infographic-brand__logo {
-  width: 32px !important;
-  height: 32px !important;
-  flex: 0 0 32px;
+  width: 34px !important;
+  height: 34px !important;
+  flex: 0 0 34px;
   display: grid !important;
   place-items: center;
   border: 1px solid rgba(255, 255, 255, .24) !important;
@@ -220,6 +222,12 @@ html.oanix-note-bulk-selecting .oanix-infographic-theme .oanix-workspace-v2__not
   box-shadow: 0 4px 12px rgba(15, 23, 42, .22);
   font-size: 12px !important;
   font-weight: 900;
+}
+
+html.oanix-brand-final .oanix-infographic-theme .oanix-infographic-brand__logo {
+  width: 34px !important;
+  height: 34px !important;
+  flex-basis: 34px !important;
 }
 
 .oanix-infographic-brand__text {
@@ -316,7 +324,7 @@ html.oanix-note-bulk-selecting .oanix-infographic-theme .oanix-workspace-v2__not
 
 .oanix-infographic-search {
   position: absolute !important;
-  top: calc(50px + env(safe-area-inset-top));
+  top: calc(var(--inf-header-height) + env(safe-area-inset-top));
   right: 0;
   left: 0;
   z-index: 39;
@@ -365,12 +373,12 @@ html.oanix-note-bulk-selecting .oanix-infographic-theme .oanix-workspace-v2__not
   min-height: 0;
   flex: 1 1 auto;
   overflow: hidden;
-  padding-top: calc(50px + env(safe-area-inset-top));
+  padding-top: calc(var(--inf-header-height) + env(safe-area-inset-top));
   padding-bottom: calc(135px + env(safe-area-inset-bottom));
 }
 
 .oanix-infographic-theme.is-search-open .oanix-infographic-main {
-  padding-top: calc(118px + env(safe-area-inset-top));
+  padding-top: calc(var(--inf-header-height) + 68px + env(safe-area-inset-top));
 }
 
 .oanix-infographic-main__layer {
@@ -378,7 +386,7 @@ html.oanix-note-bulk-selecting .oanix-infographic-theme .oanix-workspace-v2__not
   min-height: 0;
   display: flex;
   flex-direction: column;
-  padding: 16px clamp(12px, 2.2vw, 22px) 0;
+  padding: 12px clamp(12px, 2.2vw, 22px) 0;
 }
 
 .oanix-infographic-chips-wrapper {
@@ -1722,10 +1730,11 @@ body.oanix-infographic-dark .oanix-workspace-v2__modal-backdrop,
     gap: 7px;
   }
 
-  .oanix-infographic-brand__logo {
-    width: 29px !important;
-    height: 29px !important;
-    flex-basis: 29px;
+  .oanix-infographic-brand__logo,
+  html.oanix-brand-final .oanix-infographic-theme .oanix-infographic-brand__logo {
+    width: 30px !important;
+    height: 30px !important;
+    flex-basis: 30px !important;
   }
 
   .oanix-infographic-header__actions {
