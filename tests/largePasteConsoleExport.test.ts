@@ -31,7 +31,7 @@ test('large paste interception is scoped to paste events and leaves existing cod
   assert.match(source, /shouldEncapsulateClipboardPaste\(plainText\)/)
   assert.match(source, /codeTool\.click\(\)/)
   assert.match(source, /content\.textContent = plainText/)
-  assert.doesNotMatch(source, /input|keyup|keydown.*shouldEncapsulateClipboardPaste/s)
+  assert.doesNotMatch(source, /addEventListener\('(input|keyup|keydown)'/)
 })
 
 test('code block menu replaces convert-to-text with TXT and PDF exports', async () => {
