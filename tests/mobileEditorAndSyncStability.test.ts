@@ -8,10 +8,11 @@ const codeBlockEditorPath = new URL('../src/features/editor/CodeBlockEditor.tsx'
 const mobileEditorCssPath = new URL('../src/features/editor/mobileEditorStability.css', import.meta.url)
 const autoSyncRuntimePath = new URL('../src/features/sync/AutoSyncRuntime.tsx', import.meta.url)
 
-test('mobile large paste handles Android dual delivery and empty beforeinput payloads', async () => {
+test('mobile large paste handles Android dual delivery and verifies bulk insertText against clipboard', async () => {
   const source = await readFile(largePasteRuntimePath, 'utf8')
 
   assert.match(source, /function ensureEditorSelection\(editor: HTMLElement, target: Element\)/)
+  assert.match(source, /event\.inputType === 'insertText' && !event\.isComposing/)
   assert.match(source, /event\.inputType !== 'insertFromPaste'/)
   assert.match(source, /event\.dataTransfer\?\.getData\('text\/plain'\)/)
   assert.match(source, /duplicateWindowMs = 10_000/)
@@ -20,23 +21,31 @@ test('mobile large paste handles Android dual delivery and empty beforeinput pay
   assert.match(source, /if \(consumeDuplicate\(event, plainText\)\) return/)
   assert.match(source, /navigator\.clipboard/)
   assert.match(source, /await clipboard\.readText\(\)/)
+  assert.match(source, /clipboardText === bulkText/)
+  assert.match(source, /document\.execCommand\('insertText', false, bulkText\)/)
   assert.match(source, /document\.execCommand\('insertText', false, fallbackText\)/)
   assert.match(source, /document\.addEventListener\('paste', handlePaste, true\)/)
   assert.match(source, /document\.addEventListener\('beforeinput', handleBeforeInput, true\)/)
+  assert.match(source, /shouldEncapsulateClipboardPaste\(bulkText\)/)
   assert.match(source, /shouldEncapsulateClipboardPaste\(fallbackText\)/)
 })
 
-test('daily page select-all stays inside the active day and excludes date/title chrome before deletion', async () => {
+test('select-all stays inside the active editable unit and native whole-editor selection is constrained', async () => {
   const source = await readFile(largePasteRuntimePath, 'utf8')
   const css = await readFile(mobileEditorCssPath, 'utf8')
 
-  assert.match(source, /function dailyPageBounds/)
-  assert.match(source, /selectionTouchesDailyChrome/)
-  assert.match(source, /selectionSpansMultipleDailyPages/)
-  assert.match(source, /referenceBlockFromActiveElement/)
+  assert.match(source, /function editableSelectionUnit/)
+  assert.match(source, /function selectionTouchesProtectedIsland/)
+  assert.match(source, /function selectionCoversEditorContents/)
+  assert.match(source, /function constrainSelectionToUnit/)
+  assert.match(source, /compareBoundaryPoints\(Range\.START_TO_START, editorRange\)/)
+  assert.match(source, /compareBoundaryPoints\(Range\.END_TO_END, editorRange\)/)
+  assert.match(source, /\[data-daily-entry-block="true"\]/)
+  assert.match(source, /\[data-code-block="true"\]/)
+  assert.match(source, /\[data-checklist-block="true"\]/)
   assert.match(source, /document\.addEventListener\('focusin', rememberFocusInteraction, true\)/)
-  assert.match(source, /protectedRange\.setStartBefore\(bounds\.first\)/)
-  assert.match(source, /protectedRange\.setEndAfter\(bounds\.last\)/)
+  assert.match(source, /document\.addEventListener\('selectionchange', guardSelectionBoundaries\)/)
+  assert.match(source, /event\.key\.toLowerCase\(\) !== 'a'/)
   assert.match(source, /event\.inputType\.startsWith\('delete'\)/)
   assert.match(source, /event\.key !== 'Backspace' && event\.key !== 'Delete'/)
   assert.match(css, /\.editor-daily-entry,/)
@@ -44,7 +53,7 @@ test('daily page select-all stays inside the active day and excludes date/title 
   assert.match(css, /user-select: text/)
 })
 
-test('code menu interaction has one authority while export runtime only owns exports', async () => {
+test('code menu keeps one toggle authority and promotes coarse pointerup into that click path', async () => {
   const exportSource = await readFile(codeBlockExportRuntimePath, 'utf8')
   const editorSource = await readFile(codeBlockEditorPath, 'utf8')
 
@@ -53,20 +62,24 @@ test('code menu interaction has one authority while export runtime only owns exp
   assert.doesNotMatch(exportSource, /addEventListener\('pointerdown'/)
   assert.match(exportSource, /data-code-export-txt/)
   assert.match(exportSource, /data-code-export-pdf/)
-  assert.match(editorSource, /data-code-actions-toggle/)
+  assert.match(editorSource, /function handleCoarseTogglePointerUp/)
+  assert.match(editorSource, /event\.pointerType === 'mouse'/)
+  assert.match(editorSource, /actionToggle\.click\(\)/)
+  assert.match(editorSource, /root\.addEventListener\('pointerup', handleCoarseTogglePointerUp, true\)/)
+  assert.match(editorSource, /recentCoarsePromotion/)
+  assert.match(editorSource, /event\.detail !== 0/)
   assert.match(editorSource, /const opening = menu\.hidden/)
   assert.match(editorSource, /menu\.hidden = false/)
   assert.match(editorSource, /aria-expanded', 'true'/)
 })
 
-test('tablet timeline uses one centered layout authority without positional transforms', async () => {
+test('timeline uses one centered layout authority at every width and collapses on narrow tablet', async () => {
   const css = await readFile(mobileEditorCssPath, 'utf8')
 
+  assert.match(css, /\.oanix-workspace-v2 \.oanix-workspace-v2__timeline \{[\s\S]*margin-inline: auto !important;[\s\S]*left: auto !important;[\s\S]*transform: none !important;/)
   assert.match(css, /@media \(max-width: 1100px\)/)
   assert.match(css, /width: min\(calc\(100% - 2rem\), 46rem\)/)
   assert.match(css, /margin: 0 auto/)
-  assert.match(css, /left: auto !important/)
-  assert.match(css, /transform: none !important/)
   assert.match(css, /\.oanix-workspace-v2__timeline::before/)
   assert.match(css, /display: none/)
   assert.match(css, /left: 0 !important/)
