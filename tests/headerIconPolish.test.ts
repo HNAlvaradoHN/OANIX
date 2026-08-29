@@ -63,6 +63,8 @@ test('current OANIX header actions stay intact inside the isolated infographic t
   assert.match(sidebar, /onClick=\{onSearchToggle\}/)
   assert.match(sidebar, /onClick=\{onLock\}/)
   assert.match(sidebar, /onClick=\{onWorkspaceMenuToggle\}/)
+  assert.match(sidebar, /<div className="oanix-infographic-brand__text">[\s\S]*<strong>OANIX<\/strong>[\s\S]*<\/div>/)
+  assert.doesNotMatch(sidebar, /activeFolderName/)
   assert.match(v2Css, /aria-label="Buscar en notas"[\s\S]*order: 1/)
   assert.match(v2Css, /aria-label="Bloquear OANIX"[\s\S]*order: 2/)
   assert.match(v2Css, /version-history-launcher[\s\S]*order: 3/)
