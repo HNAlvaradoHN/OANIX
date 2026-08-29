@@ -12,8 +12,10 @@ const MAX_PDF_PAGES = 250
 
 const encoder = new TextEncoder()
 
+type PdfBytes = Uint8Array<ArrayBuffer>
+
 type PdfPageImage = {
-  bytes: Uint8Array
+  bytes: PdfBytes
   width: number
   height: number
 }
@@ -101,21 +103,23 @@ async function renderPage(lines: string[], title: string, pageNumber: number): P
   context.fillText(`OANIX · ${pageNumber}`, MARGIN_X, CANVAS_HEIGHT - 36)
 
   const jpeg = await canvasToJpeg(canvas)
+  const jpegBuffer = await jpeg.arrayBuffer()
   return {
-    bytes: new Uint8Array(await jpeg.arrayBuffer()),
+    bytes: new Uint8Array(jpegBuffer),
     width: CANVAS_WIDTH,
     height: CANVAS_HEIGHT,
   }
 }
 
-function ascii(value: string): Uint8Array {
-  return encoder.encode(value)
+function ascii(value: string): PdfBytes {
+  const encoded = encoder.encode(value)
+  return new Uint8Array(encoded.buffer.slice(encoded.byteOffset, encoded.byteOffset + encoded.byteLength))
 }
 
 function buildPdf(pageImages: PdfPageImage[]): Blob {
   const pageObjectIds = pageImages.map((_, index) => 3 + index * 3)
   const objectCount = 2 + pageImages.length * 3
-  const objects = new Map<number, Uint8Array[]>()
+  const objects = new Map<number, PdfBytes[]>()
 
   objects.set(1, [ascii('<< /Type /Catalog /Pages 2 0 R >>')])
   objects.set(2, [ascii(`<< /Type /Pages /Count ${pageImages.length} /Kids [${pageObjectIds.map((id) => `${id} 0 R`).join(' ')}] >>`)])
@@ -140,7 +144,7 @@ function buildPdf(pageImages: PdfPageImage[]): Blob {
     ])
   })
 
-  const chunks: Uint8Array[] = [ascii('%PDF-1.4\n% OANIX\n')]
+  const chunks: PdfBytes[] = [ascii('%PDF-1.4\n% OANIX\n')]
   const offsets = new Array<number>(objectCount + 1).fill(0)
   let totalLength = chunks[0].byteLength
 
