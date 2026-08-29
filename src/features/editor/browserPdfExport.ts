@@ -12,10 +12,10 @@ const MAX_PDF_PAGES = 250
 
 const encoder = new TextEncoder()
 
-type PdfBytes = Uint8Array<ArrayBuffer>
+type PdfChunk = string | ArrayBuffer
 
 type PdfPageImage = {
-  bytes: PdfBytes
+  bytes: ArrayBuffer
   width: number
   height: number
 }
@@ -103,26 +103,24 @@ async function renderPage(lines: string[], title: string, pageNumber: number): P
   context.fillText(`OANIX · ${pageNumber}`, MARGIN_X, CANVAS_HEIGHT - 36)
 
   const jpeg = await canvasToJpeg(canvas)
-  const jpegBuffer = await jpeg.arrayBuffer()
   return {
-    bytes: new Uint8Array(jpegBuffer),
+    bytes: await jpeg.arrayBuffer(),
     width: CANVAS_WIDTH,
     height: CANVAS_HEIGHT,
   }
 }
 
-function ascii(value: string): PdfBytes {
-  const encoded = encoder.encode(value)
-  return new Uint8Array(encoded.buffer.slice(encoded.byteOffset, encoded.byteOffset + encoded.byteLength))
+function chunkByteLength(chunk: PdfChunk): number {
+  return typeof chunk === 'string' ? encoder.encode(chunk).byteLength : chunk.byteLength
 }
 
 function buildPdf(pageImages: PdfPageImage[]): Blob {
   const pageObjectIds = pageImages.map((_, index) => 3 + index * 3)
   const objectCount = 2 + pageImages.length * 3
-  const objects = new Map<number, PdfBytes[]>()
+  const objects = new Map<number, PdfChunk[]>()
 
-  objects.set(1, [ascii('<< /Type /Catalog /Pages 2 0 R >>')])
-  objects.set(2, [ascii(`<< /Type /Pages /Count ${pageImages.length} /Kids [${pageObjectIds.map((id) => `${id} 0 R`).join(' ')}] >>`)])
+  objects.set(1, ['<< /Type /Catalog /Pages 2 0 R >>'])
+  objects.set(2, [`<< /Type /Pages /Count ${pageImages.length} /Kids [${pageObjectIds.map((id) => `${id} 0 R`).join(' ')}] >>`])
 
   pageImages.forEach((page, index) => {
     const pageId = pageObjectIds[index]
@@ -131,31 +129,31 @@ function buildPdf(pageImages: PdfPageImage[]): Blob {
     const imageName = `Im${index + 1}`
     const content = `q\n${PAGE_WIDTH_PT} 0 0 ${PAGE_HEIGHT_PT} 0 0 cm\n/${imageName} Do\nQ\n`
 
-    objects.set(pageId, [ascii(
+    objects.set(pageId, [
       `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PAGE_WIDTH_PT} ${PAGE_HEIGHT_PT}] /Resources << /XObject << /${imageName} ${imageId} 0 R >> >> /Contents ${contentId} 0 R >>`,
-    )])
+    ])
     objects.set(imageId, [
-      ascii(`<< /Type /XObject /Subtype /Image /Width ${page.width} /Height ${page.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${page.bytes.byteLength} >>\nstream\n`),
+      `<< /Type /XObject /Subtype /Image /Width ${page.width} /Height ${page.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${page.bytes.byteLength} >>\nstream\n`,
       page.bytes,
-      ascii('\nendstream'),
+      '\nendstream',
     ])
     objects.set(contentId, [
-      ascii(`<< /Length ${encoder.encode(content).byteLength} >>\nstream\n${content}endstream`),
+      `<< /Length ${encoder.encode(content).byteLength} >>\nstream\n${content}endstream`,
     ])
   })
 
-  const chunks: PdfBytes[] = [ascii('%PDF-1.4\n% OANIX\n')]
+  const chunks: PdfChunk[] = ['%PDF-1.4\n% OANIX\n']
   const offsets = new Array<number>(objectCount + 1).fill(0)
-  let totalLength = chunks[0].byteLength
+  let totalLength = chunkByteLength(chunks[0])
 
   for (let id = 1; id <= objectCount; id += 1) {
     const body = objects.get(id)
     if (!body) throw new Error('No se pudo ensamblar el PDF.')
     offsets[id] = totalLength
-    const prefix = ascii(`${id} 0 obj\n`)
-    const suffix = ascii('\nendobj\n')
+    const prefix = `${id} 0 obj\n`
+    const suffix = '\nendobj\n'
     chunks.push(prefix, ...body, suffix)
-    totalLength += prefix.byteLength + suffix.byteLength + body.reduce((sum, part) => sum + part.byteLength, 0)
+    totalLength += chunkByteLength(prefix) + chunkByteLength(suffix) + body.reduce((sum, part) => sum + chunkByteLength(part), 0)
   }
 
   const xrefOffset = totalLength
@@ -165,7 +163,7 @@ function buildPdf(pageImages: PdfPageImage[]): Blob {
     ...offsets.slice(1).map((offset) => `${String(offset).padStart(10, '0')} 00000 n \n`),
     `trailer\n<< /Size ${objectCount + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF\n`,
   ].join('')
-  chunks.push(ascii(xref))
+  chunks.push(xref)
 
   return new Blob(chunks, { type: 'application/pdf' })
 }
