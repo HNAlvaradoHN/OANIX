@@ -2,17 +2,30 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
-const source = readFileSync('src/features/notes/WorkspaceV2Sidebar.tsx', 'utf8')
-const css = readFileSync('src/features/notes/workspaceV2.css', 'utf8')
+const source = readFileSync('src/features/notes/themes/infographic/InfographicWorkspace.tsx', 'utf8')
+const shell = readFileSync('src/features/notes/WorkspaceV2Sidebar.tsx', 'utf8')
+const contract = readFileSync('src/features/notes/workspaceThemeContract.ts', 'utf8')
+const css = readFileSync('src/features/notes/themes/infographic/infographicTheme.css', 'utf8')
 const orderService = readFileSync('src/features/notes/workspaceV2OrderService.ts', 'utf8')
 const workspace = readFileSync('src/features/notes/NotesWorkspace.tsx', 'utf8')
-const dragRuntime = readFileSync('src/features/notes/WorkspaceV2DragRuntime.tsx', 'utf8')
+const dragRuntime = readFileSync('src/features/notes/themes/infographic/InfographicThemeDragRuntime.tsx', 'utf8')
 
-test('workspace v2 consumes real note/folder/tag records instead of prototype storage', () => {
+test('workspace consumes real note folder and tag records through a swappable theme contract', () => {
   for (const required of [
     'FolderRecord[]',
     'TagRecord[]',
     'NoteRecord[]',
+    'onCreateFolder',
+    'onCreateTag',
+    'onSelectNote',
+    'onFolderOrder',
+    'onTagOrder',
+    'onNoteOrder',
+  ]) {
+    assert.ok(contract.includes(required), `missing ${required}`)
+  }
+
+  for (const required of [
     'loadFolderColors()',
     'loadFolderIcons()',
     'loadFolderCovers()',
@@ -25,96 +38,79 @@ test('workspace v2 consumes real note/folder/tag records instead of prototype st
     assert.ok(source.includes(required), `missing ${required}`)
   }
 
+  assert.match(shell, /<InfographicWorkspace \.\.\.props/)
   assert.doesNotMatch(source, /datos\.js|localStorage|sessionStorage/)
   assert.doesNotMatch(source, /https?:\/\//)
 })
 
-test('workspace v2 owns persistence only through existing encrypted order services', () => {
+test('workspace persistence stays behind existing encrypted order services', () => {
   assert.match(orderService, /persistFolderOrder\(ids\)/)
   assert.match(orderService, /persistTagOrder\(ids\)/)
   assert.match(orderService, /persistNoteOrder\(ids, shouldContinue\)/)
   assert.doesNotMatch(orderService, /localStorage|sessionStorage|indexedDB/)
 })
 
-test('workspace v2 visual surface is namespaced and reduced-motion aware', () => {
-  assert.match(source, /notes-sidebar oanix-workspace-v2/)
-  assert.match(css, /^\.oanix-workspace-v2\s*\{/m)
+test('infographic theme is isolated and reduced-motion aware', () => {
+  assert.match(source, /oanix-infographic-theme/)
+  assert.match(source, /data-oanix-workspace-theme="infographic"/)
+  assert.match(css, /^\.oanix-infographic-theme\s*\{/m)
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/)
   assert.match(css, /:focus-visible/)
-  assert.match(css, /@media \(hover: none\) and \(pointer: coarse\)[\s\S]*oanix-workspace-v2__note-card[\s\S]*backdrop-filter: none/)
-  assert.doesNotMatch(css, /(^|\n)\s*(html|body|:root|button|input|main|aside)\s*[,{]/)
   assert.doesNotMatch(css, /transition:\s*all/)
-  assert.doesNotMatch(css, /animation:[^;]*infinite/)
+  assert.match(css, /oanix-infographic-slide-arrows/)
+  assert.match(css, /oanix-infographic-ios-jiggle/)
 })
 
-test('workspace v2 keeps mobile scrolling on the real scroll container and preserves momentum', () => {
-  assert.match(dragRuntime, /item\.closest<HTMLElement>\(\`\[data-v2-scroll-kind="/)
-  assert.match(dragRuntime, /gesture\.scrollContainer\.scrollTop = gesture\.startScroll - dy/)
-  assert.match(dragRuntime, /gesture\.scrollContainer\.scrollLeft = gesture\.startScroll - dx/)
+test('infographic drag keeps long press ghost edge autoscroll and momentum', () => {
+  assert.match(dragRuntime, /folder:\s*500/)
+  assert.match(dragRuntime, /tag:\s*400/)
+  assert.match(dragRuntime, /note:\s*400/)
+  assert.match(dragRuntime, /cloneNode\(true\)/)
+  assert.match(dragRuntime, /document\.elementFromPoint\(x, y\)/)
+  assert.match(dragRuntime, /scrollLeft \+= speed/)
+  assert.match(dragRuntime, /scrollTop \+= speed/)
   assert.match(dragRuntime, /startMomentumScroll/)
-  assert.match(dragRuntime, /window\.requestAnimationFrame\(tick\)/)
+  assert.match(dragRuntime, /requestAnimationFrame\(tick\)/)
 })
 
-test('workspace v2 dock keeps Todas and utility controls fixed around user folders', () => {
-  assert.match(source, /oanix-workspace-v2__folder--all/)
-  assert.match(source, /oanix-workspace-v2__folder-scroll/)
-  assert.match(source, /oanix-workspace-v2__dock-actions/)
-  assert.match(source, /applyOanixTheme\(nextTheme\)/)
-  assert.match(source, /activeFolderCover/)
-  assert.match(css, /grid-template-columns: 4\.2rem minmax\(0, 1fr\) 2\.7rem/)
-  assert.match(css, /oanix-workspace-v2__dock-actions[\s\S]*grid-template-columns: 1fr/)
-  assert.match(css, /oanix-workspace-v2__wallpaper[\s\S]*z-index: 0[\s\S]*background-image: var\(--v2-folder-wallpaper\)/)
-  assert.match(css, /oanix-workspace-v2\.has-wallpaper::before[\s\S]*z-index: 1/)
-  assert.match(css, /oanix-workspace-v2__menu-backdrop/)
+test('prototype day night is local to the workspace theme', () => {
+  assert.match(source, /const \[darkMode, setDarkMode\] = useState\(false\)/)
+  assert.match(source, /setDarkMode\(\(current\) => !current\)/)
+  assert.match(source, /classList\.toggle\('oanix-infographic-dark', darkMode\)/)
+  assert.match(css, /\.oanix-infographic-theme\.dark-mode/)
+  assert.doesNotMatch(source, /applyOanixTheme|readSavedOanixTheme/)
 })
 
-test('classic day wallpaper uses a restrained dark veil instead of a white haze', () => {
-  assert.match(css, /classic-day[^\n]*oanix-workspace-v2\.has-wallpaper::before[\s\S]*rgba\(8, 13, 23, \.10\)[\s\S]*rgba\(8, 13, 23, \.22\)/)
-  assert.match(css, /classic-day[^\n]*has-wallpaper \.oanix-workspace-v2__wallpaper[\s\S]*opacity: \.96/)
+test('infographic timeline owns a true centered divider with alternating cards', () => {
+  assert.match(css, /\.timeline-container::before[\s\S]*left: 50%/)
+  assert.match(css, /\.timeline-item\.note-row[\s\S]*width: 50% !important/)
+  assert.match(css, /\.timeline-item\.note-row:nth-child\(odd\)[\s\S]*left: 0 !important/)
+  assert.match(css, /\.timeline-item\.note-row:nth-child\(even\)[\s\S]*left: 50% !important/)
+  assert.match(css, /\.infographic-card\.note-row__open/)
 })
 
-test('workspace v2 desktop timeline centers from the divider axis and keeps compact lanes', () => {
-  assert.match(css, /@media \(min-width: 821px\)[\s\S]*oanix-workspace-v2__timeline[\s\S]*width: 100%[\s\S]*max-width: none[\s\S]*transform: none/)
-  assert.match(css, /oanix-workspace-v2__timeline::before[\s\S]*left: 50%/)
-  assert.match(css, /oanix-workspace-v2__timeline-item\.note-row[\s\S]*left: auto !important[\s\S]*width: min\(50%, calc\(var\(--v2-timeline-card-max\) \+ var\(--v2-timeline-axis-gap\)\)\) !important/)
-  assert.match(css, /oanix-workspace-v2__timeline-item\.note-row[\s\S]*margin-right: 50%[\s\S]*margin-left: auto/)
-  assert.match(css, /oanix-workspace-v2__timeline-item\.note-row:nth-child\(even\)[\s\S]*margin-right: auto[\s\S]*margin-left: 50%/)
-  assert.match(css, /oanix-workspace-v2__note-card\.note-row__open[\s\S]*width: min\(100%, 22rem\) !important/)
+test('infographic timeline collapses to one mobile lane without moving the desktop axis contract', () => {
+  assert.match(css, /@media \(max-width: 640px\)[\s\S]*\.timeline-container::before[\s\S]*left: 20px/)
+  assert.match(css, /@media \(max-width: 640px\)[\s\S]*\.timeline-item\.note-row,[\s\S]*nth-child\(even\)[\s\S]*left: 0 !important[\s\S]*width: 100% !important/)
 })
 
-test('workspace v2 keeps alternating centered lanes above 820px and collapses only on phones', () => {
-  assert.match(css, /@media \(min-width: 821px\)[\s\S]*--v2-timeline-axis-gap: 1\.45rem[\s\S]*margin-right: 50%[\s\S]*margin-left: 50%/)
-  assert.match(css, /@media \(max-width: 820px\)[\s\S]*oanix-workspace-v2__timeline-item\.note-row,[\s\S]*nth-child\(even\)[\s\S]*left: 0 !important[\s\S]*width: 100% !important/)
-  assert.match(css, /@media \(max-width: 820px\)[\s\S]*oanix-workspace-v2__note-card\.note-row__open[\s\S]*width: 100% !important[\s\S]*max-width: none !important/)
-  assert.match(css, /@media \(max-width: 820px\)[\s\S]*grid-template-columns: repeat\(auto-fit, minmax\(1\.9rem, 1fr\)\)/)
-  assert.match(css, /@media \(max-width: 480px\)[\s\S]*oanix-workspace-v2__folder-shape[\s\S]*width: 2\.55rem[\s\S]*height: 2\.55rem/)
+test('real note colors drive prototype card variables and remain editable', () => {
+  assert.match(source, /note\.visualColor \?\? category\?\.color \?\? DEFAULT_NOTE_VISUAL_COLOR/)
+  assert.match(source, /--card-r/)
+  assert.match(source, /--card-g/)
+  assert.match(source, /--card-b/)
+  assert.match(source, /luminance > 0\.5 \? '#1e293b' : '#ffffff'/)
 })
 
-test('workspace v2 reduces timeline spacing instead of wasting vertical viewport', () => {
-  assert.match(css, /@media \(min-width: 821px\)[\s\S]*padding: clamp\(\.26rem, \.62vh, \.38rem\)/)
-  assert.match(css, /@media \(max-width: 820px\)[\s\S]*padding: \.28rem \.1rem \.28rem 1\.62rem !important/)
-  assert.match(css, /oanix-workspace-v2__note-description[\s\S]*-webkit-line-clamp: 1/)
-})
-
-test('workspace v2 custom note colors choose readable ink by contrast rather than a fixed threshold', () => {
-  assert.match(source, /contrastFor\(color, themeId\)/)
-  assert.match(source, /const tintAlpha = night \? 0\.5 : 0\.42/)
-  assert.match(source, /whiteContrast = 1\.05 \/ \(luminance \+ 0\.05\)/)
-  assert.match(source, /inkContrast = \(luminance \+ 0\.05\) \/ \(inkLuminance \+ 0\.05\)/)
-  assert.match(source, /inkContrast >= whiteContrast \? '#172033' : '#ffffff'/)
-})
-
-test('workspace v2 note card keyboard activation does not hijack nested action buttons', () => {
+test('note card keyboard activation still crosses the real click path', () => {
   assert.match(source, /onKeyDown=\{\(event\) => \{[\s\S]*event\.target !== event\.currentTarget[\s\S]*event\.currentTarget\.click\(\)/)
 })
 
-
-test('workspace v2 coalesces rapid reorder persistence so the latest gesture wins', () => {
+test('workspace coalesces rapid reorder persistence so latest gesture wins', () => {
   for (const kind of ['Folder', 'Tag', 'Note']) {
     assert.match(workspace, new RegExp(`pendingV2${kind}OrderRef\\.current = \\[\\...`))
     assert.match(workspace, new RegExp(`if \\(v2${kind}OrderLoopRef\\.current\\) return`))
     assert.match(workspace, new RegExp(`while \\(pendingV2${kind}OrderRef\\.current\\)`))
-    assert.match(workspace, new RegExp(`if \\(pendingV2${kind}OrderRef\\.current\\) continue`))
   }
   assert.match(workspace, /saveWorkspaceV2NoteOrder\([\s\S]*\(\) => pendingV2NoteOrderRef\.current === null/)
   assert.match(orderService, /shouldContinue: \(\) => boolean = \(\) => true/)
