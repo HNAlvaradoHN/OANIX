@@ -217,6 +217,27 @@ html.oanix-note-bulk-selecting .oanix-infographic-theme .oanix-workspace-v2__not
   gap: 4px;
 }
 
+.oanix-infographic-header__actions > .icon-button[aria-label="Buscar en notas"],
+.oanix-infographic-header__actions > .icon-button[aria-label="Cerrar búsqueda"] {
+  order: 1;
+}
+
+.oanix-infographic-header__actions > .icon-button[aria-label="Bloquear OANIX"] {
+  order: 2;
+}
+
+.oanix-infographic-header__actions > .version-history-launcher {
+  order: 3;
+}
+
+.oanix-infographic-header__actions > .account-header-action {
+  order: 4;
+}
+
+.oanix-infographic-header__actions > .workspace-menu-wrap {
+  order: 5;
+}
+
 .oanix-infographic-header__actions > :is(
   .icon-button,
   .version-history-launcher,
