@@ -22,3 +22,23 @@ test('GitHub workflows share one Node.js version authority', () => {
     assert.doesNotMatch(workflow, /node-version:\s*['"]?\d+/)
   }
 })
+
+test('workflows that install npm dependencies reuse the package-manager cache', () => {
+  const ci = readFileSync('.github/workflows/ci.yml', 'utf8')
+  const android = readFileSync('.github/workflows/android.yml', 'utf8')
+  const pages = readFileSync('.github/workflows/pages.yml', 'utf8')
+  const [pagesBuild = '', pagesDeploy = ''] = pages.split(/\n  deploy:\n/, 2)
+
+  for (const [path, workflow] of [
+    ['.github/workflows/ci.yml', ci],
+    ['.github/workflows/android.yml', android],
+    ['.github/workflows/pages.yml build job', pagesBuild],
+  ] as const) {
+    assert.match(workflow, /run:\s*npm ci --no-audit --no-fund/)
+    assert.match(workflow, /node-version-file:\s*\.nvmrc\s*\n\s*cache:\s*npm/,
+      `${path} should enable setup-node npm caching before npm ci`)
+  }
+
+  assert.doesNotMatch(pagesDeploy, /run:\s*npm ci/)
+  assert.doesNotMatch(pagesDeploy, /cache:\s*npm/)
+})
