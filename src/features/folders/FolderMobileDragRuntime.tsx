@@ -12,7 +12,6 @@ const folderReflowAnimations = new WeakMap<HTMLElement, Animation>()
 interface TouchGesture {
   pointerId: number
   item: HTMLElement
-  folderId: string
   rail: HTMLElement
   startX: number
   startY: number
@@ -237,7 +236,6 @@ export function FolderMobileDragRuntime() {
       gesture = {
         pointerId: event.pointerId,
         item,
-        folderId,
         rail,
         startX: event.clientX,
         startY: event.clientY,

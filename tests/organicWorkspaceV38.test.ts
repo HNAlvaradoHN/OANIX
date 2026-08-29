@@ -6,7 +6,6 @@ test('organic workspace uses real OANIX data and no external prototype dependenc
   const runtime = readFileSync('src/features/notes/OrganicWorkspaceRuntime.tsx', 'utf8')
   const css = readFileSync('src/features/notes/organicWorkspace.css', 'utf8')
   const app = readFileSync('src/app/App.tsx', 'utf8')
-  const gate = readFileSync('src/app/WorkspaceRuntimeGate.tsx', 'utf8')
   const legacyGate = readFileSync('src/app/LegacyWorkspaceRuntimeGate.tsx', 'utf8')
 
   assert.match(runtime, /loadFolders/)

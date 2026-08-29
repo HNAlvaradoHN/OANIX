@@ -11,8 +11,6 @@ import { createFolder, loadFolders } from './folderService'
 import './folderCreation.css'
 
 const CREATE_COLORS = ['#3b82f6', '#ec4899', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4'] as const
-const CREATE_TRIGGER_SELECTOR = '.notes-tab--add, .oanix-folder-rail__item--add, .oanix-organic-folder-control--add'
-
 
 export function FolderCreationRuntime() {
   const [open, setOpen] = useState(false)
@@ -47,18 +45,10 @@ export function FolderCreationRuntime() {
     body.classList.add('oanix-folder-create-v2')
 
     const handleOpenRequest = () => openCreator()
-    const handleVisibleTrigger = (event: MouseEvent) => {
-      const target = event.target
-      if (!(target instanceof Element) || !target.closest(CREATE_TRIGGER_SELECTOR)) return
-      event.preventDefault()
-      openCreator()
-    }
 
     window.addEventListener('oanix:open-folder-creator', handleOpenRequest)
-    document.addEventListener('click', handleVisibleTrigger, true)
     return () => {
       window.removeEventListener('oanix:open-folder-creator', handleOpenRequest)
-      document.removeEventListener('click', handleVisibleTrigger, true)
       root.classList.remove('oanix-folder-create-v2')
       body.classList.remove('oanix-folder-create-v2')
     }
