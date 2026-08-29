@@ -3,12 +3,10 @@ import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
 const runtime = readFileSync('src/features/privacy/NoteBulkPrivacyRuntime.tsx', 'utf8')
-const css = readFileSync('src/features/privacy/noteBulkPrivacy.css', 'utf8')
 const app = readFileSync('src/app/App.tsx', 'utf8')
-const noteService = readFileSync('src/features/notes/noteService.ts', 'utf8')
-const encryptedRecords = readFileSync('src/storage/repositories/encryptedRecordRepository.ts', 'utf8')
+const theme = readFileSync('src/features/notes/themes/infographic/InfographicWorkspace.tsx', 'utf8')
 
-test('las notas nuevas mantienen el refresco aislado del runtime de privacidad', () => {
+test('new notes keep the isolated privacy refresh bridge', () => {
   assert.match(runtime, /NOTE_PRIVACY_REFRESH_EVENT = 'oanix:note-privacy-refresh'/)
   assert.match(runtime, /knownRowIdsRef/)
   assert.match(runtime, /foundNewNote/)
@@ -18,59 +16,24 @@ test('las notas nuevas mantienen el refresco aislado del runtime de privacidad',
   assert.match(app, /privacy-\$\{workspaceRevision\}-\$\{privacyRevision\}/)
 })
 
-test('el botón crear abre agregar o marcar y marcar usa un selector dedicado de notas', () => {
-  assert.match(runtime, /\.notes-create-fab/)
-  assert.match(runtime, /Agregar nota/)
-  assert.match(runtime, /Marcar notas/)
-  assert.match(runtime, /data-oanix-bulk-mode/)
-  assert.match(runtime, /selectableNotes\(\)/)
-  assert.match(runtime, /oanix-note-picker-sheet/)
-  assert.match(runtime, /Elegirlas dentro de un panel, sin tocar la lista/)
-  assert.match(runtime, /aria-pressed=\{selected\}/)
-  assert.match(runtime, /Continuar/)
-  assert.match(css, /\.notes-create-fab\[data-oanix-bulk-mode\]/)
-  assert.match(css, /\.oanix-note-picker-sheet/)
-  assert.doesNotMatch(runtime, /LONG_PRESS_MS|pointerdown|pointermove|suppressNextClickRef/)
+test('the active create-note button now calls the real create handler directly', () => {
+  assert.match(theme, /className="notes-create-fab fab-add-note"/)
+  assert.match(theme, /onClick=\{onCreateNote\}/)
+  assert.match(theme, /aria-label=\{creating \? 'Creando nota' : 'Crear nueva nota'\}/)
+  assert.doesNotMatch(runtime, /\.notes-create-fab/)
+  assert.doesNotMatch(runtime, /Agregar nota|Marcar notas|Crear o marcar notas/)
+  assert.doesNotMatch(runtime, /createPortal|data-oanix-bulk-mode|oanix-note-picker-sheet/)
 })
 
-test('terminar selección ofrece aplicar código, borrar o cancelar sin barra inferior', () => {
-  assert.match(runtime, /Aplicar código/)
-  assert.match(runtime, /Borrar/)
-  assert.match(runtime, /Cancelar selección/)
-  assert.doesNotMatch(runtime, /oanix-note-bulk-bar/)
-  assert.doesNotMatch(css, /\.oanix-note-bulk-bar/)
+test('bulk selection UI and bulk deletion are retired from the active runtime', () => {
+  assert.doesNotMatch(runtime, /selectionMode|selectedIds|beginSelection|continueSelection/)
+  assert.doesNotMatch(runtime, /Aplicar código|Borrar|Cancelar selección/)
+  assert.doesNotMatch(runtime, /deleteNote|deleteEncryptedImage|createNotePrivacyLock/)
+  assert.doesNotMatch(runtime, /noteBulkPrivacy\.css/)
 })
 
-test('protección múltiple conserva códigos existentes y crea un verificador independiente por nota', () => {
-  assert.match(runtime, /alreadyProtected/)
-  assert.match(runtime, /filter\(\(noteId\) => !alreadyProtected\.has\(noteId\)\)/)
-  assert.match(runtime, /for \(let index = 0; index < targets\.length; index \+= 1\)/)
-  assert.match(runtime, /const lock = await createNotePrivacyLock\(code\)/)
-  assert.match(runtime, /await setNotePrivacyLock\(targets\[index\], lock\)/)
-  assert.match(runtime, /Las que ya tengan código conservarán el suyo/)
-})
-
-test('borrado múltiple deja local-data-changed bajo la autoridad del almacenamiento cifrado', () => {
-  assert.match(runtime, /await deleteNote\(ids\[index\]\)/)
-  assert.match(runtime, /deleteEncryptedImage/)
-  assert.doesNotMatch(runtime, /oanix:local-data-changed/)
-  assert.match(noteService, /deleteEncryptedRecord|deleteNoteVersionHistory/)
-  assert.match(encryptedRecords, /function notifyLocalEncryptedChange/)
-  assert.match(encryptedRecords, /oanix:local-data-changed/)
-  assert.match(runtime, /oanix:workspace-refresh/)
-  assert.match(app, /window\.addEventListener\('oanix:workspace-refresh'/)
-})
-
-test('borrado múltiple no atraviesa una nota que siga bloqueada', () => {
-  assert.match(runtime, /row\?\.dataset\.oanixNoteLocked === 'true'/)
-  assert.match(runtime, /Desbloquéala con su código antes de borrarla/)
-  assert.match(runtime, /Desbloquéalas con sus códigos antes de borrarlas/)
-  assert.match(runtime, /oanix-note-action-sheet__notice/)
-  assert.match(css, /\.oanix-note-action-sheet__notice/)
-})
-
-test('desbloqueo individual existente no se sustituye por un desbloqueo grupal', () => {
-  assert.doesNotMatch(runtime, /verifyNotePrivacyLock/)
-  assert.doesNotMatch(runtime, /unlockedNoteIds/)
+test('individual privacy remains under NotePrivacyRuntime', () => {
   assert.match(app, /<NotePrivacyRuntime/)
+  assert.match(theme, /oanix:open-note-privacy/)
+  assert.match(theme, /aria-label="Privacidad de la nota"/)
 })
