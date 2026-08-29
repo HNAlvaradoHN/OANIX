@@ -18,7 +18,6 @@ import {
   type FolderAppearanceFlags,
 } from '../../../folders/folderAppearanceService'
 import { loadFolderCovers } from '../../../folders/folderCoverService'
-import type { FolderRecord } from '../../../folders/folderTypes'
 import { OanixIcon } from '../../../../shared/OanixIcon'
 import {
   DEFAULT_TAG_COLOR,
