@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -220,14 +221,14 @@ export function InfographicWorkspace({
     ? ''
     : folderCovers.get(activeFolderId) ?? ''
 
-  function showToast(message: string) {
+  const showToast = useCallback((message: string) => {
     setToast(message)
     if (toastTimerRef.current !== null) window.clearTimeout(toastTimerRef.current)
     toastTimerRef.current = window.setTimeout(() => {
       setToast('')
       toastTimerRef.current = null
     }, 1_800)
-  }
+  }, [])
 
   function scrollTags(direction: 'left' | 'right') {
     const container = tagScrollRef.current
