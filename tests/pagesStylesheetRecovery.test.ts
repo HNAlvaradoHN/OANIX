@@ -19,6 +19,8 @@ test('PWA retries a missing hashed stylesheet from the HTML bootstrap before cle
 })
 
 test('Pages deploy delegates to one versioned live HTML, CSS and JS shell verifier', () => {
+  assert.match(pagesWorkflow, /deploy:[\s\S]*Checkout verifier source[\s\S]*actions\/checkout@v4/)
+  assert.match(pagesWorkflow, /deploy:[\s\S]*Setup Node\.js[\s\S]*node-version: 22/)
   assert.match(pagesWorkflow, /Verify deployed shell assets/)
   assert.match(pagesWorkflow, /npm run verify:pages/)
   assert.doesNotMatch(pagesWorkflow, /https:\/\/hnalvaradohn\.github\.io\/OANIX\//)
