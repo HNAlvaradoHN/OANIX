@@ -73,17 +73,17 @@ test('classic day wallpaper uses a restrained dark veil instead of a white haze'
   assert.match(css, /classic-day[^\n]*has-wallpaper \.oanix-workspace-v2__wallpaper[\s\S]*opacity: \.96/)
 })
 
-test('workspace v2 desktop timeline owns the exact center axis and compact card geometry', () => {
+test('workspace v2 desktop timeline centers from the divider axis and keeps compact lanes', () => {
+  assert.match(css, /@media \(min-width: 821px\)[\s\S]*oanix-workspace-v2__timeline[\s\S]*width: 100%[\s\S]*max-width: none[\s\S]*transform: none/)
   assert.match(css, /oanix-workspace-v2__timeline::before[\s\S]*left: 50%/)
-  assert.match(css, /html\[data-oanix-theme\] \.oanix-workspace-v2 \.oanix-workspace-v2__timeline-item\.note-row[\s\S]*width: 50% !important/)
-  assert.match(css, /oanix-workspace-v2__timeline-item\.note-row:nth-child\(even\)[\s\S]*left: 50% !important/)
+  assert.match(css, /oanix-workspace-v2__timeline-item\.note-row[\s\S]*left: auto !important[\s\S]*width: min\(50%, calc\(var\(--v2-timeline-card-max\) \+ var\(--v2-timeline-axis-gap\)\)\) !important/)
+  assert.match(css, /oanix-workspace-v2__timeline-item\.note-row[\s\S]*margin-right: 50%[\s\S]*margin-left: auto/)
+  assert.match(css, /oanix-workspace-v2__timeline-item\.note-row:nth-child\(even\)[\s\S]*margin-right: auto[\s\S]*margin-left: 50%/)
   assert.match(css, /oanix-workspace-v2__note-card\.note-row__open[\s\S]*width: min\(100%, 22rem\) !important/)
-  assert.match(css, /note-row:not\(:nth-child\(even\)\)[\s\S]*margin-left: auto !important/)
-  assert.match(css, /note-row:nth-child\(even\)[\s\S]*margin-right: auto !important/)
 })
 
-test('workspace v2 responsive geometry overrides desktop half-columns on phones and tablets', () => {
-  assert.match(css, /@media \(min-width: 821px\)[\s\S]*oanix-workspace-v2__timeline[\s\S]*left: 50%[\s\S]*transform: translateX\(-50%\)/)
+test('workspace v2 keeps alternating centered lanes above 820px and collapses only on phones', () => {
+  assert.match(css, /@media \(min-width: 821px\)[\s\S]*--v2-timeline-axis-gap: 1\.45rem[\s\S]*margin-right: 50%[\s\S]*margin-left: 50%/)
   assert.match(css, /@media \(max-width: 820px\)[\s\S]*oanix-workspace-v2__timeline-item\.note-row,[\s\S]*nth-child\(even\)[\s\S]*left: 0 !important[\s\S]*width: 100% !important/)
   assert.match(css, /@media \(max-width: 820px\)[\s\S]*oanix-workspace-v2__note-card\.note-row__open[\s\S]*width: 100% !important[\s\S]*max-width: none !important/)
   assert.match(css, /@media \(max-width: 820px\)[\s\S]*grid-template-columns: repeat\(auto-fit, minmax\(1\.9rem, 1fr\)\)/)
