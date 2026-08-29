@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
 const source = readFileSync('src/features/notes/WorkspaceV2TagActions.tsx', 'utf8')
-const sidebar = readFileSync('src/features/notes/WorkspaceV2Sidebar.tsx', 'utf8')
+const sidebar = readFileSync('src/features/notes/themes/infographic/InfographicWorkspace.tsx', 'utf8')
 const workspace = readFileSync('src/features/notes/NotesWorkspace.tsx', 'utf8')
 
 test('workspace v2 tag plus exposes exactly add and delete actions', () => {
