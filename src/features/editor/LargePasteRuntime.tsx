@@ -142,7 +142,7 @@ function protectDailyPageSelection(
 }
 
 function clipboardTextFromBeforeInput(event: InputEvent): string {
-  return event.dataTransfer?.getData('text/plain') ?? event.data ?? ''
+  return event.dataTransfer?.getData('text/plain') || event.data || ''
 }
 
 export function LargePasteRuntime() {
@@ -151,7 +151,7 @@ export function LargePasteRuntime() {
     let adjustingSelection = false
     let handledText = ''
     let handledAt = 0
-    const duplicateWindowMs = 3_000
+    const duplicateWindowMs = 10_000
 
     function rememberInteractionTarget(target: EventTarget | null) {
       if (!(target instanceof Element)) return
@@ -196,8 +196,12 @@ export function LargePasteRuntime() {
       }
     }
 
+    function isRecentHandledPaste(): boolean {
+      return Boolean(handledText) && performance.now() - handledAt < duplicateWindowMs
+    }
+
     function isDuplicateLargePaste(plainText: string): boolean {
-      return plainText === handledText && performance.now() - handledAt < duplicateWindowMs
+      return plainText === handledText && isRecentHandledPaste()
     }
 
     function consumeDuplicate(event: ClipboardEvent | InputEvent, plainText: string): boolean {
@@ -219,10 +223,10 @@ export function LargePasteRuntime() {
       if (!editor) return
       if (!plainText || !shouldEncapsulateClipboardPaste(plainText)) return
 
-      // Android WebView can emit the same paste through ClipboardEvent and then
-      // InputEvent after focus has already moved into the freshly-created code
-      // block. Consume that second delivery before inspecting its new target,
-      // otherwise the same text is inserted again outside/inside the console.
+      // Android can deliver one paste twice (paste + beforeinput) after focus has
+      // already moved into the new code block. Consume the repeated delivery
+      // before inspecting the new target. The bounded transaction window still
+      // allows the user to intentionally paste the same text again later.
       if (consumeDuplicate(event, plainText)) return
 
       if (target.closest('[data-contact-field], [data-daily-entry-title="true"]')) return
@@ -276,7 +280,7 @@ export function LargePasteRuntime() {
       encapsulateLargePaste(event, target, event.clipboardData?.getData('text/plain') ?? '')
     }
 
-    function handleBeforeInput(event: InputEvent) {
+    async function handleBeforeInput(event: InputEvent) {
       const target = event.target
       if (!(target instanceof Element)) return
 
@@ -289,7 +293,47 @@ export function LargePasteRuntime() {
       }
 
       if (event.inputType !== 'insertFromPaste') return
-      encapsulateLargePaste(event, target, clipboardTextFromBeforeInput(event))
+
+      const plainText = clipboardTextFromBeforeInput(event)
+      if (plainText) {
+        encapsulateLargePaste(event, target, plainText)
+        return
+      }
+
+      // Some Android WebViews expose insertFromPaste without dataTransfer/data.
+      // If the corresponding ClipboardEvent was already handled, swallowing this
+      // empty second delivery prevents the browser from inserting the payload a
+      // second time after focus moved into the code block.
+      if (isRecentHandledPaste()) {
+        event.preventDefault()
+        event.stopPropagation()
+        return
+      }
+
+      // If beforeinput is the only useful signal, hold the native insertion and
+      // read the clipboard while the paste gesture is still active. Large text is
+      // routed through the same canonical code-block path; small text is inserted
+      // normally so this fallback does not change ordinary paste behavior.
+      const clipboard = navigator.clipboard
+      if (!clipboard?.readText) return
+
+      event.preventDefault()
+      event.stopPropagation()
+
+      try {
+        const fallbackText = await clipboard.readText()
+        if (!fallbackText) return
+
+        if (shouldEncapsulateClipboardPaste(fallbackText)) {
+          encapsulateLargePaste(event, target, fallbackText)
+          return
+        }
+
+        if (!ensureEditorSelection(editor, target)) return
+        document.execCommand('insertText', false, fallbackText)
+      } catch {
+        window.alert('OANIX no pudo leer este pegado desde Android. El contenido sigue disponible en tu portapapeles para volver a intentarlo.')
+      }
     }
 
     function handleDeleteKey(event: KeyboardEvent) {

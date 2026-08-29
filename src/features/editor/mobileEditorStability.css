@@ -37,13 +37,15 @@
 }
 
 /* Tablet/narrow-desktop contract: once two timeline columns no longer have
-   enough room for complete cards, collapse to one bounded column. The desktop
-   timeline rail/dots are deliberately removed here; moving that decoration to
-   the left created a false second column and wasted tablet width. */
+   enough room for complete cards, collapse to one bounded column. The timeline
+   owns its centering with auto margins only; any older positional centering is
+   neutralized here so tablet and mobile cannot combine both techniques. */
 @media (max-width: 1100px) {
   .oanix-workspace-v2 .oanix-workspace-v2__timeline {
-    width: min(100%, 46rem);
-    margin-inline: auto;
+    width: min(calc(100% - 2rem), 46rem);
+    margin: 0 auto;
+    left: auto !important;
+    transform: none !important;
   }
 
   .oanix-workspace-v2 .oanix-workspace-v2__timeline::before,

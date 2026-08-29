@@ -4,22 +4,26 @@ import test from 'node:test'
 
 const largePasteRuntimePath = new URL('../src/features/editor/LargePasteRuntime.tsx', import.meta.url)
 const codeBlockExportRuntimePath = new URL('../src/features/editor/CodeBlockExportRuntime.tsx', import.meta.url)
+const codeBlockEditorPath = new URL('../src/features/editor/CodeBlockEditor.tsx', import.meta.url)
 const mobileEditorCssPath = new URL('../src/features/editor/mobileEditorStability.css', import.meta.url)
 const autoSyncRuntimePath = new URL('../src/features/sync/AutoSyncRuntime.tsx', import.meta.url)
 
-test('mobile large paste handles Android dual delivery without inserting the same text twice', async () => {
+test('mobile large paste handles Android dual delivery and empty beforeinput payloads', async () => {
   const source = await readFile(largePasteRuntimePath, 'utf8')
 
   assert.match(source, /function ensureEditorSelection\(editor: HTMLElement, target: Element\)/)
   assert.match(source, /event\.inputType !== 'insertFromPaste'/)
   assert.match(source, /event\.dataTransfer\?\.getData\('text\/plain'\)/)
-  assert.match(source, /duplicateWindowMs = 3_000/)
+  assert.match(source, /duplicateWindowMs = 10_000/)
+  assert.match(source, /isRecentHandledPaste/)
   assert.match(source, /consumeDuplicate\(event, plainText\)/)
   assert.match(source, /if \(consumeDuplicate\(event, plainText\)\) return/)
-  assert.match(source, /target\.closest\('\[data-code-content="true"\]'\)/)
+  assert.match(source, /navigator\.clipboard/)
+  assert.match(source, /await clipboard\.readText\(\)/)
+  assert.match(source, /document\.execCommand\('insertText', false, fallbackText\)/)
   assert.match(source, /document\.addEventListener\('paste', handlePaste, true\)/)
   assert.match(source, /document\.addEventListener\('beforeinput', handleBeforeInput, true\)/)
-  assert.match(source, /shouldEncapsulateClipboardPaste\(plainText\)/)
+  assert.match(source, /shouldEncapsulateClipboardPaste\(fallbackText\)/)
 })
 
 test('daily page select-all stays inside the active day and excludes date/title chrome before deletion', async () => {
@@ -40,27 +44,34 @@ test('daily page select-all stays inside the active day and excludes date/title 
   assert.match(css, /user-select: text/)
 })
 
-test('touch code menu promotes a coarse pointer press into the canonical click path', async () => {
-  const source = await readFile(codeBlockExportRuntimePath, 'utf8')
+test('code menu interaction has one authority while export runtime only owns exports', async () => {
+  const exportSource = await readFile(codeBlockExportRuntimePath, 'utf8')
+  const editorSource = await readFile(codeBlockEditorPath, 'utf8')
 
-  assert.match(source, /function handleTouchMenuPointerDown\(event: PointerEvent\)/)
-  assert.match(source, /event\.pointerType === 'mouse'/)
-  assert.match(source, /data-code-actions-toggle/)
-  assert.match(source, /event\.preventDefault\(\)/)
-  assert.match(source, /toggle\.click\(\)/)
-  assert.match(source, /addEventListener\('pointerdown', handleTouchMenuPointerDown, true\)/)
+  assert.doesNotMatch(exportSource, /handleTouchMenuPointerDown/)
+  assert.doesNotMatch(exportSource, /toggle\.click\(\)/)
+  assert.doesNotMatch(exportSource, /addEventListener\('pointerdown'/)
+  assert.match(exportSource, /data-code-export-txt/)
+  assert.match(exportSource, /data-code-export-pdf/)
+  assert.match(editorSource, /data-code-actions-toggle/)
+  assert.match(editorSource, /const opening = menu\.hidden/)
+  assert.match(editorSource, /menu\.hidden = false/)
+  assert.match(editorSource, /aria-expanded', 'true'/)
 })
 
-test('tablet timeline becomes a centered single column without a stray side rail', async () => {
+test('tablet timeline uses one centered layout authority without positional transforms', async () => {
   const css = await readFile(mobileEditorCssPath, 'utf8')
 
   assert.match(css, /@media \(max-width: 1100px\)/)
+  assert.match(css, /width: min\(calc\(100% - 2rem\), 46rem\)/)
+  assert.match(css, /margin: 0 auto/)
+  assert.match(css, /left: auto !important/)
+  assert.match(css, /transform: none !important/)
   assert.match(css, /\.oanix-workspace-v2__timeline::before/)
   assert.match(css, /display: none/)
   assert.match(css, /left: 0 !important/)
   assert.match(css, /width: 100% !important/)
   assert.match(css, /width: min\(100%, 34rem\)/)
-  assert.match(css, /margin-left: auto/)
 })
 
 test('auto sync is event driven and does not poll the complete vault every 30 seconds while idle', async () => {
