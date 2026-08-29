@@ -64,7 +64,8 @@ test('functional editor and privacy runtimes remain outside the legacy-only bloc
   assert.match(beforeLegacy, /<NoteCreationFeedbackRuntime \/>/)
   assert.match(beforeLegacy, /<PrivacyStatusHelp \/>/)
   assert.doesNotMatch(gate, /noteBulkPrivacyOverrides\.css/)
-  assert.match(noteBulkPrivacy, /import '\.\/noteBulkPrivacy\.css'/)
+  assert.doesNotMatch(noteBulkPrivacy, /noteBulkPrivacy\.css/)
+  assert.doesNotMatch(noteBulkPrivacy, /createPortal|selectionMode|Marcar notas/)
 })
 
 test('workspace v2 never inherits the legacy v38.3 prepaint class', () => {

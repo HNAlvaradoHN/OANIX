@@ -118,12 +118,12 @@ test('notas fijadas y no fijadas no se mezclan', () => {
   assert.match(runtime, /rowPinned\(event\.dragged\) === rowPinned\(event\.related\)/)
 })
 
-test('controles interactivos y selección múltiple no compiten con reorder', () => {
+test('controles interactivos no compiten con reorder y el bulk marking quedó retirado', () => {
   assert.match(runtime, /function isExcludedInteractiveTarget/)
   assert.match(runtime, /interactionBlocked\(\) \|\| isExcludedInteractiveTarget\(target\)/)
   assert.match(runtime, /preventOnFilter: false/)
   assert.match(runtime, /oanix-note-bulk-selecting/)
-  assert.match(privacyRuntime, /data-oanix-bulk-mode/)
+  assert.doesNotMatch(privacyRuntime, /data-oanix-bulk-mode|selectionMode|Marcar notas/)
 })
 
 test('orden persiste y sincroniza React sin remonte completo en el camino exitoso', () => {

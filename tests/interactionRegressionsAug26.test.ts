@@ -9,7 +9,8 @@ const noteFeedback = readFileSync('src/features/notes/NoteCreationFeedbackRuntim
 const noteIdentity = readFileSync('src/features/notes/NoteVisualIdentityRuntime.tsx', 'utf8')
 const noteReorder = readFileSync('src/features/notes/NoteListReorderGestureRuntime.tsx', 'utf8')
 const noteReorderCss = readFileSync('src/features/notes/noteReorderGesture.css', 'utf8')
-const bulkOverride = readFileSync('src/features/privacy/noteBulkPrivacy.css', 'utf8')
+const bulkPrivacy = readFileSync('src/features/privacy/NoteBulkPrivacyRuntime.tsx', 'utf8')
+const infographicTheme = readFileSync('src/features/notes/themes/infographic/InfographicWorkspace.tsx', 'utf8')
 
 test('folder manager is scoped by explicit event and bypasses hidden DOM bridges', () => {
   assert.match(folderManager, /renameFolder/)
@@ -36,12 +37,10 @@ test('launcher click does not show creating feedback until creation really becom
   assert.doesNotMatch(noteFeedback, /closest<HTMLButtonElement>\(CREATE_BUTTON_SELECTOR\)/)
 })
 
-test('bulk selection finish control is a green check without overflowing text', () => {
-  assert.match(bulkOverride, /html\.oanix-note-bulk-selecting \.notes-create-fab\[data-oanix-bulk-mode\]/)
-  assert.match(bulkOverride, /background:\s*linear-gradient\(145deg, #22c55e, #16a34a\) !important/)
-  assert.match(bulkOverride, /::before[\s\S]*content:\s*'✓' !important/)
-  assert.match(bulkOverride, /::after[\s\S]*content:\s*none !important/)
-  assert.doesNotMatch(bulkOverride, /Terminar/)
+test('create-note action no longer detours through bulk marking', () => {
+  assert.match(infographicTheme, /className="notes-create-fab fab-add-note"[\s\S]*onClick=\{onCreateNote\}/)
+  assert.doesNotMatch(bulkPrivacy, /Marcar notas|data-oanix-bulk-mode|selectionMode/)
+  assert.doesNotMatch(bulkPrivacy, /\.notes-create-fab/)
 })
 
 test('note drag keeps Sortable ordering but renders an independent visible overlay', () => {

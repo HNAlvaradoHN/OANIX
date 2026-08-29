@@ -50,3 +50,16 @@ test('infographic create-note control keeps the real OANIX create callback behin
   assert.match(sidebar, /<OanixIcon name="plus" size=\{24\}/)
   assert.match(css, /\.fab-add-note[\s\S]*width: 50px !important[\s\S]*height: 50px !important/)
 })
+
+
+test('infographic note rows suppress legacy selected-row shells', () => {
+  assert.match(css, /:root\[data-oanix-theme\] \.oanix-infographic-theme \.timeline-item\.note-row\.note-row--selected/)
+  assert.match(css, /note-row--selected,[\s\S]*background: transparent !important/)
+  assert.match(css, /note-row--selected,[\s\S]*box-shadow: none !important/)
+})
+
+test('infographic create-note control stays above the folder dock and opens directly', () => {
+  assert.match(sidebar, /className="notes-create-fab fab-add-note"[\s\S]*onClick=\{onCreateNote\}/)
+  assert.match(css, /\.fab-add-note[\s\S]*bottom: calc\(148px \+ env\(safe-area-inset-bottom\)\) !important/)
+  assert.match(css, /\.fab-add-note[\s\S]*z-index: 45 !important/)
+})
