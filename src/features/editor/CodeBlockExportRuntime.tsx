@@ -18,8 +18,16 @@ function closeMenu(button: Element): void {
   }
 }
 
+function convertButtonsWithin(root: ParentNode): HTMLButtonElement[] {
+  const buttons = Array.from(root.querySelectorAll<HTMLButtonElement>('[data-code-convert="true"]'))
+  if (root instanceof HTMLButtonElement && root.matches('[data-code-convert="true"]')) {
+    buttons.unshift(root)
+  }
+  return buttons
+}
+
 function decorateExportActions(root: ParentNode = document): void {
-  root.querySelectorAll<HTMLButtonElement>('[data-code-convert="true"]').forEach((convert) => {
+  convertButtonsWithin(root).forEach((convert) => {
     delete convert.dataset.codeConvert
     convert.dataset.codeExportTxt = 'true'
     convert.textContent = 'Exportar TXT'
@@ -46,9 +54,7 @@ export function CodeBlockExportRuntime() {
     const observer = new MutationObserver((mutations) => {
       for (const mutation of mutations) {
         for (const node of mutation.addedNodes) {
-          if (node instanceof Element && node.querySelector('[data-code-convert="true"]')) {
-            decorateExportActions(node)
-          }
+          if (node instanceof Element) decorateExportActions(node)
         }
       }
     })
