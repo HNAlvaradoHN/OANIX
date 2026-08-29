@@ -5,6 +5,8 @@ import test from 'node:test'
 const runtime = readFileSync('src/features/privacy/NoteBulkPrivacyRuntime.tsx', 'utf8')
 const css = readFileSync('src/features/privacy/noteBulkPrivacy.css', 'utf8')
 const app = readFileSync('src/app/App.tsx', 'utf8')
+const noteService = readFileSync('src/features/notes/noteService.ts', 'utf8')
+const encryptedRecords = readFileSync('src/storage/repositories/encryptedRecordRepository.ts', 'utf8')
 
 test('las notas nuevas mantienen el refresco aislado del runtime de privacidad', () => {
   assert.match(runtime, /NOTE_PRIVACY_REFRESH_EVENT = 'oanix:note-privacy-refresh'/)
@@ -48,10 +50,13 @@ test('protección múltiple conserva códigos existentes y crea un verificador i
   assert.match(runtime, /Las que ya tengan código conservarán el suyo/)
 })
 
-test('borrado múltiple elimina notas e imágenes y refresca el workspace autoritativo', () => {
+test('borrado múltiple deja local-data-changed bajo la autoridad del almacenamiento cifrado', () => {
   assert.match(runtime, /await deleteNote\(ids\[index\]\)/)
   assert.match(runtime, /deleteEncryptedImage/)
-  assert.match(runtime, /oanix:local-data-changed/)
+  assert.doesNotMatch(runtime, /oanix:local-data-changed/)
+  assert.match(noteService, /deleteEncryptedRecord|deleteNoteVersionHistory/)
+  assert.match(encryptedRecords, /function notifyLocalEncryptedChange/)
+  assert.match(encryptedRecords, /oanix:local-data-changed/)
   assert.match(runtime, /oanix:workspace-refresh/)
   assert.match(app, /window\.addEventListener\('oanix:workspace-refresh'/)
 })

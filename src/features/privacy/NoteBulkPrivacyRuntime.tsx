@@ -41,10 +41,6 @@ function dispatchPrivacyRefresh() {
   window.dispatchEvent(new Event(NOTE_PRIVACY_REFRESH_EVENT))
 }
 
-function dispatchLocalNoteChange() {
-  window.dispatchEvent(new CustomEvent('oanix:local-data-changed', { detail: { recordType: 'note' } }))
-}
-
 export function NoteBulkPrivacyRuntime() {
   const [selectionMode, setSelectionMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set())
@@ -338,7 +334,6 @@ export function NoteBulkPrivacyRuntime() {
         }
       }
       await Promise.allSettled(imageIds.map((imageId) => deleteEncryptedImage(imageId)))
-      dispatchLocalNoteChange()
       dispatchPrivacyRefresh()
       clearSelection()
       window.dispatchEvent(new Event('oanix:workspace-refresh'))
