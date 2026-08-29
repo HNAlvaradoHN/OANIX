@@ -86,6 +86,23 @@ export function CodeBlockExportRuntime() {
     })
     observer.observe(document.body, { childList: true, subtree: true })
 
+    // Android WebView occasionally loses the synthetic click after a selection
+    // or scroll gesture. On coarse pointers, promote the deliberate pointerdown
+    // on the three-dot button into the same click path owned by CodeBlockEditor.
+    // preventDefault suppresses the later native compatibility click, avoiding a
+    // double toggle while keeping desktop mouse behavior untouched.
+    function handleTouchMenuPointerDown(event: PointerEvent) {
+      if (event.pointerType === 'mouse' || event.button !== 0) return
+      const target = event.target
+      if (!(target instanceof Element)) return
+      const toggle = target.closest<HTMLButtonElement>('[data-code-actions-toggle="true"]')
+      if (!toggle) return
+
+      event.preventDefault()
+      event.stopPropagation()
+      toggle.click()
+    }
+
     async function handleClick(event: MouseEvent) {
       const target = event.target
       if (!(target instanceof Element)) return
@@ -121,9 +138,11 @@ export function CodeBlockExportRuntime() {
       }
     }
 
+    document.addEventListener('pointerdown', handleTouchMenuPointerDown, true)
     document.addEventListener('click', handleClick, true)
     return () => {
       observer.disconnect()
+      document.removeEventListener('pointerdown', handleTouchMenuPointerDown, true)
       document.removeEventListener('click', handleClick, true)
       document.querySelector('[data-code-export-status="true"]')?.remove()
     }
