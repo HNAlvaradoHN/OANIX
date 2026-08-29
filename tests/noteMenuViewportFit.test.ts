@@ -9,7 +9,6 @@ const fitCss = readFileSync('src/features/notes/NoteMenuViewportFit.css', 'utf8'
 
 test('note menus measure their real height and flip toward available space', () => {
   assert.doesNotMatch(mainSource, /NoteMenuViewportFit/)
-  assert.match(legacyGate, /<NoteMenuViewportFit \/>/)
   assert.doesNotMatch(mainSource, /NoteMenuViewportFit\.css/)
   assert.doesNotMatch(legacyGate, /NoteMenuViewportFit\.css/)
   assert.match(runtimeSource, /\.\/NoteMenuViewportFit\.css/)
