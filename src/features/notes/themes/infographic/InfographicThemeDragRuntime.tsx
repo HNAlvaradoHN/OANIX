@@ -395,7 +395,9 @@ export function InfographicThemeDragRuntime({
       if (kind !== 'folder' && kind !== 'tag' && kind !== 'note') return
 
       const dragBlocked = bulkSelectionActive() || Boolean(
-        target.closest('button, a, input, textarea, select, [contenteditable="true"]'),
+        target.closest(
+          '[data-infographic-drag-ignore="true"], a, input, textarea, select, [contenteditable="true"]',
+        ),
       )
       if (dragBlocked) return
 
