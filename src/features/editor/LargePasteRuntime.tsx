@@ -146,12 +146,16 @@ export function LargePasteRuntime() {
     }
 
     function currentSelectionUnit(editor: HTMLElement): HTMLElement | null {
+      if (lastSelectionUnit?.isConnected && editor.contains(lastSelectionUnit)) {
+        return lastSelectionUnit
+      }
+
       const selection = document.getSelection()
       const anchorElement = elementFromNode(selection?.anchorNode ?? null)
       const block = directEditorBlock(editor, anchorElement) ?? lastInteractionBlock
       const unit = editableSelectionUnit(editor, anchorElement, block)
       if (unit) lastSelectionUnit = unit
-      return unit ?? (lastSelectionUnit?.isConnected && editor.contains(lastSelectionUnit) ? lastSelectionUnit : null)
+      return unit
     }
 
     function guardSelectionBoundaries() {
@@ -186,7 +190,13 @@ export function LargePasteRuntime() {
 
       const editor = target.closest<HTMLElement>('.editor-surface')
       if (!editor) return
-      const unit = editableSelectionUnit(editor, target, directEditorBlock(editor, target))
+      const selection = document.getSelection()
+      const anchorElement = elementFromNode(selection?.anchorNode ?? null)
+      const unit = editableSelectionUnit(
+        editor,
+        anchorElement,
+        directEditorBlock(editor, anchorElement) ?? lastInteractionBlock,
+      ) ?? currentSelectionUnit(editor)
       if (!unit) return
 
       event.preventDefault()
@@ -258,7 +268,7 @@ export function LargePasteRuntime() {
         : codeContentFromBlock(insertedBlock)
 
       if (!content) {
-        window.alert('OANIX no pudo preparar el bloque para este pegado grande. El contenido sigue disponible en tu portapapeles.')
+        window.alert('OANIX no pudo preparar el bloque para este pegado grande. El contenido sigue disponible en tu portapeles.')
         return
       }
 
@@ -289,6 +299,10 @@ export function LargePasteRuntime() {
         return
       }
 
+      // Some Android keyboards/WebViews deliver a bulk clipboard insertion as one
+      // non-composing insertText event instead of insertFromPaste. A single event
+      // already meeting the large-paste policy is treated as bulk input; ordinary
+      // typing never accumulates fifty lines inside one InputEvent.
       if (event.inputType === 'insertText' && !event.isComposing) {
         const bulkText = event.data ?? ''
         if (bulkText && shouldEncapsulateClipboardPaste(bulkText)) {
