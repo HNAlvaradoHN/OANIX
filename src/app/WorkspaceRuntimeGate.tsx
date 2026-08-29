@@ -1,5 +1,6 @@
 import { lazy, Suspense } from 'react'
 import { EditorOperationRuntime } from '../features/editor/EditorOperationRuntime'
+import { LargePasteRuntime } from '../features/editor/LargePasteRuntime'
 import { NoteCreationFeedbackRuntime } from '../features/notes/NoteCreationFeedbackRuntime'
 import { PrivacyStatusHelp } from '../features/privacy/PrivacyStatusHelp'
 import { WORKSPACE_V2_ENABLED } from './workspaceExperience'
@@ -20,6 +21,7 @@ export function WorkspaceRuntimeGate({
   return (
     <>
       <EditorOperationRuntime />
+      <LargePasteRuntime />
       <NoteCreationFeedbackRuntime />
       <PrivacyStatusHelp />
       {!WORKSPACE_V2_ENABLED && (
