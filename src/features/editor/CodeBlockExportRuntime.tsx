@@ -43,7 +43,15 @@ export function CodeBlockExportRuntime() {
   useEffect(() => {
     decorateExportActions()
 
-    const observer = new MutationObserver(() => decorateExportActions())
+    const observer = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        for (const node of mutation.addedNodes) {
+          if (node instanceof Element && node.querySelector('[data-code-convert="true"]')) {
+            decorateExportActions(node)
+          }
+        }
+      }
+    })
     observer.observe(document.body, { childList: true, subtree: true })
 
     function handleClick(event: MouseEvent) {
