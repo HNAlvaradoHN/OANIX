@@ -87,6 +87,21 @@ function selectionTouchesProtectedIsland(editor: HTMLElement, selection: Selecti
   })
 }
 
+function selectionCoversEditorContents(editor: HTMLElement, selection: Selection): boolean {
+  if (selection.isCollapsed || selection.rangeCount === 0) return false
+  if (!selection.anchorNode || !selection.focusNode) return false
+  if (!editor.contains(selection.anchorNode) || !editor.contains(selection.focusNode)) return false
+
+  const range = selection.getRangeAt(0)
+  const editorRange = document.createRange()
+  editorRange.selectNodeContents(editor)
+
+  return (
+    range.compareBoundaryPoints(Range.START_TO_START, editorRange) <= 0
+    && range.compareBoundaryPoints(Range.END_TO_END, editorRange) >= 0
+  )
+}
+
 function constrainSelectionToUnit(unit: HTMLElement | null): boolean {
   if (!unit || !unit.isConnected) return false
   const selection = document.getSelection()
@@ -165,9 +180,10 @@ export function LargePasteRuntime() {
 
       const selection = document.getSelection()
       if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return
-      const range = selection.getRangeAt(0)
-      if (!editor.contains(range.commonAncestorContainer)) return
-      if (!selectionTouchesProtectedIsland(editor, selection)) return
+
+      const crossesProtectedIsland = selectionTouchesProtectedIsland(editor, selection)
+      const coversWholeEditor = selectionCoversEditorContents(editor, selection)
+      if (!crossesProtectedIsland && !coversWholeEditor) return
 
       const unit = currentSelectionUnit(editor)
       if (!unit) return
@@ -268,7 +284,7 @@ export function LargePasteRuntime() {
         : codeContentFromBlock(insertedBlock)
 
       if (!content) {
-        window.alert('OANIX no pudo preparar el bloque para este pegado grande. El contenido sigue disponible en tu portapeles.')
+        window.alert('OANIX no pudo preparar el bloque para este pegado grande. El contenido sigue disponible en tu portapapeles.')
         return
       }
 
@@ -299,15 +315,32 @@ export function LargePasteRuntime() {
         return
       }
 
-      // Some Android keyboards/WebViews deliver a bulk clipboard insertion as one
-      // non-composing insertText event instead of insertFromPaste. A single event
-      // already meeting the large-paste policy is treated as bulk input; ordinary
-      // typing never accumulates fifty lines inside one InputEvent.
+      // Some Android keyboards/WebViews can deliver a whole clipboard payload as
+      // one non-composing insertText event. Only treat that path as a paste after
+      // verifying the same large payload is still present on the clipboard.
       if (event.inputType === 'insertText' && !event.isComposing) {
         const bulkText = event.data ?? ''
-        if (bulkText && shouldEncapsulateClipboardPaste(bulkText)) {
-          encapsulateLargePaste(event, target, bulkText)
+        if (!bulkText || !shouldEncapsulateClipboardPaste(bulkText)) return
+
+        const clipboard = navigator.clipboard
+        if (!clipboard?.readText) return
+
+        event.preventDefault()
+        event.stopPropagation()
+
+        try {
+          const clipboardText = await clipboard.readText()
+          if (clipboardText === bulkText && shouldEncapsulateClipboardPaste(clipboardText)) {
+            encapsulateLargePaste(event, target, clipboardText)
+            return
+          }
+        } catch {
+          // Clipboard verification is best-effort. Preserve the original bulk
+          // insertion below instead of misclassifying dictation/autofill as paste.
         }
+
+        if (!ensureEditorSelection(editor, target)) return
+        document.execCommand('insertText', false, bulkText)
         return
       }
 
