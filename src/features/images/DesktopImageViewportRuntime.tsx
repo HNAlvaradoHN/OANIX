@@ -4,6 +4,8 @@ const LIGHTBOX_VIEWPORT_SELECTOR = '.image-lightbox__viewport'
 const MIN_ZOOM = 1
 const MAX_ZOOM = 4
 const MIDDLE_BUTTON = 1
+const WHEEL_DELTA_LINE = 1
+const WHEEL_DELTA_PAGE = 2
 
 type MousePanState = {
   pointerId: number
@@ -135,9 +137,9 @@ export function DesktopImageViewportRuntime() {
       event.preventDefault()
       event.stopPropagation()
       const current = scaleFromImage(image)
-      const normalizedDelta = event.deltaMode === WheelEvent.DOM_DELTA_LINE
+      const normalizedDelta = event.deltaMode === WHEEL_DELTA_LINE
         ? event.deltaY * 18
-        : event.deltaMode === WheelEvent.DOM_DELTA_PAGE
+        : event.deltaMode === WHEEL_DELTA_PAGE
           ? event.deltaY * 180
           : event.deltaY
       const factor = Math.exp(-normalizedDelta * 0.0015)
