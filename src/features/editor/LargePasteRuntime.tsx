@@ -88,29 +88,56 @@ function selectionTouchesDailyChrome(editor: HTMLElement, selection: Selection):
     })
 }
 
+function selectionSpansMultipleDailyPages(editor: HTMLElement, selection: Selection): boolean {
+  if (selection.isCollapsed || selection.rangeCount === 0) return false
+  const range = selection.getRangeAt(0)
+  let touchedPages = 0
+
+  for (const entry of editor.querySelectorAll<HTMLElement>('[data-daily-entry-block="true"]')) {
+    try {
+      if (range.intersectsNode(entry)) touchedPages += 1
+    } catch {
+      // Ignore nodes detached during an editor mutation.
+    }
+    if (touchedPages > 1) return true
+  }
+
+  return false
+}
+
+function referenceBlockFromActiveElement(editor: HTMLElement): HTMLElement | null {
+  const active = document.activeElement
+  if (!(active instanceof Element) || !editor.contains(active)) return null
+  return directEditorBlock(editor, active)
+}
+
 function protectDailyPageSelection(
   editor: HTMLElement,
   lastInteractionBlock: HTMLElement | null,
 ): HTMLElement | null {
   const selection = document.getSelection()
   if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return lastInteractionBlock
-  if (!editor.contains(selection.getRangeAt(0).commonAncestorContainer)) return lastInteractionBlock
-  if (!selectionTouchesDailyChrome(editor, selection)) return lastInteractionBlock
+
+  const range = selection.getRangeAt(0)
+  if (!editor.contains(range.commonAncestorContainer)) return lastInteractionBlock
+  if (!selectionTouchesDailyChrome(editor, selection) && !selectionSpansMultipleDailyPages(editor, selection)) {
+    return lastInteractionBlock
+  }
 
   const anchorElement = selection.anchorNode instanceof Element
     ? selection.anchorNode
     : selection.anchorNode?.parentElement ?? null
   const reference = lastInteractionBlock?.isConnected
     ? lastInteractionBlock
-    : directEditorBlock(editor, anchorElement)
+    : referenceBlockFromActiveElement(editor) ?? directEditorBlock(editor, anchorElement)
   const bounds = dailyPageBounds(editor, reference)
   if (!bounds) return lastInteractionBlock
 
-  const range = document.createRange()
-  range.setStartBefore(bounds.first)
-  range.setEndAfter(bounds.last)
+  const protectedRange = document.createRange()
+  protectedRange.setStartBefore(bounds.first)
+  protectedRange.setEndAfter(bounds.last)
   selection.removeAllRanges()
-  selection.addRange(range)
+  selection.addRange(protectedRange)
   return reference
 }
 
@@ -124,22 +151,40 @@ export function LargePasteRuntime() {
     let adjustingSelection = false
     let handledText = ''
     let handledAt = 0
+    const duplicateWindowMs = 3_000
 
-    function rememberInteraction(event: PointerEvent) {
-      const target = event.target
+    function rememberInteractionTarget(target: EventTarget | null) {
       if (!(target instanceof Element)) return
       const editor = target.closest<HTMLElement>('.editor-surface')
-      if (!editor || target.closest('[data-daily-entry-title="true"]')) return
+      if (!editor) return
 
       const block = directEditorBlock(editor, target)
-      if (block && block.dataset.dailyEntryBlock !== 'true') lastInteractionBlock = block
+      if (block) lastInteractionBlock = block
+    }
+
+    function rememberPointerInteraction(event: PointerEvent) {
+      rememberInteractionTarget(event.target)
+    }
+
+    function rememberFocusInteraction(event: FocusEvent) {
+      rememberInteractionTarget(event.target)
     }
 
     function guardDailySelection() {
       if (adjustingSelection) return
-      const block = lastInteractionBlock
-      const editor = block?.parentElement
-      if (!(editor instanceof HTMLElement) || !editor.classList.contains('editor-surface')) return
+
+      let block = lastInteractionBlock
+      let editor = block?.parentElement
+      if (!(editor instanceof HTMLElement) || !editor.classList.contains('editor-surface')) {
+        const active = document.activeElement
+        const activeEditor = active instanceof Element
+          ? active.closest<HTMLElement>('.editor-surface')
+          : null
+        if (!activeEditor) return
+        editor = activeEditor
+        block = referenceBlockFromActiveElement(activeEditor)
+        if (block) lastInteractionBlock = block
+      }
 
       adjustingSelection = true
       try {
@@ -151,6 +196,20 @@ export function LargePasteRuntime() {
       }
     }
 
+    function isDuplicateLargePaste(plainText: string): boolean {
+      return plainText === handledText && performance.now() - handledAt < duplicateWindowMs
+    }
+
+    function consumeDuplicate(event: ClipboardEvent | InputEvent, plainText: string): boolean {
+      if (!plainText || !shouldEncapsulateClipboardPaste(plainText) || !isDuplicateLargePaste(plainText)) {
+        return false
+      }
+
+      event.preventDefault()
+      event.stopPropagation()
+      return true
+    }
+
     function encapsulateLargePaste(
       event: ClipboardEvent | InputEvent,
       target: Element,
@@ -158,16 +217,16 @@ export function LargePasteRuntime() {
     ) {
       const editor = target.closest<HTMLElement>('.editor-surface')
       if (!editor) return
-      if (target.closest('[data-contact-field], [data-daily-entry-title="true"]')) return
-      if (target.closest('[data-code-content="true"]')) return
       if (!plainText || !shouldEncapsulateClipboardPaste(plainText)) return
 
-      const now = performance.now()
-      if (plainText === handledText && now - handledAt < 250) {
-        event.preventDefault()
-        event.stopPropagation()
-        return
-      }
+      // Android WebView can emit the same paste through ClipboardEvent and then
+      // InputEvent after focus has already moved into the freshly-created code
+      // block. Consume that second delivery before inspecting its new target,
+      // otherwise the same text is inserted again outside/inside the console.
+      if (consumeDuplicate(event, plainText)) return
+
+      if (target.closest('[data-contact-field], [data-daily-entry-title="true"]')) return
+      if (target.closest('[data-code-content="true"]')) return
 
       if (!ensureEditorSelection(editor, target)) {
         event.preventDefault()
@@ -187,7 +246,7 @@ export function LargePasteRuntime() {
       event.preventDefault()
       event.stopPropagation()
       handledText = plainText
-      handledAt = now
+      handledAt = performance.now()
       codeTool.click()
 
       const insertedBlock = Array.from(
@@ -208,7 +267,7 @@ export function LargePasteRuntime() {
       content.textContent = plainText
       content.focus({ preventScroll: true })
       content.dispatchEvent(new Event('input', { bubbles: true }))
-      lastInteractionBlock = insertedBlock
+      if (insertedBlock) lastInteractionBlock = insertedBlock
     }
 
     function handlePaste(event: ClipboardEvent) {
@@ -225,7 +284,7 @@ export function LargePasteRuntime() {
       if (!editor) return
 
       if (event.inputType.startsWith('delete')) {
-        guardDailySelection()
+        if (!target.closest('[data-daily-entry-title="true"]')) guardDailySelection()
         return
       }
 
@@ -233,13 +292,24 @@ export function LargePasteRuntime() {
       encapsulateLargePaste(event, target, clipboardTextFromBeforeInput(event))
     }
 
-    document.addEventListener('pointerdown', rememberInteraction, true)
+    function handleDeleteKey(event: KeyboardEvent) {
+      if (event.key !== 'Backspace' && event.key !== 'Delete') return
+      const target = event.target
+      if (target instanceof Element && target.closest('[data-daily-entry-title="true"]')) return
+      guardDailySelection()
+    }
+
+    document.addEventListener('pointerdown', rememberPointerInteraction, true)
+    document.addEventListener('focusin', rememberFocusInteraction, true)
     document.addEventListener('selectionchange', guardDailySelection)
+    document.addEventListener('keydown', handleDeleteKey, true)
     document.addEventListener('paste', handlePaste, true)
     document.addEventListener('beforeinput', handleBeforeInput, true)
     return () => {
-      document.removeEventListener('pointerdown', rememberInteraction, true)
+      document.removeEventListener('pointerdown', rememberPointerInteraction, true)
+      document.removeEventListener('focusin', rememberFocusInteraction, true)
       document.removeEventListener('selectionchange', guardDailySelection)
+      document.removeEventListener('keydown', handleDeleteKey, true)
       document.removeEventListener('paste', handlePaste, true)
       document.removeEventListener('beforeinput', handleBeforeInput, true)
     }
