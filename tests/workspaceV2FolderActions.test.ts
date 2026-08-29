@@ -23,8 +23,9 @@ test('workspace v2 folder menu reuses encrypted appearance and cover services', 
   assert.doesNotMatch(actions, /localStorage|sessionStorage|URL\.createObjectURL/)
 })
 
-test('workspace v2 folder actions leave local-data-changed ownership to the encrypted repository', () => {
+test('workspace v2 folder actions leave encrypted refresh ownership to storage and legacy feedback to the legacy runtime', () => {
   assert.doesNotMatch(actions, /oanix:local-data-changed/)
+  assert.doesNotMatch(actions, /oanix:folder-appearance-saved/)
   assert.match(encryptedRecords, /function notifyLocalEncryptedChange/)
   assert.match(encryptedRecords, /oanix:local-data-changed/)
   assert.match(encryptedRecords, /if \(notify\) notifyLocalEncryptedChange\(recordType, recordId\)/)
