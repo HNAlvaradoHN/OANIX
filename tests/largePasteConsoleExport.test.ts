@@ -31,14 +31,17 @@ test('very long single-line clipboard content is also encapsulated', () => {
   assert.equal(shouldEncapsulateClipboardPaste('x'.repeat(LARGE_PASTE_CHARACTER_THRESHOLD)), true)
 })
 
-test('large paste interception is scoped to paste events and leaves existing code blocks alone', async () => {
+test('large paste interception handles paste delivery without hijacking ordinary typing', async () => {
   const source = await readFile(largePasteRuntimePath, 'utf8')
   assert.match(source, /document\.addEventListener\('paste', handlePaste, true\)/)
+  assert.match(source, /document\.addEventListener\('beforeinput', handleBeforeInput, true\)/)
+  assert.match(source, /event\.inputType !== 'insertFromPaste'/)
   assert.match(source, /target\.closest\('\[data-code-content="true"\]'\)/)
   assert.match(source, /shouldEncapsulateClipboardPaste\(plainText\)/)
   assert.match(source, /codeTool\.click\(\)/)
   assert.match(source, /content\.textContent = plainText/)
-  assert.doesNotMatch(source, /addEventListener\('(input|keyup|keydown)'/)
+  assert.doesNotMatch(source, /document\.addEventListener\('input'/)
+  assert.doesNotMatch(source, /document\.addEventListener\('keyup'/)
 })
 
 test('code block menu exports real TXT/PDF files without the browser print route', async () => {
