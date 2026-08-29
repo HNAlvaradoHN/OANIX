@@ -71,7 +71,7 @@ function bulkSelectionActive(): boolean {
   return document.documentElement.classList.contains('oanix-note-bulk-selecting')
 }
 
-function blockOwnClick(root: HTMLElement, milliseconds = 520) {
+function blockOwnClick(root: HTMLElement, milliseconds = 150) {
   root.dataset.infographicSuppressClickUntil = String(performance.now() + milliseconds)
 }
 
