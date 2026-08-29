@@ -6,6 +6,7 @@ const actions = readFileSync('src/features/notes/WorkspaceV2FolderActions.tsx', 
 const sidebar = readFileSync('src/features/notes/WorkspaceV2Sidebar.tsx', 'utf8')
 const workspace = readFileSync('src/features/notes/NotesWorkspace.tsx', 'utf8')
 const creator = readFileSync('src/features/notes/WorkspaceV2FolderCreator.tsx', 'utf8')
+const encryptedRecords = readFileSync('src/storage/repositories/encryptedRecordRepository.ts', 'utf8')
 
 test('workspace v2 folder menu reuses encrypted appearance and cover services', () => {
   for (const required of [
@@ -20,6 +21,15 @@ test('workspace v2 folder menu reuses encrypted appearance and cover services', 
     assert.ok(actions.includes(required), `missing ${required}`)
   }
   assert.doesNotMatch(actions, /localStorage|sessionStorage|URL\.createObjectURL/)
+})
+
+test('workspace v2 folder actions leave encrypted refresh ownership to storage and legacy feedback to the legacy runtime', () => {
+  assert.doesNotMatch(actions, /oanix:local-data-changed/)
+  assert.doesNotMatch(actions, /oanix:folder-appearance-saved/)
+  assert.match(encryptedRecords, /function notifyLocalEncryptedChange/)
+  assert.match(encryptedRecords, /oanix:local-data-changed/)
+  assert.match(encryptedRecords, /if \(notify\) notifyLocalEncryptedChange\(recordType, recordId\)/)
+  assert.match(encryptedRecords, /notifyLocalEncryptedChange\(recordType, recordId\)/)
 })
 
 test('workspace v2 folder menu owns rename/delete UI but delegates data-safe mutations', () => {

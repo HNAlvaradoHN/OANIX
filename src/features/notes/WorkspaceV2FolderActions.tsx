@@ -79,10 +79,6 @@ export function WorkspaceV2FolderActions({
         saveFolderColor(folder.id, draftColor),
         saveFolderIcon(folder.id, draftIcon),
       ])
-      window.dispatchEvent(new CustomEvent('oanix:folder-appearance-saved'))
-      window.dispatchEvent(new CustomEvent('oanix:local-data-changed', {
-        detail: { recordType: 'folder-appearance', recordId: folder.id },
-      }))
       onClose()
     })
   }
@@ -91,10 +87,6 @@ export function WorkspaceV2FolderActions({
     const next = !(flags?.pinned === true)
     await run(async () => {
       await saveFolderPinned(folder.id, next)
-      window.dispatchEvent(new CustomEvent('oanix:folder-appearance-saved'))
-      window.dispatchEvent(new CustomEvent('oanix:local-data-changed', {
-        detail: { recordType: 'folder-appearance', recordId: folder.id },
-      }))
       onClose()
     })
   }
@@ -103,10 +95,6 @@ export function WorkspaceV2FolderActions({
     const next = !(flags?.favorite === true)
     await run(async () => {
       await saveFolderFavorite(folder.id, next)
-      window.dispatchEvent(new CustomEvent('oanix:folder-appearance-saved'))
-      window.dispatchEvent(new CustomEvent('oanix:local-data-changed', {
-        detail: { recordType: 'folder-appearance', recordId: folder.id },
-      }))
       onClose()
     })
   }
@@ -116,9 +104,6 @@ export function WorkspaceV2FolderActions({
     await run(async () => {
       const dataUrl = await prepareFolderCover(file)
       await saveFolderCover(folder.id, dataUrl)
-      window.dispatchEvent(new CustomEvent('oanix:local-data-changed', {
-        detail: { recordType: 'folder-cover', recordId: folder.id },
-      }))
       onClose()
     })
     if (coverInputRef.current) coverInputRef.current.value = ''
@@ -127,9 +112,6 @@ export function WorkspaceV2FolderActions({
   async function clearCover() {
     await run(async () => {
       await removeFolderCover(folder.id)
-      window.dispatchEvent(new CustomEvent('oanix:local-data-changed', {
-        detail: { recordType: 'folder-cover', recordId: folder.id },
-      }))
       onClose()
     })
   }
