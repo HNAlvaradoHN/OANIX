@@ -68,4 +68,6 @@ test('current OANIX header actions stay intact inside the isolated infographic t
   assert.match(v2Css, /version-history-launcher[\s\S]*order: 3/)
   assert.match(v2Css, /account-header-action[\s\S]*order: 4/)
   assert.match(v2Css, /workspace-menu-wrap[\s\S]*order: 5/)
+  assert.match(v2Css, /:root\[data-oanix-theme\] \.oanix-infographic-theme \.oanix-infographic-header[\s\S]*background: var\(--inf-topbar\) !important/)
+  assert.match(v2Css, /oanix-infographic-header__actions[\s\S]*color: var\(--inf-text-main\) !important/)
 })
