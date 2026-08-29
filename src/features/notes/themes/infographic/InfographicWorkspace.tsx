@@ -213,10 +213,6 @@ export function InfographicWorkspace({
     return counts
   }, [notes])
 
-  const activeFolderName = activeFolderId === 'all'
-    ? 'Todas las notas'
-    : folders.find((folder) => folder.id === activeFolderId)?.name ?? 'Notas'
-
   const activeFolderCover = activeFolderId === 'all'
     ? ''
     : folderCovers.get(activeFolderId) ?? ''
@@ -275,7 +271,6 @@ export function InfographicWorkspace({
           <div className="notes-brand__mark oanix-infographic-brand__logo" aria-hidden="true">O</div>
           <div className="oanix-infographic-brand__text">
             <strong>OANIX</strong>
-            <span>{activeFolderName}</span>
           </div>
         </div>
 
