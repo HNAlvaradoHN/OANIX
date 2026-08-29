@@ -37,39 +37,34 @@
 }
 
 /* Tablet/narrow-desktop contract: once two timeline columns no longer have
-   enough room for complete cards, collapse to one bounded column instead of
-   allowing the right-hand card to extend beyond the viewport. The !important
-   flags intentionally match the V2 desktop geometry authority. */
+   enough room for complete cards, collapse to one bounded column. The desktop
+   timeline rail/dots are deliberately removed here; moving that decoration to
+   the left created a false second column and wasted tablet width. */
 @media (max-width: 1100px) {
   .oanix-workspace-v2 .oanix-workspace-v2__timeline {
     width: min(100%, 46rem);
     margin-inline: auto;
   }
 
-  .oanix-workspace-v2 .oanix-workspace-v2__timeline::before {
-    left: 1rem;
-    transform: none;
+  .oanix-workspace-v2 .oanix-workspace-v2__timeline::before,
+  .oanix-workspace-v2__timeline-item .oanix-workspace-v2__timeline-dot,
+  .oanix-workspace-v2__timeline-item:nth-child(even) .oanix-workspace-v2__timeline-dot {
+    display: none;
   }
 
   html[data-oanix-theme] .oanix-workspace-v2 .oanix-workspace-v2__timeline-item.note-row,
   html[data-oanix-theme] .oanix-workspace-v2 .oanix-workspace-v2__timeline-item.note-row:nth-child(even) {
     left: 0 !important;
     width: 100% !important;
-    padding: .6rem clamp(.45rem, 2vw, 1rem) .6rem 2.45rem !important;
+    padding: .6rem clamp(.45rem, 2vw, 1rem) !important;
     text-align: left !important;
-  }
-
-  .oanix-workspace-v2__timeline-item .oanix-workspace-v2__timeline-dot,
-  .oanix-workspace-v2__timeline-item:nth-child(even) .oanix-workspace-v2__timeline-dot {
-    right: auto;
-    left: .52rem;
   }
 
   html[data-oanix-theme] .oanix-workspace-v2 .oanix-workspace-v2__note-card,
   html[data-oanix-theme] .oanix-workspace-v2 .oanix-workspace-v2__timeline-item:nth-child(even) .oanix-workspace-v2__note-card {
     width: min(100%, 34rem);
     margin-right: auto;
-    margin-left: 0;
+    margin-left: auto;
   }
 
   .oanix-workspace-v2__timeline-item > .oanix-note-row-lock,
