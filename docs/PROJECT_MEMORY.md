@@ -62,6 +62,8 @@ Decisión del usuario (2026-08-29): el diseño del workspace debe poder reemplaz
 - `WorkspaceThemeProps` define datos y acciones reales que recibe cualquier tema.
 - El tema infográfico suministrado por el usuario es la autoridad visual activa; su HTML/CSS/movimiento se adapta a React sin copiar `datos.js`, almacenamiento demo, CDN ni CRUD paralelo.
 - El header conserva **los botones reales actuales de OANIX y sus funciones**: Buscar, Bloquear, Historial, Cuenta y menú `⋮`. Un tema futuro solo debe reservar el host visual para esos controles.
+- En el tema infográfico, la cabecera visual pertenece al diseño nuevo: del header anterior solo se conservan el logo, el nombre **OANIX** y esos botones reales. No mostrar el nombre de la carpeta activa como subtítulo ni reintroducir la barra opaca anterior.
+- El botón `+` de nueva nota crea y abre la nota directamente. El flujo `Agregar nota / Marcar notas` y la selección múltiple asociada quedan **SUPERSEDED**; eliminar y privacidad se resuelven desde cada nota individual.
 - Etiquetas, carpetas, notas, contadores, colores persistidos y acciones provienen de registros/handlers reales.
 - El selector de color de nota sigue persistiendo `visualColor` en el mismo `NoteRecord`; no crear un store visual paralelo.
 - Día/Noche del workspace pertenece al tema infográfico y no usa `classic-day` / `classic-night` como autoridad de esa superficie. El sistema compartido anterior no se elimina a ciegas porque otras superficies aún pueden depender de él.
