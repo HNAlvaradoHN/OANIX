@@ -1,10 +1,33 @@
 import { useEffect } from 'react'
 import { shouldEncapsulateClipboardPaste } from './largePastePolicy'
+import './mobileEditorStability.css'
 
 function selectionInsideEditor(editor: HTMLElement): boolean {
   const selection = document.getSelection()
   if (!selection || selection.rangeCount === 0) return false
   return editor.contains(selection.getRangeAt(0).commonAncestorContainer)
+}
+
+function ensureEditorSelection(editor: HTMLElement, target: Element): boolean {
+  if (selectionInsideEditor(editor)) return true
+
+  const targetBlock = target.closest<HTMLElement>('[data-block-id]')
+  const anchor = targetBlock && editor.contains(targetBlock)
+    ? targetBlock
+    : editor.lastElementChild instanceof HTMLElement
+      ? editor.lastElementChild
+      : editor
+
+  const selection = document.getSelection()
+  if (!selection) return false
+
+  editor.focus({ preventScroll: true })
+  const range = document.createRange()
+  range.selectNodeContents(anchor)
+  range.collapse(false)
+  selection.removeAllRanges()
+  selection.addRange(range)
+  return selectionInsideEditor(editor)
 }
 
 function codeContentFromBlock(block: HTMLElement | null): HTMLElement | null {
@@ -24,7 +47,16 @@ export function LargePasteRuntime() {
 
       const plainText = event.clipboardData?.getData('text/plain') ?? ''
       if (!plainText || !shouldEncapsulateClipboardPaste(plainText)) return
-      if (!selectionInsideEditor(editor)) return
+
+      // Android/PWA clipboard menus may dispatch paste after the platform has
+      // temporarily dropped the DOM Selection. Rebuild a safe caret from the
+      // actual paste target instead of allowing the normal large-text path.
+      if (!ensureEditorSelection(editor, target)) {
+        event.preventDefault()
+        event.stopPropagation()
+        window.alert('OANIX no pudo ubicar el pegado grande dentro de la nota. El contenido sigue disponible en tu portapapeles.')
+        return
+      }
 
       const frame = editor.closest<HTMLElement>('.editor-frame')
       const codeTool = frame?.querySelector<HTMLButtonElement>('[data-format="code"]')
@@ -54,7 +86,7 @@ export function LargePasteRuntime() {
       }
 
       content.textContent = plainText
-      content.focus()
+      content.focus({ preventScroll: true })
       content.dispatchEvent(new Event('input', { bubbles: true }))
     }
 
