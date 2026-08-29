@@ -264,7 +264,7 @@ function createCodeFullscreenDialog(
     event.preventDefault()
     const start = textarea.selectionStart
     const end = textarea.selectionEnd
-    textarea.setRangeText('	', start, end, 'end')
+    textarea.setRangeText('\t', start, end, 'end')
   })
 
   return { element: backdrop, close }
@@ -342,6 +342,8 @@ export function CodeBlockEditor(props: CodeBlockEditorProps) {
     const root: HTMLDivElement = currentRoot
     let activeDialog: HTMLElement | null = null
     let activeFullscreenDialog: CodeFullscreenDialog | null = null
+    let lastCoarseToggle: HTMLButtonElement | null = null
+    let lastCoarseToggleAt = 0
 
     decorateCodeBlocks(root)
 
@@ -372,12 +374,36 @@ export function CodeBlockEditor(props: CodeBlockEditorProps) {
       })
     }
 
+    function handleCoarseTogglePointerUp(event: PointerEvent) {
+      if (event.pointerType === 'mouse') return
+      const target = event.target
+      if (!(target instanceof Element)) return
+
+      const actionToggle = target.closest<HTMLButtonElement>('[data-code-actions-toggle="true"]')
+      if (!actionToggle || !root.contains(actionToggle)) return
+
+      event.preventDefault()
+      event.stopPropagation()
+      lastCoarseToggle = actionToggle
+      lastCoarseToggleAt = performance.now()
+      actionToggle.click()
+    }
+
     function handleClick(event: MouseEvent) {
       const target = event.target
       if (!(target instanceof Element)) return
 
       const actionToggle = target.closest<HTMLButtonElement>('[data-code-actions-toggle="true"]')
       if (actionToggle && root.contains(actionToggle)) {
+        const recentCoarsePromotion =
+          lastCoarseToggle === actionToggle && performance.now() - lastCoarseToggleAt < 800
+        if (recentCoarsePromotion && event.detail !== 0) {
+          event.preventDefault()
+          event.stopPropagation()
+          lastCoarseToggle = null
+          return
+        }
+
         event.preventDefault()
         event.stopPropagation()
         const toolbar = actionToggle.closest<HTMLElement>('.editor-code-block__toolbar')
@@ -503,6 +529,7 @@ export function CodeBlockEditor(props: CodeBlockEditorProps) {
       closeCodeActionMenus()
     }
 
+    root.addEventListener('pointerup', handleCoarseTogglePointerUp, true)
     root.addEventListener('click', handleClick, true)
     document.addEventListener('pointerdown', handleDocumentPointerDown)
     document.addEventListener('keydown', handleKeyDown)
@@ -511,6 +538,7 @@ export function CodeBlockEditor(props: CodeBlockEditorProps) {
 
     return () => {
       observer.disconnect()
+      root.removeEventListener('pointerup', handleCoarseTogglePointerUp, true)
       root.removeEventListener('click', handleClick, true)
       document.removeEventListener('pointerdown', handleDocumentPointerDown)
       document.removeEventListener('keydown', handleKeyDown)
