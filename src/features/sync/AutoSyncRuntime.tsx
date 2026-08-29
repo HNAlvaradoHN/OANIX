@@ -151,16 +151,17 @@ export function AutoSyncRuntime({ onRemoteApplied }: AutoSyncRuntimeProps) {
     window.addEventListener('oanix:local-data-changed', handleLocalChange)
     window.addEventListener('online', handleOnline)
     document.addEventListener('visibilitychange', handleVisibility)
-    const intervalId = window.setInterval(() => {
-      if (document.visibilityState === 'visible') schedule(0)
-    }, 30_000)
 
+    // Do not poll the complete encrypted vault while the app is idle. Remote
+    // mutations already arrive through Supabase Realtime; local writes, online
+    // recovery and foregrounding are explicit sync triggers. The old 30-second
+    // full sync repeatedly downloaded remote ciphertext and re-hashed local
+    // binary payloads even when the user was only reading a folder.
     schedule(200)
 
     return () => {
       disposed = true
       window.clearTimeout(timeoutId)
-      window.clearInterval(intervalId)
       cleanupRealtime()
       unsubscribe()
       window.removeEventListener('oanix:local-data-changed', handleLocalChange)
