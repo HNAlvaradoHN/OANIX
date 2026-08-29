@@ -25,6 +25,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
+          cache: npm
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
