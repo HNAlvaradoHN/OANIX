@@ -68,6 +68,55 @@
   --inf-topbar: rgba(15, 23, 42, .65);
 }
 
+/* The global Classic Day/Night layer still styles shared legacy class names such
+   as .notes-sidebar, .notes-header and .note-row with !important declarations.
+   The infographic theme owns those surfaces while it is mounted. */
+:root[data-oanix-theme] .oanix-infographic-theme.notes-sidebar {
+  border-right: 0 !important;
+  background: var(--inf-bg-body) !important;
+  color: var(--inf-text-main) !important;
+}
+
+:root[data-oanix-theme] .oanix-infographic-theme .oanix-infographic-header {
+  border-color: var(--inf-border) !important;
+  background: var(--inf-topbar) !important;
+  color: var(--inf-text-main) !important;
+  box-shadow: none !important;
+}
+
+:root[data-oanix-theme] .oanix-infographic-theme .oanix-infographic-brand__text strong {
+  color: var(--inf-text-main) !important;
+}
+
+:root[data-oanix-theme] .oanix-infographic-theme .oanix-infographic-brand__text span {
+  color: #ff4000 !important;
+}
+
+:root[data-oanix-theme] .oanix-infographic-theme.dark-mode .oanix-infographic-brand__text span {
+  color: #60a5fa !important;
+}
+
+:root[data-oanix-theme] .oanix-infographic-theme .oanix-infographic-header__actions > :is(
+  .icon-button,
+  .version-history-launcher,
+  .account-header-action
+),
+:root[data-oanix-theme] .oanix-infographic-theme .oanix-infographic-header__actions > .workspace-menu-wrap > .icon-button {
+  border-color: transparent !important;
+  background: transparent !important;
+  color: var(--inf-text-main) !important;
+  box-shadow: none !important;
+}
+
+:root[data-oanix-theme] .oanix-infographic-theme .timeline-item.note-row,
+:root[data-oanix-theme] .oanix-infographic-theme .timeline-item.note-row:hover,
+:root[data-oanix-theme] .oanix-infographic-theme .timeline-item.note-row.note-row--selected,
+:root[data-oanix-theme] .oanix-infographic-theme .timeline-item.note-row.note-row--menu-open {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
 .oanix-infographic-theme,
 .oanix-infographic-theme *,
 .oanix-infographic-theme *::before,
@@ -857,9 +906,9 @@ html.oanix-note-bulk-selecting .oanix-infographic-theme .oanix-workspace-v2__not
 
 .fab-add-note {
   position: absolute !important;
-  right: max(20px, env(safe-area-inset-right));
-  bottom: calc(148px + env(safe-area-inset-bottom));
-  z-index: 35;
+  right: max(20px, env(safe-area-inset-right)) !important;
+  bottom: calc(148px + env(safe-area-inset-bottom)) !important;
+  z-index: 45 !important;
   width: 50px !important;
   min-width: 50px !important;
   height: 50px !important;
