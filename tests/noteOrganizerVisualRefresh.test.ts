@@ -61,6 +61,7 @@ test('visual runtimes do not emit duplicate generic change events after encrypte
   assert.doesNotMatch(folderCreation, duplicateGenericEvent)
   assert.doesNotMatch(organic, duplicateGenericEvent)
   assert.doesNotMatch(personalization, duplicateGenericEvent)
+  assert.doesNotMatch(folderCreation, /oanix:local-data-changed/)
 
   assert.match(organic, /detail\?\.recordType === 'note'\) return/)
 })
