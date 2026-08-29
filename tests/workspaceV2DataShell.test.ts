@@ -38,7 +38,7 @@ test('workspace consumes real note folder and tag records through a swappable th
     assert.ok(source.includes(required), `missing ${required}`)
   }
 
-  assert.match(shell, /<InfographicWorkspace \.\.\.props/)
+  assert.match(shell, /<InfographicWorkspace \{\.\.\.props\} \/>/)
   assert.doesNotMatch(source, /datos\.js|localStorage|sessionStorage/)
   assert.doesNotMatch(source, /https?:\/\//)
 })
