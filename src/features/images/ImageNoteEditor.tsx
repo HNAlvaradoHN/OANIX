@@ -391,6 +391,16 @@ function insertAfterBlock(editor: HTMLElement, block: HTMLElement, afterId: stri
   }
 }
 
+function placeCaretAtEnd(element: HTMLElement) {
+  const selection = document.getSelection()
+  if (!selection) return
+  const range = document.createRange()
+  range.selectNodeContents(element)
+  range.collapse(false)
+  selection.removeAllRanges()
+  selection.addRange(range)
+}
+
 function createEmptyEditorParagraph(): HTMLParagraphElement {
   const paragraph = document.createElement('p')
   paragraph.dataset.blockId = createBlockId()
