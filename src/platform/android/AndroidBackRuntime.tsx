@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { blurFocusedMobileEditor } from '../../features/notes/mobileBackKeyboardGuard'
 import { useFolderNavigationRuntime } from '../../features/folders/folderNavigationRuntime'
 import {
   addAndroidBackPressedListener,
@@ -39,11 +40,12 @@ export function AndroidBackRuntime() {
         return
       }
 
-      const openNoteBack = document.querySelector<HTMLButtonElement>(
-        '.notes-shell--open .back-button',
-      )
-      if (openNoteBack) {
-        openNoteBack.click()
+      if (blurFocusedMobileEditor()) {
+        return
+      }
+
+      if (document.querySelector('.notes-shell--open')) {
+        window.history.back()
         return
       }
 
