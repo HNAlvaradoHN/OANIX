@@ -59,7 +59,8 @@ test('note avatars remain encrypted visuals but the list avatar is a passive reo
   assert.match(avatarService, /NOTE_AVATAR_RECORD_TYPE = 'note-avatar'/)
   assert.match(avatarService, /storeEncryptedImage/)
   assert.match(workspace, /<NoteAvatar note=\{note\} className="note-row__avatar"/)
-  assert.match(workspace, /<NoteAvatar note=\{selectedNote\} className="note-view__avatar"/)
+  assert.doesNotMatch(workspace, /<NoteAvatar note=\{selectedNote\} className="note-view__avatar"/)
+  assert.match(workspace, /<AuroraNoteSheet/)
 })
 
 test('notes use separated premium cards while preserving list-safe secondary text', () => {
