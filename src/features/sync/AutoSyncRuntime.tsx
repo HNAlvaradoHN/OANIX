@@ -99,14 +99,12 @@ export function AutoSyncRuntime({ onRemoteApplied }: AutoSyncRuntimeProps) {
       emitSyncStatus('syncing', 'Sincronizando datos e imágenes cifradas…')
       try {
         const records = await syncEncryptedVaultBidirectional()
-        if (records.downloaded > 0 || records.deletedLocal > 0) {
-          onRemoteAppliedRef.current()
-        }
-
         const binaries = await syncEncryptedBinariesBidirectional()
-        if (binaries.downloaded > 0 || binaries.deletedLocal > 0) {
-          onRemoteAppliedRef.current()
-        }
+        const remoteApplied =
+          records.downloaded > 0 || records.deletedLocal > 0 ||
+          binaries.downloaded > 0 || binaries.deletedLocal > 0
+
+        if (remoteApplied) onRemoteAppliedRef.current()
 
         const conflicts = records.conflicts + binaries.conflicts
         if (conflicts > 0) {
