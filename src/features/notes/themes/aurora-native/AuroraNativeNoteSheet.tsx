@@ -61,6 +61,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type ClipboardEvent as ReactClipboardEvent,
   type CSSProperties,
   type FormEvent,
   type PointerEvent as ReactPointerEvent,
@@ -208,8 +209,17 @@ interface FixedPosition {
   left: number
 }
 
+type InsertMode = 'after' | 'replace' | 'caret'
+
 interface InsertState extends FixedPosition {
   targetId: string | null
+  mode: InsertMode
+}
+
+interface PendingInsertContext {
+  kind: 'image' | 'file'
+  targetId: string | null
+  mode: InsertMode
 }
 
 interface ReaderState {
@@ -356,7 +366,7 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
   const [imageSelection, setImageSelection] = useState<ImageSelection | null>(null)
   const [imageBarPosition, setImageBarPosition] = useState<FixedPosition>({ top: 0, left: 0 })
   const [insertState, setInsertState] = useState<InsertState | null>(null)
-  const [pendingInsertKind, setPendingInsertKind] = useState<'image' | 'file' | null>(null)
+  const pendingInsertRef = useRef<PendingInsertContext | null>(null)
   const [pendingReplaceImageId, setPendingReplaceImageId] = useState<string | null>(null)
   const [pendingFileBlockId, setPendingFileBlockId] = useState<string | null>(null)
   const [morePosition, setMorePosition] = useState<FixedPosition | null>(null)
@@ -446,12 +456,13 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
     structuralRedoRef.current = []
   }
 
-  function commitBlocks(next: StoredNoteBlock[], rerender = true, history = true) {
+  function commitBlocks(next: StoredNoteBlock[], rerender = true, history = true): StoredNoteBlock[] {
     if (history) pushStructuralHistory()
     const normalized = normalizeNativeSheetBlocks(next)
     blocksRef.current = normalized
     propsRef.current.onBlocksChange(normalized)
     if (rerender) setBlocksVersion((value) => value + 1)
+    return normalized
   }
 
   function replaceBlock(blockId: string, nextBlock: StoredNoteBlock, rerender = true, history = true) {
@@ -653,9 +664,93 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
     setResetToken((value) => value + 1)
   }
 
-  function openInsert(anchor: DOMRect, targetId: string | null) {
+  function activeTextContext(): { blockId: string; body: HTMLElement } | null {
+    const root = rootRef.current
+    if (!root) return null
+    const rootNode = root.getRootNode()
+    const active = rootNode instanceof ShadowRoot ? rootNode.activeElement : document.activeElement
+    if (!(active instanceof HTMLElement)) return null
+    const body = active.closest<HTMLElement>('.block-body')
+    const block = body?.closest<HTMLElement>('.block[data-block-id]')
+    const blockId = block?.dataset.blockId
+    if (!body || !blockId || !root.contains(body)) return null
+    return { blockId, body }
+  }
+
+  function focusNativeBlock(blockId: string, atStart = false) {
+    requestAnimationFrame(() => {
+      const root = rootRef.current
+      const editable = root?.querySelector<HTMLElement>(
+        `.block[data-block-id="${CSS.escape(blockId)}"] [contenteditable="true"]`,
+      )
+      if (!editable) return
+      editable.focus()
+      const selection = document.getSelection()
+      if (!selection) return
+      const range = document.createRange()
+      range.selectNodeContents(editable)
+      range.collapse(atStart)
+      selection.removeAllRanges()
+      selection.addRange(range)
+    })
+  }
+
+  function caretAtStart(element: HTMLElement): boolean {
+    const selection = document.getSelection()
+    if (!selection || selection.rangeCount === 0) return false
+    const range = selection.getRangeAt(0)
+    if (!range.collapsed || !element.contains(range.startContainer)) return false
+    const prefix = range.cloneRange()
+    prefix.selectNodeContents(element)
+    try {
+      prefix.setEnd(range.startContainer, range.startOffset)
+    } catch {
+      return false
+    }
+    return prefix.toString() === ''
+  }
+
+  function splitTextBlockAtCaret(blockId: string): {
+    before: NativeTextBlock | null
+    after: ParagraphBlock
+  } | null {
+    const context = activeTextContext()
+    const selection = document.getSelection()
+    if (!context || context.blockId !== blockId || !selection || selection.rangeCount === 0) return null
+
+    const range = selection.getRangeAt(0)
+    if (!range.collapsed || !context.body.contains(range.startContainer)) return null
+
+    const beforeRange = document.createRange()
+    const afterRange = document.createRange()
+    try {
+      beforeRange.selectNodeContents(context.body)
+      beforeRange.setEnd(range.startContainer, range.startOffset)
+      afterRange.selectNodeContents(context.body)
+      afterRange.setStart(range.endContainer, range.endOffset)
+    } catch {
+      return null
+    }
+
+    const beforeHolder = document.createElement('div')
+    beforeHolder.append(beforeRange.cloneContents())
+    const afterHolder = document.createElement('div')
+    afterHolder.append(afterRange.cloneContents())
+
+    const before = (beforeHolder.textContent ?? '').trim()
+      ? textBlockFromDom(blockId, beforeHolder)
+      : null
+    const after: ParagraphBlock = {
+      id: createNativeBlockId(),
+      type: 'paragraph',
+      runs: runsFromDom(afterHolder),
+    }
+    return { before, after }
+  }
+
+  function openInsert(anchor: DOMRect, targetId: string | null, mode: InsertMode = 'after') {
     const pos = fixedNear(anchor, 280, 520)
-    setInsertState({ ...pos, targetId })
+    setInsertState({ ...pos, targetId, mode })
     setMorePosition(null)
     setCodePop(null)
     setEntryPop(null)
@@ -668,36 +763,96 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
     return index < 0 ? currentBlocks().length : index + 1
   }
 
-  function insertReadyBlocks(newBlocks: StoredNoteBlock[], targetId: string | null) {
-    const next = [...currentBlocks()]
-    next.splice(insertIndexAfter(targetId), 0, ...newBlocks)
-    commitBlocks(next)
+  function insertReadyBlocks(
+    newBlocks: StoredNoteBlock[],
+    targetId: string | null,
+    mode: InsertMode = 'after',
+  ) {
+    const source = [...currentBlocks()]
+    const targetIndex = targetId ? source.findIndex((block) => block.id === targetId) : -1
+    let next = source
+    let focusId: string | null = newBlocks[0]?.id ?? null
+    let focusAtStart = false
+
+    if (mode === 'caret' && targetId && targetIndex >= 0 && isNativeTextBlock(source[targetIndex])) {
+      const context = activeTextContext()
+      if (context?.blockId === targetId && context.body.innerText.trim() === '') {
+        next = [...source]
+        next.splice(targetIndex, 1, ...newBlocks)
+      } else {
+        const split = splitTextBlockAtCaret(targetId)
+        if (split) {
+          next = [...source]
+          const replacement = [
+            ...(split.before ? [split.before] : []),
+            ...newBlocks,
+            split.after,
+          ]
+          next.splice(targetIndex, 1, ...replacement)
+          if (newBlocks.some(isNativeContentBlock)) {
+            focusId = split.after.id
+            focusAtStart = true
+          }
+        } else {
+          next = [...source]
+          next.splice(targetIndex + 1, 0, ...newBlocks)
+        }
+      }
+    } else if (mode === 'replace' && targetIndex >= 0) {
+      next = [...source]
+      next.splice(targetIndex, 1, ...newBlocks)
+    } else {
+      next = [...source]
+      next.splice(insertIndexAfter(targetId), 0, ...newBlocks)
+    }
+
+    const normalized = commitBlocks(next)
     setInsertState(null)
     setSelectedBlockId(newBlocks[0]?.id ?? null)
+
+    if (focusId && !newBlocks.some(isNativeContentBlock) && newBlocks[0]?.type !== 'divider') {
+      focusNativeBlock(focusId)
+      return
+    }
+
+    if (focusId && focusAtStart) {
+      focusNativeBlock(focusId, true)
+      return
+    }
+
+    if (newBlocks.some(isNativeContentBlock) || newBlocks[0]?.type === 'divider') {
+      const lastInserted = newBlocks.at(-1)
+      const insertedIndex = lastInserted ? normalized.findIndex((block) => block.id === lastInserted.id) : -1
+      const following = insertedIndex >= 0
+        ? normalized.slice(insertedIndex + 1).find(isNativeTextBlock)
+        : null
+      if (following) focusNativeBlock(following.id)
+    }
   }
 
   function insertKind(kind: NativeBlockKind) {
     const targetId = insertState?.targetId ?? focusedBlockIdRef.current
+    const mode = insertState?.mode ?? 'after'
     if (kind === 'image') {
-      setPendingInsertKind('image')
+      pendingInsertRef.current = { kind: 'image', targetId, mode }
       setInsertState(null)
       imageInputRef.current?.click()
       return
     }
     if (kind === 'file') {
-      setPendingInsertKind('file')
+      pendingInsertRef.current = { kind: 'file', targetId, mode }
       setInsertState(null)
       fileInputRef.current?.click()
       return
     }
 
     if (['p', 'h2', 'h3', 'quote', 'ul', 'ol'].includes(kind)) {
-      insertReadyBlocks([newTextBlock(kind)], targetId)
+      insertReadyBlocks([newTextBlock(kind)], targetId, mode)
       return
     }
     if (kind === 'entry') {
       const [entry, body] = emptyDailyEntry()
-      insertReadyBlocks([entry, body], targetId)
+      insertReadyBlocks([entry, body], targetId, mode)
       return
     }
     if (kind === 'code') {
@@ -705,19 +860,19 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
         id: createNativeBlockId(), type: 'code', language: 'plaintext', text: '',
         showLineNumbers: false, wrapLines: true,
       }
-      insertReadyBlocks([block], targetId)
+      insertReadyBlocks([block], targetId, mode)
       return
     }
     if (kind === 'check') {
-      insertReadyBlocks([{ id: createNativeBlockId(), type: 'checklist', items: [{ text: '', checked: false }] }], targetId)
+      insertReadyBlocks([{ id: createNativeBlockId(), type: 'checklist', items: [{ text: '', checked: false }] }], targetId, mode)
       return
     }
     if (kind === 'contact') {
-      insertReadyBlocks([initialContact()], targetId)
+      insertReadyBlocks([initialContact()], targetId, mode)
       return
     }
     if (kind === 'sep') {
-      insertReadyBlocks([{ id: createNativeBlockId(), type: 'divider' }], targetId)
+      insertReadyBlocks([{ id: createNativeBlockId(), type: 'divider' }], targetId, mode)
     }
   }
 
@@ -739,9 +894,9 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
       return
     }
 
-    if (pendingInsertKind !== 'image') return
-    setPendingInsertKind(null)
-    const targetId = focusedBlockIdRef.current ?? selectedBlockId
+    const pending = pendingInsertRef.current
+    if (!pending || pending.kind !== 'image') return
+    pendingInsertRef.current = null
     try {
       const blocks: ImageBlock[] = []
       for (const file of files) {
@@ -757,7 +912,7 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
           showName: true,
         })
       }
-      insertReadyBlocks(blocks, targetId)
+      insertReadyBlocks(blocks, pending.targetId, pending.mode)
     } catch (error) {
       showToast(error instanceof Error ? error.message : 'No se pudo guardar la imagen cifrada.')
     }
@@ -779,14 +934,17 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
             attachmentIds: [...block.attachmentIds, ...stored.map((item) => item.attachmentId)],
           })
         }
-      } else if (pendingInsertKind === 'file') {
-        setPendingInsertKind(null)
-        const block: FileBlock = {
-          id: createNativeBlockId(),
-          type: 'file',
-          attachmentIds: stored.map((item) => item.attachmentId),
+      } else {
+        const pending = pendingInsertRef.current
+        if (pending?.kind === 'file') {
+          pendingInsertRef.current = null
+          const block: FileBlock = {
+            id: createNativeBlockId(),
+            type: 'file',
+            attachmentIds: stored.map((item) => item.attachmentId),
+          }
+          insertReadyBlocks([block], pending.targetId, pending.mode)
         }
-        insertReadyBlocks([block], focusedBlockIdRef.current ?? selectedBlockId)
       }
       showToast(stored.length === 1 ? 'Archivo agregado' : `${stored.length} archivos agregados`)
     } catch (error) {
@@ -868,25 +1026,108 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
   }
 
   function textKeyDown(blockId: string, event: React.KeyboardEvent<HTMLDivElement>, element: HTMLElement) {
-    if (event.key === '/' && element.innerText.trim() === '') {
+    const blocks = currentBlocks()
+    const index = blocks.findIndex((block) => block.id === blockId)
+    const block = blocks[index]
+    const previous = blocks[index - 1]
+    const previousIsContent = isNativeContentBlock(previous)
+
+    if (event.key === 'Enter' && block?.type === 'quote') {
       event.preventDefault()
-      openInsert(element.getBoundingClientRect(), blockId)
+      if (element.innerText.trim() === '') {
+        replaceBlock(block.id, { id: block.id, type: 'paragraph', runs: [] })
+        focusNativeBlock(block.id)
+      } else {
+        const quote = newTextBlock('quote')
+        const next = [...blocks]
+        next.splice(index + 1, 0, quote)
+        commitBlocks(next)
+        focusNativeBlock(quote.id)
+      }
       return
     }
 
-    if (event.key === 'Backspace' && element.innerText.trim() === '') {
-      const blocks = currentBlocks()
-      const index = blocks.findIndex((block) => block.id === blockId)
-      const previous = blocks[index - 1]
-      if (isNativeContentBlock(previous)) {
-        event.preventDefault()
+    if (event.key === '/' && block?.type === 'paragraph') {
+      event.preventDefault()
+      openInsert(
+        element.getBoundingClientRect(),
+        blockId,
+        element.innerText.trim() === '' ? 'replace' : 'caret',
+      )
+      return
+    }
+
+    if (event.key === 'Backspace') {
+      if (element.innerText.trim() === '') {
+        if (previousIsContent) {
+          event.preventDefault()
+          return
+        }
+        if (blocks.length > 1) {
+          event.preventDefault()
+          const next = blocks.filter((item) => item.id !== blockId)
+          const normalized = commitBlocks(next)
+          const target = previous && isNativeTextBlock(previous)
+            ? previous
+            : normalized.find(isNativeTextBlock)
+          if (target) focusNativeBlock(target.id)
+        }
         return
       }
-      if (blocks.length > 1) {
-        event.preventDefault()
-        const next = blocks.filter((block) => block.id !== blockId)
-        commitBlocks(next)
+      if (previousIsContent && caretAtStart(element)) event.preventDefault()
+    }
+  }
+
+  async function handleNativePaste(event: ReactClipboardEvent<HTMLDivElement>) {
+    const clipboard = event.clipboardData
+    if (!clipboard) return
+
+    const target = event.target instanceof Element
+      ? event.target.closest<HTMLElement>('.block[data-block-id]')
+      : null
+    const targetId = target?.dataset.blockId ?? currentBlocks().at(-1)?.id ?? null
+    const body = target?.querySelector<HTMLElement>('.block-body')
+    const emptyTextTarget = Boolean(body && body.innerText.trim() === '')
+
+    const images = Array.from(clipboard.files).filter((file) => file.type.startsWith('image/'))
+    if (images.length > 0) {
+      event.preventDefault()
+      try {
+        const imageBlocks: ImageBlock[] = []
+        for (const file of images) {
+          const stored = await propsRef.current.onStoreImage(file)
+          imageBlocks.push({
+            id: createNativeBlockId(),
+            type: 'image',
+            ...stored,
+            alt: '',
+            widthPercent: 92,
+            alignment: 'center',
+            locked: true,
+            showName: true,
+          })
+        }
+        insertReadyBlocks(imageBlocks, targetId, emptyTextTarget ? 'replace' : 'after')
+        showToast('Imagen pegada')
+      } catch (error) {
+        showToast(error instanceof Error ? error.message : 'No se pudo guardar la imagen pegada.')
       }
+      return
+    }
+
+    const text = clipboard.getData('text/plain') || ''
+    if (target && text.split('\n').length > 50) {
+      event.preventDefault()
+      const code: CodeBlock = {
+        id: createNativeBlockId(),
+        type: 'code',
+        language: 'plaintext',
+        text,
+        showLineNumbers: false,
+        wrapLines: true,
+      }
+      insertReadyBlocks([code], targetId, emptyTextTarget ? 'replace' : 'after')
+      showToast('Texto largo → código (Texto plano)')
     }
   }
 
@@ -983,7 +1224,7 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
         index,
         selected: selectedBlockId === block.id,
         onSelect: selectBlock,
-        onInsertAfter: (blockId: string, anchor: DOMRect) => openInsert(anchor, blockId),
+        onInsertAfter: (blockId: string, anchor: DOMRect) => openInsert(anchor, blockId, 'after'),
         onDelete: (blockId: string) => void deleteBlock(blockId),
       }
 
@@ -1056,8 +1297,11 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
             onCodeChange={patchCode}
             onOpenReader={(title, text, code) => setReader({ title, text, code })}
             onOpenOptions={(blockId, anchor) => {
-              const pos = fixedNear(anchor, 210, 150)
-              setCodePop({ ...pos, blockId })
+              setCodePop({
+                top: Math.round(anchor.bottom + 8),
+                left: Math.round(Math.min(anchor.right - 210, window.innerWidth - 218)),
+                blockId,
+              })
               setEntryPop(null)
               setEmojiPop(null)
             }}
@@ -1108,7 +1352,7 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
             busy={attachmentBusy}
             onAddFiles={(blockId) => {
               setPendingFileBlockId(blockId)
-              setPendingInsertKind(null)
+              pendingInsertRef.current = null
               fileInputRef.current?.click()
             }}
             onDownloadFile={(attachment) => {
@@ -1157,6 +1401,7 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
       style={rootStyle}
       data-note-sheet-theme="aurora-native"
       data-note-id={props.note.id}
+      onPaste={(event) => { void handleNativePaste(event) }}
       onPointerDown={(event) => {
         const target = event.target
         if (!(target instanceof Element)) return
@@ -1290,8 +1535,13 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
         type="button"
         onPointerDown={(event) => event.preventDefault()}
         onClick={(event) => {
-          const targetId = focusedBlockIdRef.current ?? selectedBlockId ?? currentBlocks().at(-1)?.id ?? null
-          openInsert(event.currentTarget.getBoundingClientRect(), targetId)
+          const active = activeTextContext()
+          if (active) {
+            openInsert(event.currentTarget.getBoundingClientRect(), active.blockId, 'caret')
+            return
+          }
+          const last = currentBlocks().at(-1)
+          openInsert(event.currentTarget.getBoundingClientRect(), last?.id ?? null, 'after')
         }}
       ><Plus />Añadir bloque</button>
 
@@ -1652,7 +1902,7 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
             <div className="info-row"><dt>Bloqueo</dt><dd>{selectedImageBlock.locked === false ? 'No' : 'Sí'}</dd></div>
           </dl>
           <div className="m-actions">
-            <button className="btn ghost" type="button" onClick={openImageLightbox}>Abrir</button>
+            <button className="btn ghost" type="button" onClick={() => { setImageInfoOpen(false); openImageLightbox() }}>Abrir</button>
             <button className="btn ghost" type="button" onClick={() => setImageInfoOpen(false)}>Cerrar</button>
           </div>
         </div>
