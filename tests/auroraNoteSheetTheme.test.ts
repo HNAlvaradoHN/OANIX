@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
 const theme = readFileSync('src/features/notes/themes/aurora/AuroraNoteSheet.tsx', 'utf8')
+const blockControls = readFileSync('src/features/notes/themes/aurora/AuroraBlockControls.tsx', 'utf8')
 const css = readFileSync('src/features/notes/themes/aurora/auroraNoteSheet.css', 'utf8')
 const contract = readFileSync('src/features/notes/noteSheetThemeContract.ts', 'utf8')
 const workspace = readFileSync('src/features/notes/NotesWorkspace.tsx', 'utf8')
@@ -54,6 +55,11 @@ test('destructive element actions remain confirmation-gated', () => {
   assert.match(imageEditor, /¿Quitar/)
   assert.match(workspace, /confirmationAlreadyShown/)
   assert.match(theme, /Eliminar nota/)
+  assert.match(blockControls, /function deleteConfirmation/)
+  assert.match(blockControls, /window\.confirm\(deleteConfirmation\(selected\.kind\)\)/)
+  assert.match(blockControls, /¿Eliminar este elemento del checklist\?/)
+  assert.match(blockControls, /root\.addEventListener\('keydown', handleKeyDown, true\)/)
+  assert.match(blockControls, /removePersistedAtomicBlock/)
 })
 
 test('the superseded 50-line automatic conversion no longer exists', () => {
