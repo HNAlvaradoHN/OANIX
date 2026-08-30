@@ -3,6 +3,7 @@
 Todos los cambios relevantes del proyecto se registran aquí por versión.
 
 ## Unreleased
+- Editor: refina el aislamiento de `Daily Entry`: la fecha y el título opcional conservan sus espacios visuales independientes y quedan fuera de la selección de la hoja. El título solo vuelve a ser seleccionable cuando recibe foco directo; `Ctrl/Cmd+A`, selección nativa y borrado se limitan al tramo de texto editable activo sin cruzar bloques atómicos.
 - Editor: `Daily Entry` queda como isla de selección independiente. La fecha no entra en selecciones de la hoja y el título opcional conserva selección propia como input; `Ctrl/Cmd+A` y la selección nativa de todo el editor se reconducen a la unidad editable activa sin cruzar Daily Entry ni otros bloques atómicos.
 - Cabecera infográfica más compacta: fija una altura real de 52px, reduce el logo dentro del tema y alinea el offset de búsqueda/contenido con esa altura para que la fila de etiquetas ya no quede cortada debajo de la barra superior.
 - Pulido del tema infográfico: la cabecera y las filas de notas dejan de heredar superficies del tema clásico, se elimina el fondo exterior de la nota seleccionada y el botón `+` de nueva nota vuelve a ser una acción directa. Se retira del workspace activo el flujo de `Marcar notas`/acciones múltiples; la privacidad individual y su refresco siguen intactos.
