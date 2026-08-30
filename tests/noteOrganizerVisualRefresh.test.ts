@@ -66,6 +66,8 @@ test('visual runtimes do not emit duplicate generic change events after encrypte
   assert.match(organic, /detail\?\.recordType === 'note'\) return/)
 })
 
-test('content autosave batching remains intact while visual refresh becomes faster', () => {
-  assert.match(notesWorkspace, /window\.setTimeout\(\(\) => \{\s*void flushPendingContent\(\)\s*\}, 550\)/)
+test('manual note persistence stays decoupled from the faster visual refresh', () => {
+  assert.doesNotMatch(notesWorkspace, /window\.setTimeout\(\(\) => \{\s*void flushPendingContent\(\)\s*\}, 550\)/)
+  assert.match(notesWorkspace, /pendingContentRef\.current = \{ noteId: activeNote\.id, blocks \}/)
+  assert.match(notesWorkspace, />\s*Sincronizar\s*</)
 })
