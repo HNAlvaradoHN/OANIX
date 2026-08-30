@@ -237,6 +237,7 @@ function decorateDailyEntry(block: HTMLElement) {
   dateRow.setAttribute('tabindex', '0')
   dateRow.title = 'Cambiar fecha'
   renderDailyDate(block)
+  block.classList.toggle('aurora-entry-no-date', block.dataset.auroraShowDate === 'false')
 
   if (!block.querySelector('[data-aurora-entry-toggle="true"]')) {
     const toggle = document.createElement('button')
@@ -353,7 +354,12 @@ export function AuroraBlockControls({ noteId }: AuroraBlockControlsProps) {
       const entryToggle = target.closest<HTMLElement>('[data-aurora-entry-toggle="true"]')
       if (entryToggle) {
         const block = entryToggle.closest<HTMLElement>('[data-daily-entry-block="true"]')
-        if (block) block.classList.toggle('aurora-entry-no-date')
+        if (block) {
+          const hidden = !block.classList.contains('aurora-entry-no-date')
+          block.classList.toggle('aurora-entry-no-date', hidden)
+          block.dataset.auroraShowDate = hidden ? 'false' : 'true'
+          block.closest<HTMLElement>('.editor-surface')?.dispatchEvent(new Event('input', { bubbles: true }))
+        }
         return
       }
 
@@ -449,12 +455,14 @@ export function AuroraBlockControls({ noteId }: AuroraBlockControlsProps) {
     const numbers = codeBlock.querySelector<HTMLElement>('[data-aurora-code-line-numbers="true"]')
     if (numbers) numbers.hidden = !enabled
     if (enabled) updateCodeLineNumbers(codeBlock)
+    codeBlock.closest<HTMLElement>('.editor-surface')?.dispatchEvent(new Event('input', { bubbles: true }))
   }
 
   function toggleCodeWrap(enabled: boolean) {
     if (!codeBlock) return
     setCodeWrap(enabled)
     codeBlock.dataset.auroraCodeWrap = String(enabled)
+    codeBlock.closest<HTMLElement>('.editor-surface')?.dispatchEvent(new Event('input', { bubbles: true }))
   }
 
   function clearCode() {
@@ -563,6 +571,8 @@ export function AuroraBlockControls({ noteId }: AuroraBlockControlsProps) {
               onClick={() => {
                 const avatar = emojiContact.querySelector<HTMLElement>('[data-contact-avatar="true"]')
                 if (avatar) avatar.textContent = emoji
+                emojiContact.dataset.contactAvatarEmoji = emoji
+                emojiContact.closest<HTMLElement>('.editor-surface')?.dispatchEvent(new Event('input', { bubbles: true }))
                 setEmojiContact(null)
               }}
             >{emoji}</button>
