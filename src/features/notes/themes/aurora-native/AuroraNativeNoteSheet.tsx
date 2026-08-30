@@ -453,6 +453,19 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
     if (toastTimerRef.current !== null) window.clearTimeout(toastTimerRef.current)
   }, [])
 
+  useEffect(() => {
+    function handleSyncStatus(event: Event) {
+      if (!(event instanceof CustomEvent)) return
+      const detail = event.detail as { kind?: unknown; message?: unknown } | null
+      if (!detail || typeof detail.message !== 'string' || !detail.message.trim()) return
+      if (!['syncing', 'synced', 'offline', 'conflict', 'error'].includes(String(detail.kind ?? ''))) return
+      showToast(detail.message)
+    }
+
+    window.addEventListener('oanix:sync-status', handleSyncStatus)
+    return () => window.removeEventListener('oanix:sync-status', handleSyncStatus)
+  }, [])
+
   function showToast(message: string, action?: ToastState['action']) {
     if (toastTimerRef.current !== null) window.clearTimeout(toastTimerRef.current)
     setToast({ message, action })
@@ -467,8 +480,15 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
   }
 
   async function syncNoteNow() {
+    setInsertState(null)
+    showToast('Guardando cambios antes de sincronizar…')
     const saved = await propsRef.current.onFlush()
-    if (saved) window.dispatchEvent(new Event('oanix:sync-now'))
+    if (!saved) {
+      showToast('No se pudo guardar la nota antes de sincronizar.')
+      return
+    }
+    showToast('Iniciando sincronización cifrada…')
+    window.dispatchEvent(new Event('oanix:sync-now'))
   }
 
   function pushStructuralHistory() {
@@ -884,6 +904,19 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
     setEntryPop(null)
     setEmojiPop(null)
   }
+
+  useEffect(() => {
+    if (!insertState) return
+
+    const closeOnViewportMove = () => setInsertState(null)
+    window.addEventListener('scroll', closeOnViewportMove, { passive: true })
+    window.visualViewport?.addEventListener('scroll', closeOnViewportMove)
+
+    return () => {
+      window.removeEventListener('scroll', closeOnViewportMove)
+      window.visualViewport?.removeEventListener('scroll', closeOnViewportMove)
+    }
+  }, [insertState])
 
   function insertIndexAfter(targetId: string | null): number {
     if (!targetId) return currentBlocks().length
@@ -1703,6 +1736,10 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
           title="Añadir bloque"
           onPointerDown={(event) => event.preventDefault()}
           onClick={(event) => {
+            if (insertState) {
+              setInsertState(null)
+              return
+            }
             const active = activeTextContext()
             if (active) {
               openInsert(event.currentTarget.getBoundingClientRect(), active.blockId, 'caret')
