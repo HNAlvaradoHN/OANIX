@@ -68,6 +68,6 @@ test('visual runtimes do not emit duplicate generic change events after encrypte
 
 test('manual note persistence stays decoupled from the faster visual refresh', () => {
   assert.doesNotMatch(notesWorkspace, /window\.setTimeout\(\(\) => \{\s*void flushPendingContent\(\)\s*\}, 550\)/)
-  assert.match(notesWorkspace, /pendingContentRef\.current = \{ noteId: activeNote\.id, blocks \}/)
+  assert.match(notesWorkspace, /pendingContentRef\.current = \{ noteId: selectedNote\.id, blocks \}/)
   assert.match(notesWorkspace, />\s*Sincronizar\s*</)
 })
