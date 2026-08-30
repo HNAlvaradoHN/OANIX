@@ -171,6 +171,10 @@ function blocksToHtml(blocks: NoteBlock[]): string {
       const id = escapeHtml(block.id)
 
       if (block.type === 'divider') return `<hr data-block-id="${id}">`
+      if (block.type === 'file') {
+        const attachmentIds = escapeHtml(block.attachmentIds.join(','))
+        return `<div class="editor-file-placeholder" data-file-block="true" data-editor-atomic-block="file" data-block-id="${id}" data-attachment-ids="${attachmentIds}" contenteditable="false">Archivos adjuntos</div>`
+      }
       if (block.type === 'code') return codeBlockToHtml(block)
       if (block.type === 'checklist') return checklistBlockToHtml(block)
       if (block.type === 'contact') return contactBlockToHtml(block)
@@ -271,6 +275,15 @@ function parseEditorBlocks(root: HTMLElement): NoteBlock[] {
 
     const tag = node.tagName.toLowerCase()
     const id = blockIdFromElement(node)
+
+    if (node.dataset.fileBlock === 'true') {
+      const attachmentIds = (node.dataset.attachmentIds ?? '')
+        .split(',')
+        .map((value) => value.trim())
+        .filter(Boolean)
+      blocks.push({ id, type: 'file', attachmentIds: [...new Set(attachmentIds)] })
+      continue
+    }
 
     if (node.dataset.codeBlock === 'true') {
       blocks.push({
