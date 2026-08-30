@@ -70,7 +70,7 @@ function UnlockedApp({ lockVault }: { lockVault: () => void }) {
       setAccountHost(document.querySelector<HTMLElement>('.notes-header__actions'))
     })
     return () => window.cancelAnimationFrame(frame)
-  }, [workspaceRevision])
+  }, [])
 
   useEffect(() => {
     const refreshPrivacy = () => setPrivacyRevision((value) => value + 1)
@@ -92,7 +92,7 @@ function UnlockedApp({ lockVault }: { lockVault: () => void }) {
       <NativeShareRuntime onImported={() => setWorkspaceRevision((value) => value + 1)} />
       <NativeNoteShareRuntime />
       <AndroidKeystoreDiagnosticRuntime />
-      <NotesWorkspace key={workspaceRevision} onLock={lockVault} />
+      <NotesWorkspace refreshRevision={workspaceRevision} onLock={lockVault} />
       <WorkspaceRuntimeGate workspaceRevision={workspaceRevision} />
       <NoteAttachmentsRuntime key={`attachments-${workspaceRevision}`} />
       <NotePrivacyRuntime key={`privacy-${workspaceRevision}-${privacyRevision}`} />
