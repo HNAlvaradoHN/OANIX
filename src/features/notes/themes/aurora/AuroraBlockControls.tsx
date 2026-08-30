@@ -394,8 +394,17 @@ export function AuroraBlockControls({ noteId }: AuroraBlockControlsProps) {
       }
 
       const block = directAtomicFromTarget(root, target)
-      if (block) select(block)
-      else if (!target.closest('.aurora-imgbar,.aurora-blockbar,.aurora-code-pop,.aurora-entry-pop,.aurora-emoji-pop')) {
+      if (block) {
+        const kind = blockKind(block)
+        const realImageAction = target.closest(
+          '[data-image-open-action="true"], [data-image-lock="true"], [data-image-align], [data-image-name-toggle="true"], [data-image-remove="true"]',
+        )
+        if (kind === 'image' && !realImageAction) {
+          event.preventDefault()
+          event.stopPropagation()
+        }
+        select(block)
+      } else if (!target.closest('.aurora-imgbar,.aurora-blockbar,.aurora-code-pop,.aurora-entry-pop,.aurora-emoji-pop')) {
         setSelected(null)
       }
     }
