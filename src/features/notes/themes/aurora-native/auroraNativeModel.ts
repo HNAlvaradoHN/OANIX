@@ -46,6 +46,20 @@ export function ensureNativeBlockFlow(input: StoredNoteBlock[]): StoredNoteBlock
   return output
 }
 
+export function normalizeNativeSheetBlocks(input: StoredNoteBlock[]): StoredNoteBlock[] {
+  const source = structuredClone(input)
+  const withBodies: StoredNoteBlock[] = []
+  for (let index = 0; index < source.length; index += 1) {
+    const block = source[index]
+    withBodies.push(block)
+    if (block.type !== 'dailyEntry') continue
+    const next = source[index + 1]
+    if (next?.type === 'paragraph') continue
+    withBodies.push(emptyParagraph())
+  }
+  return ensureNativeBlockFlow(withBodies)
+}
+
 export function appearanceForNote(value: NoteSheetAppearance | undefined): NoteSheetAppearance {
   return value ? { ...value } : { ...DEFAULT_NOTE_SHEET_APPEARANCE }
 }
