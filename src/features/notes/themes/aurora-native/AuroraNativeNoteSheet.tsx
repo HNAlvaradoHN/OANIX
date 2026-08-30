@@ -360,6 +360,7 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
   const imageInputRef = useRef<HTMLInputElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const bubbleRef = useRef<HTMLDivElement>(null)
+  const linkInputRef = useRef<HTMLInputElement>(null)
 
   const [blocksVersion, setBlocksVersion] = useState(0)
   const [resetToken, setResetToken] = useState(0)
@@ -393,6 +394,7 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
   const [emojiPop, setEmojiPop] = useState<(FixedPosition & { blockId: string }) | null>(null)
   const [blockBarPosition, setBlockBarPosition] = useState<FixedPosition>({ top: 0, left: 0 })
   const [bubblePosition, setBubblePosition] = useState<FixedPosition | null>(null)
+  const [activeFormats, setActiveFormats] = useState({ bold: false, italic: false, block: 'p' })
   const [linkOpen, setLinkOpen] = useState(false)
   const [linkValue, setLinkValue] = useState('')
   const savedRangeRef = useRef<Range | null>(null)
@@ -599,6 +601,26 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
       return
     }
 
+    let node = selection.anchorNode
+    if (node?.nodeType === Node.TEXT_NODE) node = node.parentNode
+    const parent = node instanceof Element
+      ? node.closest('p,h2,h3,blockquote,ul,ol')
+      : null
+    const tag = parent?.tagName.toLowerCase() ?? 'p'
+    let bold = false
+    let italic = false
+    try {
+      bold = document.queryCommandState('bold')
+      italic = document.queryCommandState('italic')
+    } catch {
+      // Browser editing commands are best-effort state probes.
+    }
+    setActiveFormats({
+      bold,
+      italic,
+      block: tag === 'blockquote' ? 'quote' : tag,
+    })
+
     requestAnimationFrame(() => {
       const bubble = bubbleRef.current
       const width = bubble?.offsetWidth || 388
@@ -620,12 +642,53 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
     return () => document.removeEventListener('selectionchange', syncBubble)
   }, [])
 
+  useEffect(() => {
+    function handleEscape(event: globalThis.KeyboardEvent) {
+      if (event.key !== 'Escape') return
+      setInsertState(null)
+      setMorePosition(null)
+      setCodePop(null)
+      setEntryPop(null)
+      setEmojiPop(null)
+      setLinkOpen(false)
+      setBubblePosition(null)
+      setDrawerOpen(false)
+      setThemeOpen(false)
+      setDescriptionOpen(false)
+      setImageInfoOpen(false)
+      setDeleteOpen(false)
+      setReader(null)
+      setLightbox(null)
+    }
+
+    window.addEventListener('keydown', handleEscape)
+    return () => window.removeEventListener('keydown', handleEscape)
+  }, [])
+
   function executeTextCommand(command: string, value?: string) {
     const root = rootRef.current
     if (!root) return
     const selected = selectedTextBlock(root)
     if (!selected) return
     document.execCommand(command, false, value)
+    commitTextBlock(selected.blockId, selected.body)
+    requestAnimationFrame(syncBubble)
+  }
+
+  function executeBlockFormat(tag: 'p' | 'h2' | 'h3' | 'blockquote') {
+    const root = rootRef.current
+    if (!root) return
+    const selection = selectionForRoot(root)
+    const selected = selectedTextBlock(root)
+    if (!selection || !selected) return
+
+    let node = selection.anchorNode
+    if (node?.nodeType === Node.TEXT_NODE) node = node.parentNode
+    const current = node instanceof Element
+      ? node.closest('p,h2,h3,blockquote,ul,ol')?.tagName.toLowerCase() ?? ''
+      : ''
+    const target = current === tag && tag !== 'p' ? 'p' : tag
+    document.execCommand('formatBlock', false, target)
     commitTextBlock(selected.blockId, selected.body)
     requestAnimationFrame(syncBubble)
   }
@@ -1423,6 +1486,13 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
       onPointerDown={(event) => {
         const target = event.target
         if (!(target instanceof Element)) return
+        if (!target.closest('.pop')) {
+          setInsertState(null)
+          setMorePosition(null)
+          setCodePop(null)
+          setEntryPop(null)
+          setEmojiPop(null)
+        }
         if (target.closest('.pop,.imgbar,.blockbar,.bubble,.modal,.drawer,.fab,.topbar')) return
         if (!target.closest('.block')) {
           setSelectedBlockId(null)
@@ -1651,16 +1721,23 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
           ['bold', Bold, 'Negrita'],
           ['italic', Italic, 'Cursiva'],
         ].map(([command, Icon, title]) => (
-          <button key={String(command)} type="button" title={String(title)} onMouseDown={(event) => event.preventDefault()} onClick={() => executeTextCommand(String(command))}><Icon /></button>
+          <button
+            key={String(command)}
+            className={activeFormats[command as 'bold' | 'italic'] ? 'on' : ''}
+            type="button"
+            title={String(title)}
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={() => executeTextCommand(String(command))}
+          ><Icon /></button>
         ))}
         <span className="b-sep" />
-        <button type="button" title="Párrafo" onMouseDown={(event) => event.preventDefault()} onClick={() => executeTextCommand('formatBlock', 'p')}><Pilcrow /></button>
-        <button type="button" title="H2" onMouseDown={(event) => event.preventDefault()} onClick={() => executeTextCommand('formatBlock', 'h2')}><Heading2 /></button>
-        <button type="button" title="H3" onMouseDown={(event) => event.preventDefault()} onClick={() => executeTextCommand('formatBlock', 'h3')}><Heading3 /></button>
-        <button type="button" title="Cita" onMouseDown={(event) => event.preventDefault()} onClick={() => executeTextCommand('formatBlock', 'blockquote')}><Quote /></button>
+        <button className={activeFormats.block === 'p' ? 'on' : ''} type="button" title="Párrafo" onMouseDown={(event) => event.preventDefault()} onClick={() => executeBlockFormat('p')}><Pilcrow /></button>
+        <button className={activeFormats.block === 'h2' ? 'on' : ''} type="button" title="H2" onMouseDown={(event) => event.preventDefault()} onClick={() => executeBlockFormat('h2')}><Heading2 /></button>
+        <button className={activeFormats.block === 'h3' ? 'on' : ''} type="button" title="H3" onMouseDown={(event) => event.preventDefault()} onClick={() => executeBlockFormat('h3')}><Heading3 /></button>
+        <button className={activeFormats.block === 'quote' ? 'on' : ''} type="button" title="Cita" onMouseDown={(event) => event.preventDefault()} onClick={() => executeBlockFormat('blockquote')}><Quote /></button>
         <span className="b-sep" />
-        <button type="button" title="Lista" onMouseDown={(event) => event.preventDefault()} onClick={() => executeTextCommand('insertUnorderedList')}><List /></button>
-        <button type="button" title="Lista num." onMouseDown={(event) => event.preventDefault()} onClick={() => executeTextCommand('insertOrderedList')}><ListOrdered /></button>
+        <button className={activeFormats.block === 'ul' ? 'on' : ''} type="button" title="Lista" onMouseDown={(event) => event.preventDefault()} onClick={() => executeTextCommand('insertUnorderedList')}><List /></button>
+        <button className={activeFormats.block === 'ol' ? 'on' : ''} type="button" title="Lista num." onMouseDown={(event) => event.preventDefault()} onClick={() => executeTextCommand('insertOrderedList')}><ListOrdered /></button>
         <span className="b-sep" />
         <button
           type="button"
@@ -1672,11 +1749,15 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
               const selection = root ? selectionForRoot(root) : document.getSelection()
               savedRangeRef.current = selection?.rangeCount ? selection.getRangeAt(0).cloneRange() : null
             }
-            setLinkOpen((value) => !value)
+            setLinkOpen((value) => {
+              const opening = !value
+              if (opening) window.setTimeout(() => linkInputRef.current?.focus(), 30)
+              return opening
+            })
           }}
         ><Link /></button>
         <div className="b-link">
-          <input value={linkValue} onChange={(event) => setLinkValue(event.target.value)} placeholder="https://…" />
+          <input ref={linkInputRef} value={linkValue} onChange={(event) => setLinkValue(event.target.value)} placeholder="https://…" />
           <button
             type="button"
             onMouseDown={(event) => event.preventDefault()}
