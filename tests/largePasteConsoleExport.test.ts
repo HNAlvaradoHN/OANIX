@@ -1,12 +1,6 @@
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import test from 'node:test'
-import {
-  LARGE_PASTE_CHARACTER_THRESHOLD,
-  LARGE_PASTE_LINE_THRESHOLD,
-  shouldEncapsulateClipboardPaste,
-} from '../src/features/editor/largePastePolicy.ts'
-
 const largePasteRuntimePath = new URL('../src/features/editor/LargePasteRuntime.tsx', import.meta.url)
 const exportRuntimePath = new URL('../src/features/editor/CodeBlockExportRuntime.tsx', import.meta.url)
 const exportServicePath = new URL('../src/features/editor/codeBlockExport.ts', import.meta.url)
@@ -18,30 +12,18 @@ const androidOutboundPluginPath = new URL(
   import.meta.url,
 )
 
-test('large paste policy protects the editor at 50 pasted lines only', () => {
-  assert.equal(LARGE_PASTE_LINE_THRESHOLD, 50)
-  assert.equal(shouldEncapsulateClipboardPaste(Array.from({ length: 49 }, () => 'línea').join('\n')), false)
-  assert.equal(shouldEncapsulateClipboardPaste(Array.from({ length: 50 }, () => 'línea').join('\n')), true)
-  assert.equal(shouldEncapsulateClipboardPaste('una sola línea'), false)
-})
-
-test('very long single-line clipboard content is also encapsulated', () => {
-  assert.equal(LARGE_PASTE_CHARACTER_THRESHOLD, 64 * 1024)
-  assert.equal(shouldEncapsulateClipboardPaste('x'.repeat(LARGE_PASTE_CHARACTER_THRESHOLD - 1)), false)
-  assert.equal(shouldEncapsulateClipboardPaste('x'.repeat(LARGE_PASTE_CHARACTER_THRESHOLD)), true)
-})
-
-test('large paste interception handles paste delivery without hijacking ordinary typing', async () => {
+test('paste runtime keeps Android fallback and atomic deletion without automatic code conversion', async () => {
   const source = await readFile(largePasteRuntimePath, 'utf8')
-  assert.match(source, /document\.addEventListener\('paste', handlePaste, true\)/)
   assert.match(source, /document\.addEventListener\('beforeinput', handleBeforeInput, true\)/)
   assert.match(source, /event\.inputType !== 'insertFromPaste'/)
-  assert.match(source, /target\.closest\('\[data-code-content="true"\]'\)/)
-  assert.match(source, /shouldEncapsulateClipboardPaste\(plainText\)/)
-  assert.match(source, /codeTool\.click\(\)/)
-  assert.match(source, /content\.textContent = plainText/)
-  assert.doesNotMatch(source, /document\.addEventListener\('input'/)
-  assert.doesNotMatch(source, /document\.addEventListener\('keyup'/)
+  assert.match(source, /navigator\.clipboard/)
+  assert.match(source, /await clipboard\.readText\(\)/)
+  assert.match(source, /document\.execCommand\('insertText', false, fallbackText\)/)
+  assert.match(source, /selectionTouchesAtomicBlock/)
+  assert.match(source, /deleteSelectedSheetText/)
+  assert.doesNotMatch(source, /shouldEncapsulateClipboardPaste/)
+  assert.doesNotMatch(source, /LARGE_PASTE_LINE_THRESHOLD/)
+  assert.doesNotMatch(source, /codeTool\.click\(\)/)
 })
 
 test('code block menu exports real TXT/PDF files without the browser print route', async () => {
