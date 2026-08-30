@@ -154,6 +154,8 @@ html.oanix-pwa-image-preview-v1 .image-note-editor-root .pwa-image-card__descrip
   width: 100% !important;
   min-width: 0 !important;
   height: 2.55rem !important;
+  display: flex !important;
+  align-items: center !important;
   margin: 0 !important;
   padding: 0 0.75rem !important;
   overflow: hidden;
