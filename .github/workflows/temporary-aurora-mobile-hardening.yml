@@ -19,7 +19,9 @@ jobs:
           node-version: 22
           cache: npm
       - name: Apply safeguards
-        run: python scripts/temporary_aurora_harden.py
+        run: |
+          sed -i 's/const selectedImageBlock = useMemo(/const selectedImageBlock = imageSelection/' scripts/temporary_aurora_harden.py
+          python scripts/temporary_aurora_harden.py
       - name: Test
         run: |
           npm ci
