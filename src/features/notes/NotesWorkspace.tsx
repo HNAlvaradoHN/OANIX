@@ -35,6 +35,7 @@ import { WORKSPACE_V2_ENABLED } from '../../app/workspaceExperience'
 import { OanixIcon } from '../../shared/OanixIcon'
 import { NoteAvatar } from './NoteAvatar'
 import { WorkspaceV2Sidebar } from './WorkspaceV2Sidebar'
+import { AuroraNoteSheet } from './themes/aurora/AuroraNoteSheet'
 import {
   saveWorkspaceV2FolderOrder,
   saveWorkspaceV2NoteOrder,
@@ -678,13 +679,15 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     await Promise.allSettled(imageIds.map((imageId) => deleteEncryptedImage(imageId)))
   }
 
-  async function handleDeleteNote(targetNote: NoteRecord) {
+  async function handleDeleteNote(targetNote: NoteRecord, confirmationAlreadyShown = false) {
     if (deletingId) return
 
-    const confirmed = window.confirm(
-      `¿Eliminar esta nota de forma permanente?\n\n“${targetNote.title}” se eliminará de este dispositivo junto con sus imágenes asociadas. Esta acción no se puede deshacer.`,
-    )
-    if (!confirmed) return
+    if (!confirmationAlreadyShown) {
+      const confirmed = window.confirm(
+        `¿Eliminar esta nota de forma permanente?\n\n“${targetNote.title}” se eliminará de este dispositivo junto con sus imágenes asociadas. Esta acción no se puede deshacer.`,
+      )
+      if (!confirmed) return
+    }
 
     const noteId = targetNote.id
     const deletingSelectedNote = selectedIdRef.current === noteId
@@ -1105,6 +1108,66 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
       setError('No se pudieron guardar las etiquetas de la nota.')
     } finally {
       setSavingNoteTags(false)
+    }
+  }
+
+  async function handleAuroraAddTag(name: string) {
+    const targetNote = notesRef.current.find((note) => note.id === selectedIdRef.current) ?? null
+    if (!targetNote) return
+
+    const normalized = name.trim().replace(/^#/, '').replace(/\s+/g, ' ')
+    if (!normalized) return
+    if (!(await flushPendingContent())) return
+
+    setError('')
+    try {
+      let tag = tags.find((candidate) => candidate.name.toLocaleLowerCase() === normalized.toLocaleLowerCase()) ?? null
+      if (!tag) {
+        tag = await createTag(normalized)
+        setTags((current) => sortTagState([...current, tag!]))
+      }
+
+      if ((targetNote.tagIds ?? []).includes(tag.id)) return
+      const updated = await setNoteTags(targetNote.id, [...(targetNote.tagIds ?? []), tag.id])
+      replaceNoteInState(updated)
+      setSaveState('saved')
+    } catch (tagError) {
+      setError(tagError instanceof Error ? tagError.message : 'No se pudo añadir la etiqueta a la nota.')
+    }
+  }
+
+  async function handleAuroraRemoveTag(tagId: string) {
+    const targetNote = notesRef.current.find((note) => note.id === selectedIdRef.current) ?? null
+    if (!targetNote || !(targetNote.tagIds ?? []).includes(tagId)) return
+    if (!(await flushPendingContent())) return
+
+    setError('')
+    try {
+      const updated = await setNoteTags(targetNote.id, (targetNote.tagIds ?? []).filter((id) => id !== tagId))
+      replaceNoteInState(updated)
+      setSaveState('saved')
+    } catch {
+      setError('No se pudo quitar la etiqueta de la nota.')
+    }
+  }
+
+  async function handleAuroraRenameTag(tagId: string, nextName: string) {
+    const target = tags.find((tag) => tag.id === tagId)
+    if (!target) return
+
+    const normalized = nextName.trim().replace(/\s+/g, ' ')
+    if (!normalized || normalized === target.name) return
+    if (tagNameExists(normalized, tagId)) {
+      setError('Ya existe una etiqueta con ese nombre.')
+      return
+    }
+
+    setError('')
+    try {
+      const updated = await renameTag(tagId, normalized)
+      setTags((current) => sortTagState(current.map((tag) => tag.id === tagId ? updated : tag)))
+    } catch {
+      setError('No se pudo renombrar la etiqueta.')
     }
   }
 
@@ -1849,124 +1912,16 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
 
       <section className="note-view" aria-label="Nota abierta">
         {selectedNote ? (
-          <>
-            <header className="note-view__header">
-              <button
-                className="back-button"
-                type="button"
-                onClick={() => void handleBack()}
-                aria-label="Volver a la lista de notas"
-                title="Volver"
-              >
-                <OanixIcon name="back" size={20} />
-              </button>
-              <div className="note-view__identity">
-                <NoteAvatar note={selectedNote} className="note-view__avatar" />
-                <div>
-                  <strong>{selectedNote.pinned === true && <span aria-hidden="true">📌 </span>}{selectedNote.title}</strong>
-                  <span className={saveState === 'error' ? 'save-status save-status--error' : 'save-status'}>
-                    {deletingSelected ? 'Eliminando nota…' : saveStateLabel(saveState, savingTitle)}
-                  </span>
-                </div>
-              </div>
-              <div className="note-view__actions" data-note-menu-root="true">
-                <button
-                  className="note-view__menu-button"
-                  type="button"
-                  aria-label="Acciones de la nota"
-                  aria-haspopup="menu"
-                  aria-expanded={activeNoteMenuOpen}
-                  title="Acciones de la nota"
-                  onClick={() => setActiveNoteMenuOpen((open) => !open)}
-                >
-                  <OanixIcon name="menu" />
-                </button>
-                {activeNoteMenuOpen && (
-                  <div className="note-view__menu" role="menu" aria-label="Acciones de la nota">
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => void handleTogglePinned(selectedNote)}
-                    >
-                      <OanixIcon name="pin" /> {selectedNote.pinned === true ? 'Desfijar nota' : 'Fijar nota'}
-                    </button>
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => openTagEditor(selectedNote)}
-                    >
-                      <OanixIcon name="tag" /> Etiquetas
-                    </button>
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => {
-                        setActiveNoteMenuOpen(false)
-                        setMoveNoteId(selectedNote.id)
-                      }}
-                    >
-                      <OanixIcon name="folder" /> Mover a carpeta
-                    </button>
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => {
-                        setActiveNoteMenuOpen(false)
-                        setNoteInfoOpen(true)
-                      }}
-                    >
-                      <OanixIcon name="info" /> Información
-                    </button>
-                    <button
-                      className="note-view__menu-danger"
-                      type="button"
-                      role="menuitem"
-                      disabled={deletingId !== null}
-                      onClick={() => {
-                        setActiveNoteMenuOpen(false)
-                        void handleDeleteNote(selectedNote)
-                      }}
-                    >
-                      <OanixIcon name="trash" /> {deletingSelected ? 'Eliminando…' : 'Eliminar nota'}
-                    </button>
-                  </div>
-                )}
-              </div>
-            </header>
-
-            <div className="note-canvas">
-              <label className="note-title-field" htmlFor="note-title">
-                <span>Título</span>
-                <input
-                  id="note-title"
-                  value={draftTitle}
-                  onChange={(event) => setDraftTitle(event.target.value)}
-                  onBlur={() => void persistTitle()}
-                  onKeyDown={handleTitleKeyDown}
-                  maxLength={160}
-                  disabled={savingTitle}
-                  aria-busy={savingTitle}
-                />
-              </label>
-
-              <div className="note-tag-strip" aria-label="Etiquetas de la nota">
-                {tagRecordsFor(selectedNote).map((tag) => (
-                  <span className="note-tag-chip" key={tag.id}>#{tag.name}</span>
-                ))}
-                <button type="button" className="note-tag-add" onClick={() => openTagEditor(selectedNote)}>
-                  ＋ Etiqueta
-                </button>
-              </div>
-
-              {saveState === 'error' && error && (
-                <div className="note-save-error" role="alert">
-                  <span>{error}</span>
-                  <button type="button" onClick={() => void flushPendingContent()}>
-                    Reintentar
-                  </button>
-                </div>
-              )}
-
+          <AuroraNoteSheet
+            note={selectedNote}
+            folders={folders}
+            tags={tags}
+            draftTitle={draftTitle}
+            saveLabel={saveStateLabel(saveState, savingTitle)}
+            savingTitle={savingTitle}
+            deleting={deletingSelected}
+            error={error}
+            editor={(
               <ImageNoteEditor
                 key={selectedNote.id}
                 noteId={selectedNote.id}
@@ -1976,40 +1931,23 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
                 onRemoveImage={handleRemovedImage}
                 onRestoreImage={handleRestoredImage}
               />
-            </div>
-          </>
+            )}
+            onBack={() => void handleBack()}
+            onDraftTitleChange={setDraftTitle}
+            onCommitTitle={() => void persistTitle()}
+            onTogglePinned={() => void handleTogglePinned(selectedNote)}
+            onAddTag={handleAuroraAddTag}
+            onRemoveTag={handleAuroraRemoveTag}
+            onRenameTag={handleAuroraRenameTag}
+            onMoveToFolder={async (folderId) => { await handleMoveNote(selectedNote, folderId) }}
+            onDeleteNote={() => void handleDeleteNote(selectedNote, true)}
+            onRetrySave={() => void flushPendingContent()}
+          />
         ) : (
           <div className="note-view__empty">
             <div className="note-view__empty-mark" aria-hidden="true">O</div>
             <strong>Selecciona una nota</strong>
             <p>La experiencia se organiza como una lista de conversaciones, pero cada elemento es una nota privada.</p>
-          </div>
-        )}
-
-        {selectedNote && noteInfoOpen && (
-          <div className="note-info-dialog" role="presentation" onClick={() => setNoteInfoOpen(false)}>
-            <div
-              className="note-info-dialog__panel"
-              role="dialog"
-              aria-modal="true"
-              aria-label="Información de la nota"
-              onClick={(event) => event.stopPropagation()}
-            >
-              <div className="note-info-dialog__header">
-                <strong>Información de la nota</strong>
-                <button type="button" onClick={() => setNoteInfoOpen(false)} aria-label="Cerrar">×</button>
-              </div>
-              <dl>
-                <div><dt>Título</dt><dd>{selectedNote.title}</dd></div>
-                <div><dt>Creada</dt><dd>{new Date(selectedNote.createdAt).toLocaleString('es-HN')}</dd></div>
-                <div><dt>Modificada</dt><dd>{new Date(selectedNote.updatedAt).toLocaleString('es-HN')}</dd></div>
-                <div><dt>Fijada</dt><dd>{selectedNote.pinned === true ? 'Sí' : 'No'}</dd></div>
-                <div><dt>Carpeta</dt><dd>{folderName(selectedNote.folderId)}</dd></div>
-                <div><dt>Etiquetas</dt><dd>{tagRecordsFor(selectedNote).map((tag) => tag.name).join(', ') || 'Sin etiquetas'}</dd></div>
-                <div><dt>Bloques</dt><dd>{selectedNote.content.blocks.length}</dd></div>
-                <div><dt>Protección</dt><dd>Cifrada localmente</dd></div>
-              </dl>
-            </div>
           </div>
         )}
       </section>
