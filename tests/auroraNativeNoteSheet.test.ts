@@ -99,3 +99,12 @@ test('outer workspace canvas cannot bleed through the isolated native sheet', ()
   assert.match(notesCss, /\.aurora-native-note-sheet-host/)
   assert.match(notesCss, /min-height: 100dvh/)
 })
+
+
+test('encrypted image lifecycle follows native structural undo redo instead of stale delete queues', () => {
+  assert.match(sheet, /function reconcileQueuedImageRemovals\(from: StoredNoteBlock\[], to: StoredNoteBlock\[]\)/)
+  assert.match(sheet, /if \(!after\.has\(imageId\)\) propsRef\.current\.onQueueImageRemoval\(imageId\)/)
+  assert.match(sheet, /if \(!before\.has\(imageId\)\) propsRef\.current\.onRestoreQueuedImage\(imageId\)/)
+  assert.match(sheet, /reconcileQueuedImageRemovals\(blocksRef\.current, previous\)/)
+  assert.match(sheet, /reconcileQueuedImageRemovals\(blocksRef\.current, next\)/)
+})
