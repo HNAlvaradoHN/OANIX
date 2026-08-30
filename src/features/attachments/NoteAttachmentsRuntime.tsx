@@ -232,6 +232,16 @@ export function NoteAttachmentsRuntime() {
     }
     window.addEventListener('popstate', refresh)
 
+    function handleNoteSheetAttachmentRequest(event: Event) {
+      if (!(event instanceof CustomEvent)) return
+      const detail = event.detail as { noteId?: unknown } | null
+      const noteId = currentNoteId()
+      if (!noteId || (typeof detail?.noteId === 'string' && detail.noteId !== noteId)) return
+      beginAttachmentSelection()
+    }
+
+    window.addEventListener('oanix:note-sheet-attachment-request', handleNoteSheetAttachmentRequest)
+
     function handlePossibleDelete(event: MouseEvent) {
       const target = event.target
       if (!(target instanceof Element)) return
@@ -248,6 +258,7 @@ export function NoteAttachmentsRuntime() {
       window.cancelAnimationFrame(frame)
       observer.disconnect()
       window.removeEventListener('popstate', refresh)
+      window.removeEventListener('oanix:note-sheet-attachment-request', handleNoteSheetAttachmentRequest)
       document.removeEventListener('click', handlePossibleDelete, true)
     }
   }, [])
