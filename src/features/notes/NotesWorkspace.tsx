@@ -609,11 +609,6 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     return folders.find((folder) => folder.id === folderId)?.name ?? 'Carpeta no disponible'
   }
 
-  function tagRecordsFor(note: NoteRecord): TagRecord[] {
-    const ids = new Set(note.tagIds ?? [])
-    return tags.filter((tag) => ids.has(tag.id))
-  }
-
   function sortTagState(nextTags: TagRecord[]): TagRecord[] {
     return [...nextTags].sort((left, right) =>
       left.name.localeCompare(right.name, 'es', { sensitivity: 'base' }),
@@ -674,10 +669,6 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     saveTimerRef.current = window.setTimeout(() => {
       void flushPendingContent()
     }, 550)
-  }
-
-  async function handleRemovedImage(imageId: string): Promise<void> {
-    pendingImageDeletesRef.current.add(imageId)
   }
 
   function handleRestoredImage(imageId: string) {
