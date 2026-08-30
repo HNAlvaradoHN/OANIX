@@ -209,10 +209,11 @@ export function AuroraBlockControls({ noteId }: AuroraBlockControlsProps) {
   }, [selected])
 
   useEffect(() => {
-    const root = document.querySelector<HTMLElement>(
+    const currentRoot = document.querySelector<HTMLElement>(
       `[data-note-sheet-theme="aurora"][data-note-id="${CSS.escape(noteId)}"]`,
     )
-    if (!root) return
+    if (!currentRoot) return
+    const root: HTMLElement = currentRoot
 
     decorateEditor(root)
     const observer = new MutationObserver((records) => {
