@@ -66,11 +66,50 @@ function editableSelectionUnit(
   return block
 }
 
+function isSelectionBoundaryBlock(block: HTMLElement): boolean {
+  return (
+    block.matches(
+      '[data-daily-entry-block="true"], [data-code-block="true"], [data-checklist-block="true"], [data-contact-block="true"], [data-image-block="true"], [data-attachment-block="true"]',
+    )
+    || block.getAttribute('contenteditable') === 'false'
+    || block.tagName.toLowerCase() === 'hr'
+  )
+}
+
+function textSelectionRegion(
+  editor: HTMLElement,
+  block: HTMLElement | null,
+): { first: HTMLElement; last: HTMLElement } | null {
+  if (!block || block.parentElement !== editor || isSelectionBoundaryBlock(block)) return null
+
+  let first = block
+  let last = block
+
+  for (
+    let previous = first.previousElementSibling;
+    previous instanceof HTMLElement && previous.parentElement === editor && !isSelectionBoundaryBlock(previous);
+    previous = first.previousElementSibling
+  ) {
+    first = previous
+  }
+
+  for (
+    let next = last.nextElementSibling;
+    next instanceof HTMLElement && next.parentElement === editor && !isSelectionBoundaryBlock(next);
+    next = last.nextElementSibling
+  ) {
+    last = next
+  }
+
+  return { first, last }
+}
+
 function selectionTouchesProtectedIsland(editor: HTMLElement, selection: Selection): boolean {
   if (selection.isCollapsed || selection.rangeCount === 0) return false
   const range = selection.getRangeAt(0)
   const selectors = [
-    '[data-editor-selection-island="true"]',
+    '[data-daily-entry-block="true"]',
+    '[data-editor-selection-island]',
     '[data-code-block="true"]',
     '[data-checklist-block="true"]',
     '[data-contact-block="true"]',
@@ -112,6 +151,61 @@ function constrainSelectionToUnit(unit: HTMLElement | null): boolean {
   selection.removeAllRanges()
   selection.addRange(range)
   return true
+}
+
+function constrainSelectionToTextRegion(
+  editor: HTMLElement,
+  block: HTMLElement | null,
+  preserveExistingRange: boolean,
+): boolean {
+  const region = textSelectionRegion(editor, block)
+  const selection = document.getSelection()
+  if (!region || !selection) return false
+
+  const scope = document.createRange()
+  scope.setStart(region.first, 0)
+  scope.setEnd(region.last, region.last.childNodes.length)
+
+  if (!preserveExistingRange || selection.rangeCount === 0 || selection.isCollapsed) {
+    selection.removeAllRanges()
+    selection.addRange(scope)
+    return true
+  }
+
+  const current = selection.getRangeAt(0)
+  const clipped = document.createRange()
+
+  if (current.compareBoundaryPoints(Range.START_TO_START, scope) < 0) {
+    clipped.setStart(scope.startContainer, scope.startOffset)
+  } else {
+    clipped.setStart(current.startContainer, current.startOffset)
+  }
+
+  if (current.compareBoundaryPoints(Range.END_TO_END, scope) > 0) {
+    clipped.setEnd(scope.endContainer, scope.endOffset)
+  } else {
+    clipped.setEnd(current.endContainer, current.endOffset)
+  }
+
+  if (clipped.collapsed) return false
+
+  selection.removeAllRanges()
+  selection.addRange(clipped)
+  return true
+}
+
+function constrainSelectionToActiveScope(
+  editor: HTMLElement,
+  unit: HTMLElement | null,
+  preserveExistingRange: boolean,
+): boolean {
+  if (!unit || !unit.isConnected) return false
+
+  if (unit.parentElement === editor && !isSelectionBoundaryBlock(unit)) {
+    return constrainSelectionToTextRegion(editor, unit, preserveExistingRange)
+  }
+
+  return constrainSelectionToUnit(unit)
 }
 
 function clipboardTextFromBeforeInput(event: InputEvent): string {
@@ -217,7 +311,7 @@ export function LargePasteRuntime() {
 
       adjustingSelection = true
       try {
-        constrainSelectionToUnit(unit)
+        constrainSelectionToActiveScope(editor, unit, true)
       } finally {
         queueMicrotask(() => {
           adjustingSelection = false
@@ -245,7 +339,7 @@ export function LargePasteRuntime() {
       event.preventDefault()
       event.stopPropagation()
       lastSelectionUnit = unit
-      constrainSelectionToUnit(unit)
+      constrainSelectionToActiveScope(editor, unit, false)
     }
 
     function isRecentHandledPaste(): boolean {
