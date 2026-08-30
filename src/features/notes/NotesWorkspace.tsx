@@ -1131,7 +1131,9 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
 
   async function handleAuroraRemoveTag(tagId: string) {
     const targetNote = notesRef.current.find((note) => note.id === selectedIdRef.current) ?? null
-    if (!targetNote || !(targetNote.tagIds ?? []).includes(tagId)) return
+    const tag = tags.find((candidate) => candidate.id === tagId) ?? null
+    if (!targetNote || !tag || !(targetNote.tagIds ?? []).includes(tagId)) return
+    if (!window.confirm(`¿Quitar la etiqueta “${tag.name}” de esta nota?`)) return
     if (!(await flushPendingContent())) return
 
     setError('')
