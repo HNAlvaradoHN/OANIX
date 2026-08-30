@@ -79,3 +79,12 @@ test('Aurora block decoration stays idempotent so opening a note cannot self-tri
   assert.match(controls, /setTextIfChanged\(weekday, DAILY_WEEKDAYS/)
   assert.match(controls, /setTextIfChanged\(monthYear,/)
 })
+
+
+test('Aurora isolates the real editor from legacy workspace frame theming', () => {
+  assert.match(css, /\.notes-shell\.oanix-workspace-v2-shell \.aurora-note-sheet \.aurora-editor-host \.editor-frame/)
+  assert.match(css, /display:block!important/)
+  assert.match(css, /grid-template-rows:none!important/)
+  assert.match(css, /background:transparent!important/)
+  assert.match(css, /backdrop-filter:none!important/)
+})
