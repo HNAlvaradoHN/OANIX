@@ -44,6 +44,7 @@ import {
   Plus,
   Quote,
   Redo2,
+  RefreshCw,
   RotateCcw,
   SlidersHorizontal,
   SquareCheck,
@@ -465,6 +466,11 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
     return blocksRef.current
   }
 
+  async function syncNoteNow() {
+    const saved = await propsRef.current.onFlush()
+    if (saved) window.dispatchEvent(new Event('oanix:sync-now'))
+  }
+
   function pushStructuralHistory() {
     structuralHistoryRef.current.push(cloneBlocks(blocksRef.current))
     if (structuralHistoryRef.current.length > 40) structuralHistoryRef.current.shift()
@@ -567,21 +573,38 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
     if (!current?.figure.isConnected) return
     const frame = current.figure.querySelector<HTMLElement>('.img-frame')
     if (!frame) return
+
     const rect = frame.getBoundingClientRect()
     const bar = rootRef.current?.querySelector<HTMLElement>('.imgbar')
-    const width = bar?.offsetWidth || 380
+    const width = bar?.offsetWidth || 44
     const height = bar?.offsetHeight || 44
+    const viewport = window.visualViewport
+    const viewportLeft = viewport?.offsetLeft ?? 0
+    const viewportTop = viewport?.offsetTop ?? 0
+    const viewportWidth = viewport?.width ?? window.innerWidth
+    const viewportHeight = viewport?.height ?? window.innerHeight
+    const viewportRight = viewportLeft + viewportWidth
+    const viewportBottom = viewportTop + viewportHeight
+
     let top = rect.top - height - 12
-    if (top < 64) top = rect.bottom + 12
+    if (top < viewportTop + 8) top = rect.bottom + 12
+    top = Math.min(Math.max(viewportTop + 8, top), Math.max(viewportTop + 8, viewportBottom - height - 8))
+
+    const centeredLeft = rect.left + rect.width / 2 - width / 2
+    const left = Math.min(
+      Math.max(viewportLeft + 8, centeredLeft),
+      Math.max(viewportLeft + 8, viewportRight - width - 8),
+    )
+
     setImageBarPosition({
       top: Math.round(top),
-      left: Math.round(Math.min(Math.max(8, rect.left + rect.width / 2 - width / 2), window.innerWidth - width - 8)),
+      left: Math.round(left),
     })
   }
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     positionImageBar()
-  }, [imageSelection?.blockId, blocksVersion])
+  }, [imageSelection?.blockId, imageActionsOpen, blocksVersion])
 
   useEffect(() => {
     function reposition() {
@@ -589,13 +612,20 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
       positionImageBar()
       positionBlockBar()
     }
+
+    const viewport = window.visualViewport
     window.addEventListener('scroll', reposition, { passive: true })
     window.addEventListener('resize', reposition)
+    viewport?.addEventListener('scroll', reposition)
+    viewport?.addEventListener('resize', reposition)
+
     return () => {
       window.removeEventListener('scroll', reposition)
       window.removeEventListener('resize', reposition)
+      viewport?.removeEventListener('scroll', reposition)
+      viewport?.removeEventListener('resize', reposition)
     }
-  })
+  }, [imageSelection, selectedBlockElement, imageActionsOpen])
 
   function syncBubble() {
     const root = rootRef.current
@@ -1574,18 +1604,14 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
             <span className="meta-dot">·</span>
             <span>{noteReadingMinutes(currentBlocks())} min</span>
             {props.note.pinned && <span className="meta-chip pin-badge"><Pin />Fijada</span>}
-            <button
-              type="button"
-              className={`save native-manual-sync${props.error ? ' error' : ''}`}
+            <span
+              className={`save native-save-status${props.error ? ' error' : ''}`}
               style={{ marginLeft: 'auto' }}
-              onClick={() => void props.onFlush()}
-              disabled={props.deleting}
-              aria-label="Sincronizar y guardar nota ahora"
-              title="Guardar nota ahora"
+              role="status"
+              aria-live="polite"
             >
-              <span className="native-manual-sync__icon" aria-hidden="true">↻</span>
               <i />{props.deleting ? 'Eliminando…' : props.saveLabel}
-            </button>
+            </span>
           </div>
 
           <h1
@@ -1651,6 +1677,7 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
             </div>
           )}
 
+          <div className="note-body-divider" aria-hidden="true"><span>✳</span></div>
           <div id="blocks">{renderBlocks()}</div>
           <div
             className="canvas-tail"
@@ -1668,20 +1695,33 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
         </div>
       </main>
 
-      <button
-        className="fab"
-        type="button"
-        onPointerDown={(event) => event.preventDefault()}
-        onClick={(event) => {
-          const active = activeTextContext()
-          if (active) {
-            openInsert(event.currentTarget.getBoundingClientRect(), active.blockId, 'caret')
-            return
-          }
-          const last = currentBlocks().at(-1)
-          openInsert(event.currentTarget.getBoundingClientRect(), last?.id ?? null, 'after')
-        }}
-      ><Plus />Añadir bloque</button>
+      <div className="fab" role="group" aria-label="Acciones rápidas de la nota">
+        <button
+          className="fab-action fab-add"
+          type="button"
+          aria-label="Añadir bloque"
+          title="Añadir bloque"
+          onPointerDown={(event) => event.preventDefault()}
+          onClick={(event) => {
+            const active = activeTextContext()
+            if (active) {
+              openInsert(event.currentTarget.getBoundingClientRect(), active.blockId, 'caret')
+              return
+            }
+            const last = currentBlocks().at(-1)
+            openInsert(event.currentTarget.getBoundingClientRect(), last?.id ?? null, 'after')
+          }}
+        ><Plus /></button>
+        <span className="fab-sep" aria-hidden="true" />
+        <button
+          className={`fab-action native-manual-sync${props.error ? ' error' : ''}`}
+          type="button"
+          disabled={props.deleting}
+          aria-label="Sincronizar y guardar nota ahora"
+          title="Sincronizar y guardar"
+          onClick={() => void syncNoteNow()}
+        ><RefreshCw /></button>
+      </div>
 
       {insertState && (
         <div className="pop insert-menu" style={{ top: insertState.top, left: insertState.left }}>
