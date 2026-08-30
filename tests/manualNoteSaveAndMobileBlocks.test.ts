@@ -6,6 +6,7 @@ const notesWorkspacePath = new URL('../src/features/notes/NotesWorkspace.tsx', i
 const previewRuntimePath = new URL('../src/features/images/PwaImagePreviewRuntime.tsx', import.meta.url)
 const previewCssPath = new URL('../src/features/images/pwa-image-preview.css', import.meta.url)
 const mobileBackKeyboardGuardPath = new URL('../src/features/notes/mobileBackKeyboardGuard.ts', import.meta.url)
+const androidBackRuntimePath = new URL('../src/platform/android/AndroidBackRuntime.tsx', import.meta.url)
 const mainPath = new URL('../src/main.tsx', import.meta.url)
 const auroraSheetPath = new URL('../src/features/notes/themes/aurora-native/AuroraNativeNoteSheet.tsx', import.meta.url)
 const auroraBlocksPath = new URL('../src/features/notes/themes/aurora-native/AuroraNativeBlocks.tsx', import.meta.url)
@@ -26,7 +27,10 @@ test('note content remains local while typing and persists explicitly or before 
   assert.doesNotMatch(changeHandler, /flushPendingContent\(\)/)
   assert.match(source, /onFlush=\{flushPendingContent\}/)
   assert.match(auroraSheet, /native-manual-sync/)
-  assert.match(auroraSheet, /onClick=\{\(\) => void props\.onFlush\(\)\}/)
+  assert.match(auroraSheet, /async function syncNoteNow\(\)/)
+  assert.match(auroraSheet, /const saved = await propsRef\.current\.onFlush\(\)/)
+  assert.match(auroraSheet, /window\.dispatchEvent\(new Event\('oanix:sync-now'\)\)/)
+  assert.match(auroraSheet, /onClick=\{\(\) => void syncNoteNow\(\)\}/)
   assert.match(auroraSheet, /aria-label=\"Sincronizar y guardar nota ahora\"/)
   assert.match(handleBack, /if \(!\(await flushPendingContent\(\)\)\) return/)
   assert.match(handleBack, /window\.history\.back\(\)/)
@@ -85,6 +89,18 @@ test('first mobile back gesture dismisses an active editor before note navigatio
   assert.doesNotMatch(guard, /flushPendingContent/)
 })
 
+
+test('native Android back dismisses the Shadow DOM editor before navigating the note history', async () => {
+  const runtime = await readFile(androidBackRuntimePath, 'utf8')
+  const guard = await readFile(mobileBackKeyboardGuardPath, 'utf8')
+
+  assert.match(guard, /export function blurFocusedMobileEditor\(\): boolean/)
+  assert.match(runtime, /blurFocusedMobileEditor\(\)/)
+  assert.match(runtime, /document\.querySelector\('\.notes-shell--open'\)/)
+  assert.match(runtime, /window\.history\.back\(\)/)
+  assert.ok(runtime.indexOf('blurFocusedMobileEditor()') < runtime.indexOf("document.querySelector('.notes-shell--open')"))
+  assert.ok(runtime.indexOf("document.querySelector('.notes-shell--open')") < runtime.indexOf('window.history.back()'))
+})
 
 test('Aurora preserves compact contact notes and mobile image safeguards inside Shadow DOM', async () => {
   const sheet = await readFile(auroraSheetPath, 'utf8')
