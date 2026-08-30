@@ -1,5 +1,4 @@
 import { useEffect } from 'react'
-import { shouldEncapsulateClipboardPaste } from './largePastePolicy'
 import './mobileEditorStability.css'
 
 function selectionInsideEditor(editor: HTMLElement): boolean {
@@ -28,10 +27,6 @@ function ensureEditorSelection(editor: HTMLElement, target: Element): boolean {
   selection.removeAllRanges()
   selection.addRange(range)
   return selectionInsideEditor(editor)
-}
-
-function codeContentFromBlock(block: HTMLElement | null): HTMLElement | null {
-  return block?.querySelector<HTMLElement>('[data-code-content="true"]') ?? null
 }
 
 function directEditorBlock(editor: HTMLElement, element: Element | null): HTMLElement | null {
@@ -168,16 +163,9 @@ function deleteSelectedSheetText(editor: HTMLElement, selection: Selection): boo
   return true
 }
 
-function clipboardTextFromBeforeInput(event: InputEvent): string {
-  return event.dataTransfer?.getData('text/plain') || event.data || ''
-}
-
 export function LargePasteRuntime() {
   useEffect(() => {
     let lastInteractionBlock: HTMLElement | null = null
-    let handledText = ''
-    let handledAt = 0
-    const duplicateWindowMs = 10_000
 
     function rememberInteractionTarget(target: EventTarget | null) {
       if (!(target instanceof Element)) return
@@ -186,14 +174,6 @@ export function LargePasteRuntime() {
 
       const block = directEditorBlock(editor, target)
       if (block) lastInteractionBlock = block
-    }
-
-    function rememberPointerInteraction(event: PointerEvent) {
-      rememberInteractionTarget(event.target)
-    }
-
-    function rememberFocusInteraction(event: FocusEvent) {
-      rememberInteractionTarget(event.target)
     }
 
     function activeEditor(): HTMLElement | null {
@@ -209,19 +189,16 @@ export function LargePasteRuntime() {
         : null
     }
 
-    function rememberSelectionUnit(editor: HTMLElement, selection: Selection) {
-      const anchorBlock = directEditorBlock(editor, elementFromNode(selection.anchorNode))
-      const focusBlock = directEditorBlock(editor, elementFromNode(selection.focusNode))
-      if (anchorBlock) lastInteractionBlock = anchorBlock
-      else if (focusBlock) lastInteractionBlock = focusBlock
-    }
-
     function trackSelectionUnit() {
       const editor = activeEditor()
       if (!editor) return
       const selection = document.getSelection()
       if (!selection || selection.rangeCount === 0) return
-      rememberSelectionUnit(editor, selection)
+
+      const anchorBlock = directEditorBlock(editor, elementFromNode(selection.anchorNode))
+      const focusBlock = directEditorBlock(editor, elementFromNode(selection.focusNode))
+      if (anchorBlock) lastInteractionBlock = anchorBlock
+      else if (focusBlock) lastInteractionBlock = focusBlock
     }
 
     function handleSelectAllKey(event: KeyboardEvent) {
@@ -238,94 +215,11 @@ export function LargePasteRuntime() {
       const local = localEditableFromElement(editor, target)
         ?? localEditableFromElement(editor, anchorElement)
 
-      if (!local) {
-        // Let the browser select the outer editing host. Atomic blocks are
-        // contenteditable=false, so they behave like the console shell.
-        return
-      }
+      if (!local) return
 
       event.preventDefault()
       event.stopPropagation()
       constrainSelectionToUnit(local)
-    }
-
-    function isRecentHandledPaste(): boolean {
-      return Boolean(handledText) && performance.now() - handledAt < duplicateWindowMs
-    }
-
-    function isDuplicateLargePaste(plainText: string): boolean {
-      return plainText === handledText && isRecentHandledPaste()
-    }
-
-    function consumeDuplicate(event: ClipboardEvent | InputEvent, plainText: string): boolean {
-      if (!plainText || !shouldEncapsulateClipboardPaste(plainText) || !isDuplicateLargePaste(plainText)) {
-        return false
-      }
-
-      event.preventDefault()
-      event.stopPropagation()
-      return true
-    }
-
-    function encapsulateLargePaste(
-      event: ClipboardEvent | InputEvent,
-      target: Element,
-      plainText: string,
-    ) {
-      const editor = target.closest<HTMLElement>('.editor-surface')
-      if (!editor) return
-      if (!plainText || !shouldEncapsulateClipboardPaste(plainText)) return
-
-      if (consumeDuplicate(event, plainText)) return
-      if (target.closest('[data-contact-field], [data-daily-entry-title="true"], [data-image-alt="true"]')) return
-      if (target.closest('[data-code-content="true"]')) return
-
-      if (!ensureEditorSelection(editor, target)) {
-        event.preventDefault()
-        event.stopPropagation()
-        window.alert('OANIX no pudo ubicar el pegado grande dentro de la nota. El contenido sigue disponible en tu portapapeles.')
-        return
-      }
-
-      const frame = editor.closest<HTMLElement>('.editor-frame')
-      const codeTool = frame?.querySelector<HTMLButtonElement>('[data-format="code"]')
-      if (!codeTool) return
-
-      const existingBlocks = new Set(
-        Array.from(editor.querySelectorAll<HTMLElement>('[data-code-block="true"]')),
-      )
-
-      event.preventDefault()
-      event.stopPropagation()
-      handledText = plainText
-      handledAt = performance.now()
-      codeTool.click()
-
-      const insertedBlock = Array.from(
-        editor.querySelectorAll<HTMLElement>('[data-code-block="true"]'),
-      ).find((block) => !existingBlocks.has(block)) ?? null
-      const activeContent = document.activeElement instanceof Element
-        ? document.activeElement.closest<HTMLElement>('[data-code-content="true"]')
-        : null
-      const content = activeContent && editor.contains(activeContent)
-        ? activeContent
-        : codeContentFromBlock(insertedBlock)
-
-      if (!content) {
-        window.alert('OANIX no pudo preparar el bloque para este pegado grande. El contenido sigue disponible en tu portapapeles.')
-        return
-      }
-
-      content.textContent = plainText
-      content.focus({ preventScroll: true })
-      content.dispatchEvent(new Event('input', { bubbles: true }))
-      if (insertedBlock) lastInteractionBlock = insertedBlock
-    }
-
-    function handlePaste(event: ClipboardEvent) {
-      const target = event.target
-      if (!(target instanceof Element)) return
-      encapsulateLargePaste(event, target, event.clipboardData?.getData('text/plain') ?? '')
     }
 
     async function handleBeforeInput(event: InputEvent) {
@@ -348,48 +242,14 @@ export function LargePasteRuntime() {
         return
       }
 
-      // Some Android keyboards/WebViews can deliver a whole clipboard payload as
-      // one non-composing insertText event. Only treat that path as a paste after
-      // verifying the same large payload is still present on the clipboard.
-      if (event.inputType === 'insertText' && !event.isComposing) {
-        const bulkText = event.data ?? ''
-        if (!bulkText || !shouldEncapsulateClipboardPaste(bulkText)) return
-
-        const clipboard = navigator.clipboard
-        if (!clipboard?.readText) return
-
-        event.preventDefault()
-        event.stopPropagation()
-
-        try {
-          const clipboardText = await clipboard.readText()
-          if (clipboardText === bulkText && shouldEncapsulateClipboardPaste(clipboardText)) {
-            encapsulateLargePaste(event, target, clipboardText)
-            return
-          }
-        } catch {
-          // Clipboard verification is best-effort. Preserve the original bulk
-          // insertion below instead of misclassifying dictation/autofill as paste.
-        }
-
-        if (!ensureEditorSelection(editor, target)) return
-        document.execCommand('insertText', false, bulkText)
-        return
-      }
-
       if (event.inputType !== 'insertFromPaste') return
 
-      const plainText = clipboardTextFromBeforeInput(event)
-      if (plainText) {
-        encapsulateLargePaste(event, target, plainText)
-        return
-      }
-
-      if (isRecentHandledPaste()) {
-        event.preventDefault()
-        event.stopPropagation()
-        return
-      }
+      // Ordinary clipboard paste is intentionally left to the browser. The old
+      // 50-line/64KiB auto-conversion to a code block was removed with the
+      // Aurora note-sheet replacement. Only recover Android/WebView paste when
+      // it reports insertFromPaste without carrying any payload at all.
+      const inlineText = event.dataTransfer?.getData('text/plain') || event.data || ''
+      if (inlineText) return
 
       const clipboard = navigator.clipboard
       if (!clipboard?.readText) return
@@ -399,32 +259,21 @@ export function LargePasteRuntime() {
 
       try {
         const fallbackText = await clipboard.readText()
-        if (!fallbackText) return
-
-        if (shouldEncapsulateClipboardPaste(fallbackText)) {
-          encapsulateLargePaste(event, target, fallbackText)
-          return
-        }
-
-        if (!ensureEditorSelection(editor, target)) return
+        if (!fallbackText || !ensureEditorSelection(editor, target)) return
         document.execCommand('insertText', false, fallbackText)
       } catch {
         window.alert('OANIX no pudo leer este pegado desde Android. El contenido sigue disponible en tu portapapeles para volver a intentarlo.')
       }
     }
 
-    document.addEventListener('pointerdown', rememberPointerInteraction, true)
-    document.addEventListener('focusin', rememberFocusInteraction, true)
+    document.addEventListener('pointerdown', (event) => rememberInteractionTarget(event.target), true)
+    document.addEventListener('focusin', (event) => rememberInteractionTarget(event.target), true)
     document.addEventListener('selectionchange', trackSelectionUnit)
     document.addEventListener('keydown', handleSelectAllKey, true)
-    document.addEventListener('paste', handlePaste, true)
     document.addEventListener('beforeinput', handleBeforeInput, true)
     return () => {
-      document.removeEventListener('pointerdown', rememberPointerInteraction, true)
-      document.removeEventListener('focusin', rememberFocusInteraction, true)
       document.removeEventListener('selectionchange', trackSelectionUnit)
       document.removeEventListener('keydown', handleSelectAllKey, true)
-      document.removeEventListener('paste', handlePaste, true)
       document.removeEventListener('beforeinput', handleBeforeInput, true)
     }
   }, [])
