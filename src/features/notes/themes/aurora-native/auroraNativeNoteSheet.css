@@ -371,6 +371,18 @@ button.meta-chip:hover{border-color:var(--acc);box-shadow:var(--sh-1)}
   .c-fields{grid-template-columns:1fr}
   .brand span{display:none}
   .fab{right:14px;bottom:max(14px,calc(env(safe-area-inset-bottom,0px) + 10px))}
+  .insert-menu{
+    left:12px!important;
+    right:12px;
+    top:auto!important;
+    bottom:max(78px,calc(env(safe-area-inset-bottom,0px) + 74px));
+    width:auto;
+    max-height:min(58dvh,520px);
+    overscroll-behavior:contain;
+  }
+  .toast{
+    bottom:max(82px,calc(env(safe-area-inset-bottom,0px) + 78px));
+  }
 }
 
 .native-save-status{font-family:var(--f-mono);font-size:11.5px;color:var(--ink-soft);white-space:nowrap}
