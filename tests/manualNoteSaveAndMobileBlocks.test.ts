@@ -9,13 +9,20 @@ const previewCssPath = new URL('../src/features/images/pwa-image-preview.css', i
 test('note content remains local while typing and persists explicitly or before leaving', async () => {
   const source = await readFile(notesWorkspacePath, 'utf8')
   const changeHandler = source.match(/function handleContentChange\(blocks: StoredNoteBlock\[\]\) \{([\s\S]*?)\n  \}/)?.[1] ?? ''
+  const handleBackStart = source.indexOf('async function handleBack()')
+  const handleLockStart = source.indexOf('async function handleLockWorkspace()', handleBackStart)
+  const handleBack = handleBackStart >= 0 && handleLockStart > handleBackStart
+    ? source.slice(handleBackStart, handleLockStart)
+    : ''
 
   assert.match(changeHandler, /pendingContentRef\.current = \{ noteId: selectedNote\.id, blocks \}/)
   assert.doesNotMatch(changeHandler, /setTimeout/)
   assert.doesNotMatch(changeHandler, /flushPendingContent\(\)/)
   assert.match(source, /className=\{`note-manual-sync/)
   assert.match(source, /onClick=\{\(\) => void flushPendingContent\(\)\}/)
-  assert.match(source, /if \(!\(await flushPendingContent\(\)\)\) return[\s\S]*history\.back\(\)/)
+  assert.match(handleBack, /if \(!\(await flushPendingContent\(\)\)\) return/)
+  assert.match(handleBack, /window\.history\.back\(\)/)
+  assert.ok(handleBack.indexOf('flushPendingContent()') < handleBack.indexOf('window.history.back()'))
   assert.match(source, /if \(saveState === 'saving'\) return 'Guardando nota…'/)
   assert.match(source, /onBlur=\{\(\) => undefined\}/)
 })
