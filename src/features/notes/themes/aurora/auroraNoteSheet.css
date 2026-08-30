@@ -110,6 +110,35 @@
 .aurora-save-error button{font-weight:700;color:var(--aurora-danger)}
 
 .aurora-editor-host{position:relative;min-width:0}
+
+/* Aurora owns the open-note canvas. The workspace shell still carries legacy
+   editor-frame theme rules for the previous sheet, so neutralize those rules
+   here with stronger, theme-local specificity instead of changing shared
+   editor behavior. */
+.notes-shell.oanix-workspace-v2-shell .aurora-note-sheet .aurora-editor-host .editor-frame{
+  display:block!important;
+  grid-template-rows:none!important;
+  min-height:0!important;
+  margin:0!important;
+  padding:0!important;
+  border:0!important;
+  border-radius:0!important;
+  overflow:visible!important;
+  isolation:auto!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  -webkit-backdrop-filter:none!important;
+  backdrop-filter:none!important;
+}
+.notes-shell.oanix-workspace-v2-shell .aurora-note-sheet .aurora-editor-host .editor-surface{
+  width:100%!important;
+  min-height:0!important;
+  margin:0!important;
+  padding:0!important;
+  border:0!important;
+  background-color:transparent!important;
+  box-shadow:none!important;
+}
 .aurora-editor-host .image-note-editor-root{position:relative;min-width:0;padding:0!important;background:transparent!important;color:inherit!important}
 .aurora-editor-host .editor-frame{border:0!important;background:transparent!important;box-shadow:none!important;padding:0!important;overflow:visible!important}
 .aurora-editor-host .editor-toolbar,
