@@ -57,10 +57,17 @@ function labelFor(kind: AtomicKind): string {
   return 'Imagen'
 }
 
-function removeDivider(block: HTMLElement) {
+function deleteConfirmation(kind: Exclude<AtomicKind, 'image'>): string {
+  if (kind === 'entry') return '¿Eliminar esta entrada diaria?'
+  if (kind === 'check') return '¿Eliminar este checklist?'
+  if (kind === 'contact') return '¿Eliminar esta ficha de contacto privada?'
+  if (kind === 'sep') return '¿Eliminar este separador?'
+  return '¿Eliminar este bloque de código?'
+}
+
+function removePersistedAtomicBlock(block: HTMLElement) {
   const editor = block.closest<HTMLElement>('.editor-surface')
-  if (!editor) return
-  if (!window.confirm('¿Eliminar este separador?')) return
+  if (!editor || block.parentElement !== editor) return
   block.remove()
   editor.dispatchEvent(new Event('input', { bubbles: true }))
 }
@@ -73,19 +80,9 @@ function requestAtomicDelete(noteId: string, selected: SelectedBlock) {
     sendCommand(noteId, 'image-delete', selected.blockId)
     return
   }
-  if (selected.kind === 'code') {
-    block.querySelector<HTMLButtonElement>('[data-code-delete="true"]')?.click()
-    return
-  }
-  if (selected.kind === 'check' || selected.kind === 'entry') {
-    block.querySelector<HTMLButtonElement>('[data-atomic-block-remove]')?.click()
-    return
-  }
-  if (selected.kind === 'contact') {
-    block.querySelector<HTMLButtonElement>('[data-contact-remove="true"]')?.click()
-    return
-  }
-  removeDivider(block)
+
+  if (!window.confirm(deleteConfirmation(selected.kind))) return
+  removePersistedAtomicBlock(block)
 }
 
 function updateCodeLineNumbers(codeBlock: HTMLElement) {
@@ -425,8 +422,27 @@ export function AuroraBlockControls({ noteId }: AuroraBlockControlsProps) {
       }
     }
 
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key !== 'Backspace') return
+      const target = event.target
+      if (!(target instanceof Element) || !root.contains(target)) return
+      const checklistText = target.closest<HTMLElement>('[data-checklist-text="true"]')
+      if (!checklistText || !/^\n*$/.test(checklistText.innerText.replace(/\r\n?/g, '\n').replaceAll('\u00a0', ' '))) return
+      const checklist = checklistText.closest<HTMLElement>('[data-checklist-block="true"]')
+      const item = checklistText.closest<HTMLElement>('[data-checklist-item="true"]')
+      if (!checklist || !item) return
+      const items = Array.from(checklist.children).filter(
+        (child): child is HTMLElement => child instanceof HTMLElement && child.dataset.checklistItem === 'true',
+      )
+      if (items.length <= 1) return
+      if (window.confirm('¿Eliminar este elemento del checklist?')) return
+      event.preventDefault()
+      event.stopPropagation()
+    }
+
     root.addEventListener('click', handleClick, true)
     root.addEventListener('input', handleInput, true)
+    root.addEventListener('keydown', handleKeyDown, true)
     window.addEventListener('scroll', positionSelected, { passive: true })
     window.addEventListener('resize', positionSelected)
 
@@ -434,6 +450,7 @@ export function AuroraBlockControls({ noteId }: AuroraBlockControlsProps) {
       observer.disconnect()
       root.removeEventListener('click', handleClick, true)
       root.removeEventListener('input', handleInput, true)
+      root.removeEventListener('keydown', handleKeyDown, true)
       window.removeEventListener('scroll', positionSelected)
       window.removeEventListener('resize', positionSelected)
     }
@@ -476,7 +493,11 @@ export function AuroraBlockControls({ noteId }: AuroraBlockControlsProps) {
 
   function deleteCode() {
     if (!codeBlock) return
-    codeBlock.querySelector<HTMLButtonElement>('[data-code-delete="true"]')?.click()
+    requestAtomicDelete(noteId, {
+      blockId: directBlockId(codeBlock),
+      kind: 'code',
+      element: codeBlock,
+    })
     setCodeMenu(false)
   }
 
