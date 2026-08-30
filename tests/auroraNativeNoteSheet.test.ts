@@ -9,6 +9,7 @@ const css = readFileSync('src/features/notes/themes/aurora-native/auroraNativeNo
 const contract = readFileSync('src/features/notes/noteSheetThemeContract.ts', 'utf8')
 const operations = readFileSync('src/features/notes/nativeNoteSheetOperations.ts', 'utf8')
 const types = readFileSync('src/features/notes/noteTypes.ts', 'utf8')
+const notesCss = readFileSync('src/features/notes/notes.css', 'utf8')
 
 test('open-note UI is the isolated native Aurora sheet, not the legacy editor presentation', () => {
   assert.match(workspace, /<AuroraNativeNoteSheet/)
@@ -88,4 +89,13 @@ test('native title and selection respect the ShadowRoot editing host', () => {
   assert.match(sheet, /rootNode instanceof ShadowRoot \? rootNode\.activeElement : document\.activeElement/)
   assert.match(sheet, /function selectionForRoot\(root: HTMLElement\)/)
   assert.match(sheet, /getSelection\?: \(\) => Selection \| null/)
+})
+
+
+test('outer workspace canvas cannot bleed through the isolated native sheet', () => {
+  assert.match(workspace, /note-view note-view--aurora-native/)
+  assert.match(notesCss, /\.note-view\.note-view--aurora-native/)
+  assert.match(notesCss, /background: transparent !important/)
+  assert.match(notesCss, /\.aurora-native-note-sheet-host/)
+  assert.match(notesCss, /min-height: 100dvh/)
 })
