@@ -8,6 +8,7 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
 } from 'react'
 import { OanixIcon } from '../../../../shared/OanixIcon'
+import { AuroraBlockControls } from './AuroraBlockControls'
 import { noteBlocksToPlainText } from '../../noteTypes'
 import type { NoteSheetThemeProps } from '../../noteSheetThemeContract'
 import './auroraNoteSheet.css'
@@ -623,6 +624,8 @@ export function AuroraNoteSheet({
           <div className="aurora-m-actions"><button className="aurora-btn primary" type="button" onClick={() => setThemeOpen(false)}>Listo</button></div>
         </div>
       )}
+
+      <AuroraBlockControls noteId={note.id} />
 
       {deleteOpen && (
         <div className="aurora-modal open">
