@@ -236,8 +236,8 @@ function noteLocalSearchFields(note: NoteRecord): LocalSearchField[] {
 
 function saveStateLabel(saveState: SaveState, savingTitle: boolean): string {
   if (savingTitle) return 'Guardando título…'
-  if (saveState === 'dirty') return 'Cambios pendientes…'
-  if (saveState === 'saving') return 'Guardando cifrado…'
+  if (saveState === 'dirty') return 'Cambios pendientes · toca sincronizar'
+  if (saveState === 'saving') return 'Guardando nota…'
   if (saveState === 'saved') return 'Guardado · cifrado local'
   if (saveState === 'error') return 'No se pudo guardar'
   return 'Cifrada en este dispositivo'
@@ -666,10 +666,6 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     pendingContentRef.current = { noteId: selectedNote.id, blocks }
     setSaveState('dirty')
     setError('')
-    clearSaveTimer()
-    saveTimerRef.current = window.setTimeout(() => {
-      void flushPendingContent()
-    }, 550)
   }
 
   function handleRestoredImage(imageId: string) {

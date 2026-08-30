@@ -1568,9 +1568,18 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
             <span className="meta-dot">·</span>
             <span>{noteReadingMinutes(currentBlocks())} min</span>
             {props.note.pinned && <span className="meta-chip pin-badge"><Pin />Fijada</span>}
-            <span className={`save${props.error ? ' error' : ''}`} style={{ marginLeft: 'auto' }}>
+            <button
+              type="button"
+              className={`save native-manual-sync${props.error ? ' error' : ''}`}
+              style={{ marginLeft: 'auto' }}
+              onClick={() => void props.onFlush()}
+              disabled={props.deleting}
+              aria-label="Sincronizar y guardar nota ahora"
+              title="Guardar nota ahora"
+            >
+              <span className="native-manual-sync__icon" aria-hidden="true">↻</span>
               <i />{props.deleting ? 'Eliminando…' : props.saveLabel}
-            </span>
+            </button>
           </div>
 
           <h1

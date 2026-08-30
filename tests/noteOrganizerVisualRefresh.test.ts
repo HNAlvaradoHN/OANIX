@@ -8,6 +8,7 @@ const folderCreation = readFileSync('src/features/folders/FolderCreationRuntime.
 const noteService = readFileSync('src/features/notes/noteService.ts', 'utf8')
 const organic = readFileSync('src/features/notes/OrganicWorkspaceRuntime.tsx', 'utf8')
 const personalization = readFileSync('src/features/notes/WorkspacePersonalizationRuntime.tsx', 'utf8')
+const auroraNativeSheet = readFileSync('src/features/notes/themes/aurora-native/AuroraNativeNoteSheet.tsx', 'utf8')
 
 test('note tag and folder actions keep their real encrypted handlers and visible dialogs', () => {
   assert.match(notesWorkspace, /function openTagEditor\(note: NoteRecord\)/)
@@ -66,6 +67,9 @@ test('visual runtimes do not emit duplicate generic change events after encrypte
   assert.match(organic, /detail\?\.recordType === 'note'\) return/)
 })
 
-test('content autosave batching remains intact while visual refresh becomes faster', () => {
-  assert.match(notesWorkspace, /window\.setTimeout\(\(\) => \{\s*void flushPendingContent\(\)\s*\}, 550\)/)
+test('manual note persistence stays decoupled from the faster visual refresh', () => {
+  assert.doesNotMatch(notesWorkspace, /window\.setTimeout\(\(\) => \{\s*void flushPendingContent\(\)\s*\}, 550\)/)
+  assert.match(notesWorkspace, /pendingContentRef\.current = \{ noteId: selectedNote\.id, blocks \}/)
+  assert.match(notesWorkspace, /onClick=\{\(\) => void flushPendingContent\(\)\}/)
+  assert.match(auroraNativeSheet, /aria-label="Sincronizar y guardar nota ahora"/)
 })

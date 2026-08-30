@@ -356,3 +356,9 @@ button.meta-chip:hover{border-color:var(--acc);box-shadow:var(--sh-1)}
   .brand span{display:none}
   .fab{right:16px;bottom:16px}
 }
+
+.native-manual-sync{padding:4px 8px;border-radius:999px;transition:background .15s,color .15s,transform .1s}
+.native-manual-sync:hover{background:var(--paper2);color:var(--acc-deep)}
+.native-manual-sync:active{transform:scale(.97)}
+.native-manual-sync:disabled{opacity:.6;cursor:default;transform:none}
+.native-manual-sync__icon{font-size:13px;line-height:1;color:var(--acc)}
