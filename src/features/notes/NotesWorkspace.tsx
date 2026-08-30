@@ -263,8 +263,6 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
   const [noteMenuId, setNoteMenuId] = useState<string | null>(null)
   const [noteMenuDirection, setNoteMenuDirection] = useState<'down' | 'up'>('down')
   const [workspaceMenuOpen, setWorkspaceMenuOpen] = useState(false)
-  const [, setActiveNoteMenuOpen] = useState(false)
-  const [, setNoteInfoOpen] = useState(false)
   const [savingTitle, setSavingTitle] = useState(false)
   const [saveState, setSaveState] = useState<SaveState>('idle')
   const [error, setError] = useState('')
@@ -554,15 +552,12 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
       if (target instanceof Element && target.closest('[data-note-menu-root="true"]')) return
       setNoteMenuId(null)
       setWorkspaceMenuOpen(false)
-      setActiveNoteMenuOpen(false)
     }
 
     function closeNoteMenuWithKeyboard(event: KeyboardEvent) {
       if (event.key === 'Escape') {
         setNoteMenuId(null)
         setWorkspaceMenuOpen(false)
-        setActiveNoteMenuOpen(false)
-        setNoteInfoOpen(false)
         setMoveNoteId(null)
         setFolderManagerOpen(false)
         setTagFilterOpen(false)
@@ -687,7 +682,6 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
 
     setDeletingId(noteId)
     setNoteMenuId(null)
-    setActiveNoteMenuOpen(false)
     setError('')
     setNoteDeleteFeedback(true)
 
@@ -716,7 +710,6 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
         selectedIdRef.current = null
         setSelectedId(null)
         setSaveState('idle')
-        setNoteInfoOpen(false)
         setMoveNoteId(null)
         setTagEditorNoteId(null)
 
@@ -763,8 +756,6 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     setSelectedId(null)
     setSaveState('idle')
     setNoteMenuId(null)
-    setActiveNoteMenuOpen(false)
-    setNoteInfoOpen(false)
 
     if (mobileSinglePane()) {
       window.history.replaceState({ ...currentHistoryState(), oanixView: 'list' }, '')
@@ -789,8 +780,6 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     setSelectedId(null)
     setSaveState('idle')
     setNoteMenuId(null)
-    setActiveNoteMenuOpen(false)
-    setNoteInfoOpen(false)
     setTagFilterOpen(false)
 
     if (mobileSinglePane()) {
@@ -940,7 +929,6 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
       replaceNoteInState(updated)
       setMoveNoteId(null)
       setNoteMenuId(null)
-      setActiveNoteMenuOpen(false)
     } catch {
       setError('No se pudo mover la nota a la carpeta seleccionada.')
     } finally {
@@ -952,7 +940,6 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     if (targetNote.id === selectedIdRef.current && !(await flushPendingContent())) return
 
     setNoteMenuId(null)
-    setActiveNoteMenuOpen(false)
     setError('')
     try {
       const updated = await setNotePinned(targetNote.id, targetNote.pinned !== true)
@@ -1073,7 +1060,6 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     setTagDraftIds(note.tagIds ?? [])
     setTagEditorNoteId(note.id)
     setNoteMenuId(null)
-    setActiveNoteMenuOpen(false)
     setError('')
   }
 
@@ -1234,7 +1220,6 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
 
   async function handleSelectNote(noteId: string) {
     setNoteMenuId(null)
-    setActiveNoteMenuOpen(false)
     if (noteId === selectedId) return
     if (!(await flushPendingContent())) return
     await finalizeRemovedImages()
@@ -1309,8 +1294,6 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     setSelectedId(null)
     setSaveState('idle')
     setNoteMenuId(null)
-    setActiveNoteMenuOpen(false)
-    setNoteInfoOpen(false)
     setWorkspaceMenuOpen(false)
     setSearchOpen(true)
 
