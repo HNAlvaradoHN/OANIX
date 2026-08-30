@@ -296,7 +296,11 @@ html.oanix-pwa-image-preview-v1 .image-note-editor-root .pwa-image-card__menu-to
   cursor: pointer;
 }
 
-html.oanix-pwa-image-preview-v1 .image-note-editor-root .editor-image-block[data-pwa-image-card='true'][data-pwa-actions-open='false'] .editor-image-block__actions > button {
+html.oanix-pwa-image-preview-v1 .image-note-editor-root .editor-image-block[data-pwa-image-card='true'][data-pwa-actions-open='false'] .pwa-image-card__top {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+html.oanix-pwa-image-preview-v1 .image-note-editor-root .editor-image-block[data-pwa-image-card='true'][data-pwa-actions-open='false'] .editor-image-block__actions {
   display: none !important;
 }
 
@@ -344,6 +348,43 @@ html.oanix-pwa-image-preview-v1 .image-note-editor-root .pwa-contact-notes-more[
   display: none !important;
 }
 
+.note-manual-sync {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.42rem;
+  margin: 0 0 0.55rem auto;
+  padding: 0.52rem 0.78rem;
+  border: 1px solid rgba(148, 163, 184, 0.46);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.68);
+  color: #475569;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.84);
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 820;
+  cursor: pointer;
+}
+
+.note-manual-sync > span:first-child {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.note-manual-sync--dirty {
+  border-color: rgba(59, 130, 246, 0.48);
+  background: rgba(239, 246, 255, 0.78);
+  color: #1d4ed8;
+  box-shadow: 0 10px 26px rgba(37, 99, 235, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.note-manual-sync:disabled {
+  cursor: default;
+  opacity: 0.62;
+}
+
 @media (max-width: 760px) {
   html.oanix-pwa-image-preview-v1 .image-note-editor-root .editor-surface > .editor-image-block[data-pwa-image-card='true'] {
     width: calc(100% - 0.35rem) !important;
@@ -354,6 +395,10 @@ html.oanix-pwa-image-preview-v1 .image-note-editor-root .pwa-contact-notes-more[
     grid-template-columns: minmax(7.25rem, 43%) minmax(0, 1fr);
     gap: 0.65rem;
     padding: 0.65rem;
+  }
+
+  html.oanix-pwa-image-preview-v1 .image-note-editor-root .editor-image-block[data-pwa-image-card='true'][data-pwa-actions-open='false'] .pwa-image-card__top {
+    grid-template-columns: minmax(0, 1fr) !important;
   }
 
   html.oanix-pwa-image-preview-v1 .image-note-editor-root .editor-image-block[data-pwa-image-card='true'] .editor-image-block__preview {
@@ -374,6 +419,18 @@ html.oanix-pwa-image-preview-v1 .image-note-editor-root .pwa-contact-notes-more[
 
   html.oanix-pwa-image-preview-v1 .pwa-image-description-overlay {
     padding: 0.75rem;
+  }
+
+  .note-manual-sync {
+    position: fixed;
+    z-index: 1328;
+    right: max(0.88rem, env(safe-area-inset-right));
+    bottom: calc(4.55rem + env(safe-area-inset-bottom));
+    margin: 0;
+    min-height: 2.35rem;
+    padding: 0.44rem 0.68rem;
+    background: rgba(248, 250, 252, 0.72);
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.92);
   }
 }
 
