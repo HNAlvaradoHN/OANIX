@@ -59,6 +59,7 @@ import './notes.css'
 
 interface NotesWorkspaceProps {
   onLock: () => void
+  refreshRevision: number
 }
 
 type SaveState = 'idle' | 'dirty' | 'saving' | 'saved' | 'error'
@@ -141,6 +142,68 @@ function setNoteDeleteFeedback(active: boolean) {
   copy.append(title, detail)
   feedback.append(icon, copy)
   document.body.appendChild(feedback)
+}
+
+function setNoteSaveFeedback(active: boolean) {
+  const id = 'oanix-note-save-feedback'
+  const existing = document.getElementById(id)
+  if (!active) {
+    existing?.remove()
+    return
+  }
+  if (existing) return
+
+  const feedback = document.createElement('div')
+  feedback.id = id
+  feedback.setAttribute('role', 'status')
+  feedback.setAttribute('aria-live', 'polite')
+  feedback.style.position = 'fixed'
+  feedback.style.zIndex = '7600'
+  feedback.style.left = '50%'
+  feedback.style.top = 'max(86px, calc(env(safe-area-inset-top, 0px) + 72px))'
+  feedback.style.transform = 'translateX(-50%)'
+  feedback.style.display = 'flex'
+  feedback.style.alignItems = 'center'
+  feedback.style.gap = '9px'
+  feedback.style.width = 'max-content'
+  feedback.style.maxWidth = 'calc(100vw - 32px)'
+  feedback.style.padding = '10px 14px'
+  feedback.style.border = '1px solid rgba(96,165,250,.3)'
+  feedback.style.borderRadius = '14px'
+  feedback.style.background = 'rgba(15,23,42,.94)'
+  feedback.style.color = '#f8fafc'
+  feedback.style.boxShadow = '0 12px 30px rgba(0,0,0,.28)'
+  feedback.style.pointerEvents = 'none'
+
+  const icon = document.createElement('span')
+  icon.setAttribute('aria-hidden', 'true')
+  icon.textContent = '↻'
+  icon.style.fontSize = '18px'
+  icon.style.lineHeight = '1'
+
+  const copy = document.createElement('span')
+  copy.style.display = 'grid'
+  copy.style.gap = '2px'
+
+  const title = document.createElement('strong')
+  title.textContent = 'Guardando nota…'
+  title.style.fontSize = '12px'
+  title.style.fontWeight = '900'
+  title.style.lineHeight = '1.2'
+
+  const detail = document.createElement('small')
+  detail.textContent = 'Cifrando cambios antes de volver'
+  detail.style.color = 'rgba(226,232,240,.72)'
+  detail.style.fontSize = '9px'
+  detail.style.lineHeight = '1.2'
+
+  copy.append(title, detail)
+  feedback.append(icon, copy)
+  document.body.appendChild(feedback)
+}
+
+function nextUiFrame(): Promise<void> {
+  return new Promise((resolve) => window.requestAnimationFrame(() => resolve()))
 }
 
 function formatNoteTime(isoDate: string): string {
@@ -243,7 +306,7 @@ function saveStateLabel(saveState: SaveState, savingTitle: boolean): string {
   return 'Cifrada en este dispositivo'
 }
 
-export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
+export function NotesWorkspace({ onLock, refreshRevision }: NotesWorkspaceProps) {
   const [notes, setNotes] = useState<NoteRecord[]>([])
   const [folders, setFolders] = useState<FolderRecord[]>([])
   const [tags, setTags] = useState<TagRecord[]>([])
@@ -457,6 +520,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
       selectedIdRef.current = null
       setSelectedId(null)
       setSaveState('idle')
+      setNoteSaveFeedback(false)
     }
 
     function handlePopState(event: PopStateEvent) {
@@ -481,8 +545,11 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
         return
       }
 
+      setNoteSaveFeedback(true)
       void (async () => {
+        await nextUiFrame()
         if (!(await flushPendingContent())) {
+          setNoteSaveFeedback(false)
           window.history.pushState(
             { ...currentHistoryState(), oanixView: 'note', noteId: openId },
             '',
@@ -519,7 +586,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     return () => {
       active = false
     }
-  }, [])
+  }, [refreshRevision])
 
   useEffect(() => {
     setDraftTitle(selectedNote?.title ?? '')
@@ -560,6 +627,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
         window.clearTimeout(saveTimerRef.current)
       }
       setNoteDeleteFeedback(false)
+      setNoteSaveFeedback(false)
     }
   }, [])
 
@@ -1265,7 +1333,12 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
   }
 
   async function handleBack() {
-    if (!(await flushPendingContent())) return
+    setNoteSaveFeedback(true)
+    await nextUiFrame()
+    if (!(await flushPendingContent())) {
+      setNoteSaveFeedback(false)
+      return
+    }
     await finalizeRemovedImages()
 
     const state = (window.history.state ?? {}) as OanixHistoryState
@@ -1278,6 +1351,7 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     selectedIdRef.current = null
     setSelectedId(null)
     setSaveState('idle')
+    setNoteSaveFeedback(false)
   }
 
   async function handleLockWorkspace() {
