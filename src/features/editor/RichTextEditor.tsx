@@ -111,7 +111,9 @@ function codeBlockToHtml(block: Extract<NoteBlock, { type: 'code' }>): string {
   const language = normalizeCodeLanguage(block.language)
   const text = escapeHtml(block.text)
 
-  return `<div class="editor-code-block" data-code-block="true" data-editor-atomic-block="code" data-block-id="${id}" data-language="${language}" contenteditable="false"><div class="editor-code-block__toolbar"><select class="editor-code-block__language" data-code-language="true" aria-label="Lenguaje del bloque de código">${codeLanguageOptions(language)}</select><button class="editor-code-block__copy" data-code-copy="true" type="button">Copiar</button></div><div class="editor-code-block__content" data-code-content="true" data-editor-local-editable="true" contenteditable="true" spellcheck="false" autocapitalize="off" tabindex="0">${text}</div></div>`
+  const showLineNumbers = block.showLineNumbers === true ? 'true' : 'false'
+  const wrapLines = block.wrapLines === false ? 'false' : 'true'
+  return `<div class="editor-code-block" data-code-block="true" data-editor-atomic-block="code" data-block-id="${id}" data-language="${language}" data-aurora-code-nums="${showLineNumbers}" data-aurora-code-wrap="${wrapLines}" contenteditable="false"><div class="editor-code-block__toolbar"><select class="editor-code-block__language" data-code-language="true" aria-label="Lenguaje del bloque de código">${codeLanguageOptions(language)}</select><button class="editor-code-block__copy" data-code-copy="true" type="button">Copiar</button></div><div class="editor-code-block__content" data-code-content="true" data-editor-local-editable="true" contenteditable="true" spellcheck="false" autocapitalize="off" tabindex="0">${text}</div></div>`
 }
 
 type ChecklistItemModel = Extract<NoteBlock, { type: 'checklist' }>['items'][number]
@@ -144,8 +146,10 @@ function contactInitial(name: string): string {
 
 function contactBlockToHtml(block: Extract<NoteBlock, { type: 'contact' }>): string {
   const id = escapeHtml(block.id)
-  const initial = escapeHtml(contactInitial(block.name))
-  return `<div class="editor-contact-card" data-contact-block="true" data-editor-atomic-block="contact" data-block-id="${id}" contenteditable="false"><div class="editor-contact-card__header"><div class="editor-contact-card__avatar" data-contact-avatar="true" aria-hidden="true">${initial}</div><div class="editor-contact-card__title"><strong>Contacto privado</strong><span>Cifrado dentro de esta nota</span></div><button class="editor-contact-card__remove" data-contact-remove="true" type="button">Eliminar</button></div><div class="editor-contact-card__fields"><label class="editor-contact-card__field"><span>Nombre</span><input data-contact-field="name" type="text" value="${escapeHtml(block.name)}" autocomplete="off"></label><label class="editor-contact-card__field"><span>Teléfono</span><input data-contact-field="phone" type="tel" value="${escapeHtml(block.phone)}" autocomplete="off" inputmode="tel"></label><label class="editor-contact-card__field"><span>Correo</span><input data-contact-field="email" type="email" value="${escapeHtml(block.email)}" autocomplete="off" autocapitalize="none" spellcheck="false"></label><label class="editor-contact-card__field"><span>Organización</span><input data-contact-field="organization" type="text" value="${escapeHtml(block.organization)}" autocomplete="off"></label><label class="editor-contact-card__field editor-contact-card__field--notes"><span>Notas</span><textarea data-contact-field="notes" rows="3" autocomplete="off">${escapeHtml(block.notes)}</textarea></label></div></div>`
+  const avatarEmoji = block.avatarEmoji?.trim().slice(0, 8) ?? ''
+  const initial = escapeHtml(avatarEmoji || contactInitial(block.name))
+  const avatarAttribute = avatarEmoji ? ` data-contact-avatar-emoji="${escapeHtml(avatarEmoji)}"` : ''
+  return `<div class="editor-contact-card" data-contact-block="true" data-editor-atomic-block="contact" data-block-id="${id}"${avatarAttribute} contenteditable="false"><div class="editor-contact-card__header"><div class="editor-contact-card__avatar" data-contact-avatar="true" aria-hidden="true">${initial}</div><div class="editor-contact-card__title"><strong>Contacto privado</strong><span>Cifrado dentro de esta nota</span></div><button class="editor-contact-card__remove" data-contact-remove="true" type="button">Eliminar</button></div><div class="editor-contact-card__fields"><label class="editor-contact-card__field"><span>Nombre</span><input data-contact-field="name" type="text" value="${escapeHtml(block.name)}" autocomplete="off"></label><label class="editor-contact-card__field"><span>Teléfono</span><input data-contact-field="phone" type="tel" value="${escapeHtml(block.phone)}" autocomplete="off" inputmode="tel"></label><label class="editor-contact-card__field"><span>Correo</span><input data-contact-field="email" type="email" value="${escapeHtml(block.email)}" autocomplete="off" autocapitalize="none" spellcheck="false"></label><label class="editor-contact-card__field"><span>Organización</span><input data-contact-field="organization" type="text" value="${escapeHtml(block.organization)}" autocomplete="off"></label><label class="editor-contact-card__field editor-contact-card__field--notes"><span>Notas</span><textarea data-contact-field="notes" rows="3" autocomplete="off">${escapeHtml(block.notes)}</textarea></label></div></div>`
 }
 
 function contactFieldValue(block: HTMLElement, name: string): string {
@@ -158,7 +162,8 @@ function dailyEntryBlockToHtml(block: Extract<NoteBlock, { type: 'dailyEntry' }>
   const date = escapeHtml(block.date)
   const title = escapeHtml(block.title)
   const label = escapeHtml(formatDailyEntryDate(block.date))
-  return `<div class="editor-daily-entry" data-daily-entry-block="true" data-editor-atomic-block="daily-entry" data-daily-entry-date="${date}" data-block-id="${id}" contenteditable="false"><div class="editor-daily-entry__date-row" data-editor-selection-island="date"><span class="editor-daily-entry__date">${label}</span></div><div class="editor-daily-entry__title" data-daily-entry-title="true" data-editor-local-editable="true" contenteditable="true" role="textbox" aria-label="Título de esta entrada" data-placeholder="Título de esta entrada (opcional)" spellcheck="true">${title}</div></div>`
+  const showDate = block.showDate === false ? 'false' : 'true'
+  return `<div class="editor-daily-entry" data-daily-entry-block="true" data-editor-atomic-block="daily-entry" data-daily-entry-date="${date}" data-aurora-show-date="${showDate}" data-block-id="${id}" contenteditable="false"><div class="editor-daily-entry__date-row" data-editor-selection-island="date"><span class="editor-daily-entry__date">${label}</span></div><div class="editor-daily-entry__title" data-daily-entry-title="true" data-editor-local-editable="true" contenteditable="true" role="textbox" aria-label="Título de esta entrada" data-placeholder="Título de esta entrada (opcional)" spellcheck="true">${title}</div></div>`
 }
 
 function blocksToHtml(blocks: NoteBlock[]): string {
@@ -278,6 +283,8 @@ function parseEditorBlocks(root: HTMLElement): NoteBlock[] {
         type: 'code',
         language: normalizeCodeLanguage(node.dataset.language),
         text: codeTextFromElement(node.querySelector<HTMLElement>('[data-code-content="true"]')),
+        showLineNumbers: node.dataset.auroraCodeNums === 'true',
+        wrapLines: node.dataset.auroraCodeWrap !== 'false',
       })
       continue
     }
@@ -291,6 +298,7 @@ function parseEditorBlocks(root: HTMLElement): NoteBlock[] {
         email: contactFieldValue(node, 'email'),
         organization: contactFieldValue(node, 'organization'),
         notes: contactFieldValue(node, 'notes'),
+        ...(node.dataset.contactAvatarEmoji ? { avatarEmoji: node.dataset.contactAvatarEmoji } : {}),
       })
       continue
     }
@@ -303,6 +311,7 @@ function parseEditorBlocks(root: HTMLElement): NoteBlock[] {
         type: 'dailyEntry',
         date: node.dataset.dailyEntryDate ?? localDateKey(),
         title,
+        showDate: node.dataset.auroraShowDate !== 'false',
       })
       continue
     }
@@ -1237,7 +1246,7 @@ function RichTextEditorComponent({
       if (target.dataset.contactField === 'name') {
         const card = target.closest<HTMLElement>('[data-contact-block="true"]')
         const avatar = card?.querySelector<HTMLElement>('[data-contact-avatar="true"]')
-        if (avatar) avatar.textContent = contactInitial(target.value)
+        if (avatar && !card?.dataset.contactAvatarEmoji) avatar.textContent = contactInitial(target.value)
       }
     } else if (target instanceof HTMLTextAreaElement && target.dataset.contactField) {
       target.defaultValue = target.value
