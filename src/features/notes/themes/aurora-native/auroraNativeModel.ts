@@ -145,7 +145,13 @@ export function runsFromDom(root: HTMLElement): RichTextRun[] {
     if (tag === 'br') runs.push({ text: '\n', ...next })
   }
 
-  Array.from(root.childNodes).forEach((child) => walk(child, {}))
+  const children = Array.from(root.childNodes)
+  const blockLike = new Set(['p', 'div', 'h1', 'h2', 'h3', 'blockquote'])
+  children.forEach((child, index) => {
+    walk(child, {})
+    const tag = child instanceof HTMLElement ? child.tagName.toLowerCase() : ''
+    if (index < children.length - 1 && blockLike.has(tag)) runs.push({ text: '\n' })
+  })
   return mergeRichRuns(runs)
 }
 
@@ -166,8 +172,7 @@ export function textBlockFromDom(blockId: string, body: HTMLElement): NativeText
       : { id: blockId, type: 'orderedList', items }
   }
 
-  const content = first instanceof HTMLElement ? first : body
-  const runs = runsFromDom(content)
+  const runs = runsFromDom(body)
   if (tag === 'h2') return { id: blockId, type: 'heading', level: 2, runs }
   if (tag === 'h3') return { id: blockId, type: 'heading', level: 3, runs }
   if (tag === 'blockquote') return { id: blockId, type: 'quote', runs }
