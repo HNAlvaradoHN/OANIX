@@ -470,9 +470,26 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
     structuralRedoRef.current = []
   }
 
+  function imageIdsIn(blocks: StoredNoteBlock[]): Set<string> {
+    return new Set(blocks.flatMap((block) => block.type === 'image' ? [block.imageId] : []))
+  }
+
+  function reconcileQueuedImageRemovals(from: StoredNoteBlock[], to: StoredNoteBlock[]) {
+    const before = imageIdsIn(from)
+    const after = imageIdsIn(to)
+
+    before.forEach((imageId) => {
+      if (!after.has(imageId)) propsRef.current.onQueueImageRemoval(imageId)
+    })
+    after.forEach((imageId) => {
+      if (!before.has(imageId)) propsRef.current.onRestoreQueuedImage(imageId)
+    })
+  }
+
   function commitBlocks(next: StoredNoteBlock[], rerender = true, history = true): StoredNoteBlock[] {
     if (history) pushStructuralHistory()
     const normalized = normalizeNativeSheetBlocks(next)
+    reconcileQueuedImageRemovals(blocksRef.current, normalized)
     blocksRef.current = normalized
     propsRef.current.onBlocksChange(normalized)
     if (rerender) setBlocksVersion((value) => value + 1)
@@ -710,6 +727,7 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
     const previous = structuralHistoryRef.current.pop()
     if (!previous) return
     structuralRedoRef.current.push(cloneBlocks(blocksRef.current))
+    reconcileQueuedImageRemovals(blocksRef.current, previous)
     blocksRef.current = previous
     propsRef.current.onBlocksChange(previous)
     setBlocksVersion((value) => value + 1)
@@ -733,6 +751,7 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
     const next = structuralRedoRef.current.pop()
     if (!next) return
     structuralHistoryRef.current.push(cloneBlocks(blocksRef.current))
+    reconcileQueuedImageRemovals(blocksRef.current, next)
     blocksRef.current = next
     propsRef.current.onBlocksChange(next)
     setBlocksVersion((value) => value + 1)
@@ -967,7 +986,6 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
       if (!window.confirm(`¿Reemplazar “${block.name}”?\n\nLa imagen anterior se eliminará de la nota después de guardar el cambio.`)) return
       try {
         const stored = await propsRef.current.onStoreImage(files[0])
-        propsRef.current.onQueueImageRemoval(block.imageId)
         const next: ImageBlock = { ...block, ...stored, id: block.id, type: 'image' }
         replaceBlock(block.id, next)
         showToast('Imagen reemplazada')
@@ -1081,8 +1099,6 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
       setAttachmentBusy(false)
     }
 
-    if (block.type === 'image') propsRef.current.onQueueImageRemoval(block.imageId)
-
     const removed: StoredNoteBlock[] = [block]
     let deleteCount = 1
     if (block.type === 'dailyEntry' && blocks[index + 1]?.type === 'paragraph') {
@@ -1100,9 +1116,10 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
       run: () => {
         const restored = [...currentBlocks()]
         restored.splice(Math.min(index, restored.length), 0, ...removed)
-        if (block.type === 'image') propsRef.current.onRestoreQueuedImage(block.imageId)
-        blocksRef.current = ensureNativeBlockFlow(restored)
-        propsRef.current.onBlocksChange(blocksRef.current)
+        const normalized = ensureNativeBlockFlow(restored)
+        reconcileQueuedImageRemovals(blocksRef.current, normalized)
+        blocksRef.current = normalized
+        propsRef.current.onBlocksChange(normalized)
         setBlocksVersion((value) => value + 1)
       },
     })
