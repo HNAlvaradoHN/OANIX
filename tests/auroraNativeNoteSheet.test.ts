@@ -10,6 +10,7 @@ const contract = readFileSync('src/features/notes/noteSheetThemeContract.ts', 'u
 const operations = readFileSync('src/features/notes/nativeNoteSheetOperations.ts', 'utf8')
 const types = readFileSync('src/features/notes/noteTypes.ts', 'utf8')
 const notesCss = readFileSync('src/features/notes/notes.css', 'utf8')
+const model = readFileSync('src/features/notes/themes/aurora-native/auroraNativeModel.ts', 'utf8')
 
 test('open-note UI is the isolated native Aurora sheet, not the legacy editor presentation', () => {
   assert.match(workspace, /<AuroraNativeNoteSheet/)
@@ -100,6 +101,20 @@ test('outer workspace canvas cannot bleed through the isolated native sheet', ()
   assert.match(notesCss, /min-height: 100dvh/)
 })
 
+
+test('Aurora mobile review regressions keep safe areas, compact controls and stable continuation flow', () => {
+  assert.match(css, /env\(safe-area-inset-top,0px\)/)
+  assert.match(css, /\.fab-action/)
+  assert.match(css, /\.fab-sep/)
+  assert.match(css, /\.note-body-divider/)
+  assert.match(css, /@media \(hover:none\) and \(pointer:coarse\)/)
+  assert.match(css, /\.grain\{display:none\}/)
+  assert.match(sheet, /imageActionsOpen, blocksVersion/)
+  assert.match(sheet, /window\.visualViewport/)
+  assert.match(model, /const following = source\[index \+ 1\]/)
+  assert.match(model, /if \(!isNativeTextBlock\(following\)\)/)
+  assert.match(model, /withBodies\.push\(emptyParagraph\(\)\)/)
+})
 
 test('encrypted image lifecycle follows native structural undo redo instead of stale delete queues', () => {
   assert.match(sheet, /function reconcileQueuedImageRemovals\(from: StoredNoteBlock\[], to: StoredNoteBlock\[]\)/)
