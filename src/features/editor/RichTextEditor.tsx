@@ -191,7 +191,11 @@ function blocksToHtml(blocks: NoteBlock[]): string {
         return `<${tag} data-block-id="${id}">${items || '<li><br></li>'}</${tag}>`
       }
 
-      return `<p data-block-id="${id}">${runsToHtml(block.runs)}</p>`
+      if (block.type === 'paragraph') {
+        return `<p data-block-id="${id}">${runsToHtml(block.runs)}</p>`
+      }
+
+      return `<p data-block-id="${id}"><br></p>`
     })
     .join('')
 }
