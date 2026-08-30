@@ -9,6 +9,7 @@ import {
   Film,
   GripVertical,
   Image as ImageIcon,
+  Lock,
   Maximize2,
   Music,
   Package,
