@@ -732,8 +732,8 @@ export function NotesWorkspace({ onLock, refreshRevision }: NotesWorkspaceProps)
     if (!selectedNote) return
 
     pendingContentRef.current = { noteId: selectedNote.id, blocks }
-    setSaveState('dirty')
-    setError('')
+    if (saveState !== 'dirty') setSaveState('dirty')
+    if (error) setError('')
   }
 
   function handleRestoredImage(imageId: string) {
