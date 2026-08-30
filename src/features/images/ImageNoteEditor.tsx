@@ -1336,6 +1336,17 @@ export function ImageNoteEditor({
         return
       }
 
+      if (detail.command === 'focus-end') {
+        const editor = root.querySelector<HTMLElement>('.editor-surface')
+        if (!editor) return
+        ensureTrailingParagraph(editor)
+        const target = editor.lastElementChild instanceof HTMLElement ? editor.lastElementChild : editor
+        editor.focus({ preventScroll: true })
+        placeCaretAtEnd(target)
+        target.scrollIntoView({ block: 'nearest' })
+        return
+      }
+
       if (detail.command === 'insert-image') {
         insertionAfterIdRef.current = currentDirectBlockId(root)
         forceHistoryBoundaryRef.current = true
