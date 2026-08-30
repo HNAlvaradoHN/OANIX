@@ -39,6 +39,7 @@ import {
   type NoteListAppearanceInput,
 } from './noteService'
 import { searchItemsByLocalFields, type LocalSearchField } from '../search/localSearch'
+import { prepareDailyEntriesForEditing } from './dailyEntries'
 import { WORKSPACE_V2_ENABLED } from '../../app/workspaceExperience'
 import { NoteAvatar } from './NoteAvatar'
 import { WorkspaceV2Sidebar } from './WorkspaceV2Sidebar'
@@ -1925,7 +1926,13 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
         {selectedNote ? (
           <AuroraNativeNoteSheet
             key={selectedNote.id}
-            note={selectedNote}
+            note={{
+              ...selectedNote,
+              content: {
+                ...selectedNote.content,
+                blocks: prepareDailyEntriesForEditing(selectedNote),
+              },
+            }}
             folders={folders}
             tags={tags}
             draftTitle={draftTitle}
