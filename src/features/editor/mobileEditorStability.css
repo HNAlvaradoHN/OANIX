@@ -12,6 +12,11 @@
 }
 
 .editor-daily-entry__title {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.editor-daily-entry__title:focus {
   -webkit-user-select: text;
   user-select: text;
 }
