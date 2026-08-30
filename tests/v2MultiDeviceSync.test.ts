@@ -86,14 +86,22 @@ test('automatic sync reacts quickly to local and remote changes without idle ful
   assert.match(runtime, /syncEncryptedVaultBidirectional/)
   assert.match(runtime, /syncEncryptedBinariesBidirectional/)
   assert.match(runtime, /onRemoteAppliedRef\.current\(\)/)
+  assert.match(runtime, /document\.querySelector\('\.notes-shell--open'\)/)
+  assert.match(runtime, /addEventListener\('oanix:sync-now'/)
+  assert.match(runtime, /forceNextRun = true/)
+  assert.match(runtime, /schedule\(1200\)/)
 })
 
-test('remote changes refresh the workspace without reloading or relocking the vault', () => {
+test('remote changes refresh data without remounting or ejecting the active note', () => {
   const app = readFileSync('src/app/App.tsx', 'utf8')
+  const workspace = readFileSync('src/features/notes/NotesWorkspace.tsx', 'utf8')
 
   assert.match(app, /workspaceRevision/)
-  assert.match(app, /<NotesWorkspace key=\{workspaceRevision\}/)
+  assert.match(app, /<NotesWorkspace refreshRevision=\{workspaceRevision\}/)
+  assert.doesNotMatch(app, /<NotesWorkspace key=\{workspaceRevision\}/)
   assert.match(app, /onRemoteApplied=\{\(\) => setWorkspaceRevision/)
+  assert.match(workspace, /refreshRevision: number/)
+  assert.match(workspace, /\}, \[refreshRevision\]\)/)
   assert.doesNotMatch(app, /location\.reload\(\)/)
 })
 
