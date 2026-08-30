@@ -128,6 +128,8 @@ interface EditableProps {
   placeholder?: string
   spellCheck?: boolean
   editable?: boolean
+  maxLines?: number
+  onOverflowChange?: (overflow: boolean) => void
   onInput: (element: HTMLElement) => void
   onFocus?: (element: HTMLElement) => void
   onBlur?: (element: HTMLElement) => void
@@ -143,6 +145,8 @@ export function UncontrolledEditable({
   placeholder,
   spellCheck = false,
   editable = true,
+  maxLines,
+  onOverflowChange,
   onInput,
   onFocus,
   onBlur,
@@ -150,11 +154,23 @@ export function UncontrolledEditable({
 }: EditableProps) {
   const ref = useRef<HTMLDivElement>(null)
 
+  function measureOverflow() {
+    const element = ref.current
+    if (!element || !maxLines) return
+    element.classList.remove('clamped')
+    const computed = getComputedStyle(element)
+    const lineHeight = Number.parseFloat(computed.lineHeight) || Number.parseFloat(computed.fontSize) * 1.6
+    const overflow = element.scrollHeight > lineHeight * maxLines + 2
+    element.classList.toggle('clamped', overflow)
+    onOverflowChange?.(overflow)
+  }
+
   useLayoutEffect(() => {
     const element = ref.current
     if (!element) return
     if (html !== undefined) element.innerHTML = html
     else element.textContent = text ?? ''
+    measureOverflow()
   }, [identity, resetToken])
 
   return (
@@ -167,6 +183,7 @@ export function UncontrolledEditable({
       data-ph={placeholder}
       onInput={() => {
         if (ref.current) onInput(ref.current)
+        window.setTimeout(measureOverflow, 0)
       }}
       onFocus={() => {
         if (ref.current) onFocus?.(ref.current)
@@ -395,6 +412,7 @@ export function ChecklistBlockView({
   ...chrome
 }: ChecklistBlockViewProps) {
   const done = block.items.filter((item) => item.checked).length
+  const [overflowByIndex, setOverflowByIndex] = useState<Record<number, boolean>>({})
 
   function update(index: number, patch: Partial<ChecklistBlock['items'][number]>) {
     const items = block.items.map((item, itemIndex) => itemIndex === index ? { ...item, ...patch } : item)
@@ -417,6 +435,10 @@ export function ChecklistBlockView({
                 className="ck-text"
                 text={item.text}
                 placeholder="Nuevo elemento"
+                maxLines={2}
+                onOverflowChange={(overflow) => setOverflowByIndex((current) =>
+                  current[index] === overflow ? current : { ...current, [index]: overflow },
+                )}
                 onInput={(element) => update(index, { text: element.innerText })}
                 onKeyDown={(event, element) => {
                   if (event.key === 'Enter') {
@@ -435,7 +457,7 @@ export function ChecklistBlockView({
               <button
                 className="ck-more"
                 type="button"
-                hidden={item.text.length < 90}
+                hidden={!overflowByIndex[index]}
                 title="Ver completo"
                 onClick={() => onOpenReader('Elemento de checklist', item.text, false)}
               >+</button>
@@ -571,6 +593,8 @@ export function DailyEntryBlockView({
 }: DailyEntryBlockViewProps) {
   const parts = dailyDateParts(block.date)
   const showDate = block.showDate !== false
+  const [titleOverflow, setTitleOverflow] = useState(false)
+  const [bodyOverflow, setBodyOverflow] = useState(false)
   return (
     <BlockChrome {...chrome} blockId={block.id} kind="entry">
       <div className={`entry-card${showDate ? '' : ' no-date'}`}>
@@ -601,12 +625,14 @@ export function DailyEntryBlockView({
               className="entry-title"
               text={block.title}
               placeholder="Título opcional…"
+              maxLines={2}
+              onOverflowChange={setTitleOverflow}
               onInput={(element) => onEntryChange(block.id, { title: element.innerText.slice(0, 120) }, false)}
             />
             <button
               className="mini-toggle entry-title-toggle"
               type="button"
-              hidden={block.title.length < 85}
+              hidden={!titleOverflow}
               title="Ver completo"
               onClick={() => onOpenReader('Título de la entrada', block.title, false)}
             ><Maximize2 /></button>
@@ -617,12 +643,14 @@ export function DailyEntryBlockView({
             className="entry-body"
             html={textBlockToHtml(body)}
             placeholder="Escribí la entrada del día…"
+            maxLines={3}
+            onOverflowChange={setBodyOverflow}
             onInput={(element) => onEntryBodyChange(body.id, element)}
           />
           <button
             className="mini-toggle entry-body-toggle"
             type="button"
-            hidden={body.runs.map((run) => run.text).join('').length < 210}
+            hidden={!bodyOverflow}
             title="Ver completo"
             onClick={() => onOpenReader('Entrada del día', body.runs.map((run) => run.text).join(''), false)}
           ><Maximize2 /></button>
