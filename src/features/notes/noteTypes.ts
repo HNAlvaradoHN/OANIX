@@ -88,6 +88,45 @@ export function isNoteVisualColor(value: unknown): value is string {
   return typeof value === 'string' && NOTE_VISUAL_COLOR.test(value)
 }
 
+export const NOTE_SHEET_THEMES = ['claro', 'sepia', 'noche'] as const
+export const NOTE_SHEET_ACCENTS = ['vermellon', 'oceano', 'bosque', 'lavanda', 'dorado'] as const
+export const NOTE_SHEET_DESIGNS = ['liso', 'renglones', 'puntos', 'cuadricula'] as const
+export const NOTE_SHEET_FONTS = ['serif', 'sans', 'mono'] as const
+
+export type NoteSheetThemeName = (typeof NOTE_SHEET_THEMES)[number]
+export type NoteSheetAccentName = (typeof NOTE_SHEET_ACCENTS)[number]
+export type NoteSheetDesignName = (typeof NOTE_SHEET_DESIGNS)[number]
+export type NoteSheetFontName = (typeof NOTE_SHEET_FONTS)[number]
+
+export interface NoteSheetAppearance {
+  theme: NoteSheetThemeName
+  accent: NoteSheetAccentName
+  design: NoteSheetDesignName
+  font: NoteSheetFontName
+}
+
+export const DEFAULT_NOTE_SHEET_APPEARANCE: NoteSheetAppearance = {
+  theme: 'claro',
+  accent: 'vermellon',
+  design: 'liso',
+  font: 'serif',
+}
+
+export function isNoteSheetAppearance(value: unknown): value is NoteSheetAppearance {
+  if (!value || typeof value !== 'object') return false
+  const appearance = value as Partial<NoteSheetAppearance>
+  return (
+    typeof appearance.theme === 'string' &&
+    (NOTE_SHEET_THEMES as readonly string[]).includes(appearance.theme) &&
+    typeof appearance.accent === 'string' &&
+    (NOTE_SHEET_ACCENTS as readonly string[]).includes(appearance.accent) &&
+    typeof appearance.design === 'string' &&
+    (NOTE_SHEET_DESIGNS as readonly string[]).includes(appearance.design) &&
+    typeof appearance.font === 'string' &&
+    (NOTE_SHEET_FONTS as readonly string[]).includes(appearance.font)
+  )
+}
+
 export interface ParagraphBlock {
   id: string
   type: 'paragraph'
@@ -205,6 +244,7 @@ export interface NoteRecord {
   visualCategoryTagId?: string
   visualIcon?: NoteVisualIcon
   visualColor?: string
+  sheetAppearance?: NoteSheetAppearance
   content: {
     format: 'blocks-v1'
     blocks: StoredNoteBlock[]
@@ -402,6 +442,7 @@ export function isNoteRecord(value: unknown): value is NoteRecord {
       (typeof note.visualCategoryTagId === 'string' && note.visualCategoryTagId.length > 0)) &&
     (note.visualIcon === undefined || isNoteVisualIcon(note.visualIcon)) &&
     (note.visualColor === undefined || isNoteVisualColor(note.visualColor)) &&
+    (note.sheetAppearance === undefined || isNoteSheetAppearance(note.sheetAppearance)) &&
     !!note.content &&
     note.content.format === 'blocks-v1' &&
     Array.isArray(note.content.blocks) &&
