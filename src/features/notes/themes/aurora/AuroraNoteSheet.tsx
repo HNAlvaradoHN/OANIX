@@ -5,7 +5,7 @@ import {
   useState,
   type CSSProperties,
   type FormEvent,
-  type KeyboardEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
 } from 'react'
 import { OanixIcon } from '../../../../shared/OanixIcon'
 import { noteBlocksToPlainText } from '../../noteTypes'
@@ -268,7 +268,7 @@ export function AuroraNoteSheet({
     setTagValue('')
   }
 
-  function titleKeyDown(event: KeyboardEvent<HTMLHeadingElement>) {
+  function titleKeyDown(event: ReactKeyboardEvent<HTMLHeadingElement>) {
     if (event.key !== 'Enter') return
     event.preventDefault()
     event.currentTarget.blur()
