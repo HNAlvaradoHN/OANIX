@@ -10,10 +10,12 @@ import { createDailyEntryBlocks } from './dailyEntries'
 import { deleteNoteAvatar } from './noteAvatarService'
 import {
   compareNotesForList,
+  isNoteSheetAppearance,
   isNoteVisualColor,
   isNoteVisualIcon,
   MAX_NOTE_VISUAL_DESCRIPTION_LENGTH,
   type NoteRecord,
+  type NoteSheetAppearance,
   type NoteVisualIcon,
   type StoredNoteBlock,
 } from './noteTypes'
@@ -299,6 +301,18 @@ export function setNoteListAppearance(noteId: string, input: NoteListAppearanceI
       updatedAt: new Date().toISOString(),
     }
   })
+}
+
+export function setNoteSheetAppearance(noteId: string, appearance: NoteSheetAppearance): Promise<NoteRecord> {
+  if (!isNoteSheetAppearance(appearance)) {
+    throw new Error('La apariencia de la hoja no es válida.')
+  }
+
+  return enqueueNoteMutation(noteId, (existing) => ({
+    ...existing,
+    sheetAppearance: { ...appearance },
+    updatedAt: new Date().toISOString(),
+  }))
 }
 
 export function setNotePinned(noteId: string, pinned: boolean): Promise<NoteRecord> {
