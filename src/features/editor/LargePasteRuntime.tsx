@@ -176,6 +176,14 @@ export function LargePasteRuntime() {
       if (block) lastInteractionBlock = block
     }
 
+    function rememberPointerInteraction(event: PointerEvent) {
+      rememberInteractionTarget(event.target)
+    }
+
+    function rememberFocusInteraction(event: FocusEvent) {
+      rememberInteractionTarget(event.target)
+    }
+
     function activeEditor(): HTMLElement | null {
       const active = document.activeElement
       if (active instanceof Element) {
@@ -266,12 +274,14 @@ export function LargePasteRuntime() {
       }
     }
 
-    document.addEventListener('pointerdown', (event) => rememberInteractionTarget(event.target), true)
-    document.addEventListener('focusin', (event) => rememberInteractionTarget(event.target), true)
+    document.addEventListener('pointerdown', rememberPointerInteraction, true)
+    document.addEventListener('focusin', rememberFocusInteraction, true)
     document.addEventListener('selectionchange', trackSelectionUnit)
     document.addEventListener('keydown', handleSelectAllKey, true)
     document.addEventListener('beforeinput', handleBeforeInput, true)
     return () => {
+      document.removeEventListener('pointerdown', rememberPointerInteraction, true)
+      document.removeEventListener('focusin', rememberFocusInteraction, true)
       document.removeEventListener('selectionchange', trackSelectionUnit)
       document.removeEventListener('keydown', handleSelectAllKey, true)
       document.removeEventListener('beforeinput', handleBeforeInput, true)
