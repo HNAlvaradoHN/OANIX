@@ -31,6 +31,7 @@ export function AutoSyncRuntime({ onRemoteApplied }: AutoSyncRuntimeProps) {
     let disposed = false
     let running = false
     let runAgain = false
+    let forceNextRun = false
     let timeoutId = 0
     let realtimeUserId: string | null = null
     let cleanupRealtime = () => undefined
@@ -80,6 +81,12 @@ export function AutoSyncRuntime({ onRemoteApplied }: AutoSyncRuntimeProps) {
         emitSyncStatus('offline', 'Sin conexión. Los cambios siguen guardándose localmente y se sincronizarán al volver Internet.')
         return
       }
+
+      if (!forceNextRun && document.querySelector('.notes-shell--open')) {
+        schedule(900)
+        return
+      }
+      forceNextRun = false
 
       const session = await getOnlineAccountSession().catch(() => null)
       bindRealtime(session?.userId ?? null)
@@ -138,6 +145,10 @@ export function AutoSyncRuntime({ onRemoteApplied }: AutoSyncRuntimeProps) {
       schedule()
     }
     const handleOnline = () => schedule(0)
+    const handleManualSync = () => {
+      forceNextRun = true
+      schedule(0)
+    }
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') schedule(0)
     }
@@ -149,6 +160,7 @@ export function AutoSyncRuntime({ onRemoteApplied }: AutoSyncRuntimeProps) {
     })
 
     window.addEventListener('oanix:local-data-changed', handleLocalChange)
+    window.addEventListener('oanix:sync-now', handleManualSync)
     window.addEventListener('online', handleOnline)
     document.addEventListener('visibilitychange', handleVisibility)
 
@@ -157,7 +169,7 @@ export function AutoSyncRuntime({ onRemoteApplied }: AutoSyncRuntimeProps) {
     // recovery and foregrounding are explicit sync triggers. The old 30-second
     // full sync repeatedly downloaded remote ciphertext and re-hashed local
     // binary payloads even when the user was only reading a folder.
-    schedule(200)
+    schedule(1200)
 
     return () => {
       disposed = true
@@ -165,6 +177,7 @@ export function AutoSyncRuntime({ onRemoteApplied }: AutoSyncRuntimeProps) {
       cleanupRealtime()
       unsubscribe()
       window.removeEventListener('oanix:local-data-changed', handleLocalChange)
+      window.removeEventListener('oanix:sync-now', handleManualSync)
       window.removeEventListener('online', handleOnline)
       document.removeEventListener('visibilitychange', handleVisibility)
     }
