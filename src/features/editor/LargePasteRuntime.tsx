@@ -189,8 +189,6 @@ function clipboardTextFromBeforeInput(event: InputEvent): string {
 export function LargePasteRuntime() {
   useEffect(() => {
     let lastInteractionBlock: HTMLElement | null = null
-    let lastSelectionUnit: HTMLElement | null = null
-    let adjustingSelection = false
     let handledText = ''
     let handledAt = 0
     const duplicateWindowMs = 10_000
@@ -203,8 +201,7 @@ export function LargePasteRuntime() {
       const block = directEditorBlock(editor, target)
       if (block) lastInteractionBlock = block
 
-      const unit = editableSelectionUnit(editor, target, block)
-      if (unit) lastSelectionUnit = unit
+      editableSelectionUnit(editor, target, block)
     }
 
     function rememberPointerInteraction(event: PointerEvent) {
@@ -229,35 +226,10 @@ export function LargePasteRuntime() {
     }
 
     function rememberSelectionUnit(editor: HTMLElement, selection: Selection) {
-      const anchorElement = elementFromNode(selection.anchorNode)
-      const anchorBlock = directEditorBlock(editor, anchorElement)
-      const anchorUnit = editableSelectionUnit(editor, anchorElement, anchorBlock)
-
-      const focusElement = elementFromNode(selection.focusNode)
-      const focusBlock = directEditorBlock(editor, focusElement)
-      const focusUnit = editableSelectionUnit(editor, focusElement, focusBlock)
-
+      const anchorBlock = directEditorBlock(editor, elementFromNode(selection.anchorNode))
+      const focusBlock = directEditorBlock(editor, elementFromNode(selection.focusNode))
       if (anchorBlock) lastInteractionBlock = anchorBlock
       else if (focusBlock) lastInteractionBlock = focusBlock
-
-      if (anchorUnit && (!focusUnit || anchorUnit === focusUnit)) {
-        lastSelectionUnit = anchorUnit
-        return
-      }
-
-      if (focusUnit && !anchorUnit) lastSelectionUnit = focusUnit
-    }
-
-    function currentSelectionUnit(editor: HTMLElement): HTMLElement | null {
-      if (lastSelectionUnit?.isConnected && editor.contains(lastSelectionUnit)) {
-        return lastSelectionUnit
-      }
-
-      const selection = document.getSelection()
-      if (selection) rememberSelectionUnit(editor, selection)
-      return lastSelectionUnit?.isConnected && editor.contains(lastSelectionUnit)
-        ? lastSelectionUnit
-        : null
     }
 
     function trackSelectionUnit() {
@@ -290,7 +262,6 @@ export function LargePasteRuntime() {
 
       event.preventDefault()
       event.stopPropagation()
-      lastSelectionUnit = local
       constrainSelectionToUnit(local)
     }
 
@@ -364,10 +335,7 @@ export function LargePasteRuntime() {
       content.textContent = plainText
       content.focus({ preventScroll: true })
       content.dispatchEvent(new Event('input', { bubbles: true }))
-      if (insertedBlock) {
-        lastInteractionBlock = insertedBlock
-        lastSelectionUnit = content
-      }
+      if (insertedBlock) lastInteractionBlock = insertedBlock
     }
 
     function handlePaste(event: ClipboardEvent) {
