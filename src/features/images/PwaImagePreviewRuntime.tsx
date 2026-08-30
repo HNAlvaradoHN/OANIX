@@ -8,6 +8,10 @@ const MAX_ZOOM = 4
 const HISTORY_KEY = '__oanixPwaImageOverlay'
 const LIGHTBOX_SELECTOR = '.image-lightbox'
 
+function isAuroraImageFigure(figure: Element | null): boolean {
+  return Boolean(figure?.closest('[data-note-sheet-theme="aurora"]'))
+}
+
 function mutationTouchesImagePreview(record: MutationRecord): boolean {
   const target = record.target
   if (target instanceof Element) {
@@ -94,6 +98,7 @@ export function PwaImagePreviewRuntime() {
     }
 
     function normalizeFigure(figure: HTMLElement) {
+      if (isAuroraImageFigure(figure)) return
       figure.dataset.pwaImageCard = 'true'
       figure.dataset.imageSelected = 'false'
       figure.style.removeProperty('translate')
@@ -428,7 +433,7 @@ export function PwaImagePreviewRuntime() {
 
       const preview = target.closest<HTMLElement>('[data-image-preview="true"]')
       const figure = preview?.closest<HTMLElement>(IMAGE_CARD_SELECTOR)
-      if (preview && figure) {
+      if (preview && figure && !isAuroraImageFigure(figure)) {
         const open = figure.querySelector<HTMLButtonElement>('[data-image-open-action="true"]')
         if (!open) return
         event.preventDefault()
