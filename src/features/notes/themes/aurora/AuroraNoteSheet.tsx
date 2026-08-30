@@ -16,8 +16,6 @@ import {
   NOTE_SHEET_THEMES,
   noteBlocksToPlainText,
   type NoteSheetAccentName,
-  type NoteSheetDesignName,
-  type NoteSheetFontName,
   type NoteSheetThemeName,
 } from '../../noteTypes'
 import { useNoteSheetAppearanceAdapter } from '../../noteSheetAppearanceAdapter'
