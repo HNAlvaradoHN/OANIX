@@ -393,7 +393,7 @@
   opacity:.55!important;
 }
 
-.aurora-canvas-tail{min-height:150px;border-radius:13px;position:relative}
+.aurora-canvas-tail{display:block;width:100%;min-height:150px;border:0;border-radius:13px;position:relative;background:transparent!important;text-align:left}
 .aurora-canvas-tail::before{content:'Escribí acá para continuar la nota…';position:absolute;top:14px;left:2px;font-size:14px;color:var(--aurora-ink-faint);opacity:0;transition:opacity .2s;pointer-events:none}
 .aurora-canvas-tail:hover::before{opacity:.8}
 
