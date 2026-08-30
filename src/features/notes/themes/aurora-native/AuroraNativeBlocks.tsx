@@ -41,7 +41,7 @@ import {
   type ImageBlock,
   type ParagraphBlock,
 } from '../../noteTypes'
-import { textBlockToHtml, type NativeTextBlock } from './auroraNativeModel'
+import { runsToHtml, textBlockToHtml, type NativeTextBlock } from './auroraNativeModel'
 
 export type NativeBlockKind = 'p' | 'h2' | 'h3' | 'quote' | 'ul' | 'ol' | 'entry' | 'image' | 'code' | 'check' | 'contact' | 'sep' | 'file'
 
@@ -128,6 +128,7 @@ interface EditableProps {
   placeholder?: string
   spellCheck?: boolean
   editable?: boolean
+  as?: 'div' | 'code'
   maxLines?: number
   onOverflowChange?: (overflow: boolean) => void
   onInput: (element: HTMLElement) => void
@@ -145,6 +146,7 @@ export function UncontrolledEditable({
   placeholder,
   spellCheck = false,
   editable = true,
+  as = 'div',
   maxLines,
   onOverflowChange,
   onInput,
@@ -173,8 +175,9 @@ export function UncontrolledEditable({
     measureOverflow()
   }, [identity, resetToken])
 
+  const Tag = as
   return (
-    <div
+    <Tag
       ref={ref}
       className={className}
       contentEditable={editable}
@@ -385,6 +388,7 @@ export function CodeBlockView({
               identity={`${block.id}:code`}
               resetToken={resetToken}
               className="native-code-editable"
+              as="code"
               text={block.text}
               spellCheck={false}
               onInput={(element) => onCodeChange(block.id, { text: element.innerText }, false)}
@@ -641,7 +645,7 @@ export function DailyEntryBlockView({
             identity={`${body.id}:entry-body`}
             resetToken={resetToken}
             className="entry-body"
-            html={textBlockToHtml(body)}
+            html={runsToHtml(body.runs)}
             placeholder="Escribí la entrada del día…"
             maxLines={3}
             onOverflowChange={setBodyOverflow}
