@@ -84,7 +84,8 @@ test('el CSS de interacción no conserva controles retirados del personalizador'
 })
 
 test('FolderGridRuntime sigue dentro de la sesión desbloqueada como fuente de comportamiento real', () => {
-  assert.match(app, /<NotesWorkspace key=\{workspaceRevision\} onLock=\{lockVault\} \/>\s*<WorkspaceRuntimeGate workspaceRevision=\{workspaceRevision\} \/>/)
+  assert.match(app, /<NotesWorkspace refreshRevision=\{workspaceRevision\} onLock=\{lockVault\} \/>\s*<WorkspaceRuntimeGate workspaceRevision=\{workspaceRevision\} \/>/)
+  assert.doesNotMatch(app, /<NotesWorkspace key=\{workspaceRevision\}/)
   assert.match(legacyGate, /<FolderGridRuntime \/>/)
   assert.match(app, /renderUnlocked=\{\(lockVault\) => <UnlockedApp lockVault=\{lockVault\} \/>\}/)
 })
