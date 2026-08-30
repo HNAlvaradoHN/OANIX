@@ -69,7 +69,6 @@ import { createPortal } from 'react-dom'
 import type { AttachmentMetadata } from '../../../attachments/attachmentTypes'
 import type { NoteSheetThemeProps } from '../../noteSheetThemeContract'
 import {
-  DEFAULT_NOTE_SHEET_APPEARANCE,
   type CodeBlock,
   type ContactBlock,
   type DailyEntryBlock,
@@ -86,7 +85,6 @@ import {
 import {
   appearanceForNote,
   attachUnreferencedFiles,
-  blockPlainText,
   createNativeBlockId,
   ensureNativeBlockFlow,
   isNativeContentBlock,
@@ -108,9 +106,7 @@ import {
   DividerBlockView,
   FileBlockView,
   ImageBlockView,
-  ImageToolbarIcons,
   TextBlockView,
-  UncontrolledEditable,
   type NativeBlockKind,
 } from './AuroraNativeBlocks'
 import auroraCss from './auroraNativeNoteSheet.css?inline'
@@ -281,10 +277,6 @@ function noteDateLabel(value: string): string {
     hour: '2-digit',
     minute: '2-digit',
   }).format(date)
-}
-
-function imageLabel(block: ImageBlock): string {
-  return block.name.trim() || 'esta imagen'
 }
 
 function contentLabel(block: StoredNoteBlock): string {
