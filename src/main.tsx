@@ -7,6 +7,7 @@ import { applyOanixTheme, readSavedOanixTheme } from './features/personalization
 import { DesktopImageViewportRuntime } from './features/images/DesktopImageViewportRuntime'
 import { PwaImagePreviewRuntime } from './features/images/PwaImagePreviewRuntime'
 import { WORKSPACE_V2_ENABLED } from './app/workspaceExperience'
+import './features/notes/mobileBackKeyboardGuard'
 import './styles/global.css'
 import './app/ThemeVisualStyles'
 import './app/VaultVisualStyles'
