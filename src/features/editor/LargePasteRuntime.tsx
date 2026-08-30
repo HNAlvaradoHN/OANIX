@@ -51,20 +51,6 @@ function localEditableFromElement(
   return local && editor.contains(local) ? local : null
 }
 
-function editableSelectionUnit(
-  editor: HTMLElement,
-  element: Element | null,
-  fallbackBlock: HTMLElement | null,
-): HTMLElement | null {
-  const local = localEditableFromElement(editor, element)
-  if (local) return local
-
-  const block = directEditorBlock(editor, element) ?? fallbackBlock
-  if (!block || block.parentElement !== editor) return null
-  if (isSelectionBoundaryBlock(block)) return null
-  return block
-}
-
 function isSelectionBoundaryBlock(block: HTMLElement): boolean {
   return (
     block.matches(
@@ -200,8 +186,6 @@ export function LargePasteRuntime() {
 
       const block = directEditorBlock(editor, target)
       if (block) lastInteractionBlock = block
-
-      editableSelectionUnit(editor, target, block)
     }
 
     function rememberPointerInteraction(event: PointerEvent) {
