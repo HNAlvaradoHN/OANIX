@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises'
 import test from 'node:test'
 
 const largePasteRuntimePath = new URL('../src/features/editor/LargePasteRuntime.tsx', import.meta.url)
+const richTextEditorPath = new URL('../src/features/editor/RichTextEditor.tsx', import.meta.url)
 const codeBlockExportRuntimePath = new URL('../src/features/editor/CodeBlockExportRuntime.tsx', import.meta.url)
 const codeBlockEditorPath = new URL('../src/features/editor/CodeBlockEditor.tsx', import.meta.url)
 const mobileEditorCssPath = new URL('../src/features/editor/mobileEditorStability.css', import.meta.url)
@@ -30,27 +31,32 @@ test('mobile large paste handles Android dual delivery and verifies bulk insertT
   assert.match(source, /shouldEncapsulateClipboardPaste\(fallbackText\)/)
 })
 
-test('select-all stays inside the active editable unit and native whole-editor selection is constrained', async () => {
+test('select-all keeps Daily Entry chrome outside the sheet and native whole-editor selection is constrained', async () => {
   const source = await readFile(largePasteRuntimePath, 'utf8')
+  const editorSource = await readFile(richTextEditorPath, 'utf8')
   const css = await readFile(mobileEditorCssPath, 'utf8')
 
   assert.match(source, /function editableSelectionUnit/)
   assert.match(source, /function selectionTouchesProtectedIsland/)
   assert.match(source, /function selectionCoversEditorContents/)
   assert.match(source, /function constrainSelectionToUnit/)
+  assert.match(source, /function rememberSelectionUnit/)
+  assert.match(source, /if \(selection\.isCollapsed\) \{[\s\S]*rememberSelectionUnit\(editor, selection\)/)
   assert.match(source, /compareBoundaryPoints\(Range\.START_TO_START, editorRange\)/)
   assert.match(source, /compareBoundaryPoints\(Range\.END_TO_END, editorRange\)/)
-  assert.match(source, /\[data-daily-entry-block="true"\]/)
+  assert.match(source, /\[data-editor-selection-island="true"\]/)
   assert.match(source, /\[data-code-block="true"\]/)
   assert.match(source, /\[data-checklist-block="true"\]/)
+  assert.match(editorSource, /data-daily-entry-block="true" data-editor-selection-island="true"/)
+  assert.match(editorSource, /data-daily-entry-title="true"/)
+  assert.match(source, /target\.closest\('input, textarea, \[data-daily-entry-title="true"\]'\)/)
   assert.match(source, /document\.addEventListener\('focusin', rememberFocusInteraction, true\)/)
   assert.match(source, /document\.addEventListener\('selectionchange', guardSelectionBoundaries\)/)
   assert.match(source, /event\.key\.toLowerCase\(\) !== 'a'/)
   assert.match(source, /event\.inputType\.startsWith\('delete'\)/)
   assert.match(source, /event\.key !== 'Backspace' && event\.key !== 'Delete'/)
-  assert.match(css, /\.editor-daily-entry,/)
-  assert.match(css, /\.editor-daily-entry__title \{/)
-  assert.match(css, /user-select: text/)
+  assert.match(css, /\.editor-daily-entry,[\s\S]*user-select: none/)
+  assert.match(css, /\.editor-daily-entry__title \{[\s\S]*user-select: text/)
 })
 
 test('code menu keeps one toggle authority and promotes coarse pointerup into that click path', async () => {
