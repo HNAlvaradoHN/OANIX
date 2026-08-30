@@ -38,6 +38,13 @@ function editableElement(): HTMLElement | null {
   return active.isContentEditable ? active : null
 }
 
+export function blurFocusedMobileEditor(): boolean {
+  const focusedEditor = editableElement()
+  if (!focusedEditor) return false
+  focusedEditor.blur()
+  return true
+}
+
 let lastOpenNoteId = noteIdFromState(window.history.state)
 
 const originalPushState = window.history.pushState.bind(window.history)
@@ -68,11 +75,10 @@ window.addEventListener('popstate', (event) => {
   if (nextState.oanixView !== 'list') return
   if (!document.querySelector('.notes-shell--open')) return
 
-  const focusedEditor = editableElement()
-  if (!focusedEditor || !lastOpenNoteId) return
+  if (!lastOpenNoteId || !editableElement()) return
 
   event.stopImmediatePropagation()
-  focusedEditor.blur()
+  blurFocusedMobileEditor()
   originalPushState(
     { ...nextState, oanixView: 'note', noteId: lastOpenNoteId },
     '',
