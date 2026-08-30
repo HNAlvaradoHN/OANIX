@@ -13,15 +13,20 @@ test('MainActivity registers Android back and device-security plugins', () => {
   assert.match(activity, /registerPlugin\(OanixDeviceCredentialPlugin\.class\)/)
 })
 
-test('Android back runtime returns from an open note through the existing safe back action', () => {
+test('Android back runtime dismisses editing first and then returns through note history', () => {
   const runtime = readFileSync('src/platform/android/AndroidBackRuntime.tsx', 'utf8')
   const workspace = readFileSync('src/features/notes/NotesWorkspace.tsx', 'utf8')
+  const guard = readFileSync('src/features/notes/mobileBackKeyboardGuard.ts', 'utf8')
 
-  assert.match(runtime, /\.notes-shell--open \.back-button/)
-  assert.match(runtime, /openNoteBack\.click\(\)/)
+  assert.match(runtime, /blurFocusedMobileEditor\(\)/)
+  assert.match(runtime, /document\.querySelector\('\.notes-shell--open'\)/)
+  assert.match(runtime, /window\.history\.back\(\)/)
+  assert.ok(runtime.indexOf('blurFocusedMobileEditor()') < runtime.indexOf("document.querySelector('.notes-shell--open')"))
+  assert.match(guard, /shadowRoot\?\.activeElement/)
   assert.match(workspace, /async function handleBack\(\)/)
   assert.match(workspace, /await flushPendingContent\(\)/)
   assert.match(workspace, /await finalizeRemovedImages\(\)/)
+  assert.match(workspace, /Guardando nota…/)
 })
 
 test('Android back runtime confirms exit professionally and exits on the second back gesture', () => {
