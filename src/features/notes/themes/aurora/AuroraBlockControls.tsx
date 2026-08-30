@@ -83,6 +83,10 @@ function requestAtomicDelete(noteId: string, selected: SelectedBlock) {
   removePersistedAtomicBlock(block)
 }
 
+function setTextIfChanged(element: HTMLElement | null, value: string) {
+  if (element && element.textContent !== value) element.textContent = value
+}
+
 function updateCodeLineNumbers(codeBlock: HTMLElement) {
   const content = codeBlock.querySelector<HTMLElement>('[data-code-content="true"]')
   const numbers = codeBlock.querySelector<HTMLElement>('[data-aurora-code-line-numbers="true"]')
@@ -123,7 +127,7 @@ function updateChecklistCount(block: HTMLElement) {
   const items = Array.from(block.querySelectorAll<HTMLElement>('[data-checklist-item="true"]'))
   const done = items.filter((item) => item.dataset.checked === 'true').length
   const count = block.querySelector<HTMLElement>('[data-aurora-check-count="true"]')
-  if (count) count.textContent = `${done}/${items.length}`
+  setTextIfChanged(count, `${done}/${items.length}`)
 }
 
 function decorateChecklist(block: HTMLElement) {
@@ -217,11 +221,11 @@ function renderDailyDate(block: HTMLElement) {
     dateRow.append(day, sub)
   }
 
-  day.textContent = String(date.getDate())
+  setTextIfChanged(day, String(date.getDate()))
   const weekday = sub.querySelector<HTMLElement>('[data-aurora-entry-weekday="true"]')
   const monthYear = sub.querySelector<HTMLElement>('[data-aurora-entry-month-year="true"]')
-  if (weekday) weekday.textContent = DAILY_WEEKDAYS[date.getDay()]
-  if (monthYear) monthYear.textContent = `${DAILY_MONTHS[date.getMonth()]} ${date.getFullYear()}`
+  setTextIfChanged(weekday, DAILY_WEEKDAYS[date.getDay()])
+  setTextIfChanged(monthYear, `${DAILY_MONTHS[date.getMonth()]} ${date.getFullYear()}`)
 }
 
 function decorateDailyEntry(block: HTMLElement) {
