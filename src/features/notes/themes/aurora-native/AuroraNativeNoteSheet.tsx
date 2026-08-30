@@ -964,6 +964,7 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
       const block = currentBlocks().find((item): item is ImageBlock => item.id === pendingReplaceImageId && item.type === 'image')
       setPendingReplaceImageId(null)
       if (!block) return
+      if (!window.confirm(`¿Reemplazar “${block.name}”?\n\nLa imagen anterior se eliminará de la nota después de guardar el cambio.`)) return
       try {
         const stored = await propsRef.current.onStoreImage(files[0])
         propsRef.current.onQueueImageRemoval(block.imageId)
@@ -1562,7 +1563,25 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
             suppressContentEditableWarning
             spellCheck={false}
             data-ph="Título de la nota…"
-            onInput={(event) => props.onDraftTitleChange(event.currentTarget.textContent ?? '')}
+            onInput={(event) => {
+              const element = event.currentTarget
+              const raw = element.textContent ?? ''
+              const next = raw.slice(0, 160)
+              if (raw !== next) {
+                element.textContent = next
+                const selection = element.getRootNode() instanceof ShadowRoot
+                  ? (element.getRootNode() as ShadowRoot).getSelection?.()
+                  : document.getSelection()
+                if (selection) {
+                  const range = document.createRange()
+                  range.selectNodeContents(element)
+                  range.collapse(false)
+                  selection.removeAllRanges()
+                  selection.addRange(range)
+                }
+              }
+              props.onDraftTitleChange(next)
+            }}
             onBlur={() => void props.onCommitTitle()}
             onKeyDown={(event) => {
               if (event.key === 'Enter') {
@@ -1786,7 +1805,16 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
             <label className="cp-row"><input type="checkbox" checked={block.showLineNumbers === true} onChange={(event) => patchCode(block.id, { showLineNumbers: event.target.checked }, true)} /> Números de línea</label>
             <label className="cp-row"><input type="checkbox" checked={block.wrapLines !== false} onChange={(event) => patchCode(block.id, { wrapLines: event.target.checked }, true)} /> Ajustar líneas</label>
             <div className="mm-sep" />
-            <button className="cp-danger" type="button" onClick={() => { patchCode(block.id, { text: '' }, true); setResetToken((value) => value + 1); setCodePop(null) }}>Vaciar bloque</button>
+            <button
+              className="cp-danger"
+              type="button"
+              onClick={() => {
+                if (!window.confirm('¿Vaciar todo el contenido de este bloque de código?')) return
+                patchCode(block.id, { text: '' }, true)
+                setResetToken((value) => value + 1)
+                setCodePop(null)
+              }}
+            >Vaciar bloque</button>
             <button className="cp-danger" type="button" onClick={() => { setCodePop(null); void deleteBlock(block.id) }}>Eliminar bloque</button>
           </div>
         )
