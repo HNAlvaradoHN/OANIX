@@ -5,6 +5,8 @@ import test from 'node:test'
 const notesWorkspacePath = new URL('../src/features/notes/NotesWorkspace.tsx', import.meta.url)
 const previewRuntimePath = new URL('../src/features/images/PwaImagePreviewRuntime.tsx', import.meta.url)
 const previewCssPath = new URL('../src/features/images/pwa-image-preview.css', import.meta.url)
+const mobileBackKeyboardGuardPath = new URL('../src/features/notes/mobileBackKeyboardGuard.ts', import.meta.url)
+const mainPath = new URL('../src/main.tsx', import.meta.url)
 
 test('note content remains local while typing and persists explicitly or before leaving', async () => {
   const source = await readFile(notesWorkspacePath, 'utf8')
@@ -60,4 +62,19 @@ test('image actions require an explicit compact menu toggle', async () => {
   assert.match(source, /figure\.dataset\.pwaActionsOpen = String\(opening\)/)
   assert.match(css, /data-pwa-actions-open='false'[\s\S]*editor-image-block__actions[\s\S]*display: none !important/)
   assert.match(css, /\.pwa-image-card__menu-toggle/)
+})
+
+test('first mobile back gesture dismisses an active editor before note navigation', async () => {
+  const guard = await readFile(mobileBackKeyboardGuardPath, 'utf8')
+  const main = await readFile(mainPath, 'utf8')
+
+  assert.match(main, /import '\.\/features\/notes\/mobileBackKeyboardGuard'/)
+  assert.match(guard, /window\.addEventListener\('popstate'/)
+  assert.match(guard, /document\.querySelector\('\.notes-shell--open'\)/)
+  assert.match(guard, /editableElement\(\)/)
+  assert.match(guard, /event\.stopImmediatePropagation\(\)/)
+  assert.match(guard, /focusedEditor\.blur\(\)/)
+  assert.match(guard, /oanixView: 'note', noteId: lastOpenNoteId/)
+  assert.ok(guard.indexOf('focusedEditor.blur()') < guard.indexOf("oanixView: 'note', noteId: lastOpenNoteId"))
+  assert.doesNotMatch(guard, /flushPendingContent/)
 })
