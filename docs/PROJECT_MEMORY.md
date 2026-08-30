@@ -94,6 +94,19 @@ La antigua afirmación de que el workspace debía reutilizar obligatoriamente la
 - No mostrar botones persistentes `↕`, `Listo` o `✓` para entrar/salir del reordenamiento.
 - Atrás debe conservar navegación real correcta; no crear un historial visual paralelo.
 
+### Islas atómicas del editor — IMPLEMENTED
+
+Decisión del usuario (2026-08-29): imagen, fecha Daily Entry, título opcional y otros bloques especiales deben comportarse como la consola frente a selección y borrado.
+
+- Un bloque especial exterior usa `contenteditable=false` y `data-editor-atomic-block`.
+- Una zona que sí admite edición dentro de ese bloque usa un host local `contenteditable=true` con `data-editor-local-editable=true`.
+- `Ctrl/Cmd+A` dentro de un host local selecciona solo ese host; desde la hoja se deja que el navegador trate los bloques atómicos como islas.
+- Si una selección de la hoja cruza imágenes u otros bloques atómicos y se borra, OANIX intercepta `beforeinput delete*` y elimina únicamente los tramos de texto normal seleccionados. No desmontar el bloque atómico para después reconstruirlo.
+- Daily Entry conserva fecha y título como espacios visuales separados; el título ya no depende de un `input` dentro del host principal, sino de un editor local independiente.
+- La descripción opcional de imagen usa el mismo patrón local dentro de la tarjeta atómica.
+- Como defensa secundaria, si una imagen debe reconstruirse por reconciliación/historial, la preview cacheada debe reaplicarse al nuevo nodo; no dejar la tarjeta en “Descifrando imagen…” hasta reabrir la nota.
+- No convertir estos bloques en capas flotantes: la separación es semántica/DOM, no posicionamiento absoluto, para evitar coste y desalineación innecesarios.
+
 ## 5. Archivos grandes
 
 Objetivo inicial de producto: **5 GB por archivo**, sin diseñar el motor con un techo arquitectónico de 5 GB. El límite de seguridad del protocolo puede ser mayor (~20 GiB actualmente).
