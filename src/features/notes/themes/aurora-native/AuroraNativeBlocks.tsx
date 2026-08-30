@@ -1,23 +1,14 @@
 import {
-  AlignCenter,
-  AlignLeft,
-  AlignRight,
   CalendarDays,
-  Check,
   ChevronDown,
   Copy,
   Download,
-  Expand,
-  Eye,
-  EyeOff,
   File,
   FileCode,
   FileText,
   Film,
   GripVertical,
   Image as ImageIcon,
-  Lock,
-  Maximize,
   Maximize2,
   Music,
   Package,
@@ -28,7 +19,6 @@ import {
   Smile,
   SquareCheck,
   Trash2,
-  Upload,
   X,
 } from 'lucide-react'
 import {
@@ -38,7 +28,6 @@ import {
   useState,
   type CSSProperties,
   type KeyboardEvent,
-  type MouseEvent,
   type ReactNode,
 } from 'react'
 import { formatAttachmentSize, type AttachmentMetadata } from '../../../attachments/attachmentTypes'
@@ -708,18 +697,3 @@ export function DividerBlockView(chrome: DividerBlockViewProps) {
   )
 }
 
-export const ImageToolbarIcons = {
-  Maximize,
-  Upload,
-  Lock,
-  Expand,
-  AlignLeft,
-  AlignCenter,
-  AlignRight,
-  Eye,
-  EyeOff,
-  PencilLine,
-  SlidersHorizontal,
-  Trash2,
-  Check,
-}
