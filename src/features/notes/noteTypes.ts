@@ -78,6 +78,45 @@ export const NOTE_VISUAL_COLORS = [
 export const DEFAULT_NOTE_VISUAL_ICON: NoteVisualIcon = '📝'
 export const DEFAULT_NOTE_VISUAL_COLOR = '#2563eb'
 export const MAX_NOTE_VISUAL_DESCRIPTION_LENGTH = 140
+
+export const NOTE_SHEET_THEMES = ['claro', 'sepia', 'noche'] as const
+export type NoteSheetTheme = (typeof NOTE_SHEET_THEMES)[number]
+export const NOTE_SHEET_ACCENTS = ['vermellon', 'oceano', 'bosque', 'lavanda', 'dorado'] as const
+export type NoteSheetAccent = (typeof NOTE_SHEET_ACCENTS)[number]
+export const NOTE_SHEET_DESIGNS = ['liso', 'renglones', 'puntos', 'cuadricula'] as const
+export type NoteSheetDesign = (typeof NOTE_SHEET_DESIGNS)[number]
+export const NOTE_SHEET_FONTS = ['serif', 'sans', 'mono'] as const
+export type NoteSheetFont = (typeof NOTE_SHEET_FONTS)[number]
+
+export interface NoteSheetAppearance {
+  theme: NoteSheetTheme
+  accent: NoteSheetAccent
+  design: NoteSheetDesign
+  font: NoteSheetFont
+}
+
+export const DEFAULT_NOTE_SHEET_APPEARANCE: NoteSheetAppearance = {
+  theme: 'claro',
+  accent: 'vermellon',
+  design: 'liso',
+  font: 'serif',
+}
+
+export function isNoteSheetAppearance(value: unknown): value is NoteSheetAppearance {
+  if (!value || typeof value !== 'object') return false
+  const appearance = value as Partial<NoteSheetAppearance>
+  return (
+    typeof appearance.theme === 'string' &&
+    (NOTE_SHEET_THEMES as readonly string[]).includes(appearance.theme) &&
+    typeof appearance.accent === 'string' &&
+    (NOTE_SHEET_ACCENTS as readonly string[]).includes(appearance.accent) &&
+    typeof appearance.design === 'string' &&
+    (NOTE_SHEET_DESIGNS as readonly string[]).includes(appearance.design) &&
+    typeof appearance.font === 'string' &&
+    (NOTE_SHEET_FONTS as readonly string[]).includes(appearance.font)
+  )
+}
+
 const NOTE_VISUAL_COLOR = /^#[0-9a-f]{6}$/i
 
 export function isNoteVisualIcon(value: unknown): value is NoteVisualIcon {
@@ -138,6 +177,7 @@ export interface ContactBlock {
   email: string
   organization: string
   notes: string
+  avatarEmoji?: string
 }
 
 export interface DailyEntryBlock {
@@ -145,6 +185,7 @@ export interface DailyEntryBlock {
   type: 'dailyEntry'
   date: string
   title: string
+  showDate?: boolean
 }
 
 export interface DividerBlock {
@@ -157,6 +198,14 @@ export interface CodeBlock {
   type: 'code'
   language: CodeLanguage
   text: string
+  showLineNumbers?: boolean
+  wrapLines?: boolean
+}
+
+export interface FileBlock {
+  id: string
+  type: 'file'
+  attachmentIds: string[]
 }
 
 export interface ImageBlock {
@@ -184,6 +233,7 @@ export type NoteBlock =
   | DailyEntryBlock
   | DividerBlock
   | CodeBlock
+  | FileBlock
 
 export type StoredNoteBlock = NoteBlock | ImageBlock
 
@@ -201,6 +251,7 @@ export interface NoteRecord {
   visualCategoryTagId?: string
   visualIcon?: NoteVisualIcon
   visualColor?: string
+  sheetAppearance?: NoteSheetAppearance
   content: {
     format: 'blocks-v1'
     blocks: StoredNoteBlock[]
@@ -289,6 +340,11 @@ function isStoredNoteBlock(value: unknown): value is StoredNoteBlock {
     notes?: unknown
     date?: unknown
     title?: unknown
+    avatarEmoji?: unknown
+    showDate?: unknown
+    showLineNumbers?: unknown
+    wrapLines?: unknown
+    attachmentIds?: unknown
   }
 
   if (typeof block.id !== 'string' || block.id.length === 0 || typeof block.type !== 'string') {
@@ -301,7 +357,17 @@ function isStoredNoteBlock(value: unknown): value is StoredNoteBlock {
     return (
       typeof block.text === 'string' &&
       typeof block.language === 'string' &&
-      normalizeCodeLanguage(block.language) === block.language
+      normalizeCodeLanguage(block.language) === block.language &&
+      (block.showLineNumbers === undefined || typeof block.showLineNumbers === 'boolean') &&
+      (block.wrapLines === undefined || typeof block.wrapLines === 'boolean')
+    )
+  }
+
+  if (block.type === 'file') {
+    return (
+      Array.isArray(block.attachmentIds) &&
+      block.attachmentIds.every((attachmentId) => typeof attachmentId === 'string' && attachmentId.length > 0) &&
+      new Set(block.attachmentIds).size === block.attachmentIds.length
     )
   }
 
@@ -336,7 +402,9 @@ function isStoredNoteBlock(value: unknown): value is StoredNoteBlock {
       typeof block.phone === 'string' &&
       typeof block.email === 'string' &&
       typeof block.organization === 'string' &&
-      typeof block.notes === 'string'
+      typeof block.notes === 'string' &&
+      (block.avatarEmoji === undefined ||
+        (typeof block.avatarEmoji === 'string' && block.avatarEmoji.length <= 8))
     )
   }
 
@@ -344,7 +412,8 @@ function isStoredNoteBlock(value: unknown): value is StoredNoteBlock {
     return (
       typeof block.date === 'string' &&
       /^\d{4}-\d{2}-\d{2}$/.test(block.date) &&
-      typeof block.title === 'string'
+      typeof block.title === 'string' &&
+      (block.showDate === undefined || typeof block.showDate === 'boolean')
     )
   }
 
@@ -390,6 +459,7 @@ export function isNoteRecord(value: unknown): value is NoteRecord {
       (typeof note.visualCategoryTagId === 'string' && note.visualCategoryTagId.length > 0)) &&
     (note.visualIcon === undefined || isNoteVisualIcon(note.visualIcon)) &&
     (note.visualColor === undefined || isNoteVisualColor(note.visualColor)) &&
+    (note.sheetAppearance === undefined || isNoteSheetAppearance(note.sheetAppearance)) &&
     !!note.content &&
     note.content.format === 'blocks-v1' &&
     Array.isArray(note.content.blocks) &&
@@ -417,7 +487,7 @@ export function noteBlocksToPlainText(blocks: StoredNoteBlock[]): string {
 export function noteBlocksToFullPlainText(blocks: StoredNoteBlock[]): string {
   return blocks
     .flatMap((block) => {
-      if (block.type === 'divider') return []
+      if (block.type === 'divider' || block.type === 'file') return []
       if (block.type === 'code') return [block.text]
       if (block.type === 'image') {
         const description = block.alt?.trim()
