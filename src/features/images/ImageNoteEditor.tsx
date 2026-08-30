@@ -261,6 +261,7 @@ function createImageElement(block: ImageBlock, objectUrl?: string): HTMLElement 
   const figure = document.createElement('div')
   figure.className = 'editor-image-block'
   figure.dataset.imageBlock = 'true'
+  figure.dataset.editorAtomicBlock = 'image'
   figure.dataset.imageId = block.imageId
   figure.dataset.blockId = block.id
   figure.dataset.imageSelected = 'false'
@@ -362,13 +363,15 @@ function createImageElement(block: ImageBlock, objectUrl?: string): HTMLElement 
   size.textContent = formatImageSize(block.byteLength)
   meta.append(name, size)
 
-  const alt = document.createElement('input')
+  const alt = document.createElement('div')
   alt.className = 'editor-image-block__alt'
-  alt.type = 'text'
-  alt.value = block.alt ?? ''
-  alt.placeholder = 'Descripción opcional'
-  alt.maxLength = 240
+  alt.contentEditable = 'true'
+  alt.spellcheck = true
+  alt.textContent = block.alt ?? ''
   alt.dataset.imageAlt = 'true'
+  alt.dataset.editorLocalEditable = 'true'
+  alt.dataset.placeholder = 'Descripción opcional'
+  alt.setAttribute('role', 'textbox')
   alt.setAttribute('aria-label', 'Descripción de la imagen')
 
   details.append(meta, alt)
@@ -669,7 +672,8 @@ export function ImageNoteEditor({
         applyImageElementState(element, block)
       }
 
-      if (!previewUrlsRef.current.has(block.imageId)) {
+      const image = element.querySelector<HTMLImageElement>('[data-image-element="true"]')
+      if (!image?.src || !previewUrlsRef.current.has(block.imageId)) {
         void hydrateImageElement(root, block, element)
       }
 
@@ -1172,16 +1176,24 @@ export function ImageNoteEditor({
 
     function handleImageInput(event: Event) {
       const target = event.target
-      if (!(target instanceof HTMLInputElement) || target.dataset.imageAlt !== 'true') return
+      if (!(target instanceof Element)) return
+      const alt = target.closest<HTMLElement>('[data-image-alt="true"]')
+      if (!alt || !root.contains(alt)) return
 
-      const figure = target.closest<HTMLElement>('[data-image-block="true"]')
+      const figure = alt.closest<HTMLElement>('[data-image-block="true"]')
       const blockId = figure?.dataset.blockId
       const block = blockId ? imagesRef.current.get(blockId) : null
       if (!blockId || !block) return
 
-      updateImageBlock(root, blockId, (current) => ({ ...current, alt: target.value }), false)
+      const normalized = (alt.innerText ?? '').replace(/[\r\n]+/g, ' ').slice(0, 240)
+      if ((alt.textContent ?? '') !== normalized) {
+        alt.textContent = normalized
+        placeCaretAtEnd(alt)
+      }
+
+      updateImageBlock(root, blockId, (current) => ({ ...current, alt: normalized }), false)
       const image = figure?.querySelector<HTMLImageElement>('[data-image-element="true"]')
-      if (image) image.alt = target.value.trim() || block.name
+      if (image) image.alt = normalized.trim() || block.name
       emitEditorInput(root)
     }
 
@@ -1196,6 +1208,17 @@ export function ImageNoteEditor({
     }
 
     function handleKeyDown(event: KeyboardEvent) {
+      const keyTarget = event.target
+      if (
+        keyTarget instanceof Element
+        && keyTarget.closest('[data-image-alt="true"]')
+        && event.key === 'Enter'
+      ) {
+        event.preventDefault()
+        ;(keyTarget.closest<HTMLElement>('[data-image-alt="true"]'))?.blur()
+        return
+      }
+
       if (event.ctrlKey || event.metaKey) {
         const target = event.target
         const key = event.key.toLowerCase()
