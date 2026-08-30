@@ -48,7 +48,7 @@ test('image actions require an explicit compact menu toggle', async () => {
   const source = await readFile(previewRuntimePath, 'utf8')
   const css = await readFile(previewCssPath, 'utf8')
 
-  assert.match(source, /data\.pwaActionsOpen \?\?= 'false'/)
+  assert.match(source, /dataset\.pwaActionsOpen \?\?= 'false'/)
   assert.match(source, /data-pwa-image-menu-toggle/)
   assert.match(source, /figure\.dataset\.pwaActionsOpen = String\(opening\)/)
   assert.match(css, /data-pwa-actions-open='false'[\s\S]*editor-image-block__actions[\s\S]*display: none !important/)
