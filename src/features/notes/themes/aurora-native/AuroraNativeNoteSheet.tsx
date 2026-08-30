@@ -755,7 +755,8 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
   function focusNativeBlock(blockId: string, atStart = false) {
     requestAnimationFrame(() => {
       const root = rootRef.current
-      const editable = root?.querySelector<HTMLElement>(
+      if (!root) return
+      const editable = root.querySelector<HTMLElement>(
         `.block[data-block-id="${CSS.escape(blockId)}"] [contenteditable="true"]`,
       )
       if (!editable) return
@@ -2063,8 +2064,26 @@ function NativeLightbox({ state, onClose }: { state: LightboxState; onClose: () 
     setOffset({ x: 0, y: 0 })
   }
 
-  function zoom(factor: number) {
-    setScale((value) => clampScale(value * factor))
+  function zoomAt(factor: number, clientX: number, clientY: number) {
+    const stage = stageRef.current
+    if (!stage) return
+    const rect = stage.getBoundingClientRect()
+    const px = clientX - rect.left - rect.width / 2
+    const py = clientY - rect.top - rect.height / 2
+    const nextScale = clampScale(scale * factor)
+    const ratio = nextScale / scale
+    setOffset((current) => ({
+      x: px - (px - current.x) * ratio,
+      y: py - (py - current.y) * ratio,
+    }))
+    setScale(nextScale)
+  }
+
+  function zoomFromCenter(factor: number) {
+    const stage = stageRef.current
+    if (!stage) return
+    const rect = stage.getBoundingClientRect()
+    zoomAt(factor, rect.left + rect.width / 2, rect.top + rect.height / 2)
   }
 
   function pointerDown(event: ReactPointerEvent<HTMLDivElement>) {
@@ -2105,9 +2124,9 @@ function NativeLightbox({ state, onClose }: { state: LightboxState; onClose: () 
     <div className="modal lightbox open">
       <button className="lb-close" type="button" onClick={onClose}><X /></button>
       <div className="lb-tools">
-        <button type="button" onClick={() => zoom(.8)}><ZoomOut /></button>
+        <button type="button" onClick={() => zoomFromCenter(.8)}><ZoomOut /></button>
         <span className="lb-pct">{Math.round(scale * 100)}%</span>
-        <button type="button" onClick={() => zoom(1.25)}><ZoomIn /></button>
+        <button type="button" onClick={() => zoomFromCenter(1.25)}><ZoomIn /></button>
         <button type="button" onClick={reset}><RotateCcw /></button>
       </div>
       <div
@@ -2115,7 +2134,7 @@ function NativeLightbox({ state, onClose }: { state: LightboxState; onClose: () 
         className="lb-stage"
         onWheel={(event) => {
           event.preventDefault()
-          zoom(event.deltaY < 0 ? 1.12 : .89)
+          zoomAt(event.deltaY < 0 ? 1.12 : .89, event.clientX, event.clientY)
         }}
         onDoubleClick={() => { if (scale > 1) reset(); else setScale(2) }}
         onPointerDown={pointerDown}
