@@ -277,7 +277,7 @@ export function LargePasteRuntime() {
       if (!plainText || !shouldEncapsulateClipboardPaste(plainText)) return
 
       if (consumeDuplicate(event, plainText)) return
-      if (target.closest('[data-contact-field], [data-daily-entry-title="true"]')) return
+      if (target.closest('[data-contact-field], [data-daily-entry-title="true"], [data-image-alt="true"]')) return
       if (target.closest('[data-code-content="true"]')) return
 
       if (!ensureEditorSelection(editor, target)) {
