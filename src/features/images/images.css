@@ -514,6 +514,11 @@
 }
 
 .image-note-editor-root .editor-image-block__alt {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.image-note-editor-root .editor-image-block__alt:focus {
   -webkit-user-select: text;
   user-select: text;
 }
