@@ -138,6 +138,7 @@ export interface ContactBlock {
   email: string
   organization: string
   notes: string
+  avatarEmoji?: string
 }
 
 export interface DailyEntryBlock {
@@ -145,6 +146,7 @@ export interface DailyEntryBlock {
   type: 'dailyEntry'
   date: string
   title: string
+  showDate?: boolean
 }
 
 export interface DividerBlock {
@@ -157,6 +159,8 @@ export interface CodeBlock {
   type: 'code'
   language: CodeLanguage
   text: string
+  showLineNumbers?: boolean
+  wrapLines?: boolean
 }
 
 export interface ImageBlock {
@@ -289,6 +293,10 @@ function isStoredNoteBlock(value: unknown): value is StoredNoteBlock {
     notes?: unknown
     date?: unknown
     title?: unknown
+    avatarEmoji?: unknown
+    showDate?: unknown
+    showLineNumbers?: unknown
+    wrapLines?: unknown
   }
 
   if (typeof block.id !== 'string' || block.id.length === 0 || typeof block.type !== 'string') {
@@ -301,7 +309,9 @@ function isStoredNoteBlock(value: unknown): value is StoredNoteBlock {
     return (
       typeof block.text === 'string' &&
       typeof block.language === 'string' &&
-      normalizeCodeLanguage(block.language) === block.language
+      normalizeCodeLanguage(block.language) === block.language &&
+      (block.showLineNumbers === undefined || typeof block.showLineNumbers === 'boolean') &&
+      (block.wrapLines === undefined || typeof block.wrapLines === 'boolean')
     )
   }
 
@@ -336,7 +346,8 @@ function isStoredNoteBlock(value: unknown): value is StoredNoteBlock {
       typeof block.phone === 'string' &&
       typeof block.email === 'string' &&
       typeof block.organization === 'string' &&
-      typeof block.notes === 'string'
+      typeof block.notes === 'string' &&
+      (block.avatarEmoji === undefined || (typeof block.avatarEmoji === 'string' && block.avatarEmoji.length <= 8))
     )
   }
 
@@ -344,7 +355,8 @@ function isStoredNoteBlock(value: unknown): value is StoredNoteBlock {
     return (
       typeof block.date === 'string' &&
       /^\d{4}-\d{2}-\d{2}$/.test(block.date) &&
-      typeof block.title === 'string'
+      typeof block.title === 'string' &&
+      (block.showDate === undefined || typeof block.showDate === 'boolean')
     )
   }
 
