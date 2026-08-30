@@ -49,14 +49,26 @@ export function ensureNativeBlockFlow(input: StoredNoteBlock[]): StoredNoteBlock
 export function normalizeNativeSheetBlocks(input: StoredNoteBlock[]): StoredNoteBlock[] {
   const source = structuredClone(input)
   const withBodies: StoredNoteBlock[] = []
+
   for (let index = 0; index < source.length; index += 1) {
     const block = source[index]
     withBodies.push(block)
     if (block.type !== 'dailyEntry') continue
-    const next = source[index + 1]
-    if (next?.type === 'paragraph') continue
-    withBodies.push(emptyParagraph())
+
+    const body = source[index + 1]
+    if (body?.type === 'paragraph') {
+      withBodies.push(body)
+      index += 1
+    } else {
+      withBodies.push(emptyParagraph())
+    }
+
+    const following = source[index + 1]
+    if (!isNativeTextBlock(following)) {
+      withBodies.push(emptyParagraph())
+    }
   }
+
   return ensureNativeBlockFlow(withBodies)
 }
 
