@@ -68,3 +68,14 @@ test('the superseded 50-line automatic conversion no longer exists', () => {
   assert.doesNotMatch(pasteRuntime, /codeTool\.click\(\)/)
   assert.match(pasteRuntime, /Ordinary clipboard paste is intentionally left to the browser/)
 })
+
+
+test('Aurora block decoration stays idempotent so opening a note cannot self-trigger MutationObserver forever', () => {
+  const controls = readFileSync('src/features/notes/themes/aurora/AuroraBlockControls.tsx', 'utf8')
+  assert.match(controls, /function setTextIfChanged\(element: HTMLElement \| null, value: string\)/)
+  assert.match(controls, /element\.textContent !== value/)
+  assert.match(controls, /setTextIfChanged\(count,/)
+  assert.match(controls, /setTextIfChanged\(day, String\(date\.getDate\(\)\)\)/)
+  assert.match(controls, /setTextIfChanged\(weekday, DAILY_WEEKDAYS/)
+  assert.match(controls, /setTextIfChanged\(monthYear,/)
+})
