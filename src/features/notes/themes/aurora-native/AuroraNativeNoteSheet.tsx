@@ -98,7 +98,6 @@ import {
   type NativeTextBlock,
 } from './auroraNativeModel'
 import {
-  BlockChrome,
   ChecklistBlockView,
   CodeBlockView,
   ContactBlockView,
@@ -1299,7 +1298,7 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
 
       {insertState && (
         <div className="pop insert-menu" style={{ top: insertState.top, left: insertState.left }}>
-          {INSERT_ITEMS.map((item, index) => {
+          {INSERT_ITEMS.map((item) => {
             if ('group' in item) return <div className="im-group" key={`g:${item.group}`}>{item.group}</div>
             const Icon = item.icon
             return (
