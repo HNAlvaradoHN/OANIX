@@ -525,6 +525,8 @@ export function NoteAttachmentsRuntime() {
   const localCount = attachments.length - remoteCount
   const panelVisible = Boolean(targets.noteId && (loading || busy || error || status || attachments.length > 0))
 
+  const auroraSheet = Boolean(targets.editorRoot?.closest('[data-note-sheet-theme="aurora"]'))
+
   return (
     <>
       <input
@@ -565,70 +567,130 @@ export function NoteAttachmentsRuntime() {
       )}
 
       {targets.editorRoot && panelVisible && createPortal(
-        <section className="note-attachments" aria-label="Archivos adjuntos de la nota">
-          <div className="note-attachments__heading">
-            <div>
-              <strong>Adjuntos</strong>
-              <span>
-                {attachments.length} archivo{attachments.length === 1 ? '' : 's'}
-                {attachments.length > 0 ? ` · ${localCount} local${localCount === 1 ? '' : 'es'} · ${remoteCount} Drive` : ''}
-              </span>
+        auroraSheet ? (
+          <section className="note-attachments note-attachments--aurora" aria-label="Archivos adjuntos de la nota">
+            <div className="note-attachments__heading">
+              <div>
+                <strong>Archivos adjuntos</strong>
+                <span className="note-attachments__count">{attachments.length}</span>
+              </div>
+              <button className="note-attachments__add" type="button" onClick={beginAttachmentSelection} disabled={busy}>＋ Añadir</button>
             </div>
-            <button type="button" onClick={beginAttachmentSelection} disabled={busy}>＋</button>
-          </div>
 
-          {attachments.length > 0 && (
-            <div className="note-attachments__list">
-              {attachments.map((item) => {
-                const isNew = newAttachmentIds.has(item.attachmentId)
-                const remote = isRemoteLargeAttachment(item)
-                return (
+            {attachments.length > 0 && (
+              <div className="note-attachments__list">
+                {attachments.map((item) => (
                   <article
                     className="note-attachment-card"
-                    data-oanix-new={isNew ? 'true' : 'false'}
-                    data-oanix-storage={remote ? 'remote' : 'local'}
+                    data-oanix-new={newAttachmentIds.has(item.attachmentId) ? 'true' : 'false'}
+                    data-oanix-storage={isRemoteLargeAttachment(item) ? 'remote' : 'local'}
                     key={item.attachmentId}
                   >
                     <div className="note-attachment-card__icon" aria-hidden="true">{attachmentIcon(item)}</div>
                     <div className="note-attachment-card__body">
                       <strong title={item.name}>{item.name}</strong>
-                      <span>{formatAttachmentSize(item.byteLength)} · {attachmentTypeLabel(item)} · {attachmentLocationLabel(item)}</span>
+                      <span>{formatAttachmentSize(item.byteLength)}</span>
                     </div>
                     <div className="note-attachment-card__actions">
                       <button
-                        type="button"
-                        onClick={() => void handleOpen(item)}
-                        disabled={busy}
-                        title={remote ? 'Recuperar, descifrar y abrir desde Drive' : undefined}
-                      >Abrir</button>
-                      <button
+                        className="note-attachment-card__download"
                         type="button"
                         onClick={() => void handleExport(item)}
                         disabled={busy}
-                        title={remote ? 'Recuperar y guardar desde Drive' : undefined}
-                      >Exportar</button>
-                      <button className="note-attachment-card__remove" type="button" onClick={() => void handleRemove(item)} disabled={busy}>Quitar</button>
+                        title="Descargar archivo"
+                        aria-label={`Descargar ${item.name}`}
+                      >↓</button>
+                      <button
+                        className="note-attachment-card__remove"
+                        type="button"
+                        onClick={() => void handleRemove(item)}
+                        disabled={busy}
+                        title="Quitar archivo"
+                        aria-label={`Quitar ${item.name}`}
+                      >×</button>
                     </div>
                   </article>
-                )
-              })}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
 
-          {loading && <p className="note-attachments__status">Cargando adjuntos cifrados…</p>}
-          {status && (
-            <div className="note-attachments__status-row" role="status">
-              <p className="note-attachments__status note-attachments__status--added">{status}</p>
-              {recovering && (
-                <button className="note-attachments__cancel" type="button" onClick={cancelRecovery}>Cancelar</button>
-              )}
+            {loading && <p className="note-attachments__status">Cargando adjuntos cifrados…</p>}
+            {status && (
+              <div className="note-attachments__status-row" role="status">
+                <p className="note-attachments__status note-attachments__status--added">{status}</p>
+                {recovering && (
+                  <button className="note-attachments__cancel" type="button" onClick={cancelRecovery}>Cancelar</button>
+                )}
+              </div>
+            )}
+            {error && <p className="note-attachments__error" role="alert">{error}</p>}
+          </section>
+        ) : (
+          <section className="note-attachments" aria-label="Archivos adjuntos de la nota">
+            <div className="note-attachments__heading">
+              <div>
+                <strong>Adjuntos</strong>
+                <span>
+                  {attachments.length} archivo{attachments.length === 1 ? '' : 's'}
+                  {attachments.length > 0 ? ` · ${localCount} local${localCount === 1 ? '' : 'es'} · ${remoteCount} Drive` : ''}
+                </span>
+              </div>
+              <button type="button" onClick={beginAttachmentSelection} disabled={busy}>＋</button>
             </div>
-          )}
-          {error && <p className="note-attachments__error" role="alert">{error}</p>}
-          <p className="note-attachments__scope">
-            Locales: incluidos en el backup cifrado. Grandes en Drive: el backup conserva referencia y manifiestos cifrados, no el contenido remoto.
-          </p>
-        </section>,
+
+            {attachments.length > 0 && (
+              <div className="note-attachments__list">
+                {attachments.map((item) => {
+                  const isNew = newAttachmentIds.has(item.attachmentId)
+                  const remote = isRemoteLargeAttachment(item)
+                  return (
+                    <article
+                      className="note-attachment-card"
+                      data-oanix-new={isNew ? 'true' : 'false'}
+                      data-oanix-storage={remote ? 'remote' : 'local'}
+                      key={item.attachmentId}
+                    >
+                      <div className="note-attachment-card__icon" aria-hidden="true">{attachmentIcon(item)}</div>
+                      <div className="note-attachment-card__body">
+                        <strong title={item.name}>{item.name}</strong>
+                        <span>{formatAttachmentSize(item.byteLength)} · {attachmentTypeLabel(item)} · {attachmentLocationLabel(item)}</span>
+                      </div>
+                      <div className="note-attachment-card__actions">
+                        <button
+                          type="button"
+                          onClick={() => void handleOpen(item)}
+                          disabled={busy}
+                          title={remote ? 'Recuperar, descifrar y abrir desde Drive' : undefined}
+                        >Abrir</button>
+                        <button
+                          type="button"
+                          onClick={() => void handleExport(item)}
+                          disabled={busy}
+                          title={remote ? 'Recuperar y guardar desde Drive' : undefined}
+                        >Exportar</button>
+                        <button className="note-attachment-card__remove" type="button" onClick={() => void handleRemove(item)} disabled={busy}>Quitar</button>
+                      </div>
+                    </article>
+                  )
+                })}
+              </div>
+            )}
+
+            {loading && <p className="note-attachments__status">Cargando adjuntos cifrados…</p>}
+            {status && (
+              <div className="note-attachments__status-row" role="status">
+                <p className="note-attachments__status note-attachments__status--added">{status}</p>
+                {recovering && (
+                  <button className="note-attachments__cancel" type="button" onClick={cancelRecovery}>Cancelar</button>
+                )}
+              </div>
+            )}
+            {error && <p className="note-attachments__error" role="alert">{error}</p>}
+            <p className="note-attachments__scope">
+              Locales: incluidos en el backup cifrado. Grandes en Drive: el backup conserva referencia y manifiestos cifrados, no el contenido remoto.
+            </p>
+          </section>
+        ),
         targets.editorRoot,
       )}
     </>
