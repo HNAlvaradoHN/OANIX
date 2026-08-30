@@ -173,6 +173,13 @@ function constrainSelectionToTextRegion(
   }
 
   const current = selection.getRangeAt(0)
+  if (
+    current.compareBoundaryPoints(Range.END_TO_START, scope) <= 0
+    || current.compareBoundaryPoints(Range.START_TO_END, scope) >= 0
+  ) {
+    return false
+  }
+
   const clipped = document.createRange()
 
   if (current.compareBoundaryPoints(Range.START_TO_START, scope) < 0) {
