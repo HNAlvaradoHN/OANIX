@@ -3,6 +3,7 @@
 Todos los cambios relevantes del proyecto se registran aquí por versión.
 
 ## Unreleased
+- Editor atómico: imagen, Daily Entry, consola, checklist y contacto comparten un contrato de bloque exterior `contenteditable=false`; las zonas que sí se editan usan hosts locales independientes. El borrado que cruza bloques atómicos elimina solo texto normal seleccionado y deja los bloques intactos; además, una imagen reconstruida vuelve a aplicar su preview aunque la URL ya esté cacheada.
 - Editor: refina el aislamiento de `Daily Entry`: la fecha y el título opcional conservan sus espacios visuales independientes y quedan fuera de la selección de la hoja. El título solo vuelve a ser seleccionable cuando recibe foco directo; `Ctrl/Cmd+A`, selección nativa y borrado se limitan al tramo de texto editable activo sin cruzar bloques atómicos.
 - Editor: `Daily Entry` queda como isla de selección independiente. La fecha no entra en selecciones de la hoja y el título opcional conserva selección propia como input; `Ctrl/Cmd+A` y la selección nativa de todo el editor se reconducen a la unidad editable activa sin cruzar Daily Entry ni otros bloques atómicos.
 - Cabecera infográfica más compacta: fija una altura real de 52px, reduce el logo dentro del tema y alinea el offset de búsqueda/contenido con esa altura para que la fila de etiquetas ya no quede cortada debajo de la barra superior.
