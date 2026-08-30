@@ -163,6 +163,7 @@ export function AuroraNoteSheet({
   const rootRef = useRef<HTMLElement>(null)
   const titleRef = useRef<HTMLHeadingElement>(null)
   const bubbleRef = useRef<HTMLDivElement>(null)
+  const savedLinkRangeRef = useRef<Range | null>(null)
   const [moreOpen, setMoreOpen] = useState(false)
   const [insertOpen, setInsertOpen] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -412,11 +413,21 @@ export function AuroraNoteSheet({
             {editor}
           </div>
 
-          <div className="aurora-canvas-tail" aria-hidden="true" />
+          <button
+            className="aurora-canvas-tail"
+            type="button"
+            aria-label="Continuar escribiendo la nota"
+            onClick={() => runEditorCommand('focus-end')}
+          />
         </div>
       </main>
 
-      <button className="aurora-fab" type="button" onClick={() => setInsertOpen((open) => !open)}>
+      <button
+        className="aurora-fab"
+        type="button"
+        onPointerDown={(event) => event.preventDefault()}
+        onClick={() => setInsertOpen((open) => !open)}
+      >
         <OanixIcon name="plus" size={17} />Añadir bloque
       </button>
 
@@ -481,7 +492,13 @@ export function AuroraNoteSheet({
           type="button"
           title="Enlace"
           onMouseDown={(e) => e.preventDefault()}
-          onClick={() => setLinkOpen((open) => !open)}
+          onClick={() => {
+            if (!linkOpen) {
+              const selection = document.getSelection()
+              savedLinkRangeRef.current = selection?.rangeCount ? selection.getRangeAt(0).cloneRange() : null
+            }
+            setLinkOpen((open) => !open)
+          }}
         >↗</button>
         {linkOpen && (
           <div className="aurora-b-link">
@@ -492,7 +509,14 @@ export function AuroraNoteSheet({
               onClick={() => {
                 const value = linkValue.trim()
                 if (!value) return
+                const range = savedLinkRangeRef.current
+                const selection = document.getSelection()
+                if (range && selection) {
+                  selection.removeAllRanges()
+                  selection.addRange(range)
+                }
                 runEditorCommand('format-link', value)
+                savedLinkRangeRef.current = null
                 setLinkValue('')
                 setLinkOpen(false)
               }}
