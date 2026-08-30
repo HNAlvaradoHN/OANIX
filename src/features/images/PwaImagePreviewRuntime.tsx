@@ -320,7 +320,7 @@ export function PwaImagePreviewRuntime() {
       const target = event.target
       if (!(target instanceof Element)) return
       const input = target.closest<HTMLElement>('[data-image-alt="true"]')
-      if (!input || !appRoot.contains(input)) return
+      if (!input || !input.closest(IMAGE_CARD_SELECTOR)) return
       updateDescriptionMore(input)
 
       if (descriptionBubble) {
