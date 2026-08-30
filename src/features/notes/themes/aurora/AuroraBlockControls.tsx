@@ -106,6 +106,8 @@ function updateCodeLineNumbers(codeBlock: HTMLElement) {
 }
 
 function decorateCodeBlock(block: HTMLElement) {
+  if (block.dataset.auroraCodeWrap === undefined) block.dataset.auroraCodeWrap = 'true'
+  if (block.dataset.auroraCodeNums === undefined) block.dataset.auroraCodeNums = 'false'
   const toolbar = block.querySelector<HTMLElement>('.editor-code-block__toolbar')
   if (!toolbar) return
 
