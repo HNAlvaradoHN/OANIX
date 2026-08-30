@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { OanixIcon } from '../../../../shared/OanixIcon'
+import { persistConfirmedAtomicElementRemoval } from '../../noteSheetElementPersistenceAdapter'
 
 type AtomicKind = 'image' | 'code' | 'check' | 'contact' | 'entry' | 'sep'
 
@@ -66,10 +67,7 @@ function deleteConfirmation(kind: Exclude<AtomicKind, 'image'>): string {
 }
 
 function removePersistedAtomicBlock(block: HTMLElement) {
-  const editor = block.closest<HTMLElement>('.editor-surface')
-  if (!editor || block.parentElement !== editor) return
-  block.remove()
-  editor.dispatchEvent(new Event('input', { bubbles: true }))
+  persistConfirmedAtomicElementRemoval(block)
 }
 
 function requestAtomicDelete(noteId: string, selected: SelectedBlock) {
