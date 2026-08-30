@@ -251,6 +251,15 @@ function elementFromNode(node: Node | null): Element | null {
   return node instanceof Element ? node : node?.parentElement ?? null
 }
 
+function selectionForRoot(root: HTMLElement): Selection | null {
+  const rootNode = root.getRootNode()
+  if (rootNode instanceof ShadowRoot) {
+    const shadowSelection = (rootNode as ShadowRoot & { getSelection?: () => Selection | null }).getSelection?.()
+    if (shadowSelection) return shadowSelection
+  }
+  return document.getSelection()
+}
+
 function darken(hex: string, amount: number): string {
   const clean = hex.replace('#', '')
   const value = Number.parseInt(clean, 16)
@@ -333,7 +342,7 @@ function initialContact(): ContactBlock {
 }
 
 function selectedTextBlock(root: HTMLElement): { blockId: string; body: HTMLElement } | null {
-  const selection = document.getSelection()
+  const selection = selectionForRoot(root)
   if (!selection || selection.rangeCount === 0) return null
   const element = elementFromNode(selection.anchorNode)
   const body = element?.closest<HTMLElement>('.block-body')
@@ -570,7 +579,7 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
 
   function syncBubble() {
     const root = rootRef.current
-    const selection = document.getSelection()
+    const selection = root ? selectionForRoot(root) : null
     if (!root || !selection || selection.rangeCount === 0 || selection.isCollapsed) {
       setBubblePosition(null)
       return
@@ -688,7 +697,7 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
       )
       if (!editable) return
       editable.focus()
-      const selection = document.getSelection()
+      const selection = selectionForRoot(root)
       if (!selection) return
       const range = document.createRange()
       range.selectNodeContents(editable)
@@ -699,7 +708,8 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
   }
 
   function caretAtStart(element: HTMLElement): boolean {
-    const selection = document.getSelection()
+    const root = rootRef.current
+    const selection = root ? selectionForRoot(root) : document.getSelection()
     if (!selection || selection.rangeCount === 0) return false
     const range = selection.getRangeAt(0)
     if (!range.collapsed || !element.contains(range.startContainer)) return false
@@ -718,7 +728,8 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
     after: ParagraphBlock
   } | null {
     const context = activeTextContext()
-    const selection = document.getSelection()
+    const root = rootRef.current
+    const selection = root ? selectionForRoot(root) : document.getSelection()
     if (!context || context.blockId !== blockId || !selection || selection.rangeCount === 0) return null
 
     const range = selection.getRangeAt(0)
@@ -1657,7 +1668,8 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
           onMouseDown={(event) => event.preventDefault()}
           onClick={() => {
             if (!linkOpen) {
-              const selection = document.getSelection()
+              const root = rootRef.current
+              const selection = root ? selectionForRoot(root) : document.getSelection()
               savedRangeRef.current = selection?.rangeCount ? selection.getRangeAt(0).cloneRange() : null
             }
             setLinkOpen((value) => !value)
@@ -1671,7 +1683,8 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
             onClick={() => {
               const value = linkValue.trim()
               if (!value || !savedRangeRef.current) return
-              const selection = document.getSelection()
+              const root = rootRef.current
+              const selection = root ? selectionForRoot(root) : document.getSelection()
               selection?.removeAllRanges()
               selection?.addRange(savedRangeRef.current)
               executeTextCommand('createLink', value)
