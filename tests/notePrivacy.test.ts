@@ -61,7 +61,8 @@ test('private box is absent from normal lists and requires reauthentication', ()
 })
 
 test('note privacy runtime is scoped to an unlocked vault session', () => {
-  assert.match(appSource, /<NotesWorkspace key=\{workspaceRevision\}/)
+  assert.match(appSource, /<NotesWorkspace refreshRevision=\{workspaceRevision\}/)
+  assert.doesNotMatch(appSource, /<NotesWorkspace key=\{workspaceRevision\}/)
   assert.match(appSource, /<NotePrivacyRuntime key=\{`privacy-\$\{workspaceRevision\}-\$\{privacyRevision\}`\} \/>/)
   assert.match(appSource, /<NoteBulkPrivacyRuntime key=\{`privacy-bulk-\$\{workspaceRevision\}`\} \/>/)
   assert.match(appSource, /window\.addEventListener\(NOTE_PRIVACY_REFRESH_EVENT, refreshPrivacy\)/)
