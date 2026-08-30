@@ -429,7 +429,10 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
 
   useLayoutEffect(() => {
     const title = titleRef.current
-    if (!title || document.activeElement === title) return
+    if (!title) return
+    const rootNode = title.getRootNode()
+    const active = rootNode instanceof ShadowRoot ? rootNode.activeElement : document.activeElement
+    if (active === title) return
     if (title.textContent !== props.draftTitle) title.textContent = props.draftTitle
   }, [props.draftTitle, props.note.id])
 
@@ -749,7 +752,7 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
   }
 
   function openInsert(anchor: DOMRect, targetId: string | null, mode: InsertMode = 'after') {
-    const pos = fixedNear(anchor, 280, 520)
+    const pos = fixedNear(anchor, 280, 420)
     setInsertState({ ...pos, targetId, mode })
     setMorePosition(null)
     setCodePop(null)
@@ -834,12 +837,16 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
     const targetId = insertState?.targetId ?? focusedBlockIdRef.current
     const mode = insertState?.mode ?? 'after'
     if (kind === 'image') {
+      setPendingReplaceImageId(null)
+      setPendingFileBlockId(null)
       pendingInsertRef.current = { kind: 'image', targetId, mode }
       setInsertState(null)
       imageInputRef.current?.click()
       return
     }
     if (kind === 'file') {
+      setPendingReplaceImageId(null)
+      setPendingFileBlockId(null)
       pendingInsertRef.current = { kind: 'file', targetId, mode }
       setInsertState(null)
       fileInputRef.current?.click()
@@ -1735,6 +1742,11 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
         onChange={(event) => {
           const files = Array.from(event.currentTarget.files ?? [])
           event.currentTarget.value = ''
+          if (files.length === 0) {
+            setPendingReplaceImageId(null)
+            pendingInsertRef.current = null
+            return
+          }
           void handleImageFiles(files)
         }}
       />
@@ -1746,6 +1758,11 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
         onChange={(event) => {
           const files = Array.from(event.currentTarget.files ?? [])
           event.currentTarget.value = ''
+          if (files.length === 0) {
+            setPendingFileBlockId(null)
+            pendingInsertRef.current = null
+            return
+          }
           void handleFileFiles(files)
         }}
       />
