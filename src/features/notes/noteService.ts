@@ -234,6 +234,9 @@ export function deleteNote(noteId: string): Promise<NoteRecord> {
 
 export function renameNote(noteId: string, title: string): Promise<NoteRecord> {
   const normalizedTitle = title.trim() || UNTITLED_NOTE_TITLE
+  if (normalizedTitle.length > MAX_NOTE_TITLE_LENGTH) {
+    throw new Error(`El título no puede superar ${MAX_NOTE_TITLE_LENGTH} caracteres.`)
+  }
 
   return enqueueNoteMutation(noteId, (existing) => ({
     ...existing,
