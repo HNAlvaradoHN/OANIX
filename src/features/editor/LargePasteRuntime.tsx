@@ -70,7 +70,7 @@ function selectionTouchesProtectedIsland(editor: HTMLElement, selection: Selecti
   if (selection.isCollapsed || selection.rangeCount === 0) return false
   const range = selection.getRangeAt(0)
   const selectors = [
-    '[data-daily-entry-block="true"]',
+    '[data-editor-selection-island="true"]',
     '[data-code-block="true"]',
     '[data-checklist-block="true"]',
     '[data-contact-block="true"]',
@@ -160,17 +160,36 @@ export function LargePasteRuntime() {
         : null
     }
 
+    function rememberSelectionUnit(editor: HTMLElement, selection: Selection) {
+      const anchorElement = elementFromNode(selection.anchorNode)
+      const anchorBlock = directEditorBlock(editor, anchorElement)
+      const anchorUnit = editableSelectionUnit(editor, anchorElement, anchorBlock)
+
+      const focusElement = elementFromNode(selection.focusNode)
+      const focusBlock = directEditorBlock(editor, focusElement)
+      const focusUnit = editableSelectionUnit(editor, focusElement, focusBlock)
+
+      if (anchorBlock) lastInteractionBlock = anchorBlock
+      else if (focusBlock) lastInteractionBlock = focusBlock
+
+      if (anchorUnit && (!focusUnit || anchorUnit === focusUnit)) {
+        lastSelectionUnit = anchorUnit
+        return
+      }
+
+      if (focusUnit && !anchorUnit) lastSelectionUnit = focusUnit
+    }
+
     function currentSelectionUnit(editor: HTMLElement): HTMLElement | null {
       if (lastSelectionUnit?.isConnected && editor.contains(lastSelectionUnit)) {
         return lastSelectionUnit
       }
 
       const selection = document.getSelection()
-      const anchorElement = elementFromNode(selection?.anchorNode ?? null)
-      const block = directEditorBlock(editor, anchorElement) ?? lastInteractionBlock
-      const unit = editableSelectionUnit(editor, anchorElement, block)
-      if (unit) lastSelectionUnit = unit
-      return unit
+      if (selection) rememberSelectionUnit(editor, selection)
+      return lastSelectionUnit?.isConnected && editor.contains(lastSelectionUnit)
+        ? lastSelectionUnit
+        : null
     }
 
     function guardSelectionBoundaries() {
@@ -179,11 +198,19 @@ export function LargePasteRuntime() {
       if (!editor) return
 
       const selection = document.getSelection()
-      if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return
+      if (!selection || selection.rangeCount === 0) return
+
+      if (selection.isCollapsed) {
+        rememberSelectionUnit(editor, selection)
+        return
+      }
 
       const crossesProtectedIsland = selectionTouchesProtectedIsland(editor, selection)
       const coversWholeEditor = selectionCoversEditorContents(editor, selection)
-      if (!crossesProtectedIsland && !coversWholeEditor) return
+      if (!crossesProtectedIsland && !coversWholeEditor) {
+        rememberSelectionUnit(editor, selection)
+        return
+      }
 
       const unit = currentSelectionUnit(editor)
       if (!unit) return

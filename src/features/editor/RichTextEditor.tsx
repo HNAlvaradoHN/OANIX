@@ -158,7 +158,7 @@ function dailyEntryBlockToHtml(block: Extract<NoteBlock, { type: 'dailyEntry' }>
   const date = escapeHtml(block.date)
   const title = escapeHtml(block.title)
   const label = escapeHtml(formatDailyEntryDate(block.date))
-  return `<div class="editor-daily-entry" data-daily-entry-block="true" data-daily-entry-date="${date}" data-block-id="${id}" contenteditable="false"><div class="editor-daily-entry__date-row"><span class="editor-daily-entry__date">${label}</span></div><input class="editor-daily-entry__title" data-daily-entry-title="true" type="text" value="${title}" maxlength="120" placeholder="Título de esta entrada (opcional)" autocomplete="off"></div>`
+  return `<div class="editor-daily-entry" data-daily-entry-block="true" data-editor-selection-island="true" data-daily-entry-date="${date}" data-block-id="${id}" contenteditable="false"><div class="editor-daily-entry__date-row"><span class="editor-daily-entry__date">${label}</span></div><input class="editor-daily-entry__title" data-daily-entry-title="true" type="text" value="${title}" maxlength="120" placeholder="Título de esta entrada (opcional)" autocomplete="off"></div>`
 }
 
 function blocksToHtml(blocks: NoteBlock[]): string {
