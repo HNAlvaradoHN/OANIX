@@ -34,6 +34,13 @@ test('preview stays compact on the left and readable actions stay on the right',
   assert.match(css, /width: min\(100%, 34rem\) !important/)
 })
 
+test('image description is a local editing host inside an atomic image card', () => {
+  assert.match(runtime, /querySelector<HTMLElement>\('\[data-image-alt="true"\]'\)/)
+  assert.match(runtime, /function descriptionValue\(input: HTMLElement\)/)
+  assert.doesNotMatch(runtime, /querySelector<HTMLInputElement>\('\[data-image-alt="true"\]'\)/)
+  assert.match(css, /editor-image-block__alt[\s\S]*display: flex !important/)
+})
+
 test('description uses the full lower bar, truncates visually, and exposes a complete-text bubble', () => {
   assert.match(runtime, /DESCRIPTION_LIMIT = 56/)
   assert.match(runtime, /data-pwa-image-description-row/)
