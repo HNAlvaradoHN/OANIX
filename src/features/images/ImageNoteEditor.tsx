@@ -401,6 +401,13 @@ function placeCaretAtEnd(element: HTMLElement) {
   selection.addRange(range)
 }
 
+function selectionInsideRoot(root: HTMLElement): boolean {
+  const selection = document.getSelection()
+  if (!selection || selection.rangeCount === 0) return false
+  const range = selection.getRangeAt(0)
+  return root.contains(range.commonAncestorContainer)
+}
+
 function createEmptyEditorParagraph(): HTMLParagraphElement {
   const paragraph = document.createElement('p')
   paragraph.dataset.blockId = createBlockId()
@@ -1130,6 +1137,8 @@ export function ImageNoteEditor({
         event.stopPropagation()
 
         const imageBlock = imagesRef.current.get(blockId)
+        const imageName = imageBlock?.name?.trim() || 'esta imagen'
+        if (!window.confirm(`¿Quitar “${imageName}” de esta nota?`)) return
         forceHistoryBoundaryRef.current = true
         authorizedProtectedRemovalsRef.current.add(blockId)
         if (imageBlock) revokeImageUrls(imageBlock.imageId)
@@ -1255,12 +1264,110 @@ export function ImageNoteEditor({
       }
     }
 
+    function handleNoteSheetCommand(event: Event) {
+      if (!(event instanceof CustomEvent)) return
+      const detail = event.detail as {
+        noteId?: unknown
+        command?: unknown
+        value?: unknown
+        blockId?: unknown
+      } | null
+      if (detail?.noteId !== noteId || typeof detail.command !== 'string') return
+
+      const toolbarSelectors: Record<string, string> = {
+        'format-bold': '[data-format="bold"]',
+        'format-italic': '[data-format="italic"]',
+        'format-paragraph': '[data-format="paragraph"]',
+        'format-heading2': '[data-format="heading2"]',
+        'format-heading3': '[data-format="heading3"]',
+        'format-bulletList': '[data-format="bulletList"]',
+        'format-orderedList': '[data-format="orderedList"]',
+        'format-quote': '[data-format="quote"]',
+        'insert-dailyEntry': '[data-insert="dailyEntry"]',
+        'insert-code': '[data-format="code"]',
+        'insert-checklist': '[data-insert="checklist"]',
+        'insert-contact': '[data-insert="contact"]',
+        'insert-divider': '[title="Separador"]',
+      }
+
+      if (detail.command === 'undo') {
+        undoLastChange(root)
+        return
+      }
+
+      if (detail.command === 'redo') {
+        redoLastChange(root)
+        return
+      }
+
+      if (detail.command === 'insert-image') {
+        insertionAfterIdRef.current = currentDirectBlockId(root)
+        forceHistoryBoundaryRef.current = true
+        inputRef.current?.click()
+        return
+      }
+
+      if (detail.command === 'format-link' && typeof detail.value === 'string') {
+        const editor = root.querySelector<HTMLElement>('.editor-surface')
+        if (!editor || !selectionInsideRoot(root)) return
+        document.execCommand('createLink', false, detail.value)
+        editor.dispatchEvent(new Event('input', { bubbles: true }))
+        return
+      }
+
+      const selector = toolbarSelectors[detail.command]
+      if (selector) {
+        triggerToolbarAction(selector)
+        return
+      }
+
+      if (typeof detail.blockId !== 'string') return
+      const editor = root.querySelector<HTMLElement>('.editor-surface')
+      const figure = editor ? directBlockById(editor, detail.blockId) : null
+      if (!figure || figure.dataset.imageBlock !== 'true') return
+
+      if (detail.command === 'image-open') {
+        figure.querySelector<HTMLButtonElement>('[data-image-open-action="true"]')?.click()
+        return
+      }
+      if (detail.command === 'image-lock') {
+        figure.querySelector<HTMLButtonElement>('[data-image-lock="true"]')?.click()
+        return
+      }
+      if (detail.command === 'image-name') {
+        figure.querySelector<HTMLButtonElement>('[data-image-name-toggle="true"]')?.click()
+        return
+      }
+      if (detail.command === 'image-delete') {
+        figure.querySelector<HTMLButtonElement>('[data-image-remove="true"]')?.click()
+        return
+      }
+      if (detail.command === 'image-align' && typeof detail.value === 'string') {
+        figure.querySelector<HTMLButtonElement>(`[data-image-align="${detail.value}"]`)?.click()
+        return
+      }
+      if (detail.command === 'image-size' && typeof detail.value === 'number') {
+        const blockId = figure.dataset.blockId
+        if (!blockId) return
+        const widthPercent = Math.min(100, Math.max(10, Math.round(detail.value)))
+        updateImageBlock(root, blockId, (current) => ({ ...current, widthPercent }))
+        return
+      }
+      if (detail.command === 'image-description' && typeof detail.value === 'string') {
+        const alt = figure.querySelector<HTMLElement>('[data-image-alt="true"]')
+        if (!alt) return
+        alt.textContent = detail.value.slice(0, 240)
+        alt.dispatchEvent(new Event('input', { bubbles: true }))
+      }
+    }
+
     root.addEventListener('mousedown', handleMouseDown, true)
     root.addEventListener('pointerdown', handlePointerDown, true)
     root.addEventListener('click', handleClick, true)
     root.addEventListener('input', handleImageInput, true)
     root.addEventListener('paste', handlePaste, true)
     document.addEventListener('keydown', handleKeyDown)
+    window.addEventListener('oanix:note-sheet-command', handleNoteSheetCommand)
 
     return () => {
       observer.disconnect()
@@ -1271,6 +1378,7 @@ export function ImageNoteEditor({
       root.removeEventListener('input', handleImageInput, true)
       root.removeEventListener('paste', handlePaste, true)
       document.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener('oanix:note-sheet-command', handleNoteSheetCommand)
       window.visualViewport?.removeEventListener('resize', syncVisualViewportMetrics)
       window.visualViewport?.removeEventListener('scroll', syncVisualViewportMetrics)
       window.removeEventListener('resize', syncVisualViewportMetrics)
