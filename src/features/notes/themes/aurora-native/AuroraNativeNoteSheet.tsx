@@ -480,8 +480,7 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
   function entryBodyChange(bodyId: string, element: HTMLElement) {
     const holder = document.createElement('div')
     holder.innerHTML = element.innerHTML
-    const first = holder.firstElementChild
-    const runs = runsFromDom(first instanceof HTMLElement ? first : holder)
+    const runs = runsFromDom(holder)
     const paragraph: ParagraphBlock = { id: bodyId, type: 'paragraph', runs }
     const next = currentBlocks().map((block) => block.id === bodyId ? paragraph : block)
     blocksRef.current = next
