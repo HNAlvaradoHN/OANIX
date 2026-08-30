@@ -10,26 +10,19 @@ const codeBlockEditorPath = new URL('../src/features/editor/CodeBlockEditor.tsx'
 const mobileEditorCssPath = new URL('../src/features/editor/mobileEditorStability.css', import.meta.url)
 const autoSyncRuntimePath = new URL('../src/features/sync/AutoSyncRuntime.tsx', import.meta.url)
 
-test('mobile large paste handles Android dual delivery and verifies bulk insertText against clipboard', async () => {
+test('mobile paste keeps Android fallback without automatic large-text conversion', async () => {
   const source = await readFile(largePasteRuntimePath, 'utf8')
 
   assert.match(source, /function ensureEditorSelection\(editor: HTMLElement, target: Element\)/)
-  assert.match(source, /event\.inputType === 'insertText' && !event\.isComposing/)
   assert.match(source, /event\.inputType !== 'insertFromPaste'/)
-  assert.match(source, /event\.dataTransfer\?\.getData\('text\/plain'\)/)
-  assert.match(source, /duplicateWindowMs = 10_000/)
-  assert.match(source, /isRecentHandledPaste/)
-  assert.match(source, /consumeDuplicate\(event, plainText\)/)
-  assert.match(source, /if \(consumeDuplicate\(event, plainText\)\) return/)
   assert.match(source, /navigator\.clipboard/)
   assert.match(source, /await clipboard\.readText\(\)/)
-  assert.match(source, /clipboardText === bulkText/)
-  assert.match(source, /document\.execCommand\('insertText', false, bulkText\)/)
   assert.match(source, /document\.execCommand\('insertText', false, fallbackText\)/)
-  assert.match(source, /document\.addEventListener\('paste', handlePaste, true\)/)
   assert.match(source, /document\.addEventListener\('beforeinput', handleBeforeInput, true\)/)
-  assert.match(source, /shouldEncapsulateClipboardPaste\(bulkText\)/)
-  assert.match(source, /shouldEncapsulateClipboardPaste\(fallbackText\)/)
+  assert.match(source, /selectionTouchesAtomicBlock/)
+  assert.match(source, /deleteSelectedSheetText/)
+  assert.doesNotMatch(source, /shouldEncapsulateClipboardPaste/)
+  assert.doesNotMatch(source, /LARGE_PASTE_LINE_THRESHOLD/)
 })
 
 test('atomic editor islands mirror the code-console editing boundary', async () => {
