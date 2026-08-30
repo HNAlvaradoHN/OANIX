@@ -3,7 +3,6 @@ import {
   useMemo,
   useRef,
   useState,
-  type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent as ReactMouseEvent,
 } from 'react'
 import { deleteEncryptedImage } from '../images/imageService'
@@ -32,7 +31,6 @@ import {
 import { searchItemsByLocalFields, type LocalSearchField } from '../search/localSearch'
 import { prepareDailyEntriesForEditing } from './dailyEntries'
 import { WORKSPACE_V2_ENABLED } from '../../app/workspaceExperience'
-import { OanixIcon } from '../../shared/OanixIcon'
 import { NoteAvatar } from './NoteAvatar'
 import { WorkspaceV2Sidebar } from './WorkspaceV2Sidebar'
 import { AuroraNoteSheet } from './themes/aurora/AuroraNoteSheet'
@@ -265,8 +263,8 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
   const [noteMenuId, setNoteMenuId] = useState<string | null>(null)
   const [noteMenuDirection, setNoteMenuDirection] = useState<'down' | 'up'>('down')
   const [workspaceMenuOpen, setWorkspaceMenuOpen] = useState(false)
-  const [activeNoteMenuOpen, setActiveNoteMenuOpen] = useState(false)
-  const [noteInfoOpen, setNoteInfoOpen] = useState(false)
+  const [, setActiveNoteMenuOpen] = useState(false)
+  const [, setNoteInfoOpen] = useState(false)
   const [savingTitle, setSavingTitle] = useState(false)
   const [saveState, setSaveState] = useState<SaveState>('idle')
   const [error, setError] = useState('')
@@ -595,11 +593,6 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
   function folderName(folderId: string | null | undefined): string {
     if (!folderId) return 'Sin carpeta'
     return folders.find((folder) => folder.id === folderId)?.name ?? 'Carpeta no disponible'
-  }
-
-  function tagRecordsFor(note: NoteRecord): TagRecord[] {
-    const ids = new Set(note.tagIds ?? [])
-    return tags.filter((tag) => ids.has(tag.id))
   }
 
   function sortTagState(nextTags: TagRecord[]): TagRecord[] {
@@ -1324,12 +1317,6 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     }
 
     window.requestAnimationFrame(() => searchInputRef.current?.focus())
-  }
-
-  function handleTitleKeyDown(event: ReactKeyboardEvent<HTMLInputElement>) {
-    if (event.key === 'Enter') {
-      event.currentTarget.blur()
-    }
   }
 
   function toggleNoteMenu(noteId: string, event: ReactMouseEvent<HTMLButtonElement>) {
