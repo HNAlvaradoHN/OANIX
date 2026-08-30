@@ -43,73 +43,40 @@ function elementFromNode(node: Node | null): Element | null {
   return node instanceof Element ? node : node?.parentElement ?? null
 }
 
-function editableSelectionUnit(
+function localEditableFromElement(
   editor: HTMLElement,
   element: Element | null,
-  fallbackBlock: HTMLElement | null,
 ): HTMLElement | null {
-  if (element) {
-    const codeContent = element.closest<HTMLElement>('[data-code-content="true"]')
-    if (codeContent && editor.contains(codeContent)) return codeContent
-
-    const checklistText = element.closest<HTMLElement>('[data-checklist-text="true"]')
-    if (checklistText && editor.contains(checklistText)) return checklistText
-
-    const dailyTitle = element.closest<HTMLElement>('[data-daily-entry-title="true"]')
-    if (dailyTitle && editor.contains(dailyTitle)) return null
-  }
-
-  const block = directEditorBlock(editor, element) ?? fallbackBlock
-  if (!block || block.parentElement !== editor) return null
-  if (block.dataset.dailyEntryBlock === 'true') return null
-  if (block.getAttribute('contenteditable') === 'false') return null
-  return block
+  const local = element?.closest<HTMLElement>('[data-editor-local-editable="true"]') ?? null
+  return local && editor.contains(local) ? local : null
 }
 
 function isSelectionBoundaryBlock(block: HTMLElement): boolean {
   return (
     block.matches(
-      '[data-daily-entry-block="true"], [data-code-block="true"], [data-checklist-block="true"], [data-contact-block="true"], [data-image-block="true"], [data-attachment-block="true"]',
+      '[data-editor-atomic-block], [data-daily-entry-block="true"], [data-code-block="true"], [data-checklist-block="true"], [data-contact-block="true"], [data-image-block="true"], [data-attachment-block="true"]',
     )
     || block.getAttribute('contenteditable') === 'false'
     || block.tagName.toLowerCase() === 'hr'
   )
 }
 
-function textSelectionRegion(
+function selectionWithinSameLocalEditable(
   editor: HTMLElement,
-  block: HTMLElement | null,
-): { first: HTMLElement; last: HTMLElement } | null {
-  if (!block || block.parentElement !== editor || isSelectionBoundaryBlock(block)) return null
-
-  let first = block
-  let last = block
-
-  for (
-    let previous = first.previousElementSibling;
-    previous instanceof HTMLElement && previous.parentElement === editor && !isSelectionBoundaryBlock(previous);
-    previous = first.previousElementSibling
-  ) {
-    first = previous
-  }
-
-  for (
-    let next = last.nextElementSibling;
-    next instanceof HTMLElement && next.parentElement === editor && !isSelectionBoundaryBlock(next);
-    next = last.nextElementSibling
-  ) {
-    last = next
-  }
-
-  return { first, last }
+  selection: Selection,
+): HTMLElement | null {
+  if (selection.rangeCount === 0 || !selection.anchorNode || !selection.focusNode) return null
+  const anchor = localEditableFromElement(editor, elementFromNode(selection.anchorNode))
+  const focus = localEditableFromElement(editor, elementFromNode(selection.focusNode))
+  return anchor && anchor === focus ? anchor : null
 }
 
-function selectionTouchesProtectedIsland(editor: HTMLElement, selection: Selection): boolean {
+function selectionTouchesAtomicBlock(editor: HTMLElement, selection: Selection): boolean {
   if (selection.isCollapsed || selection.rangeCount === 0) return false
   const range = selection.getRangeAt(0)
   const selectors = [
+    '[data-editor-atomic-block]',
     '[data-daily-entry-block="true"]',
-    '[data-editor-selection-island]',
     '[data-code-block="true"]',
     '[data-checklist-block="true"]',
     '[data-contact-block="true"]',
@@ -117,28 +84,13 @@ function selectionTouchesProtectedIsland(editor: HTMLElement, selection: Selecti
     '[data-attachment-block="true"]',
   ].join(',')
 
-  return Array.from(editor.querySelectorAll<HTMLElement>(selectors)).some((island) => {
+  return Array.from(editor.querySelectorAll<HTMLElement>(selectors)).some((block) => {
     try {
-      return range.intersectsNode(island)
+      return range.intersectsNode(block)
     } catch {
       return false
     }
   })
-}
-
-function selectionCoversEditorContents(editor: HTMLElement, selection: Selection): boolean {
-  if (selection.isCollapsed || selection.rangeCount === 0) return false
-  if (!selection.anchorNode || !selection.focusNode) return false
-  if (!editor.contains(selection.anchorNode) || !editor.contains(selection.focusNode)) return false
-
-  const range = selection.getRangeAt(0)
-  const editorRange = document.createRange()
-  editorRange.selectNodeContents(editor)
-
-  return (
-    range.compareBoundaryPoints(Range.START_TO_START, editorRange) <= 0
-    && range.compareBoundaryPoints(Range.END_TO_END, editorRange) >= 0
-  )
 }
 
 function constrainSelectionToUnit(unit: HTMLElement | null): boolean {
@@ -153,66 +105,67 @@ function constrainSelectionToUnit(unit: HTMLElement | null): boolean {
   return true
 }
 
-function constrainSelectionToTextRegion(
-  editor: HTMLElement,
-  block: HTMLElement | null,
-  preserveExistingRange: boolean,
-): boolean {
-  const region = textSelectionRegion(editor, block)
-  const selection = document.getSelection()
-  if (!region || !selection) return false
+function rangeIntersectionWithinBlock(source: Range, block: HTMLElement): Range | null {
+  const blockRange = document.createRange()
+  blockRange.selectNodeContents(block)
 
-  const scope = document.createRange()
-  scope.setStart(region.first, 0)
-  scope.setEnd(region.last, region.last.childNodes.length)
-
-  if (!preserveExistingRange || selection.rangeCount === 0 || selection.isCollapsed) {
-    selection.removeAllRanges()
-    selection.addRange(scope)
-    return true
-  }
-
-  const current = selection.getRangeAt(0)
   if (
-    current.compareBoundaryPoints(Range.END_TO_START, scope) <= 0
-    || current.compareBoundaryPoints(Range.START_TO_END, scope) >= 0
+    source.compareBoundaryPoints(Range.END_TO_START, blockRange) <= 0
+    || source.compareBoundaryPoints(Range.START_TO_END, blockRange) >= 0
   ) {
-    return false
+    return null
   }
 
-  const clipped = document.createRange()
+  const result = document.createRange()
 
-  if (current.compareBoundaryPoints(Range.START_TO_START, scope) < 0) {
-    clipped.setStart(scope.startContainer, scope.startOffset)
+  if (source.compareBoundaryPoints(Range.START_TO_START, blockRange) <= 0) {
+    result.setStart(blockRange.startContainer, blockRange.startOffset)
   } else {
-    clipped.setStart(current.startContainer, current.startOffset)
+    result.setStart(source.startContainer, source.startOffset)
   }
 
-  if (current.compareBoundaryPoints(Range.END_TO_END, scope) > 0) {
-    clipped.setEnd(scope.endContainer, scope.endOffset)
+  if (source.compareBoundaryPoints(Range.END_TO_END, blockRange) >= 0) {
+    result.setEnd(blockRange.endContainer, blockRange.endOffset)
   } else {
-    clipped.setEnd(current.endContainer, current.endOffset)
+    result.setEnd(source.endContainer, source.endOffset)
   }
 
-  if (clipped.collapsed) return false
-
-  selection.removeAllRanges()
-  selection.addRange(clipped)
-  return true
+  return result.collapsed ? null : result
 }
 
-function constrainSelectionToActiveScope(
-  editor: HTMLElement,
-  unit: HTMLElement | null,
-  preserveExistingRange: boolean,
-): boolean {
-  if (!unit || !unit.isConnected) return false
+function ensureEditableBlockCaret(block: HTMLElement) {
+  if (block.textContent || block.children.length > 0) return
+  block.appendChild(document.createElement('br'))
+}
 
-  if (unit.parentElement === editor && !isSelectionBoundaryBlock(unit)) {
-    return constrainSelectionToTextRegion(editor, unit, preserveExistingRange)
+function deleteSelectedSheetText(editor: HTMLElement, selection: Selection): boolean {
+  if (selection.isCollapsed || selection.rangeCount === 0) return false
+
+  const source = selection.getRangeAt(0).cloneRange()
+  const affected = Array.from(editor.children)
+    .filter((child): child is HTMLElement => child instanceof HTMLElement)
+    .filter((block) => !isSelectionBoundaryBlock(block))
+    .flatMap((block) => {
+      const range = rangeIntersectionWithinBlock(source, block)
+      return range ? [{ block, range }] : []
+    })
+
+  if (affected.length === 0) return false
+
+  for (let index = affected.length - 1; index >= 0; index -= 1) {
+    affected[index].range.deleteContents()
+    ensureEditableBlockCaret(affected[index].block)
   }
 
-  return constrainSelectionToUnit(unit)
+  const firstBlock = affected[0].block
+  const caret = document.createRange()
+  caret.selectNodeContents(firstBlock)
+  caret.collapse(true)
+  selection.removeAllRanges()
+  selection.addRange(caret)
+
+  editor.dispatchEvent(new Event('input', { bubbles: true }))
+  return true
 }
 
 function clipboardTextFromBeforeInput(event: InputEvent): string {
@@ -222,8 +175,6 @@ function clipboardTextFromBeforeInput(event: InputEvent): string {
 export function LargePasteRuntime() {
   useEffect(() => {
     let lastInteractionBlock: HTMLElement | null = null
-    let lastSelectionUnit: HTMLElement | null = null
-    let adjustingSelection = false
     let handledText = ''
     let handledAt = 0
     const duplicateWindowMs = 10_000
@@ -235,9 +186,6 @@ export function LargePasteRuntime() {
 
       const block = directEditorBlock(editor, target)
       if (block) lastInteractionBlock = block
-
-      const unit = editableSelectionUnit(editor, target, block)
-      if (unit) lastSelectionUnit = unit
     }
 
     function rememberPointerInteraction(event: PointerEvent) {
@@ -262,91 +210,43 @@ export function LargePasteRuntime() {
     }
 
     function rememberSelectionUnit(editor: HTMLElement, selection: Selection) {
-      const anchorElement = elementFromNode(selection.anchorNode)
-      const anchorBlock = directEditorBlock(editor, anchorElement)
-      const anchorUnit = editableSelectionUnit(editor, anchorElement, anchorBlock)
-
-      const focusElement = elementFromNode(selection.focusNode)
-      const focusBlock = directEditorBlock(editor, focusElement)
-      const focusUnit = editableSelectionUnit(editor, focusElement, focusBlock)
-
+      const anchorBlock = directEditorBlock(editor, elementFromNode(selection.anchorNode))
+      const focusBlock = directEditorBlock(editor, elementFromNode(selection.focusNode))
       if (anchorBlock) lastInteractionBlock = anchorBlock
       else if (focusBlock) lastInteractionBlock = focusBlock
-
-      if (anchorUnit && (!focusUnit || anchorUnit === focusUnit)) {
-        lastSelectionUnit = anchorUnit
-        return
-      }
-
-      if (focusUnit && !anchorUnit) lastSelectionUnit = focusUnit
     }
 
-    function currentSelectionUnit(editor: HTMLElement): HTMLElement | null {
-      if (lastSelectionUnit?.isConnected && editor.contains(lastSelectionUnit)) {
-        return lastSelectionUnit
-      }
-
-      const selection = document.getSelection()
-      if (selection) rememberSelectionUnit(editor, selection)
-      return lastSelectionUnit?.isConnected && editor.contains(lastSelectionUnit)
-        ? lastSelectionUnit
-        : null
-    }
-
-    function guardSelectionBoundaries() {
-      if (adjustingSelection) return
+    function trackSelectionUnit() {
       const editor = activeEditor()
       if (!editor) return
-
       const selection = document.getSelection()
       if (!selection || selection.rangeCount === 0) return
-
-      if (selection.isCollapsed) {
-        rememberSelectionUnit(editor, selection)
-        return
-      }
-
-      const crossesProtectedIsland = selectionTouchesProtectedIsland(editor, selection)
-      const coversWholeEditor = selectionCoversEditorContents(editor, selection)
-      if (!crossesProtectedIsland && !coversWholeEditor) {
-        rememberSelectionUnit(editor, selection)
-        return
-      }
-
-      const unit = currentSelectionUnit(editor)
-      if (!unit) return
-
-      adjustingSelection = true
-      try {
-        constrainSelectionToActiveScope(editor, unit, true)
-      } finally {
-        queueMicrotask(() => {
-          adjustingSelection = false
-        })
-      }
+      rememberSelectionUnit(editor, selection)
     }
 
     function handleSelectAllKey(event: KeyboardEvent) {
       if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== 'a') return
       const target = event.target
       if (!(target instanceof Element)) return
-      if (target.closest('input, textarea, [data-daily-entry-title="true"]')) return
+      if (target.closest('input, textarea')) return
 
       const editor = target.closest<HTMLElement>('.editor-surface')
       if (!editor) return
+
       const selection = document.getSelection()
       const anchorElement = elementFromNode(selection?.anchorNode ?? null)
-      const unit = editableSelectionUnit(
-        editor,
-        anchorElement,
-        directEditorBlock(editor, anchorElement) ?? lastInteractionBlock,
-      ) ?? currentSelectionUnit(editor)
-      if (!unit) return
+      const local = localEditableFromElement(editor, target)
+        ?? localEditableFromElement(editor, anchorElement)
+
+      if (!local) {
+        // Let the browser select the outer editing host. Atomic blocks are
+        // contenteditable=false, so they behave like the console shell.
+        return
+      }
 
       event.preventDefault()
       event.stopPropagation()
-      lastSelectionUnit = unit
-      constrainSelectionToActiveScope(editor, unit, false)
+      constrainSelectionToUnit(local)
     }
 
     function isRecentHandledPaste(): boolean {
@@ -377,7 +277,7 @@ export function LargePasteRuntime() {
       if (!plainText || !shouldEncapsulateClipboardPaste(plainText)) return
 
       if (consumeDuplicate(event, plainText)) return
-      if (target.closest('[data-contact-field], [data-daily-entry-title="true"]')) return
+      if (target.closest('[data-contact-field], [data-daily-entry-title="true"], [data-image-alt="true"]')) return
       if (target.closest('[data-code-content="true"]')) return
 
       if (!ensureEditorSelection(editor, target)) {
@@ -419,10 +319,7 @@ export function LargePasteRuntime() {
       content.textContent = plainText
       content.focus({ preventScroll: true })
       content.dispatchEvent(new Event('input', { bubbles: true }))
-      if (insertedBlock) {
-        lastInteractionBlock = insertedBlock
-        lastSelectionUnit = content
-      }
+      if (insertedBlock) lastInteractionBlock = insertedBlock
     }
 
     function handlePaste(event: ClipboardEvent) {
@@ -439,7 +336,15 @@ export function LargePasteRuntime() {
       if (!editor) return
 
       if (event.inputType.startsWith('delete')) {
-        if (!target.closest('[data-daily-entry-title="true"]')) guardSelectionBoundaries()
+        const selection = document.getSelection()
+        if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return
+
+        if (selectionWithinSameLocalEditable(editor, selection)) return
+        if (!selectionTouchesAtomicBlock(editor, selection)) return
+
+        event.preventDefault()
+        event.stopPropagation()
+        deleteSelectedSheetText(editor, selection)
         return
       }
 
@@ -508,26 +413,17 @@ export function LargePasteRuntime() {
       }
     }
 
-    function handleDeleteKey(event: KeyboardEvent) {
-      if (event.key !== 'Backspace' && event.key !== 'Delete') return
-      const target = event.target
-      if (target instanceof Element && target.closest('[data-daily-entry-title="true"]')) return
-      guardSelectionBoundaries()
-    }
-
     document.addEventListener('pointerdown', rememberPointerInteraction, true)
     document.addEventListener('focusin', rememberFocusInteraction, true)
-    document.addEventListener('selectionchange', guardSelectionBoundaries)
+    document.addEventListener('selectionchange', trackSelectionUnit)
     document.addEventListener('keydown', handleSelectAllKey, true)
-    document.addEventListener('keydown', handleDeleteKey, true)
     document.addEventListener('paste', handlePaste, true)
     document.addEventListener('beforeinput', handleBeforeInput, true)
     return () => {
       document.removeEventListener('pointerdown', rememberPointerInteraction, true)
       document.removeEventListener('focusin', rememberFocusInteraction, true)
-      document.removeEventListener('selectionchange', guardSelectionBoundaries)
+      document.removeEventListener('selectionchange', trackSelectionUnit)
       document.removeEventListener('keydown', handleSelectAllKey, true)
-      document.removeEventListener('keydown', handleDeleteKey, true)
       document.removeEventListener('paste', handlePaste, true)
       document.removeEventListener('beforeinput', handleBeforeInput, true)
     }

@@ -75,11 +75,15 @@ export function PwaImagePreviewRuntime() {
     let panState: PanState | null = null
     let gestureListenersAttached = false
 
-    function descriptionNeedsMore(input: HTMLInputElement): boolean {
-      return input.value.trim().length > DESCRIPTION_LIMIT
+    function descriptionValue(input: HTMLElement): string {
+      return (input.innerText ?? '').trim()
     }
 
-    function updateDescriptionMore(input: HTMLInputElement) {
+    function descriptionNeedsMore(input: HTMLElement): boolean {
+      return descriptionValue(input).length > DESCRIPTION_LIMIT
+    }
+
+    function updateDescriptionMore(input: HTMLElement) {
       const row = input.closest<HTMLElement>('[data-pwa-image-description-row="true"]')
       const more = row?.querySelector<HTMLButtonElement>('[data-pwa-image-description-more="true"]')
       if (!row || !more) return
@@ -99,7 +103,7 @@ export function PwaImagePreviewRuntime() {
       const actions = figure.querySelector<HTMLElement>('.editor-image-block__actions')
       const details = figure.querySelector<HTMLElement>('.editor-image-block__details')
       const meta = figure.querySelector<HTMLElement>('.editor-image-block__meta')
-      const input = figure.querySelector<HTMLInputElement>('[data-image-alt="true"]')
+      const input = figure.querySelector<HTMLElement>('[data-image-alt="true"]')
       if (!preview || !footer || !actions || !details || !input) return
 
       let top = figure.querySelector<HTMLElement>('[data-pwa-image-top="true"]')
@@ -186,8 +190,8 @@ export function PwaImagePreviewRuntime() {
       descriptionBubble = null
     }
 
-    function openDescriptionBubble(input: HTMLInputElement) {
-      const text = input.value.trim()
+    function openDescriptionBubble(input: HTMLElement) {
+      const text = descriptionValue(input)
       if (!text) return
 
       removeDescriptionBubble()
@@ -314,12 +318,14 @@ export function PwaImagePreviewRuntime() {
 
     function handleInput(event: Event) {
       const target = event.target
-      if (!(target instanceof HTMLInputElement) || target.dataset.imageAlt !== 'true') return
-      updateDescriptionMore(target)
+      if (!(target instanceof Element)) return
+      const input = target.closest<HTMLElement>('[data-image-alt="true"]')
+      if (!input || !input.closest(IMAGE_CARD_SELECTOR)) return
+      updateDescriptionMore(input)
 
       if (descriptionBubble) {
         const text = descriptionBubble.querySelector<HTMLElement>('.pwa-image-description-bubble__text')
-        if (text) text.textContent = target.value.trim()
+        if (text) text.textContent = descriptionValue(input)
       }
     }
 
@@ -397,7 +403,7 @@ export function PwaImagePreviewRuntime() {
       const more = target.closest<HTMLButtonElement>('[data-pwa-image-description-more="true"]')
       if (more) {
         const row = more.closest<HTMLElement>('[data-pwa-image-description-row="true"]')
-        const input = row?.querySelector<HTMLInputElement>('[data-image-alt="true"]')
+        const input = row?.querySelector<HTMLElement>('[data-image-alt="true"]')
         if (!input) return
         event.preventDefault()
         event.stopPropagation()

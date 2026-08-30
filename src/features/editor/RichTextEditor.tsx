@@ -111,7 +111,7 @@ function codeBlockToHtml(block: Extract<NoteBlock, { type: 'code' }>): string {
   const language = normalizeCodeLanguage(block.language)
   const text = escapeHtml(block.text)
 
-  return `<div class="editor-code-block" data-code-block="true" data-block-id="${id}" data-language="${language}" contenteditable="false"><div class="editor-code-block__toolbar"><select class="editor-code-block__language" data-code-language="true" aria-label="Lenguaje del bloque de código">${codeLanguageOptions(language)}</select><button class="editor-code-block__copy" data-code-copy="true" type="button">Copiar</button></div><div class="editor-code-block__content" data-code-content="true" contenteditable="true" spellcheck="false" autocapitalize="off" tabindex="0">${text}</div></div>`
+  return `<div class="editor-code-block" data-code-block="true" data-editor-atomic-block="code" data-block-id="${id}" data-language="${language}" contenteditable="false"><div class="editor-code-block__toolbar"><select class="editor-code-block__language" data-code-language="true" aria-label="Lenguaje del bloque de código">${codeLanguageOptions(language)}</select><button class="editor-code-block__copy" data-code-copy="true" type="button">Copiar</button></div><div class="editor-code-block__content" data-code-content="true" data-editor-local-editable="true" contenteditable="true" spellcheck="false" autocapitalize="off" tabindex="0">${text}</div></div>`
 }
 
 type ChecklistItemModel = Extract<NoteBlock, { type: 'checklist' }>['items'][number]
@@ -121,13 +121,13 @@ function checklistItemToHtml(item: ChecklistItemModel): string {
   const mark = item.checked ? '✓' : ''
   const label = item.checked ? 'Marcar tarea como pendiente' : 'Marcar tarea como completada'
   const text = escapeHtml(item.text).replaceAll('\n', '<br>') || '<br>'
-  return `<div class="editor-checklist__item" data-checklist-item="true" data-checked="${checked}"><button class="editor-checklist__toggle" data-checklist-toggle="true" type="button" aria-pressed="${checked}" aria-label="${label}">${mark}</button><div class="editor-checklist__text" data-checklist-text="true" contenteditable="true" role="textbox" aria-label="Tarea de checklist" spellcheck="true">${text}</div></div>`
+  return `<div class="editor-checklist__item" data-checklist-item="true" data-checked="${checked}"><button class="editor-checklist__toggle" data-checklist-toggle="true" type="button" aria-pressed="${checked}" aria-label="${label}">${mark}</button><div class="editor-checklist__text" data-checklist-text="true" data-editor-local-editable="true" contenteditable="true" role="textbox" aria-label="Tarea de checklist" spellcheck="true">${text}</div></div>`
 }
 
 function checklistBlockToHtml(block: Extract<NoteBlock, { type: 'checklist' }>): string {
   const id = escapeHtml(block.id)
   const items = block.items.length > 0 ? block.items : [{ text: '', checked: false }]
-  return `<div class="editor-checklist" data-checklist-block="true" data-block-id="${id}" contenteditable="false">${items.map(checklistItemToHtml).join('')}</div>`
+  return `<div class="editor-checklist" data-checklist-block="true" data-editor-atomic-block="checklist" data-block-id="${id}" contenteditable="false">${items.map(checklistItemToHtml).join('')}</div>`
 }
 
 function createChecklistItemElement(item: ChecklistItemModel): HTMLElement {
@@ -145,7 +145,7 @@ function contactInitial(name: string): string {
 function contactBlockToHtml(block: Extract<NoteBlock, { type: 'contact' }>): string {
   const id = escapeHtml(block.id)
   const initial = escapeHtml(contactInitial(block.name))
-  return `<div class="editor-contact-card" data-contact-block="true" data-block-id="${id}" contenteditable="false"><div class="editor-contact-card__header"><div class="editor-contact-card__avatar" data-contact-avatar="true" aria-hidden="true">${initial}</div><div class="editor-contact-card__title"><strong>Contacto privado</strong><span>Cifrado dentro de esta nota</span></div><button class="editor-contact-card__remove" data-contact-remove="true" type="button">Eliminar</button></div><div class="editor-contact-card__fields"><label class="editor-contact-card__field"><span>Nombre</span><input data-contact-field="name" type="text" value="${escapeHtml(block.name)}" autocomplete="off"></label><label class="editor-contact-card__field"><span>Teléfono</span><input data-contact-field="phone" type="tel" value="${escapeHtml(block.phone)}" autocomplete="off" inputmode="tel"></label><label class="editor-contact-card__field"><span>Correo</span><input data-contact-field="email" type="email" value="${escapeHtml(block.email)}" autocomplete="off" autocapitalize="none" spellcheck="false"></label><label class="editor-contact-card__field"><span>Organización</span><input data-contact-field="organization" type="text" value="${escapeHtml(block.organization)}" autocomplete="off"></label><label class="editor-contact-card__field editor-contact-card__field--notes"><span>Notas</span><textarea data-contact-field="notes" rows="3" autocomplete="off">${escapeHtml(block.notes)}</textarea></label></div></div>`
+  return `<div class="editor-contact-card" data-contact-block="true" data-editor-atomic-block="contact" data-block-id="${id}" contenteditable="false"><div class="editor-contact-card__header"><div class="editor-contact-card__avatar" data-contact-avatar="true" aria-hidden="true">${initial}</div><div class="editor-contact-card__title"><strong>Contacto privado</strong><span>Cifrado dentro de esta nota</span></div><button class="editor-contact-card__remove" data-contact-remove="true" type="button">Eliminar</button></div><div class="editor-contact-card__fields"><label class="editor-contact-card__field"><span>Nombre</span><input data-contact-field="name" type="text" value="${escapeHtml(block.name)}" autocomplete="off"></label><label class="editor-contact-card__field"><span>Teléfono</span><input data-contact-field="phone" type="tel" value="${escapeHtml(block.phone)}" autocomplete="off" inputmode="tel"></label><label class="editor-contact-card__field"><span>Correo</span><input data-contact-field="email" type="email" value="${escapeHtml(block.email)}" autocomplete="off" autocapitalize="none" spellcheck="false"></label><label class="editor-contact-card__field"><span>Organización</span><input data-contact-field="organization" type="text" value="${escapeHtml(block.organization)}" autocomplete="off"></label><label class="editor-contact-card__field editor-contact-card__field--notes"><span>Notas</span><textarea data-contact-field="notes" rows="3" autocomplete="off">${escapeHtml(block.notes)}</textarea></label></div></div>`
 }
 
 function contactFieldValue(block: HTMLElement, name: string): string {
@@ -158,7 +158,7 @@ function dailyEntryBlockToHtml(block: Extract<NoteBlock, { type: 'dailyEntry' }>
   const date = escapeHtml(block.date)
   const title = escapeHtml(block.title)
   const label = escapeHtml(formatDailyEntryDate(block.date))
-  return `<div class="editor-daily-entry" data-daily-entry-block="true" data-daily-entry-date="${date}" data-block-id="${id}" contenteditable="false"><div class="editor-daily-entry__date-row" data-editor-selection-island="date"><span class="editor-daily-entry__date">${label}</span></div><input class="editor-daily-entry__title" data-daily-entry-title="true" data-editor-selection-island="title" type="text" value="${title}" maxlength="120" placeholder="Título de esta entrada (opcional)" autocomplete="off"></div>`
+  return `<div class="editor-daily-entry" data-daily-entry-block="true" data-editor-atomic-block="daily-entry" data-daily-entry-date="${date}" data-block-id="${id}" contenteditable="false"><div class="editor-daily-entry__date-row" data-editor-selection-island="date"><span class="editor-daily-entry__date">${label}</span></div><div class="editor-daily-entry__title" data-daily-entry-title="true" data-editor-local-editable="true" contenteditable="true" role="textbox" aria-label="Título de esta entrada" data-placeholder="Título de esta entrada (opcional)" spellcheck="true">${title}</div></div>`
 }
 
 function blocksToHtml(blocks: NoteBlock[]): string {
@@ -296,7 +296,8 @@ function parseEditorBlocks(root: HTMLElement): NoteBlock[] {
     }
 
     if (node.dataset.dailyEntryBlock === 'true') {
-      const title = node.querySelector<HTMLInputElement>('[data-daily-entry-title="true"]')?.value ?? ''
+      const titleElement = node.querySelector<HTMLElement>('[data-daily-entry-title="true"]')
+      const title = (titleElement?.innerText ?? '').replace(/\s+/g, ' ').trim().slice(0, 120)
       blocks.push({
         id,
         type: 'dailyEntry',
@@ -417,9 +418,10 @@ function isEmptyCaretParagraph(element: Element | null): element is HTMLParagrap
 
 function isProtectedEditorBlock(element: HTMLElement): boolean {
   return (
-    element.dataset.codeBlock === 'true' ||
-    element.dataset.imageBlock === 'true' ||
-    element.dataset.dailyEntryBlock === 'true'
+    element.dataset.editorAtomicBlock !== undefined
+    || element.dataset.codeBlock === 'true'
+    || element.dataset.imageBlock === 'true'
+    || element.dataset.dailyEntryBlock === 'true'
   )
 }
 
@@ -548,14 +550,14 @@ function atomicHostForInsertion(editor: HTMLElement, selection: Selection | null
   const active = document.activeElement
   if (active instanceof Element && editor.contains(active)) {
     const activeHost = active.closest<HTMLElement>(
-      '[data-code-block="true"], [data-checklist-block="true"], [data-contact-block="true"], [data-daily-entry-block="true"]',
+      '[data-editor-atomic-block], [data-code-block="true"], [data-checklist-block="true"], [data-contact-block="true"], [data-daily-entry-block="true"]',
     )
     if (activeHost?.parentElement === editor) return activeHost
   }
 
   const anchorElement = elementFromSelectionNode(selection?.anchorNode ?? null)
   const selectionHost = anchorElement?.closest<HTMLElement>(
-    '[data-code-block="true"], [data-checklist-block="true"], [data-contact-block="true"], [data-daily-entry-block="true"]',
+    '[data-editor-atomic-block], [data-code-block="true"], [data-checklist-block="true"], [data-contact-block="true"], [data-daily-entry-block="true"]',
   )
   return selectionHost?.parentElement === editor ? selectionHost : null
 }
@@ -873,8 +875,8 @@ function RichTextEditorComponent({
       .find((entry) => entry.dataset.dailyEntryDate === today)
 
     if (existing) {
-      const title = existing.querySelector<HTMLInputElement>('[data-daily-entry-title="true"]')
-      if (title && !title.value.trim()) {
+      const title = existing.querySelector<HTMLElement>('[data-daily-entry-title="true"]')
+      if (title && !(title.innerText ?? '').trim()) {
         title.focus()
         return
       }
@@ -896,7 +898,7 @@ function RichTextEditorComponent({
     editor.insertAdjacentHTML('beforeend', `${dailyEntryBlockToHtml(entry)}<p data-block-id="${escapeHtml(paragraphBlock.id)}"><br></p>`)
     emitChange()
 
-    const title = editor.querySelector<HTMLInputElement>(
+    const title = editor.querySelector<HTMLElement>(
       `[data-block-id="${entry.id}"] [data-daily-entry-title="true"]`,
     )
     title?.focus()
@@ -1220,8 +1222,16 @@ function RichTextEditorComponent({
 
   function handleEditorInput(event: ReactFormEvent<HTMLDivElement>) {
     const target = event.target
-    if (target instanceof HTMLInputElement && target.dataset.dailyEntryTitle === 'true') {
-      target.setAttribute('value', target.value)
+    const dailyTitle = target instanceof Element
+      ? target.closest<HTMLElement>('[data-daily-entry-title="true"]')
+      : null
+
+    if (dailyTitle) {
+      const normalized = (dailyTitle.innerText ?? '').replace(/[\r\n]+/g, ' ').slice(0, 120)
+      if ((dailyTitle.textContent ?? '') !== normalized) {
+        dailyTitle.textContent = normalized
+        placeCaretAtEnd(dailyTitle)
+      }
     } else if (target instanceof HTMLInputElement && target.dataset.contactField) {
       target.setAttribute('value', target.value)
       if (target.dataset.contactField === 'name') {
@@ -1252,7 +1262,7 @@ function RichTextEditorComponent({
     const target = event.target
     if (!editor || !(target instanceof Element)) return
 
-    const dailyTitle = target.closest<HTMLInputElement>('[data-daily-entry-title="true"]')
+    const dailyTitle = target.closest<HTMLElement>('[data-daily-entry-title="true"]')
     if (dailyTitle) {
       if (event.key === 'Enter') {
         event.preventDefault()

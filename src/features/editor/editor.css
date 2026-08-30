@@ -658,7 +658,10 @@
   min-width: 0;
   height: auto;
   min-height: 2.45rem;
+  display: grid;
+  place-items: center;
   padding: .5rem .75rem;
+  overflow: hidden;
   border: 1px solid transparent;
   border-radius: .75rem;
   outline: none;
@@ -668,16 +671,27 @@
   font: inherit;
   font-size: clamp(.9rem, 2.6cqw, 1rem);
   font-weight: 800;
+  line-height: 1.35;
   text-align: center;
-  -webkit-user-select: text;
-  user-select: text;
+  white-space: nowrap;
+  -webkit-user-select: none;
+  user-select: none;
 }
-.editor-daily-entry__title::placeholder { color: #9aa5b1; font-weight: 650; }
+.editor-daily-entry__title:empty::before {
+  content: attr(data-placeholder);
+  color: #9aa5b1;
+  font-weight: 650;
+  pointer-events: none;
+}
 .editor-daily-entry__title:hover,
 .editor-daily-entry__title:focus {
   border-color: #cbd5e1;
   background: #fff;
   box-shadow: 0 0 0 3px rgba(37,99,235,.08);
+}
+.editor-daily-entry__title:focus {
+  -webkit-user-select: text;
+  user-select: text;
 }
 @container (max-width: 28rem) {
   .editor-daily-entry__date-row { grid-template-columns: minmax(.5rem, 1fr) auto minmax(.5rem, 1fr); gap: .4rem; }
