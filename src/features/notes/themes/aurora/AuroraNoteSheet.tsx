@@ -9,21 +9,20 @@ import {
 } from 'react'
 import { OanixIcon } from '../../../../shared/OanixIcon'
 import { AuroraBlockControls } from './AuroraBlockControls'
-import { noteBlocksToPlainText } from '../../noteTypes'
+import {
+  NOTE_SHEET_ACCENTS,
+  NOTE_SHEET_DESIGNS,
+  NOTE_SHEET_FONTS,
+  NOTE_SHEET_THEMES,
+  noteBlocksToPlainText,
+  type NoteSheetAccentName,
+  type NoteSheetDesignName,
+  type NoteSheetFontName,
+  type NoteSheetThemeName,
+} from '../../noteTypes'
+import { useNoteSheetAppearanceAdapter } from '../../noteSheetAppearanceAdapter'
 import type { NoteSheetThemeProps } from '../../noteSheetThemeContract'
 import './auroraNoteSheet.css'
-
-type ThemeName = 'claro' | 'sepia' | 'noche'
-type AccentName = 'vermellon' | 'oceano' | 'bosque' | 'lavanda' | 'dorado'
-type DesignName = 'liso' | 'renglones' | 'puntos' | 'cuadricula'
-type FontName = 'serif' | 'sans' | 'mono'
-
-interface SheetThemeState {
-  theme: ThemeName
-  accent: AccentName
-  design: DesignName
-  font: FontName
-}
 
 interface NoteSheetCommand {
   noteId: string
@@ -32,7 +31,7 @@ interface NoteSheetCommand {
   blockId?: string
 }
 
-const ACCENTS: Record<AccentName, string> = {
+const ACCENTS: Record<NoteSheetAccentName, string> = {
   vermellon: '#D9542B',
   oceano: '#2E7FB0',
   bosque: '#3E7C4F',
@@ -40,7 +39,7 @@ const ACCENTS: Record<AccentName, string> = {
   dorado: '#B07D2B',
 }
 
-const THEME_VARS: Record<ThemeName, Record<string, string>> = {
+const THEME_VARS: Record<NoteSheetThemeName, Record<string, string>> = {
   claro: {
     '--aurora-paper': '#F6F3EC',
     '--aurora-paper2': '#EFEAE0',
@@ -173,12 +172,7 @@ export function AuroraNoteSheet({
   const [linkOpen, setLinkOpen] = useState(false)
   const [linkValue, setLinkValue] = useState('')
   const [tagValue, setTagValue] = useState('')
-  const [themeState, setThemeState] = useState<SheetThemeState>({
-    theme: 'claro',
-    accent: 'vermellon',
-    design: 'liso',
-    font: 'serif',
-  })
+  const { appearance: themeState, updateAppearance } = useNoteSheetAppearanceAdapter(note)
 
   const noteTags = useMemo(
     () => tags.filter((tag) => (note.tagIds ?? []).includes(tag.id)),
@@ -594,12 +588,12 @@ export function AuroraNoteSheet({
           <div className="aurora-pt-section">
             <div className="aurora-pt-label">Tema</div>
             <div className="aurora-pt-row">
-              {(['claro', 'sepia', 'noche'] as ThemeName[]).map((name) => (
+              {NOTE_SHEET_THEMES.map((name) => (
                 <button
                   className={`aurora-pt-opt${themeState.theme === name ? ' active' : ''}`}
                   type="button"
                   key={name}
-                  onClick={() => setThemeState((state) => ({ ...state, theme: name }))}
+                  onClick={() => { void updateAppearance({ theme: name }) }}
                 >{name === 'claro' ? 'Claro' : name === 'sepia' ? 'Sepia' : 'Noche'}</button>
               ))}
             </div>
@@ -607,14 +601,14 @@ export function AuroraNoteSheet({
           <div className="aurora-pt-section">
             <div className="aurora-pt-label">Acento</div>
             <div className="aurora-pt-row">
-              {(Object.keys(ACCENTS) as AccentName[]).map((name) => (
+              {NOTE_SHEET_ACCENTS.map((name) => (
                 <button
                   className={`aurora-pt-opt aurora-accent-dot${themeState.accent === name ? ' active' : ''}`}
                   type="button"
                   key={name}
                   style={{ '--dot': ACCENTS[name] } as CSSProperties}
                   aria-label={name}
-                  onClick={() => setThemeState((state) => ({ ...state, accent: name }))}
+                  onClick={() => { void updateAppearance({ accent: name }) }}
                 />
               ))}
             </div>
@@ -622,12 +616,12 @@ export function AuroraNoteSheet({
           <div className="aurora-pt-section">
             <div className="aurora-pt-label">Fondo</div>
             <div className="aurora-pt-row">
-              {(['liso', 'renglones', 'puntos', 'cuadricula'] as DesignName[]).map((name) => (
+              {NOTE_SHEET_DESIGNS.map((name) => (
                 <button
                   className={`aurora-pt-opt${themeState.design === name ? ' active' : ''}`}
                   type="button"
                   key={name}
-                  onClick={() => setThemeState((state) => ({ ...state, design: name }))}
+                  onClick={() => { void updateAppearance({ design: name }) }}
                 >{name === 'cuadricula' ? 'Cuadrícula' : name[0].toUpperCase() + name.slice(1)}</button>
               ))}
             </div>
@@ -635,12 +629,12 @@ export function AuroraNoteSheet({
           <div className="aurora-pt-section">
             <div className="aurora-pt-label">Tipografía</div>
             <div className="aurora-pt-row">
-              {(['serif', 'sans', 'mono'] as FontName[]).map((name) => (
+              {NOTE_SHEET_FONTS.map((name) => (
                 <button
                   className={`aurora-pt-opt${themeState.font === name ? ' active' : ''}`}
                   type="button"
                   key={name}
-                  onClick={() => setThemeState((state) => ({ ...state, font: name }))}
+                  onClick={() => { void updateAppearance({ font: name }) }}
                 >{name === 'serif' ? 'Serif' : name === 'sans' ? 'Sans' : 'Mono'}</button>
               ))}
             </div>
