@@ -674,8 +674,8 @@
   line-height: 1.35;
   text-align: center;
   white-space: nowrap;
-  -webkit-user-select: text;
-  user-select: text;
+  -webkit-user-select: none;
+  user-select: none;
 }
 .editor-daily-entry__title:empty::before {
   content: attr(data-placeholder);
@@ -688,6 +688,10 @@
   border-color: #cbd5e1;
   background: #fff;
   box-shadow: 0 0 0 3px rgba(37,99,235,.08);
+}
+.editor-daily-entry__title:focus {
+  -webkit-user-select: text;
+  user-select: text;
 }
 @container (max-width: 28rem) {
   .editor-daily-entry__date-row { grid-template-columns: minmax(.5rem, 1fr) auto minmax(.5rem, 1fr); gap: .4rem; }
