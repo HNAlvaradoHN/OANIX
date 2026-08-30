@@ -418,9 +418,10 @@ function isEmptyCaretParagraph(element: Element | null): element is HTMLParagrap
 
 function isProtectedEditorBlock(element: HTMLElement): boolean {
   return (
-    element.dataset.codeBlock === 'true' ||
-    element.dataset.imageBlock === 'true' ||
-    element.dataset.dailyEntryBlock === 'true'
+    element.dataset.editorAtomicBlock !== undefined
+    || element.dataset.codeBlock === 'true'
+    || element.dataset.imageBlock === 'true'
+    || element.dataset.dailyEntryBlock === 'true'
   )
 }
 
@@ -549,14 +550,14 @@ function atomicHostForInsertion(editor: HTMLElement, selection: Selection | null
   const active = document.activeElement
   if (active instanceof Element && editor.contains(active)) {
     const activeHost = active.closest<HTMLElement>(
-      '[data-code-block="true"], [data-checklist-block="true"], [data-contact-block="true"], [data-daily-entry-block="true"]',
+      '[data-editor-atomic-block], [data-code-block="true"], [data-checklist-block="true"], [data-contact-block="true"], [data-daily-entry-block="true"]',
     )
     if (activeHost?.parentElement === editor) return activeHost
   }
 
   const anchorElement = elementFromSelectionNode(selection?.anchorNode ?? null)
   const selectionHost = anchorElement?.closest<HTMLElement>(
-    '[data-code-block="true"], [data-checklist-block="true"], [data-contact-block="true"], [data-daily-entry-block="true"]',
+    '[data-editor-atomic-block], [data-code-block="true"], [data-checklist-block="true"], [data-contact-block="true"], [data-daily-entry-block="true"]',
   )
   return selectionHost?.parentElement === editor ? selectionHost : null
 }
