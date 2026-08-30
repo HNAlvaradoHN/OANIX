@@ -467,6 +467,7 @@ export function ImageNoteEditor({
   const objectUrlsRef = useRef(new Map<string, string>())
   const previewUrlsRef = useRef(new Map<string, string>())
   const insertionAfterIdRef = useRef<string | null>(null)
+  const replacementImageBlockIdRef = useRef<string | null>(null)
   const undoHistoryRef = useRef<StoredNoteBlock[][]>([])
   const redoHistoryRef = useRef<StoredNoteBlock[][]>([])
   const authorizedProtectedRemovalsRef = useRef(new Set<string>())
@@ -741,6 +742,41 @@ export function ImageNoteEditor({
     insertionAfterIdRef.current = afterId
     if (lastElement) selectImageFigure(root, lastElement)
     emitEditorInput(root)
+  }
+
+  async function replaceImageFile(blockId: string, file: File) {
+    const root = rootRef.current
+    const editor = root?.querySelector<HTMLElement>('.editor-surface')
+    const current = imagesRef.current.get(blockId)
+    const figure = editor ? directBlockById(editor, blockId) : null
+    if (!root || !editor || !current || !figure || figure.dataset.imageBlock !== 'true') return
+
+    setImageError('')
+    forceHistoryBoundaryRef.current = true
+
+    try {
+      const stored = await storeEncryptedImage(file)
+      const next: ImageBlock = {
+        ...current,
+        ...stored,
+        id: current.id,
+        type: 'image',
+      }
+
+      revokeImageUrls(current.imageId)
+      const url = URL.createObjectURL(file)
+      objectUrlsRef.current.set(next.imageId, url)
+      imagesRef.current.set(blockId, next)
+
+      const replacement = createImageElement(next, url)
+      figure.replaceWith(replacement)
+      void hydrateImageElement(root, next, replacement)
+      selectImageFigure(root, replacement)
+      emitEditorInput(root)
+      void onRemoveImage(current.imageId)
+    } catch (error) {
+      setImageError(error instanceof Error ? error.message : 'No se pudo reemplazar la imagen cifrada.')
+    }
   }
 
   function applyHistoryState(
@@ -1307,6 +1343,13 @@ export function ImageNoteEditor({
         return
       }
 
+      if (detail.command === 'image-replace' && typeof detail.blockId === 'string') {
+        replacementImageBlockIdRef.current = detail.blockId
+        forceHistoryBoundaryRef.current = true
+        inputRef.current?.click()
+        return
+      }
+
       if (detail.command === 'format-link' && typeof detail.value === 'string') {
         const editor = root.querySelector<HTMLElement>('.editor-surface')
         if (!editor || !selectionInsideRoot(root)) return
@@ -1393,6 +1436,14 @@ export function ImageNoteEditor({
   async function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.currentTarget.files ?? [])
     event.currentTarget.value = ''
+    const replacementBlockId = replacementImageBlockIdRef.current
+    replacementImageBlockIdRef.current = null
+
+    if (replacementBlockId && files[0]) {
+      await replaceImageFile(replacementBlockId, files[0])
+      return
+    }
+
     await insertFiles(files)
   }
 
