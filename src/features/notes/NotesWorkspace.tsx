@@ -222,8 +222,8 @@ function noteLocalSearchFields(note: NoteRecord): LocalSearchField[] {
 
 function saveStateLabel(saveState: SaveState, savingTitle: boolean): string {
   if (savingTitle) return 'Guardando título…'
-  if (saveState === 'dirty') return 'Cambios pendientes…'
-  if (saveState === 'saving') return 'Guardando cifrado…'
+  if (saveState === 'dirty') return 'Cambios pendientes · toca sincronizar'
+  if (saveState === 'saving') return 'Guardando nota…'
   if (saveState === 'saved') return 'Guardado · cifrado local'
   if (saveState === 'error') return 'No se pudo guardar'
   return 'Cifrada en este dispositivo'
@@ -657,10 +657,6 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
     pendingContentRef.current = { noteId: selectedNote.id, blocks }
     setSaveState('dirty')
     setError('')
-    clearSaveTimer()
-    saveTimerRef.current = window.setTimeout(() => {
-      void flushPendingContent()
-    }, 550)
   }
 
   async function handleRemovedImage(imageId: string): Promise<void> {
@@ -1967,12 +1963,24 @@ export function NotesWorkspace({ onLock }: NotesWorkspaceProps) {
                 </div>
               )}
 
+              <button
+                className={`note-manual-sync${saveState === 'dirty' ? ' note-manual-sync--dirty' : ''}`}
+                type="button"
+                onClick={() => void flushPendingContent()}
+                disabled={saveState === 'saving' || savingTitle}
+                aria-label="Sincronizar y guardar nota ahora"
+                title="Guardar nota ahora"
+              >
+                <span aria-hidden="true">↻</span>
+                <span>{saveState === 'saving' ? 'Guardando…' : saveState === 'saved' ? 'Sincronizado' : 'Sincronizar'}</span>
+              </button>
+
               <ImageNoteEditor
                 key={selectedNote.id}
                 noteId={selectedNote.id}
                 initialBlocks={prepareDailyEntriesForEditing(selectedNote)}
                 onChange={handleContentChange}
-                onBlur={() => void flushPendingContent()}
+                onBlur={() => undefined}
                 onRemoveImage={handleRemovedImage}
                 onRestoreImage={handleRestoredImage}
               />

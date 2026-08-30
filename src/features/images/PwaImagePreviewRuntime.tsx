@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import './pwa-image-preview.css'
 
 const IMAGE_CARD_SELECTOR = '.image-note-editor-root .editor-image-block[data-image-block="true"]'
+const CONTACT_CARD_SELECTOR = '.image-note-editor-root .editor-contact-card[data-contact-block="true"]'
 const DESCRIPTION_LIMIT = 56
 const MIN_ZOOM = 1
 const MAX_ZOOM = 4
@@ -14,6 +15,8 @@ function mutationTouchesImagePreview(record: MutationRecord): boolean {
     if (
       target.matches(IMAGE_CARD_SELECTOR)
       || target.closest(IMAGE_CARD_SELECTOR)
+      || target.matches(CONTACT_CARD_SELECTOR)
+      || target.closest(CONTACT_CARD_SELECTOR)
       || target.matches(LIGHTBOX_SELECTOR)
       || target.closest(LIGHTBOX_SELECTOR)
     ) return true
@@ -25,6 +28,8 @@ function mutationTouchesImagePreview(record: MutationRecord): boolean {
     return (
       node.matches(IMAGE_CARD_SELECTOR)
       || node.querySelector(IMAGE_CARD_SELECTOR) !== null
+      || node.matches(CONTACT_CARD_SELECTOR)
+      || node.querySelector(CONTACT_CARD_SELECTOR) !== null
       || node.matches(LIGHTBOX_SELECTOR)
       || node.querySelector(LIGHTBOX_SELECTOR) !== null
     )
@@ -47,6 +52,8 @@ function pointDistance(left: TouchPoint, right: TouchPoint): number {
 }
 
 function scaleFromImage(image: HTMLImageElement | null): number {
+  const runtimeScale = Number(image?.dataset.pwaZoom)
+  if (Number.isFinite(runtimeScale) && runtimeScale >= MIN_ZOOM) return runtimeScale
   const match = image?.style.transform.match(/scale\((\d+(?:\.\d+)?)\)/)
   const value = match ? Number(match[1]) : 1
   return Number.isFinite(value) ? value : 1
@@ -75,8 +82,13 @@ export function PwaImagePreviewRuntime() {
     let panState: PanState | null = null
     let gestureListenersAttached = false
 
-    function descriptionValue(input: HTMLElement): string {
+    function editableValue(input: HTMLElement): string {
+      if (input instanceof HTMLTextAreaElement || input instanceof HTMLInputElement) return input.value.trim()
       return (input.innerText ?? '').trim()
+    }
+
+    function descriptionValue(input: HTMLElement): string {
+      return editableValue(input)
     }
 
     function descriptionNeedsMore(input: HTMLElement): boolean {
@@ -93,9 +105,51 @@ export function PwaImagePreviewRuntime() {
       row.dataset.descriptionOverflow = String(shouldShow)
     }
 
+    function updateContactMore(notes: HTMLTextAreaElement) {
+      const row = notes.closest<HTMLElement>('[data-pwa-contact-notes-row="true"]')
+      const more = row?.querySelector<HTMLButtonElement>('[data-pwa-contact-notes-more="true"]')
+      if (!row || !more) return
+      const shouldShow = notes.value.trim().length > 70 || notes.scrollHeight > notes.clientHeight + 2
+      more.hidden = !shouldShow
+      row.dataset.contactOverflow = String(shouldShow)
+    }
+
+    function normalizeContact(card: HTMLElement) {
+      card.dataset.pwaContactCard = 'true'
+      const notes = card.querySelector<HTMLTextAreaElement>('textarea[data-contact-field="notes"]')
+        ?? card.querySelector<HTMLTextAreaElement>('textarea[name="notes"]')
+        ?? card.querySelector<HTMLTextAreaElement>('textarea')
+      if (!notes) return
+
+      notes.rows = 2
+      notes.dataset.pwaContactNotes = 'true'
+      let row = notes.closest<HTMLElement>('[data-pwa-contact-notes-row="true"]')
+      if (!row) {
+        row = document.createElement('div')
+        row.className = 'pwa-contact-notes-row'
+        row.dataset.pwaContactNotesRow = 'true'
+        notes.parentElement?.insertBefore(row, notes)
+        row.append(notes)
+      }
+
+      let more = row.querySelector<HTMLButtonElement>('[data-pwa-contact-notes-more="true"]')
+      if (!more) {
+        more = document.createElement('button')
+        more.type = 'button'
+        more.className = 'pwa-contact-notes-more'
+        more.dataset.pwaContactNotesMore = 'true'
+        more.textContent = 'Ver todo'
+        more.title = 'Ver todas las notas del contacto'
+        more.setAttribute('aria-label', 'Ver todo el texto de notas del contacto')
+        row.append(more)
+      }
+      updateContactMore(notes)
+    }
+
     function normalizeFigure(figure: HTMLElement) {
       figure.dataset.pwaImageCard = 'true'
       figure.dataset.imageSelected = 'false'
+      figure.dataset.pwaActionsOpen ??= 'false'
       figure.style.removeProperty('translate')
 
       const preview = figure.querySelector<HTMLElement>('[data-image-preview="true"]')
@@ -105,6 +159,19 @@ export function PwaImagePreviewRuntime() {
       const meta = figure.querySelector<HTMLElement>('.editor-image-block__meta')
       const input = figure.querySelector<HTMLElement>('[data-image-alt="true"]')
       if (!preview || !footer || !actions || !details || !input) return
+
+      let menuToggle = figure.querySelector<HTMLButtonElement>('[data-pwa-image-menu-toggle="true"]')
+      if (!menuToggle) {
+        menuToggle = document.createElement('button')
+        menuToggle.type = 'button'
+        menuToggle.className = 'pwa-image-card__menu-toggle'
+        menuToggle.dataset.pwaImageMenuToggle = 'true'
+        menuToggle.textContent = '⋯'
+        menuToggle.title = 'Acciones de la imagen'
+        menuToggle.setAttribute('aria-label', 'Abrir acciones de la imagen')
+        menuToggle.setAttribute('aria-expanded', 'false')
+        figure.append(menuToggle)
+      }
 
       let top = figure.querySelector<HTMLElement>('[data-pwa-image-top="true"]')
       if (!top) {
@@ -148,6 +215,7 @@ export function PwaImagePreviewRuntime() {
 
     function normalizeAllFigures() {
       document.querySelectorAll<HTMLElement>(IMAGE_CARD_SELECTOR).forEach(normalizeFigure)
+      document.querySelectorAll<HTMLElement>(CONTACT_CARD_SELECTOR).forEach(normalizeContact)
     }
 
     function queueNormalize() {
@@ -190,10 +258,8 @@ export function PwaImagePreviewRuntime() {
       descriptionBubble = null
     }
 
-    function openDescriptionBubble(input: HTMLElement) {
-      const text = descriptionValue(input)
+    function openTextBubble(text: string, headingText: string, ariaLabel: string) {
       if (!text) return
-
       removeDescriptionBubble()
 
       const overlay = document.createElement('div')
@@ -201,28 +267,23 @@ export function PwaImagePreviewRuntime() {
       overlay.dataset.pwaImageDescriptionOverlay = 'true'
       overlay.setAttribute('role', 'dialog')
       overlay.setAttribute('aria-modal', 'true')
-      overlay.setAttribute('aria-label', 'Descripción completa de la imagen')
+      overlay.setAttribute('aria-label', ariaLabel)
 
       const bubble = document.createElement('div')
       bubble.className = 'pwa-image-description-bubble'
-
       const heading = document.createElement('div')
       heading.className = 'pwa-image-description-bubble__heading'
-
       const title = document.createElement('strong')
-      title.textContent = 'Descripción'
-
+      title.textContent = headingText
       const close = document.createElement('button')
       close.type = 'button'
       close.dataset.pwaImageDescriptionClose = 'true'
       close.textContent = '×'
-      close.title = 'Cerrar descripción'
-      close.setAttribute('aria-label', 'Cerrar descripción completa')
-
+      close.title = 'Cerrar'
+      close.setAttribute('aria-label', 'Cerrar texto completo')
       const body = document.createElement('p')
       body.className = 'pwa-image-description-bubble__text'
       body.textContent = text
-
       heading.append(title, close)
       bubble.append(heading, body)
       overlay.append(bubble)
@@ -232,15 +293,35 @@ export function PwaImagePreviewRuntime() {
       close.focus()
     }
 
+    function openDescriptionBubble(input: HTMLElement) {
+      openTextBubble(descriptionValue(input), 'Descripción', 'Descripción completa de la imagen')
+    }
+
     function lightboxImage(lightbox: HTMLElement | null = currentLightbox): HTMLImageElement | null {
       return lightbox?.querySelector<HTMLImageElement>('.image-lightbox__viewport img') ?? null
+    }
+
+    function ensureLayoutZoomBase(image: HTMLImageElement) {
+      if (image.dataset.pwaBaseWidth) return
+      const transform = image.style.transform
+      image.style.transform = 'none'
+      const baseWidth = Math.max(1, image.getBoundingClientRect().width)
+      image.dataset.pwaBaseWidth = String(baseWidth)
+      image.style.transform = transform
     }
 
     function setLightboxScale(lightbox: HTMLElement, scale: number) {
       const image = lightboxImage(lightbox)
       if (!image) return
       const next = clampZoom(Number(scale.toFixed(2)))
-      image.style.transform = `scale(${next})`
+      ensureLayoutZoomBase(image)
+      const baseWidth = Number(image.dataset.pwaBaseWidth) || image.getBoundingClientRect().width
+      image.dataset.pwaZoom = String(next)
+      image.style.transform = 'none'
+      image.style.width = `${Math.round(baseWidth * next)}px`
+      image.style.maxWidth = 'none'
+      image.style.maxHeight = 'none'
+      image.style.height = 'auto'
       const label = lightbox.querySelector<HTMLElement>('.image-lightbox__zoom-label')
       if (label) label.textContent = `${Math.round(next * 100)}%`
     }
@@ -284,6 +365,7 @@ export function PwaImagePreviewRuntime() {
       if (next && next !== currentLightbox) {
         currentLightbox = next
         clearTouchState()
+        queueMicrotask(() => setLightboxScale(next, 1))
         pushOverlayHistory('lightbox')
         return
       }
@@ -320,13 +402,16 @@ export function PwaImagePreviewRuntime() {
       const target = event.target
       if (!(target instanceof Element)) return
       const input = target.closest<HTMLElement>('[data-image-alt="true"]')
-      if (!input || !input.closest(IMAGE_CARD_SELECTOR)) return
-      updateDescriptionMore(input)
-
-      if (descriptionBubble) {
-        const text = descriptionBubble.querySelector<HTMLElement>('.pwa-image-description-bubble__text')
-        if (text) text.textContent = descriptionValue(input)
+      if (input?.closest(IMAGE_CARD_SELECTOR)) {
+        updateDescriptionMore(input)
+        if (descriptionBubble) {
+          const text = descriptionBubble.querySelector<HTMLElement>('.pwa-image-description-bubble__text')
+          if (text) text.textContent = descriptionValue(input)
+        }
+        return
       }
+      const contactNotes = target.closest<HTMLTextAreaElement>('[data-pwa-contact-notes="true"]')
+      if (contactNotes) updateContactMore(contactNotes)
     }
 
     function handlePointerDown(event: PointerEvent) {
@@ -360,10 +445,7 @@ export function PwaImagePreviewRuntime() {
       }
 
       const preview = target.closest<HTMLElement>('[data-image-preview="true"]')
-      if (preview?.closest(IMAGE_CARD_SELECTOR)) {
-        // Stop the shared editor before it can begin its legacy image-drag gesture.
-        event.stopPropagation()
-      }
+      if (preview?.closest(IMAGE_CARD_SELECTOR)) event.stopPropagation()
     }
 
     function handlePointerMove(event: PointerEvent) {
@@ -395,10 +477,59 @@ export function PwaImagePreviewRuntime() {
       if (touchPoints.size === 0) detachGestureListeners()
     }
 
+    function handleDoubleClick(event: MouseEvent) {
+      const target = event.target
+      if (!(target instanceof Element) || !currentLightbox) return
+      if (!target.closest('.image-lightbox__viewport img')) return
+      event.preventDefault()
+      event.stopPropagation()
+      setLightboxScale(currentLightbox, scaleFromImage(lightboxImage()) > 1 ? 1 : 2)
+    }
+
     function handleClick(event: MouseEvent) {
       if (closingFromHistory) return
       const target = event.target
       if (!(target instanceof Element)) return
+
+      const imageMenu = target.closest<HTMLButtonElement>('[data-pwa-image-menu-toggle="true"]')
+      if (imageMenu) {
+        const figure = imageMenu.closest<HTMLElement>(IMAGE_CARD_SELECTOR)
+        if (!figure) return
+        event.preventDefault()
+        event.stopPropagation()
+        const opening = figure.dataset.pwaActionsOpen !== 'true'
+        document.querySelectorAll<HTMLElement>(IMAGE_CARD_SELECTOR).forEach((other) => {
+          if (other !== figure) other.dataset.pwaActionsOpen = 'false'
+          other.querySelector<HTMLButtonElement>('[data-pwa-image-menu-toggle="true"]')?.setAttribute('aria-expanded', String(other === figure && opening))
+        })
+        figure.dataset.pwaActionsOpen = String(opening)
+        imageMenu.setAttribute('aria-expanded', String(opening))
+        return
+      }
+
+      const contactMore = target.closest<HTMLButtonElement>('[data-pwa-contact-notes-more="true"]')
+      if (contactMore) {
+        const row = contactMore.closest<HTMLElement>('[data-pwa-contact-notes-row="true"]')
+        const notes = row?.querySelector<HTMLTextAreaElement>('[data-pwa-contact-notes="true"]')
+        if (!notes) return
+        event.preventDefault()
+        event.stopPropagation()
+        openTextBubble(notes.value.trim(), 'Notas del contacto', 'Texto completo de notas del contacto')
+        return
+      }
+
+      if (currentLightbox) {
+        const zoomIn = target.closest<HTMLButtonElement>('[aria-label="Acercar imagen"]')
+        const zoomOut = target.closest<HTMLButtonElement>('[aria-label="Alejar imagen"]')
+        const zoomReset = target.closest<HTMLButtonElement>('.image-lightbox__zoom-label')
+        if (zoomIn || zoomOut || zoomReset) {
+          event.preventDefault()
+          event.stopPropagation()
+          const current = scaleFromImage(lightboxImage())
+          setLightboxScale(currentLightbox, zoomReset ? 1 : current + (zoomIn ? 0.25 : -0.25))
+          return
+        }
+      }
 
       const more = target.closest<HTMLButtonElement>('[data-pwa-image-description-more="true"]')
       if (more) {
@@ -475,6 +606,7 @@ export function PwaImagePreviewRuntime() {
     document.addEventListener('input', handleInput, true)
     document.addEventListener('pointerdown', handlePointerDown, true)
     document.addEventListener('click', handleClick, true)
+    document.addEventListener('dblclick', handleDoubleClick, true)
     document.addEventListener('keydown', handleKeyDown, true)
     window.addEventListener('popstate', handlePopState)
     window.addEventListener('resize', queueNormalize)
@@ -484,6 +616,7 @@ export function PwaImagePreviewRuntime() {
       document.removeEventListener('input', handleInput, true)
       document.removeEventListener('pointerdown', handlePointerDown, true)
       document.removeEventListener('click', handleClick, true)
+      document.removeEventListener('dblclick', handleDoubleClick, true)
       document.removeEventListener('keydown', handleKeyDown, true)
       window.removeEventListener('popstate', handlePopState)
       window.removeEventListener('resize', queueNormalize)
