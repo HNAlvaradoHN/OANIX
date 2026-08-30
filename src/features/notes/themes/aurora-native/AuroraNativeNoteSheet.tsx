@@ -1569,9 +1569,7 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
               const next = raw.slice(0, 160)
               if (raw !== next) {
                 element.textContent = next
-                const selection = element.getRootNode() instanceof ShadowRoot
-                  ? (element.getRootNode() as ShadowRoot).getSelection?.()
-                  : document.getSelection()
+                const selection = selectionForRoot(element)
                 if (selection) {
                   const range = document.createRange()
                   range.selectNodeContents(element)
