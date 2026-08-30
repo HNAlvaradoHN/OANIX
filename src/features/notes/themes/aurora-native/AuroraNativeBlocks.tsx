@@ -155,16 +155,32 @@ export function UncontrolledEditable({
   onKeyDown,
 }: EditableProps) {
   const ref = useRef<HTMLDivElement>(null)
+  const overflowFrameRef = useRef<number | null>(null)
+  const focusedRef = useRef(false)
+  const lastOverflowRef = useRef<boolean | null>(null)
 
   function measureOverflow() {
     const element = ref.current
-    if (!element || !maxLines) return
+    if (!element || !maxLines || focusedRef.current) return
+
     element.classList.remove('clamped')
     const computed = getComputedStyle(element)
     const lineHeight = Number.parseFloat(computed.lineHeight) || Number.parseFloat(computed.fontSize) * 1.6
     const overflow = element.scrollHeight > lineHeight * maxLines + 2
     element.classList.toggle('clamped', overflow)
-    onOverflowChange?.(overflow)
+
+    if (lastOverflowRef.current !== overflow) {
+      lastOverflowRef.current = overflow
+      onOverflowChange?.(overflow)
+    }
+  }
+
+  function scheduleOverflowMeasure() {
+    if (!maxLines || overflowFrameRef.current !== null) return
+    overflowFrameRef.current = window.requestAnimationFrame(() => {
+      overflowFrameRef.current = null
+      measureOverflow()
+    })
   }
 
   useLayoutEffect(() => {
@@ -172,23 +188,22 @@ export function UncontrolledEditable({
     if (!element) return
     if (html !== undefined) element.innerHTML = html
     else element.textContent = text ?? ''
+    focusedRef.current = false
+    lastOverflowRef.current = null
     measureOverflow()
   }, [identity, resetToken])
 
   useEffect(() => {
     if (!maxLines) return
-    const element = ref.current
-    if (!element) return
 
-    const resize = () => measureOverflow()
-    const observer = typeof ResizeObserver === 'undefined'
-      ? null
-      : new ResizeObserver(resize)
-    observer?.observe(element)
+    const resize = () => scheduleOverflowMeasure()
     window.addEventListener('resize', resize)
     return () => {
-      observer?.disconnect()
       window.removeEventListener('resize', resize)
+      if (overflowFrameRef.current !== null) {
+        window.cancelAnimationFrame(overflowFrameRef.current)
+        overflowFrameRef.current = null
+      }
     }
   }, [identity, maxLines])
 
@@ -203,13 +218,16 @@ export function UncontrolledEditable({
       data-ph={placeholder}
       onInput={() => {
         if (ref.current) onInput(ref.current)
-        window.setTimeout(measureOverflow, 0)
       }}
       onFocus={() => {
+        focusedRef.current = true
+        if (maxLines) ref.current?.classList.remove('clamped')
         if (ref.current) onFocus?.(ref.current)
       }}
       onBlur={() => {
+        focusedRef.current = false
         if (ref.current) onBlur?.(ref.current)
+        scheduleOverflowMeasure()
       }}
       onKeyDown={(event) => {
         if (ref.current) onKeyDown?.(event, ref.current)
