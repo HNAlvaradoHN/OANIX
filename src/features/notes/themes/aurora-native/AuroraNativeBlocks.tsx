@@ -316,12 +316,6 @@ export const NATIVE_CODE_LANGUAGES: Array<[CodeBlock['language'], string]> = [
   ['json', 'JSON'],
   ['sql', 'SQL'],
   ['plaintext', 'Texto plano'],
-  ['java', 'Java'],
-  ['cpp', 'C++'],
-  ['csharp', 'C#'],
-  ['kotlin', 'Kotlin'],
-  ['swift', 'Swift'],
-  ['php', 'PHP'],
 ]
 
 interface CodeBlockViewProps extends Omit<BlockChromeProps, 'kind' | 'children'> {
@@ -343,7 +337,10 @@ export function CodeBlockView({
   ...chrome
 }: CodeBlockViewProps) {
   const lineCount = Math.max(1, block.text.replace(/\n$/, '').split('\n').length)
-  const label = NATIVE_CODE_LANGUAGES.find(([id]) => id === block.language)?.[1] ?? 'Texto plano'
+  const uiLanguage = NATIVE_CODE_LANGUAGES.some(([id]) => id === block.language)
+    ? block.language
+    : 'plaintext'
+  const label = NATIVE_CODE_LANGUAGES.find(([id]) => id === uiLanguage)?.[1] ?? 'Texto plano'
   const showNums = block.showLineNumbers === true
   const wrapChecked = block.wrapLines !== false
 
@@ -368,7 +365,7 @@ export function CodeBlockView({
           <div className="lang-wrap">
             <select
               className="lang-sel"
-              value={block.language}
+              value={uiLanguage}
               onChange={(event) => onCodeChange(block.id, { language: event.target.value as CodeBlock['language'] }, true)}
               aria-label="Lenguaje del código"
             >
