@@ -57,15 +57,6 @@ function labelFor(kind: AtomicKind): string {
   return 'Imagen'
 }
 
-function formatDailyDate(value: string): string {
-  const date = new Date(`${value}T00:00:00`)
-  if (Number.isNaN(date.getTime())) return value
-  const day = new Intl.DateTimeFormat('es-HN', { day: 'numeric' }).format(date)
-  const weekday = new Intl.DateTimeFormat('es-HN', { weekday: 'short' }).format(date).replace('.', '')
-  const monthYear = new Intl.DateTimeFormat('es-HN', { month: 'short', year: 'numeric' }).format(date)
-  return `${weekday} · ${day} · ${monthYear}`
-}
-
 function removeDivider(block: HTMLElement) {
   const editor = block.closest<HTMLElement>('.editor-surface')
   if (!editor) return
@@ -133,14 +124,44 @@ function decorateCodeBlock(block: HTMLElement) {
   }
 }
 
+function updateChecklistCount(block: HTMLElement) {
+  const items = Array.from(block.querySelectorAll<HTMLElement>('[data-checklist-item="true"]'))
+  const done = items.filter((item) => item.dataset.checked === 'true').length
+  const count = block.querySelector<HTMLElement>('[data-aurora-check-count="true"]')
+  if (count) count.textContent = `${done}/${items.length}`
+}
+
 function decorateChecklist(block: HTMLElement) {
-  if (block.querySelector('[data-aurora-check-add="true"]')) return
-  const button = document.createElement('button')
-  button.type = 'button'
-  button.className = 'aurora-check-add'
-  button.dataset.auroraCheckAdd = 'true'
-  button.textContent = '＋ Añadir elemento'
-  block.append(button)
+  if (!block.querySelector('[data-aurora-check-head="true"]')) {
+    const head = document.createElement('div')
+    head.className = 'aurora-check-head'
+    head.dataset.auroraCheckHead = 'true'
+
+    const icon = document.createElement('span')
+    icon.textContent = '☑'
+    icon.setAttribute('aria-hidden', 'true')
+
+    const label = document.createElement('span')
+    label.textContent = 'Checklist'
+
+    const count = document.createElement('span')
+    count.className = 'aurora-check-count'
+    count.dataset.auroraCheckCount = 'true'
+
+    head.append(icon, label, count)
+    block.prepend(head)
+  }
+
+  if (!block.querySelector('[data-aurora-check-add="true"]')) {
+    const button = document.createElement('button')
+    button.type = 'button'
+    button.className = 'aurora-check-add'
+    button.dataset.auroraCheckAdd = 'true'
+    button.textContent = '＋ Añadir elemento'
+    block.append(button)
+  }
+
+  updateChecklistCount(block)
 }
 
 function decorateContact(block: HTMLElement) {
@@ -170,6 +191,44 @@ function decorateContact(block: HTMLElement) {
   block.dataset.auroraContactEditing = 'false'
 }
 
+const DAILY_WEEKDAYS = ['dom','lun','mar','mié','jue','vie','sáb']
+const DAILY_MONTHS = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']
+
+function renderDailyDate(block: HTMLElement) {
+  const dateRow = block.querySelector<HTMLElement>('.editor-daily-entry__date-row')
+  if (!dateRow) return
+
+  const value = block.dataset.dailyEntryDate ?? ''
+  const date = new Date(`${value}T00:00:00`)
+  if (Number.isNaN(date.getTime())) return
+
+  let day = dateRow.querySelector<HTMLElement>('[data-aurora-entry-day="true"]')
+  let sub = dateRow.querySelector<HTMLElement>('[data-aurora-entry-sub="true"]')
+  if (!day || !sub) {
+    dateRow.replaceChildren()
+    day = document.createElement('span')
+    day.className = 'aurora-entry-day'
+    day.dataset.auroraEntryDay = 'true'
+
+    sub = document.createElement('span')
+    sub.className = 'aurora-entry-sub'
+    sub.dataset.auroraEntrySub = 'true'
+
+    const weekday = document.createElement('b')
+    weekday.dataset.auroraEntryWeekday = 'true'
+    const monthYear = document.createElement('i')
+    monthYear.dataset.auroraEntryMonthYear = 'true'
+    sub.append(weekday, monthYear)
+    dateRow.append(day, sub)
+  }
+
+  day.textContent = String(date.getDate())
+  const weekday = sub.querySelector<HTMLElement>('[data-aurora-entry-weekday="true"]')
+  const monthYear = sub.querySelector<HTMLElement>('[data-aurora-entry-month-year="true"]')
+  if (weekday) weekday.textContent = DAILY_WEEKDAYS[date.getDay()]
+  if (monthYear) monthYear.textContent = `${DAILY_MONTHS[date.getMonth()]} ${date.getFullYear()}`
+}
+
 function decorateDailyEntry(block: HTMLElement) {
   const dateRow = block.querySelector<HTMLElement>('.editor-daily-entry__date-row')
   if (!dateRow) return
@@ -177,6 +236,18 @@ function decorateDailyEntry(block: HTMLElement) {
   dateRow.setAttribute('role', 'button')
   dateRow.setAttribute('tabindex', '0')
   dateRow.title = 'Cambiar fecha'
+  renderDailyDate(block)
+
+  if (!block.querySelector('[data-aurora-entry-toggle="true"]')) {
+    const toggle = document.createElement('button')
+    toggle.type = 'button'
+    toggle.className = 'aurora-entry-date-toggle'
+    toggle.dataset.auroraEntryToggle = 'true'
+    toggle.title = 'Mostrar/ocultar fecha'
+    toggle.setAttribute('aria-label', 'Mostrar u ocultar la fecha de esta entrada')
+    toggle.textContent = '◷'
+    dateRow.after(toggle)
+  }
 }
 
 function decorateEditor(root: HTMLElement) {
@@ -279,6 +350,19 @@ export function AuroraBlockControls({ noteId }: AuroraBlockControlsProps) {
         return
       }
 
+      const entryToggle = target.closest<HTMLElement>('[data-aurora-entry-toggle="true"]')
+      if (entryToggle) {
+        const block = entryToggle.closest<HTMLElement>('[data-daily-entry-block="true"]')
+        if (block) block.classList.toggle('aurora-entry-no-date')
+        return
+      }
+
+      const checklistToggle = target.closest<HTMLElement>('[data-checklist-toggle="true"]')
+      if (checklistToggle) {
+        const block = checklistToggle.closest<HTMLElement>('[data-checklist-block="true"]')
+        if (block) window.setTimeout(() => updateChecklistCount(block), 0)
+      }
+
       const checkAdd = target.closest<HTMLElement>('[data-aurora-check-add="true"]')
       if (checkAdd) {
         const block = checkAdd.closest<HTMLElement>('[data-checklist-block="true"]')
@@ -343,8 +427,7 @@ export function AuroraBlockControls({ noteId }: AuroraBlockControlsProps) {
   function applyEntryDate(value: string) {
     if (!entryBlock || !value) return
     entryBlock.dataset.dailyEntryDate = value
-    const label = entryBlock.querySelector<HTMLElement>('.editor-daily-entry__date')
-    if (label) label.textContent = formatDailyDate(value)
+    renderDailyDate(entryBlock)
     const editor = entryBlock.closest<HTMLElement>('.editor-surface')
     editor?.dispatchEvent(new Event('input', { bubbles: true }))
     setEntryBlock(null)
