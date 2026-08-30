@@ -8,6 +8,8 @@ const previewCssPath = new URL('../src/features/images/pwa-image-preview.css', i
 const mobileBackKeyboardGuardPath = new URL('../src/features/notes/mobileBackKeyboardGuard.ts', import.meta.url)
 const mainPath = new URL('../src/main.tsx', import.meta.url)
 const auroraSheetPath = new URL('../src/features/notes/themes/aurora-native/AuroraNativeNoteSheet.tsx', import.meta.url)
+const auroraBlocksPath = new URL('../src/features/notes/themes/aurora-native/AuroraNativeBlocks.tsx', import.meta.url)
+const auroraCssPath = new URL('../src/features/notes/themes/aurora-native/auroraNativeNoteSheet.css', import.meta.url)
 
 test('note content remains local while typing and persists explicitly or before leaving', async () => {
   const source = await readFile(notesWorkspacePath, 'utf8')
@@ -81,4 +83,20 @@ test('first mobile back gesture dismisses an active editor before note navigatio
   assert.match(guard, /oanixView: 'note', noteId: lastOpenNoteId/)
   assert.ok(guard.indexOf('focusedEditor.blur()') < guard.indexOf("oanixView: 'note', noteId: lastOpenNoteId"))
   assert.doesNotMatch(guard, /flushPendingContent/)
+})
+
+
+test('Aurora preserves compact contact notes and mobile image safeguards inside Shadow DOM', async () => {
+  const sheet = await readFile(auroraSheetPath, 'utf8')
+  const blocks = await readFile(auroraBlocksPath, 'utf8')
+  const css = await readFile(auroraCssPath, 'utf8')
+  assert.match(blocks, /c-notes-more/)
+  assert.match(blocks, /onOpenReader\('Notas del contacto', value\)/)
+  assert.match(css, /-webkit-line-clamp:2/)
+  assert.match(sheet, /baseWidth \* scale/)
+  assert.doesNotMatch(sheet, /scale\(\$\{scale\}\)/)
+  assert.doesNotMatch(css, /will-change:transform/)
+  assert.match(sheet, /imageActionsOpen/)
+  assert.match(sheet, /aria-label="Abrir acciones de la imagen"/)
+  assert.match(sheet, /imageActionsOpen && <>/)
 })

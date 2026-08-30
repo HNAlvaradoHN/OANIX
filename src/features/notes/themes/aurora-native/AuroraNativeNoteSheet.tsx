@@ -374,6 +374,7 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null)
   const [selectedBlockElement, setSelectedBlockElement] = useState<HTMLElement | null>(null)
   const [imageSelection, setImageSelection] = useState<ImageSelection | null>(null)
+  const [imageActionsOpen, setImageActionsOpen] = useState(false)
   const [imageBarPosition, setImageBarPosition] = useState<FixedPosition>({ top: 0, left: 0 })
   const [insertState, setInsertState] = useState<InsertState | null>(null)
   const pendingInsertRef = useRef<PendingInsertContext | null>(null)
@@ -1307,6 +1308,10 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
 
   const noteTags = props.tags.filter((tag) => (props.note.tagIds ?? []).includes(tag.id))
   const folder = props.folders.find((item) => item.id === props.note.folderId) ?? null
+  useEffect(() => {
+    setImageActionsOpen(false)
+  }, [selectedBlockId])
+
   const selectedImageBlock = imageSelection
     ? currentBlocks().find((block): block is ImageBlock => block.id === imageSelection.blockId && block.type === 'image') ?? null
     : null
@@ -1435,6 +1440,7 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
             block={block}
             resetToken={resetToken}
             onContactChange={patchContact}
+            onOpenReader={(title, text) => setReader({ title, text, code: false })}
             onOpenEmoji={(blockId, anchor) => setEmojiPop({ ...fixedNear(anchor, 248, 260), blockId })}
           />,
         )
@@ -1701,9 +1707,17 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
 
       {selectedImageBlock && imageSelection && (
         <div
-          className={`imgbar${selectedImageBlock.locked === false ? ' unlocked' : ''}`}
+          className={`imgbar${selectedImageBlock.locked === false ? ' unlocked' : ''}${imageActionsOpen ? ' open' : ' compact'}`}
           style={imageBarPosition}
         >
+          <button
+            type="button"
+            title="Acciones de la imagen"
+            aria-label="Abrir acciones de la imagen"
+            aria-expanded={imageActionsOpen}
+            onClick={() => setImageActionsOpen((value) => !value)}
+          ><Ellipsis /></button>
+          {imageActionsOpen && <>
           <button type="button" title="Abrir imagen" onClick={openImageLightbox}><Maximize /></button>
           <button type="button" title="Reemplazar desde galería" onClick={() => { setPendingReplaceImageId(selectedImageBlock.id); imageInputRef.current?.click() }}><Upload /></button>
           <span className="ib-sep" />
@@ -1753,6 +1767,8 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
           <button type="button" title="Opciones" onClick={() => setImageInfoOpen(true)}><SlidersHorizontal /></button>
           <span className="ib-sep" />
           <button className="danger" type="button" title="Quitar imagen" onClick={() => void deleteBlock(selectedImageBlock.id)}><Trash2 /></button>
+
+          </>}
         </div>
       )}
 
@@ -2100,11 +2116,13 @@ function AuroraShadowHost(props: NoteSheetThemeProps) {
 
 function NativeLightbox({ state, onClose }: { state: LightboxState; onClose: () => void }) {
   const stageRef = useRef<HTMLDivElement>(null)
+  const imageRef = useRef<HTMLImageElement>(null)
   const pointersRef = useRef(new Map<number, { x: number; y: number }>())
   const lastRef = useRef<{ x: number; y: number } | null>(null)
   const pinchDistanceRef = useRef(0)
   const pinchScaleRef = useRef(1)
   const [scale, setScale] = useState(1)
+  const [baseWidth, setBaseWidth] = useState<number | null>(null)
   const [offset, setOffset] = useState({ x: 0, y: 0 })
 
   function clampScale(value: number) {
@@ -2195,10 +2213,21 @@ function NativeLightbox({ state, onClose }: { state: LightboxState; onClose: () 
         onPointerCancel={pointerUp}
       >
         <img
+          ref={imageRef}
           src={state.src}
           alt=""
           draggable={false}
-          style={{ transform: `translate(${offset.x}px,${offset.y}px) scale(${scale})` }}
+          onLoad={() => {
+            const width = imageRef.current?.getBoundingClientRect().width ?? 0
+            if (width > 0) setBaseWidth(width)
+          }}
+          style={{
+            width: baseWidth ? `${Math.round(baseWidth * scale)}px` : undefined,
+            maxWidth: baseWidth ? 'none' : undefined,
+            maxHeight: baseWidth ? 'none' : undefined,
+            height: 'auto',
+            transform: `translate(${offset.x}px,${offset.y}px)`,
+          }}
         />
       </div>
       <div className="lb-cap">{state.name}</div>

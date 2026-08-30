@@ -502,6 +502,7 @@ interface ContactBlockViewProps extends Omit<BlockChromeProps, 'kind' | 'childre
   block: ContactBlock
   resetToken: number
   onContactChange: (blockId: string, patch: Partial<ContactBlock>, rerender?: boolean) => void
+  onOpenReader: (title: string, text: string) => void
   onOpenEmoji: (blockId: string, anchor: DOMRect) => void
 }
 
@@ -509,6 +510,7 @@ export function ContactBlockView({
   block,
   resetToken,
   onContactChange,
+  onOpenReader,
   onOpenEmoji,
   ...chrome
 }: ContactBlockViewProps) {
@@ -555,16 +557,22 @@ export function ContactBlockView({
             ['email', 'Email', block.email],
             ['notes', 'Notas', block.notes],
           ].map(([field, label, value]) => (
-            <div className="c-field" key={field}>
+            <div className={`c-field${field === 'notes' ? ' c-field-notes' : ''}`} key={field}>
               <span className="c-label">{label}</span>
               <UncontrolledEditable
                 identity={`${block.id}:${field}`}
                 resetToken={resetToken}
-                className="c-value"
+                className={`c-value${field === 'notes' ? ' c-notes-value' : ''}`}
                 text={value}
                 editable={editable}
                 onInput={(element) => onContactChange(block.id, { [field]: element.innerText } as Partial<ContactBlock>, true)}
               />
+              {field === 'notes' && value.trim() && !editing && (
+                <button className="c-notes-more" type="button" onClick={(event) => {
+                  event.stopPropagation()
+                  onOpenReader('Notas del contacto', value)
+                }}>Ver todo</button>
+              )}
             </div>
           ))}
         </div>

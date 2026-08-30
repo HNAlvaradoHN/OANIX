@@ -188,6 +188,11 @@ button.meta-chip:hover{border-color:var(--acc);box-shadow:var(--sh-1)}
 .c-fields{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:14px;padding-top:14px;border-top:1px dashed var(--line)}
 .c-label{display:block;font-family:var(--f-mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:3px}
 .c-field span[contenteditable]{font-size:13.5px;border-radius:6px;padding:2px 5px;margin-left:-5px;display:inline-block;font-family:var(--f-body)}
+.c-field-notes{grid-column:1/-1;min-width:0}
+.c-notes-value:not([contenteditable='true']){display:-webkit-box!important;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;max-height:3.45em;line-height:1.72;white-space:normal;overflow-wrap:anywhere}
+.c-notes-more{display:inline-flex;margin-top:4px;font-family:var(--f-mono);font-size:10.5px;color:var(--acc-deep);text-decoration:underline;text-underline-offset:3px}
+.contact-card.editing .c-notes-value{display:inline-block!important;max-height:none;overflow:visible;-webkit-line-clamp:unset}
+
 .contact-card.editing .c-field span[contenteditable],.contact-card.editing .c-name,.contact-card.editing .c-role{background:var(--acc-soft);outline:1.5px dashed var(--acc)}
 .contact-tools{position:absolute;top:12px;right:12px;display:flex;gap:6px}
 .contact-tools button{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;color:var(--ink-faint);background:var(--card)}
@@ -336,7 +341,7 @@ button.meta-chip:hover{border-color:var(--acc);box-shadow:var(--sh-1)}
 .lb-tools .lucide{width:17px;height:17px}
 .lb-pct{font-family:var(--f-mono);font-size:12px;color:#EDEAE2;min-width:48px;text-align:center}
 .lb-stage{flex:1;overflow:hidden;display:flex;align-items:center;justify-content:center;touch-action:none;cursor:grab;position:relative}
-.lb-stage img{max-width:92vw;max-height:78vh;user-select:none;-webkit-user-drag:none;transform-origin:center center;will-change:transform}
+.lb-stage img{max-width:92vw;max-height:78vh;user-select:none;-webkit-user-drag:none;transform-origin:center center}
 .lb-cap{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);font-family:var(--f-mono);font-size:12px;color:#E8E2D6;background:rgba(30,30,34,.8);padding:6px 14px;border-radius:999px;max-width:90vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lb-close{position:absolute;top:16px;right:16px;z-index:6;width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,.12);color:#fff;display:flex;align-items:center;justify-content:center}
 
