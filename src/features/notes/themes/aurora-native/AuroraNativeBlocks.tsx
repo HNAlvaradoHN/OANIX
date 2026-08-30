@@ -137,6 +137,7 @@ interface EditableProps {
   text?: string
   placeholder?: string
   spellCheck?: boolean
+  editable?: boolean
   onInput: (element: HTMLElement) => void
   onFocus?: (element: HTMLElement) => void
   onBlur?: (element: HTMLElement) => void
@@ -151,6 +152,7 @@ export function UncontrolledEditable({
   text,
   placeholder,
   spellCheck = false,
+  editable = true,
   onInput,
   onFocus,
   onBlur,
@@ -169,7 +171,7 @@ export function UncontrolledEditable({
     <div
       ref={ref}
       className={className}
-      contentEditable
+      contentEditable={editable}
       suppressContentEditableWarning
       spellCheck={spellCheck}
       data-ph={placeholder}
@@ -505,6 +507,7 @@ export function ContactBlockView({
             resetToken={resetToken}
             className="c-name"
             text={block.name}
+            editable={editable}
             onInput={(element) => onContactChange(block.id, { name: element.innerText }, false)}
           />
           <UncontrolledEditable
@@ -512,6 +515,7 @@ export function ContactBlockView({
             resetToken={resetToken}
             className="c-role"
             text={block.organization}
+            editable={editable}
             onInput={(element) => onContactChange(block.id, { organization: element.innerText }, false)}
           />
         </div>
@@ -528,6 +532,7 @@ export function ContactBlockView({
                 resetToken={resetToken}
                 className="c-value"
                 text={value}
+                editable={editable}
                 onInput={(element) => onContactChange(block.id, { [field]: element.innerText } as Partial<ContactBlock>, false)}
               />
             </div>
@@ -536,7 +541,6 @@ export function ContactBlockView({
         <div className="contact-lock-hint">
           {editing ? <><PencilLine />Editando — tocá el lápiz para bloquear</> : <><Lock />Campos bloqueados — tocá el lápiz para editar</>}
         </div>
-        {!editable && <div className="native-contact-lock-overlay" aria-hidden="true" />}
       </div>
     </BlockChrome>
   )
