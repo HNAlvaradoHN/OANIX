@@ -175,6 +175,23 @@ export function UncontrolledEditable({
     measureOverflow()
   }, [identity, resetToken])
 
+  useEffect(() => {
+    if (!maxLines) return
+    const element = ref.current
+    if (!element) return
+
+    const resize = () => measureOverflow()
+    const observer = typeof ResizeObserver === 'undefined'
+      ? null
+      : new ResizeObserver(resize)
+    observer?.observe(element)
+    window.addEventListener('resize', resize)
+    return () => {
+      observer?.disconnect()
+      window.removeEventListener('resize', resize)
+    }
+  }, [identity, maxLines])
+
   const Tag = as
   return (
     <Tag
@@ -391,7 +408,7 @@ export function CodeBlockView({
               as="code"
               text={block.text}
               spellCheck={false}
-              onInput={(element) => onCodeChange(block.id, { text: element.innerText }, false)}
+              onInput={(element) => onCodeChange(block.id, { text: element.innerText }, true)}
             />
           </pre>
           <div className="code-fade" />
@@ -524,7 +541,7 @@ export function ContactBlockView({
             className="c-name"
             text={block.name}
             editable={editable}
-            onInput={(element) => onContactChange(block.id, { name: element.innerText }, false)}
+            onInput={(element) => onContactChange(block.id, { name: element.innerText }, true)}
           />
           <UncontrolledEditable
             identity={`${block.id}:organization`}
@@ -532,7 +549,7 @@ export function ContactBlockView({
             className="c-role"
             text={block.organization}
             editable={editable}
-            onInput={(element) => onContactChange(block.id, { organization: element.innerText }, false)}
+            onInput={(element) => onContactChange(block.id, { organization: element.innerText }, true)}
           />
         </div>
         <div className="c-fields">
@@ -549,7 +566,7 @@ export function ContactBlockView({
                 className="c-value"
                 text={value}
                 editable={editable}
-                onInput={(element) => onContactChange(block.id, { [field]: element.innerText } as Partial<ContactBlock>, false)}
+                onInput={(element) => onContactChange(block.id, { [field]: element.innerText } as Partial<ContactBlock>, true)}
               />
             </div>
           ))}
