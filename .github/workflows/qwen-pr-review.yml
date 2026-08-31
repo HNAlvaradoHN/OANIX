@@ -105,6 +105,7 @@ jobs:
       - name: Review independently with grounded Qwen prompt
         id: qwen
         if: env.QWEN_API_KEY != ''
+        continue-on-error: true
         shell: bash
         env:
           OPENAI_API_KEY: ${{ env.QWEN_API_KEY }}
@@ -135,6 +136,7 @@ jobs:
       - name: Validate Qwen grounding
         id: validate
         if: steps.qwen.outcome == 'success'
+        continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
@@ -183,6 +185,17 @@ jobs:
             qwen-artifacts/
           if-no-files-found: warn
           retention-days: 7
+
+      - name: Report unavailable independent review
+        if: always() && env.QWEN_API_KEY != '' && (steps.qwen.outcome != 'success' || steps.validate.outcome != 'success')
+        shell: bash
+        run: |
+          echo "::warning::Qwen automatic review was unavailable or incomplete. OANIX CI and Android remain the technical gates."
+          {
+            echo "### Qwen automatic review unavailable"
+            echo
+            echo "The independent reviewer did not return a grounded review. This is non-blocking by project policy; OANIX CI and Android remain authoritative gates."
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Publish Qwen review as PR comment
         if: steps.validate.outcome == 'success'
