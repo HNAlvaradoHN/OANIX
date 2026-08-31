@@ -9,6 +9,12 @@ import {
 import { AccountPanel } from '../account/AccountPanel'
 import { OanixIcon } from '../../shared/OanixIcon'
 import {
+  AUTO_LOCK_OPTIONS,
+  readSavedAutoLockMinutes,
+  saveAutoLockMinutes,
+  type AutoLockMinutes,
+} from '../../security/session/autoLockPolicy'
+import {
   applyOanixTheme,
   readSavedOanixTheme,
   type OanixThemePreset,
@@ -110,6 +116,7 @@ export function RebuildApp({ onLock }: RebuildAppProps) {
   const [accountOpen, setAccountOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [theme, setTheme] = useState<OanixThemePreset['id']>(() => readSavedOanixTheme())
+  const [autoLockMinutes, setAutoLockMinutes] = useState<AutoLockMinutes>(() => readSavedAutoLockMinutes())
   const searchRef = useRef<HTMLInputElement | null>(null)
 
   const showSavingOverlay = useDelayedBusy(saving)
@@ -182,6 +189,10 @@ export function RebuildApp({ onLock }: RebuildAppProps) {
 
   function chooseTheme(next: OanixThemePreset['id']) {
     setTheme(applyOanixTheme(next))
+  }
+
+  function chooseAutoLock(next: AutoLockMinutes) {
+    setAutoLockMinutes(saveAutoLockMinutes(next))
   }
 
   function focusSearch() {
@@ -677,6 +688,23 @@ export function RebuildApp({ onLock }: RebuildAppProps) {
                   🌙 Noche
                 </button>
               </div>
+
+              <strong>Bloqueo automático</strong>
+              <div className="rebuild-auto-lock" role="radiogroup" aria-label="Tiempo de bloqueo automático">
+                {AUTO_LOCK_OPTIONS.map((option) => (
+                  <button
+                    key={option.minutes}
+                    type="button"
+                    role="radio"
+                    aria-checked={autoLockMinutes === option.minutes}
+                    className={autoLockMinutes === option.minutes ? 'is-active' : ''}
+                    onClick={() => chooseAutoLock(option.minutes)}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+
               <button className="rebuild-lock-action" type="button" onClick={onLock}>
                 <OanixIcon name="lock" /> Bloquear OANIX
               </button>
