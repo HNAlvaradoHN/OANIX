@@ -16,7 +16,7 @@ test('legacy v38.3 layer remains preserved but detached from the active rebuild'
   assert.match(legacyGate, /<V383WorkspaceVisualRuntime \/>/)
   assert.match(runtime, /classList\.add\('oanix-v383-visual'\)/)
   assert.doesNotMatch(main, /\.\/styles\/header-icon-polish\.css/)
-  assert.match(main, /\.\/app\/ThemeVisualStyles/)
+  assert.doesNotMatch(main, /ThemeVisualStyles/)
   assert.match(themeVisualStyles, /\.\.\/styles\/notebook-contract\.css/)
   assert.doesNotMatch(main, /\.\/styles\/notebook-contract\.css/)
   assert.doesNotMatch(main, /\.\/styles\/notebook-polish\.css/)

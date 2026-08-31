@@ -34,8 +34,7 @@ test('las capas visuales heredadas de movimiento y slider quedan fuera del códi
   assert.doesNotMatch(main, /FolderKineticSlideRuntime/)
 })
 
-test('el runtime compartido conserva solo historial y se monta también en PWA desde el runtime ya global', () => {
-  assert.match(androidBackRuntime, /useFolderNavigationRuntime/)
-  assert.match(androidBackRuntime, /useFolderNavigationRuntime\(\)/)
+test('el runtime histórico de carpetas queda preservado pero no se monta en AndroidBackRuntime', () => {
+  assert.doesNotMatch(androidBackRuntime, /useFolderNavigationRuntime|folderNavigationRuntime/)
   assert.match(androidBackRuntime, /if \(!isAndroidBackRuntime\(\) \|\| !exitPromptVisible\) return null/)
 })

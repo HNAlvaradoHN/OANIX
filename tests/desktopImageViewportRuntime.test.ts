@@ -26,9 +26,8 @@ test('desktop double-click suppression is mouse-scoped and touch handlers are no
   assert.doesNotMatch(source, /touchstart|touchmove|touchend/)
 })
 
-test('desktop image viewport runtime is mounted alongside the existing PWA image runtime', async () => {
+test('legacy desktop image viewport runtime is preserved but detached from rebuild startup', async () => {
   const source = await readFile(mainPath, 'utf8')
 
-  assert.match(source, /<PwaImagePreviewRuntime \/>/)
-  assert.match(source, /<DesktopImageViewportRuntime \/>/)
+  assert.doesNotMatch(source, /PwaImagePreviewRuntime|DesktopImageViewportRuntime/)
 })

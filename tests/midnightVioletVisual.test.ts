@@ -14,7 +14,7 @@ const workspace = readFileSync('src/features/notes/NotesWorkspace.tsx', 'utf8')
 const gate = readFileSync('src/app/VaultGate.tsx', 'utf8')
 
 test('Midnight Violet has one public CSS authority with stable internal order', () => {
-  assert.match(main, /\.\/app\/ThemeVisualStyles/)
+  assert.doesNotMatch(main, /ThemeVisualStyles/)
   assert.match(themeVisualStyles, /styles\/midnight-violet\.css/)
   assert.doesNotMatch(main, /styles\/midnight-violet\.css/)
   assert.doesNotMatch(main, /styles\/redesign\.css/)
