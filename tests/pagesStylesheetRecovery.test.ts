@@ -31,6 +31,7 @@ test('Pages deploy delegates to one versioned live HTML, CSS and JS shell verifi
   assert.match(pagesVerifier, /Buffer\.byteLength\(css\) <= 10000/)
   assert.match(pagesVerifier, /Buffer\.byteLength\(js\) <= 10000/)
   assert.match(pagesVerifier, /css\.includes\('\.vault-shell'\)/)
-  assert.match(pagesVerifier, /js\.includes\('data-oanix-workspace-v2'\)/)
+  assert.match(pagesVerifier, /css\.includes\('\.rebuild-shell'\)/)
+  assert.match(pagesVerifier, /js\.includes\('encrypted_records_v2'\)/)
   assert.match(pagesVerifier, /const RETRIES = 8/)
 })
