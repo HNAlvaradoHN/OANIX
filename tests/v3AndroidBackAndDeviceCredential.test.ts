@@ -13,15 +13,16 @@ test('MainActivity registers Android back and device-security plugins', () => {
   assert.match(activity, /registerPlugin\(OanixDeviceCredentialPlugin\.class\)/)
 })
 
-test('Android back runtime returns from an open note through the existing safe back action', () => {
+test('Android back runtime closes the active rebuild layer through its explicit safe back contract', () => {
   const runtime = readFileSync('src/platform/android/AndroidBackRuntime.tsx', 'utf8')
-  const workspace = readFileSync('src/features/notes/NotesWorkspace.tsx', 'utf8')
+  const rebuild = readFileSync('src/features/rebuild/RebuildApp.tsx', 'utf8')
 
-  assert.match(runtime, /\.notes-shell--open \.back-button/)
-  assert.match(runtime, /openNoteBack\.click\(\)/)
-  assert.match(workspace, /async function handleBack\(\)/)
-  assert.match(workspace, /await flushPendingContent\(\)/)
-  assert.match(workspace, /await finalizeRemovedImages\(\)/)
+  assert.match(runtime, /\[data-oanix-back-close="true"\]/)
+  assert.match(runtime, /modalBackClose\.click\(\)/)
+  assert.doesNotMatch(runtime, /notes-shell--open|folderNavigationRuntime/)
+  assert.match(rebuild, /data-oanix-back-close="true"/)
+  assert.match(rebuild, /data-oanix-save-and-close="true"/)
+  assert.match(rebuild, /await saveRebuildNote\(editor\.meta, editor\.title, editor\.text\)/)
 })
 
 test('Android back runtime confirms exit professionally and exits on the second back gesture', () => {
