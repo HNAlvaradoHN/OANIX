@@ -276,36 +276,40 @@ La navegación inferior del diseño nuevo queda:
 
 El botón central `+` crea **Nota / Carpeta / Etiqueta**. Papelera no ocupa un destino principal de la barra.
 
-### Persistencia y sincronización incremental por cambios — DECIDED
+### Persistencia incremental local y cola de sync — IMPLEMENTED / COORDINATOR_PENDING
 
-OANIX no debe volver a guardar/sincronizar una nota completa cuando solo cambió una parte.
+OANIX no vuelve a cifrar/escribir una nota completa cuando solo cambió una parte. La unidad de persistencia debe permanecer estable y suficientemente grande para evitar miles de micro-registros, pero suficientemente pequeña para que una edición localizada no reprocesе contenido intacto.
 
-Estado actual de la fundación: `note.v2.body` sigue siendo un único cuerpo de texto, por lo que un guardado vuelve a cifrar/escribir ese body completo. Esto fue aceptable para el hito mínimo, pero **no es la arquitectura final para notas grandes o ricas**.
+Implementado en la nueva capa v2:
+- `note.v2.meta` mantiene metadata pequeña y revisión propia;
+- `note.v2.manifest` mantiene orden/referencias y revisión del contenido;
+- texto en `note.v2.text-chunk` con IDs y revisiones estables;
+- tamaño objetivo aproximado de 16 Ki caracteres, con rango normal 8–24 Ki para evitar fragmentación extrema;
+- una edición localizada intenta resincronizarse con chunks intactos cercanos y conserva sus IDs/revisiones; una edición distante posterior no obliga por sí sola a reescribir todo lo que queda entre ambas;
+- cambios grandes buscan anclas más lejanas para no reescribir una cola intacta solo porque el cambio superó la ventana local;
+- título/texto sin cambios retorna como no-op antes de cifrar/escribir;
+- lecturas de una nota piden únicamente los IDs de chunks de su manifiesto, no escanean cuerpos de otras notas;
+- escrituras y borrados de chunks, manifiesto, metadata y cola pendiente se confirman en una sola transacción IndexedDB después de cifrar;
+- `sync.v2.pending` usa una identidad determinista por unidad, de modo que cambios repetidos de la misma unidad reemplazan el pendiente anterior en lugar de hacer crecer una cola duplicada;
+- borrados generan tombstone pendiente y eliminan el chunk local en el mismo commit;
+- las notas v2 antiguas con `note.v2.body/plain-text-v1` siguen siendo legibles. Su primer cambio de cuerpo crea el formato incremental de forma perezosa; por seguridad el registro legacy no se borra todavía.
 
-Dirección obligatoria antes de añadir muchas capacidades al editor:
-- la nota usa un manifiesto pequeño con referencias/orden;
-- texto dividido en bloques con IDs estables y, si un bloque llega a ser muy grande, chunks internos estables;
-- apariencia de hoja en su propio registro;
-- código, checklist y otros bloques especiales como unidades independientes;
-- imágenes/archivos como assets separados; cambiar metadata/descripcion no vuelve a subir el binario;
-- cada unidad mantiene revisión/hash técnico suficiente para detectar cambios sin exponer contenido en claro;
-- una `dirty queue` conserva únicamente IDs/unidades modificadas o eliminadas;
-- los borrados se representan explícitamente para poder propagarlos sin escanear/recrear toda la nota.
+Reglas permanentes para la evolución rica:
+- apariencia de hoja vive en su propia unidad;
+- código, checklist y otros bloques especiales deben tener identidad estable propia;
+- imágenes/archivos son assets separados; cambiar metadata o descripción no vuelve a transferir el binario ya confirmado;
+- bloques excepcionalmente grandes pueden subdividirse internamente, sin convertir cada pulsación o línea pequeña en un registro;
+- no usar chunks basados únicamente en posiciones fijas que provoquen que una inserción al inicio cambie artificialmente todas las unidades posteriores;
+- si varias modificaciones pueden confirmarse juntas, agruparlas en un commit consistente; el manifiesto nunca debe apuntar a un estado parcialmente escrito;
+- no volver a cifrar, subir, hashear o sincronizar una unidad si su revisión/contenido confirmado no cambió;
+- una optimización que ahorre poco pero multiplique estados, cachés o coordinación no se acepta automáticamente.
 
-Guardado automático local:
-- una edición marca solo la unidad afectada como dirty;
-- al llegar a una frontera segura/idle se cifran y escriben solo las unidades dirty y el manifiesto pequeño si cambió;
-- al reabrir, todo lo ya persistido arranca limpio; no se reconstruye una cola dirty a partir de toda la nota.
+Pendiente:
+- el editor actual todavía confirma localmente al salir; falta añadir autoguardado seguro por idle que actualice el baseline sin introducir trabajo por tecla;
+- el coordinador remoto todavía no consume `sync.v2.pending`;
+- cuando una unidad sea confirmada remotamente, el coordinador deberá retirar su pendiente y conservar el baseline/revisión confirmada para que reabrir OANIX no la vuelva a sincronizar.
 
-Sincronización:
-- mantener un baseline persistente de revisiones ya confirmadas remotamente;
-- sincronizar únicamente unidades pendientes desde la dirty queue;
-- una imagen/archivo cuyo contenido ya fue confirmado no se vuelve a transferir;
-- una modificación de apariencia de hoja sincroniza solo apariencia;
-- editar un bloque de texto/código sincroniza solo ese bloque/chunk y la metadata mínima necesaria;
-- después de confirmación remota, retirar esa unidad de pendientes y conservar su revisión como nuevo baseline.
-
-Este modelo debe integrarse con la regla de prioridad de escritura: guardar/sincronizar incrementalmente **nunca** justifica trabajo pesado por cada tecla.
+La escritura mantiene prioridad absoluta: localizar/guardar/sincronizar cambios se hace fuera del camino crítico de cada tecla.
 
 ### Sincronización consciente del editor — DECIDED, todavía no conectada
 

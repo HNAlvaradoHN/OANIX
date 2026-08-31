@@ -17,10 +17,18 @@ interface StoredEncryptedV2Record {
   payload: EncryptedVaultPayload
 }
 
-export interface EncryptedV2Write<T = unknown> {
+export interface EncryptedV2RecordIdentity {
   recordType: string
   recordId: string
+}
+
+export interface EncryptedV2Write<T = unknown> extends EncryptedV2RecordIdentity {
   value: T
+}
+
+export interface EncryptedV2ChangeSet {
+  writes?: EncryptedV2Write[]
+  deletes?: EncryptedV2RecordIdentity[]
 }
 
 export interface DecryptedV2Record<T> {
@@ -101,6 +109,50 @@ export async function readEncryptedV2Record<T>(
   }
 }
 
+export async function readEncryptedV2Records<T>(
+  identities: EncryptedV2RecordIdentity[],
+): Promise<Array<T | null>> {
+  if (identities.length === 0) return []
+
+  identities.forEach(({ recordType, recordId }) => validateRecordIdentity(recordType, recordId))
+  const vaultKey = requireActiveVaultKey()
+  const database = await openLocalDatabase()
+
+  try {
+    const transaction = database.transaction(V2_ENCRYPTED_RECORDS_STORE, 'readonly')
+    const completion = transactionCompleted(transaction)
+    const store = transaction.objectStore(V2_ENCRYPTED_RECORDS_STORE)
+    const stored = await Promise.all(identities.map(({ recordType, recordId }) =>
+      requestResult<StoredEncryptedV2Record | undefined>(
+        store.get([recordType, recordId]),
+        undefined,
+      ),
+    ))
+    await completion
+
+    const values: Array<T | null> = []
+    for (let offset = 0; offset < stored.length; offset += DECRYPT_BATCH_SIZE) {
+      const batch = stored.slice(offset, offset + DECRYPT_BATCH_SIZE)
+      const batchValues = await Promise.all(batch.map(async (record) => {
+        if (!record) return null
+        return decryptVaultJson<T>(vaultKey, record.payload, {
+          recordType: record.recordType,
+          recordId: record.recordId,
+        })
+      }))
+      values.push(...batchValues)
+
+      if (offset + DECRYPT_BATCH_SIZE < stored.length) {
+        await new Promise<void>((resolve) => setTimeout(resolve, 0))
+      }
+    }
+
+    return values
+  } finally {
+    database.close()
+  }
+}
+
 export async function listEncryptedV2Records<T>(
   recordType: string,
 ): Promise<DecryptedV2Record<T>[]> {
@@ -123,10 +175,11 @@ export async function listEncryptedV2Records<T>(
   }
 }
 
-export async function writeEncryptedV2Records(
-  writes: EncryptedV2Write[],
-): Promise<void> {
-  if (writes.length === 0) return
+export async function applyEncryptedV2Changes({
+  writes = [],
+  deletes = [],
+}: EncryptedV2ChangeSet): Promise<void> {
+  if (writes.length === 0 && deletes.length === 0) return
 
   const vaultKey = requireActiveVaultKey()
   const seen = new Set<string>()
@@ -134,7 +187,7 @@ export async function writeEncryptedV2Records(
   const encrypted = await Promise.all(writes.map(async (write) => {
     validateRecordIdentity(write.recordType, write.recordId)
     const identity = JSON.stringify([write.recordType, write.recordId])
-    if (seen.has(identity)) throw new Error('Duplicate encrypted v2 record write.')
+    if (seen.has(identity)) throw new Error('Duplicate encrypted v2 record change.')
     seen.add(identity)
 
     return {
@@ -147,6 +200,13 @@ export async function writeEncryptedV2Records(
     } satisfies StoredEncryptedV2Record
   }))
 
+  deletes.forEach(({ recordType, recordId }) => {
+    validateRecordIdentity(recordType, recordId)
+    const identity = JSON.stringify([recordType, recordId])
+    if (seen.has(identity)) throw new Error('Duplicate encrypted v2 record change.')
+    seen.add(identity)
+  })
+
   await retryTransientStorageOperation(async () => {
     const database = await openLocalDatabase()
 
@@ -155,6 +215,7 @@ export async function writeEncryptedV2Records(
       const completion = transactionCompleted(transaction)
       const store = transaction.objectStore(V2_ENCRYPTED_RECORDS_STORE)
       encrypted.forEach((record) => store.put(record))
+      deletes.forEach(({ recordType, recordId }) => store.delete([recordType, recordId]))
       await completion
     } finally {
       database.close()
@@ -163,9 +224,18 @@ export async function writeEncryptedV2Records(
 
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('oanix:v2-local-data-changed', {
-      detail: writes.map(({ recordType, recordId }) => ({ recordType, recordId })),
+      detail: [
+        ...writes.map(({ recordType, recordId }) => ({ recordType, recordId, operation: 'upsert' })),
+        ...deletes.map(({ recordType, recordId }) => ({ recordType, recordId, operation: 'delete' })),
+      ],
     }))
   }
+}
+
+export async function writeEncryptedV2Records(
+  writes: EncryptedV2Write[],
+): Promise<void> {
+  return applyEncryptedV2Changes({ writes })
 }
 
 export async function writeEncryptedV2Record<T>(
@@ -180,19 +250,5 @@ export async function deleteEncryptedV2Record(
   recordType: string,
   recordId: string,
 ): Promise<void> {
-  validateRecordIdentity(recordType, recordId)
-  requireActiveVaultKey()
-
-  await retryTransientStorageOperation(async () => {
-    const database = await openLocalDatabase()
-
-    try {
-      const transaction = database.transaction(V2_ENCRYPTED_RECORDS_STORE, 'readwrite')
-      const completion = transactionCompleted(transaction)
-      transaction.objectStore(V2_ENCRYPTED_RECORDS_STORE).delete([recordType, recordId])
-      await completion
-    } finally {
-      database.close()
-    }
-  })
+  return applyEncryptedV2Changes({ deletes: [{ recordType, recordId }] })
 }

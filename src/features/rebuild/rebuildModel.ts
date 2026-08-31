@@ -1,5 +1,8 @@
 export const NOTE_V2_META_TYPE = 'note.v2.meta'
 export const NOTE_V2_BODY_TYPE = 'note.v2.body'
+export const NOTE_V2_MANIFEST_TYPE = 'note.v2.manifest'
+export const NOTE_V2_TEXT_CHUNK_TYPE = 'note.v2.text-chunk'
+export const SYNC_V2_PENDING_TYPE = 'sync.v2.pending'
 export const FOLDER_V2_TYPE = 'folder.v2'
 export const TAG_V2_TYPE = 'tag.v2'
 
@@ -31,6 +34,7 @@ export const V2_FOLDER_ICONS = [
 
 export interface NoteV2Meta {
   version: 2
+  revision: number
   id: string
   title: string
   folderId: string | null
@@ -44,6 +48,38 @@ export interface NoteV2Body {
   noteId: string
   format: 'plain-text-v1'
   text: string
+}
+
+export interface NoteV2TextChunkRef {
+  id: string
+  length: number
+  revision: number
+}
+
+export interface NoteV2Manifest {
+  version: 2
+  noteId: string
+  format: 'chunked-text-v1'
+  revision: number
+  chunks: NoteV2TextChunkRef[]
+}
+
+export interface NoteV2TextChunk {
+  version: 2
+  noteId: string
+  chunkId: string
+  revision: number
+  text: string
+}
+
+export interface SyncV2PendingRecord {
+  version: 2
+  noteId: string
+  unitType: string
+  unitId: string
+  revision: number
+  operation: 'upsert' | 'delete'
+  queuedAt: string
 }
 
 export interface FolderV2Record {

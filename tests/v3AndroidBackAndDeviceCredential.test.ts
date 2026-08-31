@@ -23,7 +23,7 @@ test('Android back runtime closes the active rebuild layer through its explicit 
   assert.doesNotMatch(runtime, /notes-shell--open|folderNavigationRuntime/)
   assert.match(editor, /data-oanix-back-close="true"/)
   assert.match(editor, /data-oanix-save-and-close="true"/)
-  assert.match(rebuild, /await saveRebuildNote\(editor\.meta, snapshot\.title, snapshot\.text\)/)
+  assert.match(rebuild, /await saveRebuildNote\(editor\.meta, editor\.text, snapshot\.title, snapshot\.text\)/)
 })
 
 test('Android back runtime confirms exit professionally and exits on the second back gesture', () => {

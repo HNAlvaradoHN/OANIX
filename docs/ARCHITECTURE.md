@@ -45,17 +45,40 @@ android/                  integración nativa Capacitor
 
 ## Notas y contenido estructurado
 
-Las notas usan un modelo versionado de bloques (`blocks-v1`), no HTML persistido. El DOM editable es una vista temporal que se transforma al modelo reconocido por OANIX antes de guardar.
+La implementación histórica de notas usa `blocks-v1` y sigue disponible como referencia/datos legacy. La reconstrucción post-unlock usa una capa v2 incremental propia; no se debe volver a meter un documento grande entero en un solo registro por comodidad.
 
-Los registros privados se cifran antes de entrar en IndexedDB. Imágenes y otros binarios privados se almacenan separadamente del JSON de la nota y se referencian mediante identificadores opacos.
+Formato activo de la reconstrucción:
 
-Las mutaciones de una misma nota se serializan. El autoguardado fuerza escrituras pendientes antes de transiciones que puedan desmontar el editor.
+```text
+note.v2.meta
+    ↓
+note.v2.manifest
+    ↓ referencias ordenadas
+note.v2.text-chunk (IDs/revisiones estables)
+    ↓
+sync.v2.pending (solo unidades pendientes)
+```
+
+Reglas:
+- metadata de lista pequeña separada del cuerpo;
+- manifiesto pequeño como autoridad del orden de unidades;
+- texto en chunks acotados; una edición localizada no debe mover/recrear artificialmente todos los chunks posteriores;
+- una unidad sin cambios conserva ID/revisión y no se vuelve a cifrar/escribir;
+- escrituras y borrados relacionados se confirman en una sola transacción local después del cifrado;
+- la cola de sync es un índice de trabajo pendiente, no una copia paralela de la nota;
+- `note.v2.body/plain-text-v1` es fallback transitorio para notas creadas antes de este formato y migra perezosamente al editar el cuerpo.
+
+El editor visual no conoce IndexedDB ni claves. Recibe/entrega estado mediante servicios; los futuros bloques ricos (hoja, código, checklist, imágenes, archivos) deben conservar unidades/IDs propios y no obligar a reserializar el documento completo.
+
+Los registros privados se cifran antes de entrar en IndexedDB. Imágenes y otros binarios privados se almacenan separadamente y se referencian mediante identificadores opacos.
 
 ## Persistencia local
 
 - La bóveda y registros privados usan la infraestructura local existente; no crear una segunda bóveda/store por función.
 - Cachés y temporales no son una segunda fuente de verdad.
 - Un dato auxiliar persistente debe ser mínimo, justificable y eliminable.
+- Antes de escribir, detectar no-op cuando sea barato y fiable; no renovar revisiones ni cifrar por actividad que no cambió contenido.
+- Agrupar cambios relacionados en commits consistentes y evitar colas duplicadas por la misma unidad.
 - Backups, exportaciones y verificaciones no dejan por defecto copias permanentes adicionales.
 
 La caché técnica de transferencias grandes está separada de `oanix-vault` y conserva únicamente el estado necesario para reanudar; no debe convertirse en un almacén alternativo de archivos.

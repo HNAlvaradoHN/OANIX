@@ -196,7 +196,7 @@ export function RebuildApp({ onLock }: RebuildAppProps) {
       const opened = await readRebuildNote(noteId)
       setEditor({
         meta: opened.meta,
-        text: opened.body.text,
+        text: opened.text,
       })
     } catch (openError) {
       setError(openError instanceof Error ? openError.message : 'No se pudo abrir la nota.')
@@ -213,7 +213,7 @@ export function RebuildApp({ onLock }: RebuildAppProps) {
       setNotes((current) => [created.meta, ...current])
       setEditor({
         meta: created.meta,
-        text: created.body.text,
+        text: created.text,
       })
       setCreateKind(null)
     } catch (createError) {
@@ -232,7 +232,7 @@ export function RebuildApp({ onLock }: RebuildAppProps) {
     setSaving(true)
     setError('')
     try {
-      const updated = await saveRebuildNote(editor.meta, snapshot.title, snapshot.text)
+      const updated = await saveRebuildNote(editor.meta, editor.text, snapshot.title, snapshot.text)
       setNotes((current) => current.map((note) => note.id === updated.id ? updated : note))
       setEditor(null)
       return true
