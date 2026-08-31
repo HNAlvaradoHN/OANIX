@@ -6,9 +6,8 @@ const main = readFileSync('src/main.tsx', 'utf8')
 const runtime = readFileSync('src/features/images/PwaImagePreviewRuntime.tsx', 'utf8')
 const css = readFileSync('src/features/images/pwa-image-preview.css', 'utf8')
 
-test('the approved fixed image card is mounted in both PWA and Capacitor without changing the shared editor', () => {
-  assert.match(main, /<PwaImagePreviewRuntime \/>/)
-  assert.doesNotMatch(main, /!isCapacitorBuild && <PwaImagePreviewRuntime \/>/)
+test('legacy fixed image card remains preserved but is not mounted by the rebuild entrypoint', () => {
+  assert.doesNotMatch(main, /PwaImagePreviewRuntime|pwa-image-preview\.css/)
   assert.doesNotMatch(runtime, /import\.meta\.env\.MODE === 'capacitor'/)
   assert.match(runtime, /oanix-pwa-image-preview-v1/)
 })
