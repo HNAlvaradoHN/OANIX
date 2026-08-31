@@ -27,6 +27,12 @@ test('Android back runtime closes the active rebuild layer through its explicit 
   assert.match(rebuild, /current\.meta,[\s\S]*current\.text,[\s\S]*snapshot\.title,[\s\S]*snapshot\.text/)
 })
 
+test('Android gesture back is routed through the OANIX callback until predictive back is migrated safely', () => {
+  const manifest = readFileSync('android/app/src/main/AndroidManifest.xml', 'utf8')
+
+  assert.match(manifest, /android:enableOnBackInvokedCallback="false"/)
+})
+
 test('Android back runtime confirms exit professionally and exits on the second back gesture', () => {
   const runtime = readFileSync('src/platform/android/AndroidBackRuntime.tsx', 'utf8')
   const plugin = readFileSync(
