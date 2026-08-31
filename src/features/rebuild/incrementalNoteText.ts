@@ -128,7 +128,25 @@ function findResyncAnchor(
     }
   }
 
-  return best ? { oldIndex: best.oldIndex, position: best.position } : null
+  if (best) return { oldIndex: best.oldIndex, position: best.position }
+
+  // A very large paste/replacement can span more than the local lookahead.
+  // Probe exponentially farther anchors so unchanged tails are not rewritten wholesale.
+  let distance = RESYNC_LOOKAHEAD_CHUNKS * 2
+  while (oldIndex + distance < oldPieces.length) {
+    const index = oldIndex + distance
+    const position = nextText.indexOf(oldPieces[index], newOffset)
+    if (position >= 0) return { oldIndex: index, position }
+    distance *= 2
+  }
+
+  const lastIndex = oldPieces.length - 1
+  if (lastIndex >= oldIndex + RESYNC_LOOKAHEAD_CHUNKS) {
+    const position = nextText.lastIndexOf(oldPieces[lastIndex])
+    if (position >= newOffset) return { oldIndex: lastIndex, position }
+  }
+
+  return null
 }
 
 export function buildInitialIncrementalText(
@@ -269,8 +287,20 @@ export function buildIncrementalTextUpdate(
     const piece = oldPieces[oldIndex]
 
     if (nextText.startsWith(piece, newOffset)) {
+      const end = newOffset + piece.length
+      const trailingInsertion = oldIndex === oldPieces.length - 1
+        ? nextText.length - end
+        : 0
+
+      if (trailingInsertion > 0 && trailingInsertion < MIN_CHUNK_CHARS) {
+        writeChangedSegment(oldIndex, oldIndex + 1, nextText.slice(newOffset))
+        oldIndex += 1
+        newOffset = nextText.length
+        continue
+      }
+
       nextRefs.push(manifest.chunks[oldIndex])
-      newOffset += piece.length
+      newOffset = end
       oldIndex += 1
       continue
     }
