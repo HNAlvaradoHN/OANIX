@@ -8,6 +8,13 @@ import './app/VaultVisualStyles'
 
 // The rebuild owns the unlocked presentation. Legacy workspace runtimes and CSS are not loaded here.
 
+type OanixUpdateWindow = Window & {
+  __oanixApplyUpdate?: () => Promise<void>
+}
+
+const oanixWindow = window as OanixUpdateWindow
+const isCapacitorBuild = import.meta.env.MODE === 'capacitor'
+
 // PWA uses the selected OANIX brand image.
 // Capacitor keeps the approved native identity until Android launcher assets are regenerated separately.
 const brandMarkAsset = isCapacitorBuild ? 'oanix-icon.svg' : 'oanix-logo.webp'
