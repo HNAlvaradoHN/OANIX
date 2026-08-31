@@ -276,6 +276,37 @@ La navegación inferior del diseño nuevo queda:
 
 El botón central `+` crea **Nota / Carpeta / Etiqueta**. Papelera no ocupa un destino principal de la barra.
 
+### Persistencia y sincronización incremental por cambios — DECIDED
+
+OANIX no debe volver a guardar/sincronizar una nota completa cuando solo cambió una parte.
+
+Estado actual de la fundación: `note.v2.body` sigue siendo un único cuerpo de texto, por lo que un guardado vuelve a cifrar/escribir ese body completo. Esto fue aceptable para el hito mínimo, pero **no es la arquitectura final para notas grandes o ricas**.
+
+Dirección obligatoria antes de añadir muchas capacidades al editor:
+- la nota usa un manifiesto pequeño con referencias/orden;
+- texto dividido en bloques con IDs estables y, si un bloque llega a ser muy grande, chunks internos estables;
+- apariencia de hoja en su propio registro;
+- código, checklist y otros bloques especiales como unidades independientes;
+- imágenes/archivos como assets separados; cambiar metadata/descripcion no vuelve a subir el binario;
+- cada unidad mantiene revisión/hash técnico suficiente para detectar cambios sin exponer contenido en claro;
+- una `dirty queue` conserva únicamente IDs/unidades modificadas o eliminadas;
+- los borrados se representan explícitamente para poder propagarlos sin escanear/recrear toda la nota.
+
+Guardado automático local:
+- una edición marca solo la unidad afectada como dirty;
+- al llegar a una frontera segura/idle se cifran y escriben solo las unidades dirty y el manifiesto pequeño si cambió;
+- al reabrir, todo lo ya persistido arranca limpio; no se reconstruye una cola dirty a partir de toda la nota.
+
+Sincronización:
+- mantener un baseline persistente de revisiones ya confirmadas remotamente;
+- sincronizar únicamente unidades pendientes desde la dirty queue;
+- una imagen/archivo cuyo contenido ya fue confirmado no se vuelve a transferir;
+- una modificación de apariencia de hoja sincroniza solo apariencia;
+- editar un bloque de texto/código sincroniza solo ese bloque/chunk y la metadata mínima necesaria;
+- después de confirmación remota, retirar esa unidad de pendientes y conservar su revisión como nuevo baseline.
+
+Este modelo debe integrarse con la regla de prioridad de escritura: guardar/sincronizar incrementalmente **nunca** justifica trabajo pesado por cada tecla.
+
 ### Sincronización consciente del editor — DECIDED, todavía no conectada
 
 No reutilizar `AutoSyncRuntime` actual como coordinador del nuevo editor. Se pueden conservar piezas sanas del protocolo/seguridad, pero la decisión de *cuándo sincronizar* debe ser nueva.
