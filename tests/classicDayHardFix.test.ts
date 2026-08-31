@@ -19,11 +19,11 @@ test('classic day pins a soft pastel palette inline so dark legacy variables can
   assert.match(catalog, /swatches: \['#f5eaf1', '#dff3e9', '#7f8fe8'\]/)
 })
 
-test('v38.3 contract is lazy legacy-only while classic theme surfaces remain shared', () => {
+test('v38.3 visual contract remains historical and is not imported by rebuild startup', () => {
   const dayIndex = themeVisualStyles.indexOf("../styles/classic-theme-surfaces.css")
   const visualIndex = visualRuntime.indexOf("./v383WorkspaceVisual.css")
   const refinementIndex = visualRuntime.indexOf("./workspaceRefinements.css")
-  assert.match(main, /\.\/app\/ThemeVisualStyles/)
+  assert.doesNotMatch(main, /ThemeVisualStyles/)
   assert.doesNotMatch(main, /\.\/styles\/classic-theme-surfaces\.css/)
   assert.ok(dayIndex >= 0)
   assert.ok(visualIndex >= 0 && refinementIndex > visualIndex)
