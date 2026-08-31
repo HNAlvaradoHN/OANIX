@@ -30,21 +30,32 @@ test('v2 encrypted records use their own indexed additive store', () => {
   assert.doesNotMatch(repository, /\.getAll\(\)[\s\S]*parseEncryptedRecordKey/)
 })
 
-test('v2 notes split list metadata from note body and persist both atomically', () => {
+test('v2 notes persist incrementally with manifest chunks and an encrypted pending queue', () => {
   assert.match(model, /NOTE_V2_META_TYPE = 'note\.v2\.meta'/)
-  assert.match(model, /NOTE_V2_BODY_TYPE = 'note\.v2\.body'/)
-  assert.match(service, /writeEncryptedV2Records\(\[/)
-  assert.match(service, /recordType: NOTE_V2_META_TYPE/)
-  assert.match(service, /recordType: NOTE_V2_BODY_TYPE/)
-  assert.match(service, /format: 'plain-text-v1'/)
-  assert.match(repository, /const transaction = database\.transaction\(V2_ENCRYPTED_RECORDS_STORE, 'readwrite'\)/)
+  assert.match(model, /NOTE_V2_MANIFEST_TYPE = 'note\.v2\.manifest'/)
+  assert.match(model, /NOTE_V2_TEXT_CHUNK_TYPE = 'note\.v2\.text-chunk'/)
+  assert.match(model, /SYNC_V2_PENDING_TYPE = 'sync\.v2\.pending'/)
+  assert.match(service, /buildInitialIncrementalText/)
+  assert.match(service, /buildIncrementalTextUpdate/)
+  assert.match(service, /readEncryptedV2Records<NoteV2TextChunk>/)
+  assert.match(service, /applyEncryptedV2Changes\(\{ writes, deletes \}\)/)
+  assert.match(service, /if \(!titleChanged && !textChanged\) return existing/)
+  assert.match(repository, /export async function applyEncryptedV2Changes/)
   assert.match(repository, /encrypted\.forEach\(\(record\) => store\.put\(record\)\)/)
+  assert.match(repository, /deletes\.forEach\(\(\{ recordType, recordId \}\) => store\.delete\(\[recordType, recordId\]\)\)/)
+})
+
+test('legacy v2 whole-body notes are read only as a migration fallback', () => {
+  assert.match(model, /NOTE_V2_BODY_TYPE = 'note\.v2\.body'/)
+  assert.match(service, /Transitional fallback/)
+  assert.match(service, /readEncryptedV2Record<NoteV2Body>\(NOTE_V2_BODY_TYPE, noteId\)/)
+  assert.doesNotMatch(service, /recordType: NOTE_V2_BODY_TYPE, recordId: existing\.id/)
 })
 
 test('typing stays inside the lightweight editor and persistence happens only at the save boundary', () => {
   assert.match(rebuild, /<NoteEditor/)
   assert.match(rebuild, /async function closeEditor\(snapshot: NoteEditorSnapshot \| null\)/)
-  assert.match(rebuild, /await saveRebuildNote\(editor\.meta, snapshot\.title, snapshot\.text\)/)
+  assert.match(rebuild, /await saveRebuildNote\(editor\.meta, editor\.text, snapshot\.title, snapshot\.text\)/)
   assert.match(noteEditor, /defaultValue=\{initialText\}/)
   assert.match(noteEditor, /defaultValue=\{initialTitle\}/)
   assert.match(noteEditor, /textRef\.current\?\.value/)
