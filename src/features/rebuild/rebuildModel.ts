@@ -34,6 +34,7 @@ export const V2_FOLDER_ICONS = [
 
 export interface NoteV2Meta {
   version: 2
+  revision: number
   id: string
   title: string
   folderId: string | null
