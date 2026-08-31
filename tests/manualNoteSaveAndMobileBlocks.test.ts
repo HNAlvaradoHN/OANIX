@@ -64,11 +64,11 @@ test('image actions require an explicit compact menu toggle', async () => {
   assert.match(css, /\.pwa-image-card__menu-toggle/)
 })
 
-test('first mobile back gesture dismisses an active editor before note navigation', async () => {
+test('legacy mobile back keyboard guard stays preserved but is detached from rebuild startup', async () => {
   const guard = await readFile(mobileBackKeyboardGuardPath, 'utf8')
   const main = await readFile(mainPath, 'utf8')
 
-  assert.match(main, /import '\.\/features\/notes\/mobileBackKeyboardGuard'/)
+  assert.doesNotMatch(main, /mobileBackKeyboardGuard/)
   assert.match(guard, /window\.addEventListener\('popstate'/)
   assert.match(guard, /document\.querySelector\('\.notes-shell--open'\)/)
   assert.match(guard, /editableElement\(\)/)
