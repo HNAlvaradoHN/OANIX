@@ -17,6 +17,7 @@ import type {
 const TARGET_CHUNK_CHARS = 16 * 1024
 const MIN_CHUNK_CHARS = 8 * 1024
 const MAX_CHUNK_CHARS = 24 * 1024
+const RESYNC_LOOKAHEAD_CHUNKS = 32
 
 export interface IncrementalTextMutation {
   manifest: NoteV2Manifest
@@ -62,11 +63,13 @@ function splitText(text: string): string[] {
   let offset = 0
 
   while (text.length - offset > MAX_CHUNK_CHARS) {
-    const preferredEnd = Math.min(offset + TARGET_CHUNK_CHARS, text.length)
+    const preferredEnd = offset + TARGET_CHUNK_CHARS
     const maxEnd = Math.min(offset + MAX_CHUNK_CHARS, text.length)
-    const minEnd = Math.min(offset + MIN_CHUNK_CHARS, text.length)
+    const minEnd = offset + MIN_CHUNK_CHARS
     const newline = text.lastIndexOf('\n', maxEnd)
-    const end = newline >= minEnd ? newline + 1 : preferredEnd
+    const newlineEnd = newline + 1
+    const leavesUsefulTail = text.length - newlineEnd >= MIN_CHUNK_CHARS
+    const end = newline >= minEnd && leavesUsefulTail ? newlineEnd : preferredEnd
 
     chunks.push(text.slice(offset, end))
     offset = end
@@ -79,74 +82,53 @@ function splitText(text: string): string[] {
   return chunks
 }
 
-function commonPrefixLength(left: string, right: string): number {
-  const limit = Math.min(left.length, right.length)
-  let index = 0
-  while (index < limit && left.charCodeAt(index) === right.charCodeAt(index)) {
-    index += 1
+function manifestPieces(manifest: NoteV2Manifest, text: string): string[] {
+  const pieces: string[] = []
+  let offset = 0
+
+  for (const chunk of manifest.chunks) {
+    const end = offset + chunk.length
+    pieces.push(text.slice(offset, end))
+    offset = end
   }
-  return index
+
+  if (offset !== text.length) {
+    throw new Error('El manifiesto incremental no coincide con el texto abierto.')
+  }
+
+  return pieces
 }
 
-function commonSuffixLength(left: string, right: string, prefixLength: number): number {
-  const max = Math.min(left.length, right.length) - prefixLength
-  let suffix = 0
-  while (
-    suffix < max
-    && left.charCodeAt(left.length - 1 - suffix) === right.charCodeAt(right.length - 1 - suffix)
-  ) {
-    suffix += 1
-  }
-  return suffix
-}
+function findResyncAnchor(
+  oldPieces: string[],
+  oldIndex: number,
+  nextText: string,
+  newOffset: number,
+): { oldIndex: number; position: number } | null {
+  const end = Math.min(oldPieces.length, oldIndex + RESYNC_LOOKAHEAD_CHUNKS)
+  let best: { oldIndex: number; position: number; strong: boolean } | null = null
 
-function chunkBoundaries(chunks: NoteV2TextChunkRef[]): number[] {
-  const boundaries = [0]
-  for (const chunk of chunks) {
-    boundaries.push(boundaries[boundaries.length - 1] + chunk.length)
-  }
-  return boundaries
-}
+  for (let index = oldIndex; index < end; index += 1) {
+    const piece = oldPieces[index]
+    if (!piece) continue
 
-function chunkIndexForOffset(
-  boundaries: number[],
-  offset: number,
-): number {
-  const chunkCount = boundaries.length - 1
-  if (chunkCount <= 0) return -1
-  if (offset >= boundaries[chunkCount]) return chunkCount - 1
+    const position = nextText.indexOf(piece, newOffset)
+    if (position < 0) continue
 
-  let low = 0
-  let high = chunkCount - 1
-  while (low <= high) {
-    const middle = Math.floor((low + high) / 2)
-    if (offset < boundaries[middle]) {
-      high = middle - 1
-    } else if (offset >= boundaries[middle + 1]) {
-      low = middle + 1
-    } else {
-      return middle
+    const following = oldPieces[index + 1]
+    const strong = !following || nextText.startsWith(following, position + piece.length)
+
+    if (
+      !best
+      || position < best.position
+      || (position === best.position && strong && !best.strong)
+      || (position === best.position && strong === best.strong && index < best.oldIndex)
+    ) {
+      best = { oldIndex: index, position, strong }
     }
   }
 
-  return Math.max(0, Math.min(chunkCount - 1, low))
-}
-
-function validateManifestTextLength(manifest: NoteV2Manifest, text: string) {
-  const total = manifest.chunks.reduce((sum, chunk) => sum + chunk.length, 0)
-  if (total !== text.length) {
-    throw new Error('El manifiesto incremental no coincide con el texto abierto.')
-  }
-}
-
-export function createEmptyManifest(noteId: string): NoteV2Manifest {
-  return {
-    version: 2,
-    noteId,
-    format: 'chunked-text-v1',
-    revision: 1,
-    chunks: [],
-  }
+  return best ? { oldIndex: best.oldIndex, position: best.position } : null
 }
 
 export function buildInitialIncrementalText(
@@ -200,13 +182,12 @@ export function buildIncrementalTextUpdate(
   queuedAt: string,
   createId: () => string,
 ): IncrementalTextMutation {
-  validateManifestTextLength(manifest, previousText)
-
   if (previousText === nextText) {
     return { manifest, writes: [], deletes: [] }
   }
 
-  if (manifest.chunks.length === 0) {
+  const oldPieces = manifestPieces(manifest, previousText)
+  if (oldPieces.length === 0) {
     const initial = buildInitialIncrementalText(manifest.noteId, nextText, queuedAt, createId)
     const updatedManifest: NoteV2Manifest = {
       ...initial.manifest,
@@ -219,10 +200,7 @@ export function buildIncrementalTextUpdate(
       if (write.recordType === SYNC_V2_PENDING_TYPE) {
         const pending = write.value as SyncV2PendingRecord
         if (pending.unitType === NOTE_V2_MANIFEST_TYPE && pending.unitId === manifest.noteId) {
-          return {
-            ...write,
-            value: { ...pending, revision: updatedManifest.revision },
-          }
+          return { ...write, value: { ...pending, revision: updatedManifest.revision } }
         }
       }
       return write
@@ -230,116 +208,107 @@ export function buildIncrementalTextUpdate(
     return { manifest: updatedManifest, writes, deletes: [] }
   }
 
-  const prefix = commonPrefixLength(previousText, nextText)
-  const suffix = commonSuffixLength(previousText, nextText, prefix)
-  const oldChangedEnd = previousText.length - suffix
-  const boundaries = chunkBoundaries(manifest.chunks)
-
-  let first = chunkIndexForOffset(boundaries, prefix)
-  let last = oldChangedEnd > prefix
-    ? chunkIndexForOffset(boundaries, oldChangedEnd - 1)
-    : first
-
-  first = Math.max(0, first - 1)
-  last = Math.min(manifest.chunks.length - 1, last + 1)
-
-  const windowStart = boundaries[first]
-  const windowEnd = boundaries[last + 1]
-  const suffixOutsideLength = previousText.length - windowEnd
-  const nextWindowEnd = nextText.length - suffixOutsideLength
-  const nextWindow = nextText.slice(windowStart, nextWindowEnd)
-  const nextPieces = splitText(nextWindow)
-
-  const oldRefs = manifest.chunks.slice(first, last + 1)
-  const oldPieces = oldRefs.map((_, index) =>
-    previousText.slice(boundaries[first + index], boundaries[first + index + 1]),
-  )
-
-  let stablePrefixCount = 0
-  while (
-    stablePrefixCount < oldPieces.length
-    && stablePrefixCount < nextPieces.length
-    && oldPieces[stablePrefixCount] === nextPieces[stablePrefixCount]
-  ) {
-    stablePrefixCount += 1
-  }
-
-  let stableSuffixCount = 0
-  while (
-    stableSuffixCount < oldPieces.length - stablePrefixCount
-    && stableSuffixCount < nextPieces.length - stablePrefixCount
-    && oldPieces[oldPieces.length - 1 - stableSuffixCount]
-      === nextPieces[nextPieces.length - 1 - stableSuffixCount]
-  ) {
-    stableSuffixCount += 1
-  }
-
-  const oldMiddleStart = stablePrefixCount
-  const oldMiddleEnd = oldRefs.length - stableSuffixCount
-  const nextMiddleStart = stablePrefixCount
-  const nextMiddleEnd = nextPieces.length - stableSuffixCount
-  const oldMiddle = oldRefs.slice(oldMiddleStart, oldMiddleEnd)
-  const nextMiddle = nextPieces.slice(nextMiddleStart, nextMiddleEnd)
-
-  const replacementRefs: NoteV2TextChunkRef[] = [
-    ...oldRefs.slice(0, stablePrefixCount),
-  ]
   const writes: EncryptedV2Write[] = []
   const deletes: EncryptedV2RecordIdentity[] = []
+  const nextRefs: NoteV2TextChunkRef[] = []
 
-  nextMiddle.forEach((piece, index) => {
-    const previous = oldMiddle[index]
-    const chunkId = previous?.id ?? createId()
-    const revision = previous ? previous.revision + 1 : 1
-    const unitId = chunkRecordId(manifest.noteId, chunkId)
-    const chunk: NoteV2TextChunk = {
-      version: 2,
-      noteId: manifest.noteId,
-      chunkId,
-      revision,
-      text: piece,
-    }
+  const writeChangedSegment = (
+    fromOldIndex: number,
+    toOldIndex: number,
+    text: string,
+  ) => {
+    const replacedRefs = manifest.chunks.slice(fromOldIndex, toOldIndex)
+    const pieces = splitText(text)
 
-    replacementRefs.push({ id: chunkId, length: piece.length, revision })
-    writes.push(
-      { recordType: NOTE_V2_TEXT_CHUNK_TYPE, recordId: unitId, value: chunk },
-      createPendingSyncWrite(
+    pieces.forEach((piece, index) => {
+      const previous = replacedRefs[index]
+      const chunkId = previous?.id ?? createId()
+      const revision = previous ? previous.revision + 1 : 1
+      const unitId = chunkRecordId(manifest.noteId, chunkId)
+      const chunk: NoteV2TextChunk = {
+        version: 2,
+        noteId: manifest.noteId,
+        chunkId,
+        revision,
+        text: piece,
+      }
+
+      nextRefs.push({ id: chunkId, length: piece.length, revision })
+      writes.push(
+        { recordType: NOTE_V2_TEXT_CHUNK_TYPE, recordId: unitId, value: chunk },
+        createPendingSyncWrite(
+          manifest.noteId,
+          NOTE_V2_TEXT_CHUNK_TYPE,
+          unitId,
+          revision,
+          'upsert',
+          queuedAt,
+        ),
+      )
+    })
+
+    for (let index = pieces.length; index < replacedRefs.length; index += 1) {
+      const removed = replacedRefs[index]
+      const unitId = chunkRecordId(manifest.noteId, removed.id)
+      deletes.push({ recordType: NOTE_V2_TEXT_CHUNK_TYPE, recordId: unitId })
+      writes.push(createPendingSyncWrite(
         manifest.noteId,
         NOTE_V2_TEXT_CHUNK_TYPE,
         unitId,
-        revision,
-        'upsert',
+        removed.revision + 1,
+        'delete',
         queuedAt,
-      ),
-    )
-  })
-
-  for (let index = nextMiddle.length; index < oldMiddle.length; index += 1) {
-    const removed = oldMiddle[index]
-    const unitId = chunkRecordId(manifest.noteId, removed.id)
-    deletes.push({ recordType: NOTE_V2_TEXT_CHUNK_TYPE, recordId: unitId })
-    writes.push(createPendingSyncWrite(
-      manifest.noteId,
-      NOTE_V2_TEXT_CHUNK_TYPE,
-      unitId,
-      removed.revision + 1,
-      'delete',
-      queuedAt,
-    ))
+      ))
+    }
   }
 
-  if (stableSuffixCount > 0) {
-    replacementRefs.push(...oldRefs.slice(oldRefs.length - stableSuffixCount))
+  let oldIndex = 0
+  let newOffset = 0
+
+  while (oldIndex < oldPieces.length) {
+    const piece = oldPieces[oldIndex]
+
+    if (nextText.startsWith(piece, newOffset)) {
+      nextRefs.push(manifest.chunks[oldIndex])
+      newOffset += piece.length
+      oldIndex += 1
+      continue
+    }
+
+    const anchor = findResyncAnchor(oldPieces, oldIndex, nextText, newOffset)
+    if (!anchor) {
+      writeChangedSegment(oldIndex, oldPieces.length, nextText.slice(newOffset))
+      oldIndex = oldPieces.length
+      newOffset = nextText.length
+      break
+    }
+
+    if (
+      anchor.oldIndex === oldIndex
+      && anchor.position > newOffset
+      && anchor.position - newOffset < MIN_CHUNK_CHARS
+    ) {
+      const end = anchor.position + oldPieces[anchor.oldIndex].length
+      writeChangedSegment(oldIndex, oldIndex + 1, nextText.slice(newOffset, end))
+      oldIndex += 1
+      newOffset = end
+      continue
+    }
+
+    writeChangedSegment(oldIndex, anchor.oldIndex, nextText.slice(newOffset, anchor.position))
+    nextRefs.push(manifest.chunks[anchor.oldIndex])
+    newOffset = anchor.position + oldPieces[anchor.oldIndex].length
+    oldIndex = anchor.oldIndex + 1
+  }
+
+  if (newOffset < nextText.length) {
+    writeChangedSegment(oldPieces.length, oldPieces.length, nextText.slice(newOffset))
   }
 
   const updatedManifest: NoteV2Manifest = {
     ...manifest,
     revision: manifest.revision + 1,
-    chunks: [
-      ...manifest.chunks.slice(0, first),
-      ...replacementRefs,
-      ...manifest.chunks.slice(last + 1),
-    ],
+    chunks: nextRefs,
   }
 
   writes.push(
