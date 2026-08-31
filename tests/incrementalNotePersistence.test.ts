@@ -15,7 +15,7 @@ test('incremental text persistence uses bounded stable chunks instead of rewriti
   assert.match(planner, /nextText\.startsWith\(piece, newOffset\)/)
   assert.match(planner, /findResyncAnchor/)
   assert.match(planner, /Probe exponentially farther anchors/)
-  assert.match(planner, /revision: previous \? previous\.revision \+ 1 : 1/)
+  assert.match(planner, /const revision = previous \? previous\.revision \+ 1 : 1/)
   assert.match(planner, /manifest\.revision \+ 1/)
 })
 
