@@ -32,7 +32,7 @@ function pendingRecordId(unitType: string, unitId: string): string {
   return JSON.stringify([unitType, unitId])
 }
 
-function createPendingRecord(
+export function createPendingSyncWrite(
   noteId: string,
   unitType: string,
   unitId: string,
@@ -173,7 +173,7 @@ export function buildInitialIncrementalText(
     refs.push({ id: chunkId, length: piece.length, revision })
     writes.push(
       { recordType: NOTE_V2_TEXT_CHUNK_TYPE, recordId: unitId, value: chunk },
-      createPendingRecord(noteId, NOTE_V2_TEXT_CHUNK_TYPE, unitId, revision, 'upsert', queuedAt),
+      createPendingSyncWrite(noteId, NOTE_V2_TEXT_CHUNK_TYPE, unitId, revision, 'upsert', queuedAt),
     )
   }
 
@@ -187,7 +187,7 @@ export function buildInitialIncrementalText(
 
   writes.push(
     { recordType: NOTE_V2_MANIFEST_TYPE, recordId: noteId, value: manifest },
-    createPendingRecord(noteId, NOTE_V2_MANIFEST_TYPE, noteId, manifest.revision, 'upsert', queuedAt),
+    createPendingSyncWrite(noteId, NOTE_V2_MANIFEST_TYPE, noteId, manifest.revision, 'upsert', queuedAt),
   )
 
   return { manifest, writes, deletes: [] }
@@ -207,7 +207,27 @@ export function buildIncrementalTextUpdate(
   }
 
   if (manifest.chunks.length === 0) {
-    return buildInitialIncrementalText(manifest.noteId, nextText, queuedAt, createId)
+    const initial = buildInitialIncrementalText(manifest.noteId, nextText, queuedAt, createId)
+    const updatedManifest: NoteV2Manifest = {
+      ...initial.manifest,
+      revision: manifest.revision + 1,
+    }
+    const writes = initial.writes.map((write) => {
+      if (write.recordType === NOTE_V2_MANIFEST_TYPE && write.recordId === manifest.noteId) {
+        return { ...write, value: updatedManifest }
+      }
+      if (write.recordType === SYNC_V2_PENDING_TYPE) {
+        const pending = write.value as SyncV2PendingRecord
+        if (pending.unitType === NOTE_V2_MANIFEST_TYPE && pending.unitId === manifest.noteId) {
+          return {
+            ...write,
+            value: { ...pending, revision: updatedManifest.revision },
+          }
+        }
+      }
+      return write
+    })
+    return { manifest: updatedManifest, writes, deletes: [] }
   }
 
   const prefix = commonPrefixLength(previousText, nextText)
@@ -283,7 +303,7 @@ export function buildIncrementalTextUpdate(
     replacementRefs.push({ id: chunkId, length: piece.length, revision })
     writes.push(
       { recordType: NOTE_V2_TEXT_CHUNK_TYPE, recordId: unitId, value: chunk },
-      createPendingRecord(
+      createPendingSyncWrite(
         manifest.noteId,
         NOTE_V2_TEXT_CHUNK_TYPE,
         unitId,
@@ -298,7 +318,7 @@ export function buildIncrementalTextUpdate(
     const removed = oldMiddle[index]
     const unitId = chunkRecordId(manifest.noteId, removed.id)
     deletes.push({ recordType: NOTE_V2_TEXT_CHUNK_TYPE, recordId: unitId })
-    writes.push(createPendingRecord(
+    writes.push(createPendingSyncWrite(
       manifest.noteId,
       NOTE_V2_TEXT_CHUNK_TYPE,
       unitId,
@@ -324,7 +344,7 @@ export function buildIncrementalTextUpdate(
 
   writes.push(
     { recordType: NOTE_V2_MANIFEST_TYPE, recordId: manifest.noteId, value: updatedManifest },
-    createPendingRecord(
+    createPendingSyncWrite(
       manifest.noteId,
       NOTE_V2_MANIFEST_TYPE,
       manifest.noteId,
