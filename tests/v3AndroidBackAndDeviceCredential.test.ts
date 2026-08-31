@@ -27,7 +27,7 @@ test('Android back runtime closes the active rebuild layer through its explicit 
   assert.match(rebuild, /current\.meta,[\s\S]*current\.text,[\s\S]*snapshot\.title,[\s\S]*snapshot\.text/)
 })
 
-test('Android back uses the supported modern dispatcher and preserves a legacy fallback', () => {
+test('Android back uses one AndroidX dispatcher with predictive back enabled', () => {
   const manifest = readFileSync('android/app/src/main/AndroidManifest.xml', 'utf8')
   const plugin = readFileSync(
     'android/app/src/main/java/io/github/hnalvaradohn/oanix/OanixBackPlugin.java',
@@ -35,13 +35,22 @@ test('Android back uses the supported modern dispatcher and preserves a legacy f
   )
 
   assert.match(manifest, /android:enableOnBackInvokedCallback="true"/)
-  assert.match(plugin, /Build\.VERSION\.SDK_INT >= Build\.VERSION_CODES\.TIRAMISU/)
-  assert.match(plugin, /OnBackInvokedDispatcher/)
-  assert.match(plugin, /registerOnBackInvokedCallback/)
-  assert.match(plugin, /unregisterOnBackInvokedCallback/)
   assert.match(plugin, /OnBackPressedCallback/)
-  assert.match(plugin, /legacyCallback\.setEnabled\(enabled\)/)
+  assert.match(plugin, /getOnBackPressedDispatcher\(\)\.addCallback/)
+  assert.match(plugin, /callback\.setEnabled\(enabled\)/)
   assert.match(plugin, /notifyListeners\("backPressed"/)
+  assert.doesNotMatch(plugin, /OnBackInvokedDispatcher|registerOnBackInvokedCallback|unregisterOnBackInvokedCallback/)
+})
+
+test('Android back listener is attached before native interception and failures release interception', () => {
+  const runtime = readFileSync('src/platform/android/AndroidBackRuntime.tsx', 'utf8')
+  const listenerIndex = runtime.indexOf('addAndroidBackPressedListener(handleBack)')
+  const enableIndex = runtime.indexOf('setAndroidBackHandlingEnabled(true)')
+
+  assert.ok(listenerIndex >= 0)
+  assert.ok(enableIndex > listenerIndex)
+  assert.match(runtime, /await handle\.remove\(\)[\s\S]*setAndroidBackHandlingEnabled\(false\)/)
+  assert.match(runtime, /Never leave Android back intercepted without a live JS listener/)
 })
 
 test('Android back runtime confirms exit professionally and exits on the second back gesture', () => {
