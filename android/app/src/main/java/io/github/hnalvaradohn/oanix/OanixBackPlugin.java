@@ -1,5 +1,9 @@
 package io.github.hnalvaradohn.oanix;
 
+import android.os.Build;
+import android.window.OnBackInvokedCallback;
+import android.window.OnBackInvokedDispatcher;
+
 import androidx.activity.OnBackPressedCallback;
 import androidx.fragment.app.FragmentActivity;
 
@@ -11,20 +15,25 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 
 @CapacitorPlugin(name = "OanixBack")
 public class OanixBackPlugin extends Plugin {
-    private OnBackPressedCallback callback;
+    private OnBackPressedCallback legacyCallback;
+    private OnBackInvokedCallback modernCallback;
+    private boolean modernCallbackRegistered;
 
     @Override
     public void load() {
         FragmentActivity activity = requireActivity();
-        callback = new OnBackPressedCallback(false) {
+
+        legacyCallback = new OnBackPressedCallback(false) {
             @Override
             public void handleOnBackPressed() {
-                JSObject payload = new JSObject();
-                payload.put("pressed", true);
-                notifyListeners("backPressed", payload, false);
+                emitBackPressed();
             }
         };
-        activity.getOnBackPressedDispatcher().addCallback(activity, callback);
+        activity.getOnBackPressedDispatcher().addCallback(activity, legacyCallback);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            modernCallback = this::emitBackPressed;
+        }
     }
 
     private FragmentActivity requireActivity() {
@@ -34,18 +43,43 @@ public class OanixBackPlugin extends Plugin {
         return (FragmentActivity) getActivity();
     }
 
-    @PluginMethod
-    public void setEnabled(PluginCall call) {
-        boolean enabled = Boolean.TRUE.equals(call.getBoolean("enabled", false));
-        if (callback == null) {
-            call.reject("El control de regreso de OANIX todavía no está disponible.");
+    private void emitBackPressed() {
+        JSObject payload = new JSObject();
+        payload.put("pressed", true);
+        notifyListeners("backPressed", payload, false);
+    }
+
+    private void setNativeBackEnabled(FragmentActivity activity, boolean enabled) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            OnBackInvokedDispatcher dispatcher = activity.getOnBackInvokedDispatcher();
+            if (enabled && !modernCallbackRegistered && modernCallback != null) {
+                dispatcher.registerOnBackInvokedCallback(
+                    OnBackInvokedDispatcher.PRIORITY_DEFAULT,
+                    modernCallback
+                );
+                modernCallbackRegistered = true;
+            } else if (!enabled && modernCallbackRegistered && modernCallback != null) {
+                dispatcher.unregisterOnBackInvokedCallback(modernCallback);
+                modernCallbackRegistered = false;
+            }
+            if (legacyCallback != null) legacyCallback.setEnabled(false);
             return;
         }
 
-        callback.setEnabled(enabled);
-        JSObject result = new JSObject();
-        result.put("enabled", enabled);
-        call.resolve(result);
+        if (legacyCallback != null) legacyCallback.setEnabled(enabled);
+    }
+
+    @PluginMethod
+    public void setEnabled(PluginCall call) {
+        boolean enabled = Boolean.TRUE.equals(call.getBoolean("enabled", false));
+        FragmentActivity activity = requireActivity();
+
+        activity.runOnUiThread(() -> {
+            setNativeBackEnabled(activity, enabled);
+            JSObject result = new JSObject();
+            result.put("enabled", enabled);
+            call.resolve(result);
+        });
     }
 
     @PluginMethod
@@ -57,9 +91,21 @@ public class OanixBackPlugin extends Plugin {
 
     @Override
     protected void handleOnDestroy() {
-        if (callback != null) {
-            callback.remove();
-            callback = null;
+        FragmentActivity activity = getActivity() instanceof FragmentActivity
+            ? (FragmentActivity) getActivity()
+            : null;
+
+        if (activity != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (modernCallbackRegistered && modernCallback != null) {
+                activity.getOnBackInvokedDispatcher().unregisterOnBackInvokedCallback(modernCallback);
+            }
+        }
+        modernCallbackRegistered = false;
+        modernCallback = null;
+
+        if (legacyCallback != null) {
+            legacyCallback.remove();
+            legacyCallback = null;
         }
         super.handleOnDestroy();
     }
