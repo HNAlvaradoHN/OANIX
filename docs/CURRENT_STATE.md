@@ -67,14 +67,18 @@ Decisiones visuales vigentes:
 
 ## Editor nuevo
 
-**Fundación v2 implementada en PR #538; validación visual física todavía pendiente.**
+**Fundación v2 implementada en PR #538; autoguardado incremental por idle implementado en PR #543; validación visual física todavía pendiente.**
 
 - Se recuperó la referencia histórica exacta que había alineado correctamente texto y renglones:
   - `b5c5dd5e3f3c1fc4892e60ee2f4a600b5d391f81`: ritmo 32px, baseline 17px e inset 24px.
   - `47107c3f5a3fe9f77f5af694c1941eaf1ec0be38`: contrato de pruebas que fijó esa alineación.
 - `NoteEditor` es ahora una pieza separada de `RebuildApp`.
 - El cuerpo de la nota usa un textarea **uncontrolled**: una tecla no copia el texto completo a estado React ni vuelve a renderizar Home.
-- El snapshot completo se lee solo en la frontera de guardado.
+- El snapshot completo se lee solo en una frontera segura de guardado: idle o cierre.
+- El autoguardado local se arma después de ~3 s sin actividad; no cifra ni escribe dentro de `onInput`.
+- Los guardados se serializan. El baseline del editor solo avanza después de un commit local correcto; si el usuario vuelve a escribir durante un guardado, la nueva generación permanece dirty y se programa el siguiente guardado sin perderla.
+- Al cerrar, el editor espera un guardado en curso y guarda únicamente el snapshot más reciente que siga pendiente.
+- El feedback local `Guardando…` aparece de forma retrasada si el autosave tarda perceptiblemente, sin bloquear ni oscurecer el contenido durante escritura normal.
 - La hoja vive aparte en `src/features/editor/sheets/ruledSheet.css`; cambiar papel/renglones después no toca formato de nota, cifrado, almacenamiento ni sync.
 - tipos previstos: rayada, cuadriculada, punteada y lisa;
 - cada hoja podrá usar un tinte de color suave por nota, con contraste derivado para Día/Noche;
@@ -103,9 +107,10 @@ Propiedades actuales:
 - no-op de título/texto evita cifrado/escritura innecesarios;
 - writes/deletes + tombstones pendientes se confirman atómicamente;
 - notas `plain-text-v1` anteriores siguen legibles y migran perezosamente al editarse, sin borrar todavía el registro legacy;
-- reabrir lee solo los chunks referenciados por esa nota.
+- reabrir lee solo los chunks referenciados por esa nota;
+- PR #543 añadió autoguardado local por idle (~3 s) sobre esta misma persistencia incremental, conservando el último baseline confirmado y evitando trabajo pesado por tecla.
 
-**Aún pendiente:** el editor sigue guardando localmente al salir; falta autoguardado por idle. El coordinador remoto tampoco consume todavía `sync.v2.pending`, por lo que la confirmación remota/baseline definitivo sigue por implementar.
+**Aún pendiente:** el coordinador remoto no consume todavía `sync.v2.pending`, por lo que la confirmación remota/baseline definitivo y la política de aplicación de cambios remotos siguen por implementar. El autoguardado local por idle ya no es trabajo pendiente.
 
 DECIDED para el coordinador, todavía no conectada:
 
@@ -147,10 +152,9 @@ No cargar archivos gigantes completos en RAM; mantener procesamiento por fragmen
 ## Próximo paso exacto
 
 1. Cerrar la validación física básica pendiente de la hoja actual en PWA/Android: alineación, salto automático, scroll, teclado y Día/Noche.
-2. Añadir autoguardado local seguro por idle sobre la persistencia incremental, actualizando el baseline del editor solo después de commit correcto y agrupando actividad para no guardar por tecla.
-3. Validar que cambios locales separados solo reescriben sus chunks/unidades y que un no-op no genera cifrado/escritura.
-4. Después implementar tipo/color de hoja como unidad visual independiente y personalización contextual de carpetas.
-5. Con esa base conectar el coordinador que consume `sync.v2.pending`, confirma revisiones remotas y elimina solo los pendientes realmente sincronizados.
+2. Validar en uso real que el autoguardado por idle mantiene el último baseline correcto y que cambios locales separados solo reescriben sus chunks/unidades; un no-op no debe generar cifrado/escritura.
+3. Después implementar tipo/color de hoja como unidad visual independiente y personalización contextual de carpetas.
+4. Con esa base conectar el coordinador que consume `sync.v2.pending`, confirma revisiones remotas y elimina solo los pendientes realmente sincronizados.
 
 ## Continuidad
 
