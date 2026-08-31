@@ -17,21 +17,3 @@ test('synchronized vault restore exposes a visible moving progress bar while clo
   assert.match(mainSource, /app\/VaultVisualStyles/)
   assert.match(authoritySource, /vaultCloudProgress\.css/)
 })
-
-test('tablet and desktop keep one shared compact geometry contract for normal and menu-open rows', () => {
-  const responsiveCss = readFileSync('src/features/notes/responsiveCompactNoteContract.css', 'utf8')
-  const mainSource = readFileSync('src/main.tsx', 'utf8')
-  const legacyGate = readFileSync('src/app/LegacyWorkspaceRuntimeGate.tsx', 'utf8')
-  const visualRuntime = readFileSync('src/features/notes/V383WorkspaceVisualRuntime.tsx', 'utf8')
-
-  assert.match(responsiveCss, /@media \(min-width: 761px\)/)
-  assert.match(responsiveCss, /\.note-row:not\(\.note-row--selected\):not\(\.note-row--menu-open\)::before,[\s\S]*?\.note-row\.note-row--menu-open:not\(\.note-row--selected\)::before\s*\{[\s\S]*?display:\s*none !important/)
-  assert.match(responsiveCss, /\.note-row:not\(\.note-row--selected\):not\(\.note-row--menu-open\) \.note-row__open,[\s\S]*?\.note-row\.note-row--menu-open:not\(\.note-row--selected\) \.note-row__open\s*\{[\s\S]*?padding:\s*13px 230px 11px 68px !important/)
-  assert.match(responsiveCss, /\.note-row:not\(\.note-row--selected\):not\(\.note-row--menu-open\) \.note-row__avatar\[data-oanix-note-icon\],[\s\S]*?\.note-row\.note-row--menu-open:not\(\.note-row--selected\) \.note-row__avatar\[data-oanix-note-icon\]\s*\{[\s\S]*?left:\s*14px !important[\s\S]*?top:\s*50% !important/)
-  assert.equal((responsiveCss.match(/padding:\s*13px 230px 11px 68px !important/g) ?? []).length, 1)
-  assert.equal((responsiveCss.match(/width:\s*40px !important/g) ?? []).length, 1)
-  assert.equal((responsiveCss.match(/display:\s*none !important/g) ?? []).length, 1)
-  assert.doesNotMatch(mainSource, /responsiveCompactNoteContract\.css/)
-  assert.match(visualRuntime, /\.\/responsiveCompactNoteContract\.css/)
-  assert.match(legacyGate, /<V383WorkspaceVisualRuntime \/>/)
-})

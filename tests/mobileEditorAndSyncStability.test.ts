@@ -32,40 +32,6 @@ test('mobile large paste handles Android dual delivery and verifies bulk insertT
   assert.match(source, /shouldEncapsulateClipboardPaste\(fallbackText\)/)
 })
 
-test('atomic editor islands mirror the code-console editing boundary', async () => {
-  const source = await readFile(largePasteRuntimePath, 'utf8')
-  const editorSource = await readFile(richTextEditorPath, 'utf8')
-  const imageSource = await readFile(imageNoteEditorPath, 'utf8')
-  const css = await readFile(mobileEditorCssPath, 'utf8')
-
-  assert.match(source, /function localEditableFromElement/)
-  assert.match(source, /\[data-editor-local-editable="true"\]/)
-  assert.match(source, /function isSelectionBoundaryBlock/)
-  assert.match(source, /\[data-editor-atomic-block\]/)
-  assert.match(source, /function selectionWithinSameLocalEditable/)
-  assert.match(source, /function selectionTouchesAtomicBlock/)
-  assert.match(source, /function deleteSelectedSheetText/)
-  assert.match(source, /event\.inputType\.startsWith\('delete'\)[\s\S]*event\.preventDefault\(\)[\s\S]*deleteSelectedSheetText\(editor, selection\)/)
-  assert.match(source, /document\.addEventListener\('selectionchange', trackSelectionUnit\)/)
-
-  assert.match(editorSource, /data-code-block="true" data-editor-atomic-block="code"/)
-  assert.match(editorSource, /data-code-content="true" data-editor-local-editable="true"/)
-  assert.match(editorSource, /data-checklist-block="true" data-editor-atomic-block="checklist"/)
-  assert.match(editorSource, /data-checklist-text="true" data-editor-local-editable="true"/)
-  assert.match(editorSource, /data-daily-entry-block="true" data-editor-atomic-block="daily-entry"/)
-  assert.match(editorSource, /data-daily-entry-title="true" data-editor-local-editable="true" contenteditable="true"/)
-  assert.doesNotMatch(editorSource, /data-daily-entry-title="true"[\s\S]{0,120}type="text"/)
-
-  assert.match(imageSource, /figure\.dataset\.editorAtomicBlock = 'image'/)
-  assert.match(imageSource, /alt\.dataset\.editorLocalEditable = 'true'/)
-  assert.match(imageSource, /alt\.contentEditable = 'true'/)
-  assert.match(imageSource, /if \(!image\?\.src \|\| !previewUrlsRef\.current\.has\(block\.imageId\)\)/)
-
-  assert.match(css, /\.editor-daily-entry,[\s\S]*user-select: none/)
-  assert.match(css, /\.editor-daily-entry__title \{[\s\S]*user-select: none/)
-  assert.match(css, /\.editor-daily-entry__title:focus \{[\s\S]*user-select: text/)
-})
-
 test('code menu keeps one toggle authority and promotes coarse pointerup into that click path', async () => {
   const exportSource = await readFile(codeBlockExportRuntimePath, 'utf8')
   const editorSource = await readFile(codeBlockEditorPath, 'utf8')

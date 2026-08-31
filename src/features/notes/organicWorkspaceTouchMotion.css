@@ -1,6 +1,0 @@
-/* The arrows remain visible as the reorder affordance, but a perpetual pulse is
- * idle compositor work with no state change behind it. One important class rule
- * is enough to override the legacy animation on every pointer type. */
-.oanix-organic-tags__arrows {
-  animation: none !important;
-}

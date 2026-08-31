@@ -97,34 +97,33 @@ Cuando el agente tenga herramientas integradas de GitHub debe usarlas directamen
 
 Si una tarea requiere prueba física en Android, el agente debe llegar hasta generar/verificar el artifact y, cuando sus herramientas lo permitan, entregar la APK directamente al usuario. Nunca afirmar que un build fue probado físicamente si solo pasó CI.
 
-## Secuencia acordada para cerrar RC y publicación
+## Prioridad operativa actual
 
-La secuencia vigente es deliberada:
+La antigua secuencia RC/publicación quedó **SUPERSEDED** por la reconstrucción post-unlock decidida el 2026-08-31.
 
-1. cerrar las validaciones funcionales visibles del RC, sin introducir nuevas funciones por impulso;
-2. mantener estable la dirección visual ya aprobada;
-3. validar en Android real los cambios que lo requieran;
-4. corregir el pendiente biométrico #105 durante pulido Android/RC sin debilitar seguridad;
-5. cerrar el checklist RC #124;
-6. preparar identidad/firma release/AAB/publicación bajo #125.
+Orden vigente:
+1. mantener seguridad/bootstrap/vault intactos;
+2. reconstruir Home/editor/capa de notas sobre almacenamiento v2;
+3. recuperar el editor aprobado con renglones perfectamente alineados;
+4. validar el flujo local cifrado crear → escribir → guardar → reabrir;
+5. completar personalización visual pendiente;
+6. conectar después el nuevo coordinador de sincronización consciente de actividad;
+7. reincorporar imágenes, archivos y demás capacidades preservadas por capas.
 
-No adelantar V4, monetización u OANIX Pro mientras existan deudas RC activas, salvo preparación arquitectónica explícitamente justificada y documentada.
+No reactivar workspace/runtimes visuales legacy para acelerar esta reconstrucción. Git conserva su historial si se necesita consultar una solución anterior.
 
 ## Estado de continuidad actual
 
-A fecha de **2026-08-18**:
+A fecha de **2026-08-31**:
 
-- V1 — Núcleo local: cerrada.
-- V2 — Cuenta y sincronización: cerrada funcionalmente; continúan deudas de validación visibles, especialmente #69, #70 y #73.
-- V3 — Android con Capacitor: cerrada formalmente en issue #79.
-- Firma debug estable: configurada y validada por CI; se comprobó físicamente una actualización APK sobre APK sin desinstalar. No confundirla con la futura firma definitiva de Play Store.
-- Rediseño visual post-V3: dirección aprobada e integrada; existen temas/personalización y pulidos de tarjetas, menús y editor.
-- Privacidad por nota + Caja privada: implementadas; issue #68 permanece abierto únicamente por validación física final.
-- PR #133 añadió relock manual de una nota protegida durante la sesión usando el mismo `unlockedNoteIds` en memoria.
-- PR #134 está **fusionado en `main`**: mueve el candado visible a la tarjeta de la nota, conserva ellipsis, usa el mismo estado efímero y no añade persistencia paralela. La APK de `main` pasó Android #164 y verificación de firma estable; falta únicamente la prueba física indicada en `docs/CURRENT_STATE.md`.
-- Deuda Android diferida: #105 — la huella puede tardar 2–3 cold starts. Resolver durante pulido Android/RC; no reducir requisitos de seguridad biométrica para ocultarlo.
-- Después de cerrar #68, el siguiente bloque técnico prioritario es la validación de conflictos #69.
-- #124 concentra el Release Candidate; #125 la preparación de publicación.
+- `RebuildApp` es la autoridad post-unlock.
+- `encrypted_records_v2` es el store cifrado v2 indexado y aditivo.
+- La UI/runtime legacy ya fue aislada del arranque y la limpieza física del árbol activo está en curso.
+- Seguridad, vault/session, cifrado y datos antiguos permanecen preservados.
+- La sincronización nueva consciente de actividad está decidida pero todavía no conectada.
+- El siguiente bloque es el editor nuevo con la alineación de renglones recuperada del historial.
+- Toda UI nueva debe validarse en PC + móvil + Día + Noche.
+- Un trabajo no se considera cerrado mientras CI, Android o Pages aplicables estén rojos; corregir y volver a validar hasta verde.
 
 ## Regla especial de traspaso entre IAs
 

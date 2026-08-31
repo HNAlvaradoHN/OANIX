@@ -26,7 +26,7 @@ Se reconstruye:
 
 La dirección infográfica anterior queda **SUPERSEDED como dirección activa**, aunque su historial/código sigue disponible hasta reemplazarlo de forma segura.
 
-PR #532 aisló la nueva superficie post-unlock de la UI/runtime legacy: los runtimes visuales antiguos ya no se montan en el arranque nuevo, el rebuild dejó de reutilizar clases `.notes-shell`, y Android Back dejó de depender de navegación histórica de carpetas. El código viejo puede conservarse como referencia o infraestructura no conectada, pero no debe interferir con la aplicación nueva.
+PR #532 aisló la nueva superficie post-unlock de la UI/runtime legacy. PR #534 elimina físicamente del árbol activo los gates, runtimes, editor visual, presentación de imágenes y CSS legacy ya sustituidos. Los servicios/tipos reutilizables y la seguridad permanecen; Git conserva el historial para consultar comportamientos antiguos sin mantener código muerto.
 
 ## Regla operativa de cierre
 
