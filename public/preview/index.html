@@ -56,33 +56,14 @@ button{cursor:pointer}
 .ftab.active{color:var(--text);font-weight:600}
 .ftab.active::after{content:"";position:absolute;left:10px;right:10px;bottom:0;height:3px;
   border-radius:3px;background:var(--grad)}
-.ftab-create{
-  position:sticky;right:6px;z-index:5;flex:none;align-self:center;
-  display:flex;align-items:center;gap:7px;
-  margin:5px 2px 5px 10px;padding:7px 12px;border:1px solid rgba(124,92,255,.42);
-  border-radius:11px;background:linear-gradient(135deg,rgba(124,92,255,.26),rgba(255,110,199,.18));
-  color:var(--text);font-size:12px;font-weight:700;white-space:nowrap;
-  box-shadow:-12px 0 18px rgba(7,7,12,.90),0 5px 18px rgba(124,92,255,.18)
-}
-.ftab-create:active{transform:scale(.96)}
-.create-plus{width:22px;height:22px;display:grid;place-items:center;border-radius:7px;
-  background:var(--grad);color:#fff;font-size:17px;line-height:1}
-
 /* ══ Etiquetas: chips de baja prioridad ══ */
 .tagstrip{display:flex;gap:6px;overflow-x:auto;padding:8px 12px;flex:none;
   border-bottom:1px solid var(--line);position:relative}
 .tagstrip::-webkit-scrollbar{height:0}
-.tagstrip.hide{justify-content:flex-end}\n.tagstrip.hide .tchip:not(.tchip-create){display:none}
+.tagstrip.hide{display:none}
 .tchip{flex:none;font-size:11px;padding:5px 11px;border-radius:999px;border:1px solid var(--line);
   color:var(--text-2);background:transparent;display:flex;align-items:center;gap:6px}
 .tchip.on{color:var(--text);border-color:rgba(124,92,255,.5);background:var(--grad-soft)}
-.tchip-create{
-  position:sticky;right:0;z-index:5;color:var(--text);font-weight:700;
-  border-color:rgba(124,92,255,.38);
-  background:linear-gradient(135deg,rgba(124,92,255,.24),rgba(255,110,199,.15));
-  box-shadow:-10px 0 16px rgba(7,7,12,.88),0 4px 14px rgba(124,92,255,.14)
-}
-.tchip-create .create-plus{width:18px;height:18px;border-radius:6px;font-size:14px}
 .cdot{width:6px;height:6px;border-radius:50%;flex:none}
 
 /* ══ Notas ══ */
@@ -102,34 +83,57 @@ button{cursor:pointer}
 .empty{margin:20px 14px;padding:34px 20px;border:1px dashed var(--line);border-radius:16px;
   color:var(--text-2);font-size:13.5px;text-align:center}
 
-/* ══ Cajón ══ */
-.sidebar{position:fixed;top:0;left:0;bottom:0;width:min(300px,84vw);z-index:50;
-  background:var(--bg-1);border-right:1px solid var(--line);padding:16px 10px;
+/* ══ Cajón de gestión ══ */
+.sidebar{position:fixed;top:0;left:0;bottom:0;width:min(720px,96vw);z-index:72;
+  background:var(--bg-1);border-right:1px solid var(--line);padding:16px 12px;
   display:flex;flex-direction:column;min-height:0;transform:translateX(-105%);
-  transition:transform .25s ease}
+  transition:transform .25s ease;box-shadow:18px 0 50px rgba(0,0,0,.28)}
 .sidebar.open{transform:translateX(0)}
-.s-head{padding:0 10px 14px;flex:none}
+.s-head{padding:0 8px 14px;flex:none;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.s-actions{display:flex;align-items:center;gap:8px}
+.s-action{width:40px;height:40px;border:1px solid var(--line);border-radius:11px;
+  background:var(--bg-2);color:var(--text-2);display:grid;place-items:center;font-size:20px;
+  transition:background .15s,color .15s,transform .15s}
+.s-action:hover{background:var(--grad-soft);color:var(--text)}
+.s-action:active{transform:scale(.94)}
+.s-columns{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;
+  flex:1;min-height:0}
+.s-section{display:flex;flex-direction:column;min-width:0;min-height:0;
+  border:1px solid var(--line);background:rgba(255,255,255,.015);border-radius:14px;overflow:hidden}
 .s-labelrow{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-2);
-  margin:12px 10px 6px;display:flex;justify-content:space-between;align-items:center;flex:none}
-.s-add{border:0;background:var(--bg-2);color:var(--text-2);width:30px;height:30px;
-  border-radius:9px;font-size:16px;display:grid;place-items:center}
-.s-add:hover{background:var(--grad-soft);color:var(--text)}
-.s-list{overflow-y:auto;min-height:0;padding:0 2px}
-.srow{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:9px;
+  padding:12px 12px 9px;display:flex;justify-content:space-between;align-items:center;flex:none;
+  border-bottom:1px solid var(--line)}
+.s-count{font-size:10px;letter-spacing:0;background:var(--bg-2);padding:2px 7px;border-radius:999px}
+.s-list{overflow-y:auto;min-height:0;padding:6px}
+.srow{display:flex;align-items:center;gap:8px;padding:9px 8px;border-radius:9px;
   color:var(--text-2);cursor:pointer;user-select:none;-webkit-touch-callout:none;
-  transition:background .12s,color .12s;min-height:40px}
+  transition:background .12s,color .12s;min-height:42px}
 .srow:hover{background:var(--bg-2);color:var(--text)}
 .sic{width:22px;text-align:center;flex:none}
-.sdot{width:9px;height:9px;border-radius:50%;flex:none;margin:0 7px 0 6px}
-.sname{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.smarks{font-size:11px;opacity:.9}
-.kebab{border:0;background:transparent;color:var(--text-2);width:26px;height:26px;
-  border-radius:8px;font-size:15px;display:grid;place-items:center;flex:none}
+.sdot{width:9px;height:9px;border-radius:50%;flex:none;margin:0 5px}
+.sname{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.smarks{font-size:10px;opacity:.9;white-space:nowrap}
+.kebab{border:0;background:transparent;color:var(--text-2);width:28px;height:28px;
+  border-radius:8px;font-size:16px;display:grid;place-items:center;flex:none}
 .kebab:hover{background:var(--bg-3);color:var(--text)}
-.scrim{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:40;opacity:0;
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:70;opacity:0;
   pointer-events:none;transition:opacity .25s}
 .scrim.show{opacity:1;pointer-events:auto}
+body.drawer-open .bnav{display:none}
 
+/* Reordenación libre */
+.reorder-list{max-height:min(56vh,520px);overflow-y:auto;display:flex;flex-direction:column;gap:7px;
+  margin-top:12px;padding:3px;overscroll-behavior:contain}
+.reorder-item{display:flex;align-items:center;gap:10px;padding:12px;border:1px solid var(--line);
+  border-radius:12px;background:var(--bg-0);user-select:none;transition:transform .16s,border-color .16s;
+  touch-action:pan-y}
+.reorder-item .r-icon{width:28px;text-align:center;flex:none}
+.reorder-item .r-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.reorder-handle{width:38px;height:38px;border:0;border-radius:10px;background:var(--bg-2);
+  color:var(--text-2);font-size:21px;display:grid;place-items:center;touch-action:none;cursor:grab}
+.reorder-item.dragging{opacity:1;transform:scale(1.025);z-index:4;filter:brightness(1.12);
+  border-color:#7c5cff;box-shadow:0 12px 28px rgba(0,0,0,.4),0 0 0 1px #7c5cff}
+.reorder-note{font-size:12px;color:var(--text-2);margin-top:-4px}
 /* ══ Arrastre ══ */
 .dragging{opacity:1;transform:scale(1.08) rotate(1.5deg);cursor:grabbing;
   position:relative;z-index:80;transition:none!important;filter:brightness(1.15);
@@ -299,6 +303,7 @@ body.light .b-code{color:#1c2b4a;background:rgba(0,0,0,.05)}
 
 <aside class="sidebar" id="sidebar">
   <div class="s-head">
+    
     <div class="brand">
       <span class="brand-badge">
         <svg viewBox="0 0 24 24" width="22" height="22">
@@ -309,11 +314,22 @@ body.light .b-code{color:#1c2b4a;background:rgba(0,0,0,.05)}
       </span>
       <span class="brand-name">OANIX</span>
     </div>
+  
+    <div class="s-actions">
+      <button class="s-action" id="side-create" title="Crear carpeta o etiqueta" aria-label="Crear carpeta o etiqueta">＋</button>
+      <button class="s-action" id="side-move" title="Reordenar carpetas o etiquetas" aria-label="Reordenar carpetas o etiquetas">↕</button>
+    </div>
   </div>
-  <div class="s-labelrow">Carpetas <button class="s-add" id="add-f">＋</button></div>
-  <div class="s-list dnd" id="s-folders"></div>
-  <div class="s-labelrow">Etiquetas <button class="s-add" id="add-t">＋</button></div>
-  <div class="s-list dnd" id="s-tags"></div>
+  <div class="s-columns">
+    <section class="s-section">
+      <div class="s-labelrow">Carpetas <span class="s-count" id="sfc">0</span></div>
+      <div class="s-list dnd" id="s-folders"></div>
+    </section>
+    <section class="s-section">
+      <div class="s-labelrow">Etiquetas <span class="s-count" id="stc">0</span></div>
+      <div class="s-list dnd" id="s-tags"></div>
+    </section>
+  </div>
 </aside>
 <div class="scrim" id="scrim"></div>
 
@@ -421,7 +437,6 @@ body.light .b-code{color:#1c2b4a;background:rgba(0,0,0,.05)}
     html+=db.folders.map(function(f){
       return '<button class="ftab '+(actF===f.id?'active':'')+'" data-f="'+f.id+'">'+f.icon+' '+esc(f.name)+'<span class="n">'+cnt(f.id)+'</span></button>';
     }).join('');
-    html+='<button class="ftab-create" data-create="folder"><span class="create-plus">＋</span>Carpeta</button>';
     $('#ftabs').innerHTML=html;
   }
   function renderStrip(){
@@ -429,11 +444,12 @@ body.light .b-code{color:#1c2b4a;background:rgba(0,0,0,.05)}
       return '<button class="tchip '+(actTags.has(t.name)?'on':'')+'" data-tag="'+esc(t.name)+'">'+
         '<span class="cdot" style="background:'+grad(t.ci)+'"></span>'+esc(t.name)+'</button>';
     }).join('');
-    html+='<button class="tchip tchip-create" data-create="tag"><span class="create-plus">＋</span>Etiqueta</button>';
     $('#tagstrip').innerHTML=html;
-    $('#tagstrip').style.display='';
+    $('#tagstrip').style.display=db.tags.length?'':'none';
   }
   function renderDrawer(){
+    $('#sfc').textContent=db.folders.length;
+    $('#stc').textContent=db.tags.length;
     $('#s-folders').innerHTML=db.folders.map(function(f){
       return '<div class="srow" data-ctx="folder:'+f.id+'"><span class="sic">'+f.icon+'</span>'+
         '<span class="sname">'+esc(f.name)+'</span><span class="smarks">'+(f.pinned?'📌':'')+(f.fav?'★':'')+(f.hash?'🔒':'')+'</span>'+
@@ -448,14 +464,10 @@ body.light .b-code{color:#1c2b4a;background:rgba(0,0,0,.05)}
   render();
 
   $('#ftabs').addEventListener('click',function(e){
-    var create=e.target.closest('[data-create="folder"]');
-    if(create){showForm('folder');return}
     var b=e.target.closest('[data-f]');if(!b)return;
     actF=b.dataset.f==='all'?'all':+b.dataset.f;renderTabs();renderList();
   });
   $('#tagstrip').addEventListener('click',function(e){
-    var create=e.target.closest('[data-create="tag"]');
-    if(create){showForm('tag');return}
     var c=e.target.closest('[data-tag]');if(!c)return;
     var t=c.dataset.tag;actTags.has(t)?actTags.delete(t):actTags.add(t);renderStrip();renderList();
   });
@@ -532,7 +544,22 @@ body.light .b-code{color:#1c2b4a;background:rgba(0,0,0,.05)}
 
   var ctx=$('#ctx');
   function closeCtx(){ctx.classList.remove('show')}
-  function openCtx(type,id,x,y){
+  function placeCtx(x,y,anchor){
+    var mw=ctx.offsetWidth,mh=ctx.offsetHeight,pad=8,left,top;
+    if(anchor){
+      left=anchor.right-mw;
+      var below=innerHeight-anchor.bottom-pad;
+      var above=anchor.top-pad;
+      if(below>=mh||below>=above)top=anchor.bottom+6;
+      else top=anchor.top-mh-6;
+    }else{
+      left=x;
+      top=(y+mh>innerHeight-pad)?y-mh:y;
+    }
+    ctx.style.left=Math.max(pad,Math.min(left,innerWidth-mw-pad))+'px';
+    ctx.style.top=Math.max(pad,Math.min(top,innerHeight-mh-pad))+'px';
+  }
+  function openCtx(type,id,x,y,anchor){
     var arr=type==='note'?db.notes:db[type+'s'];
     var it=arr.find(function(o){return o.id===id});if(!it)return;
     var armedDel=false;ctx.innerHTML='';
@@ -557,14 +584,91 @@ body.light .b-code{color:#1c2b4a;background:rgba(0,0,0,.05)}
       arr.splice(arr.indexOf(it),1);db.trash.push({type:type,item:it});closeCtx();toast('Enviado a la papelera');
     },true);
     ctx.classList.add('show');
-    var mw=ctx.offsetWidth,mh=ctx.offsetHeight;
-    ctx.style.left=Math.max(8,Math.min(x,innerWidth-mw-8))+'px';
-    ctx.style.top=Math.max(8,Math.min(y,innerHeight-mh-8))+'px';
+    placeCtx(x,y,anchor||null);
   }
 
   var overlay=$('#overlay'),modal=$('#modal');
   function closeOverlay(){overlay.classList.remove('show')}
   overlay.addEventListener('pointerdown',function(e){if(e.target===overlay)closeOverlay()});
+
+  function showCreateChooser(){
+    modal.innerHTML='<h3 style="margin-bottom:12px">¿Qué quieres crear?</h3>'+
+      '<button class="opt" id="new-folder">📁 Nueva carpeta</button>'+
+      '<button class="opt" id="new-tag">🏷 Nueva etiqueta</button>'+
+      '<div class="m-actions"><button class="btn-ghost" id="m-cancel">Cancelar</button></div>';
+    overlay.classList.add('show');
+    $('#new-folder').onclick=function(){showForm('folder')};
+    $('#new-tag').onclick=function(){showForm('tag')};
+    $('#m-cancel').onclick=closeOverlay;
+  }
+
+  function showMoveChooser(){
+    modal.innerHTML='<h3 style="margin-bottom:6px">¿Qué quieres mover?</h3>'+
+      '<p class="reorder-note">Después podrás arrastrar libremente los elementos usando el control ≡.</p>'+
+      '<button class="opt" id="move-folder" style="margin-top:14px">📁 Reordenar carpetas</button>'+
+      '<button class="opt" id="move-tag">🏷 Reordenar etiquetas</button>'+
+      '<div class="m-actions"><button class="btn-ghost" id="m-cancel">Cancelar</button></div>';
+    overlay.classList.add('show');
+    $('#move-folder').onclick=function(){showReorder('folder')};
+    $('#move-tag').onclick=function(){showReorder('tag')};
+    $('#m-cancel').onclick=closeOverlay;
+  }
+
+  var reorderState=null;
+  function reorderRow(type,item){
+    return '<div class="reorder-item" data-reorder-id="'+item.id+'">'+
+      '<span class="r-icon">'+(type==='folder'?item.icon:'<span class="sdot" style="display:inline-block;background:'+grad(item.ci)+'"></span>')+'</span>'+
+      '<span class="r-name">'+esc(item.name)+'</span>'+
+      '<button class="reorder-handle" type="button" title="Mantén y arrastra" aria-label="Mover '+esc(item.name)+'">≡</button></div>';
+  }
+  function showReorder(type){
+    var arr=db[type+'s'];
+    modal.innerHTML='<h3 style="margin-bottom:6px">'+(type==='folder'?'Ordenar carpetas':'Ordenar etiquetas')+'</h3>'+
+      '<p class="reorder-note">Arrastra con ≡ hasta la posición que quieras.</p>'+
+      '<div class="reorder-list" id="reorder-list">'+arr.map(function(it){return reorderRow(type,it)}).join('')+'</div>'+
+      '<div class="m-actions"><button class="btn-primary" id="m-done">Listo</button></div>';
+    overlay.classList.add('show');
+    $('#m-done').onclick=function(){closeOverlay();render();toast('Orden guardado')};
+  }
+  modal.addEventListener('pointerdown',function(e){
+    var handle=e.target.closest('.reorder-handle');
+    if(!handle)return;
+    var item=handle.closest('.reorder-item'),list=handle.closest('.reorder-list');
+    if(!item||!list)return;
+    e.preventDefault();
+    reorderState={item:item,list:list,pointerId:e.pointerId};
+    item.classList.add('dragging');
+    document.body.classList.add('is-dragging');
+    try{handle.setPointerCapture(e.pointerId)}catch(err){}
+  });
+  modal.addEventListener('pointermove',function(e){
+    if(!reorderState||e.pointerId!==reorderState.pointerId)return;
+    e.preventDefault();
+    var list=reorderState.list,item=reorderState.item;
+    var lr=list.getBoundingClientRect();
+    if(e.clientY<lr.top+42)list.scrollTop-=12;
+    else if(e.clientY>lr.bottom-42)list.scrollTop+=12;
+    var under=document.elementFromPoint(e.clientX,e.clientY);
+    var target=under&&under.closest?under.closest('.reorder-item'):null;
+    if(!target||target===item||target.parentElement!==list)return;
+    var r=target.getBoundingClientRect();
+    if(e.clientY<r.top+r.height/2)list.insertBefore(item,target);
+    else list.insertBefore(item,target.nextSibling);
+  },{passive:false});
+  function finishReorder(e){
+    if(!reorderState||e.pointerId!==reorderState.pointerId)return;
+    var list=reorderState.list,item=reorderState.item;
+    item.classList.remove('dragging');
+    document.body.classList.remove('is-dragging');
+    var ids=Array.from(list.querySelectorAll('.reorder-item')).map(function(el){return +el.dataset.reorderId});
+    var type=list.querySelector('.reorder-item .r-icon .sdot')?'tag':'folder';
+    var arr=db[type+'s'];
+    var ordered=ids.map(function(id){return arr.find(function(it){return it.id===id})}).filter(Boolean);
+    if(ordered.length===arr.length)arr.splice.apply(arr,[0,arr.length].concat(ordered));
+    save();render();reorderState=null;toast('Orden actualizado');
+  }
+  modal.addEventListener('pointerup',finishReorder);
+  modal.addEventListener('pointercancel',finishReorder);
 
   function showForm(type,editing){
     var isF=type==='folder';
@@ -632,9 +736,12 @@ body.light .b-code{color:#1c2b4a;background:rgba(0,0,0,.05)}
     modal.querySelectorAll('[data-kill]').forEach(function(b){b.onclick=function(){db.trash.splice(+b.dataset.kill,1);save();showTrash();toast('Eliminado definitivo')}});
   }
 
+  document.addEventListener('pointerdown',function(e){
+    if(ctx.classList.contains('show')&&!e.target.closest('#ctx')&&!e.target.closest('[data-kebab]'))closeCtx();
+  });
   document.addEventListener('click',function(e){
     var k=e.target.closest('[data-kebab]');
-    if(k){e.preventDefault();e.stopPropagation();var p=k.dataset.kebab.split(':'),r=k.getBoundingClientRect();openCtx(p[0],+p[1],r.left,r.bottom+4);return}
+    if(k){e.preventDefault();e.stopPropagation();var p=k.dataset.kebab.split(':'),r=k.getBoundingClientRect();openCtx(p[0],+p[1],r.left,r.bottom+4,r);return}
     var o=e.target.closest('[data-open]');
     if(o){var p2=o.dataset.open.split(':');if(p2[0]==='note')openNote(+p2[1])}
   });
@@ -659,11 +766,15 @@ body.light .b-code{color:#1c2b4a;background:rgba(0,0,0,.05)}
   $('#t-theme').onclick=function(){applyTheme(!document.body.classList.contains('light'))};
 
   var sidebar=$('#sidebar'),scrim=$('#scrim');
-  function closeDrawer(){sidebar.classList.remove('open');scrim.classList.remove('show')}
-  $('#menu-btn').onclick=function(){sidebar.classList.add('open');scrim.classList.add('show')};
+  function closeDrawer(){
+    sidebar.classList.remove('open');scrim.classList.remove('show');document.body.classList.remove('drawer-open');closeCtx();
+  }
+  $('#menu-btn').onclick=function(){
+    sidebar.classList.add('open');scrim.classList.add('show');document.body.classList.add('drawer-open');closeCtx();
+  };
   scrim.onclick=closeDrawer;
-  $('#add-f').onclick=function(){showForm('folder')};
-  $('#add-t').onclick=function(){showForm('tag')};
+  $('#side-create').onclick=showCreateChooser;
+  $('#side-move').onclick=showMoveChooser;
 
   $('#fab').onclick=function(){
     var folder=actF==='all'?(db.folders[0]?db.folders[0].id:null):actF;
