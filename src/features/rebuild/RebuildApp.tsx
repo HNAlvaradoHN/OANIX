@@ -271,7 +271,7 @@ export function RebuildApp({ onLock }: RebuildAppProps) {
     }
   }
 
-  const shellClass = `notes-shell rebuild-shell${editor ? ' notes-shell--open' : ''}`
+  const shellClass = `rebuild-shell${editor ? ' rebuild-shell--open' : ''}`
 
   if (loading) {
     return (
