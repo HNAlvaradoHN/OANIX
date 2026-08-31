@@ -6,7 +6,7 @@ const workflow = readFileSync('.github/workflows/qwen-pr-review.yml', 'utf8')
 const policy = readFileSync('QWEN.md', 'utf8')
 
 test('automatic Qwen review remains non-blocking when the external reviewer is unavailable', () => {
-  assert.match(policy, /workflow automático de Qwen en GitHub dejó de ser un gate/)
+  assert.match(policy, /workflow automático de Qwen \*\*no es gate técnico\*\*/)
   assert.match(workflow, /Review independently with grounded Qwen prompt[\s\S]*continue-on-error: true/)
   assert.match(workflow, /Validate Qwen grounding[\s\S]*continue-on-error: true/)
   assert.match(workflow, /Report unavailable independent review/)
