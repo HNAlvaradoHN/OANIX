@@ -92,14 +92,22 @@ El camino crítico de una tecla no debe:
 
 La alineación actual está respaldada por el contrato histórico y CI, pero no debe declararse visualmente aprobada en PWA/APK hasta verla físicamente.
 
-## Sincronización futura del editor
+## Persistencia incremental y sincronización futura
 
-**Persistencia incremental requerida:** la fundación actual todavía guarda `note.v2.body` como una sola unidad. Antes de ampliar el editor con imágenes/código/hojas personalizadas, evolucionar a manifiesto + bloques/chunks estables + registros separados de apariencia/assets y una dirty queue. El objetivo es que guardar y sincronizar procesen solo lo nuevo/modificado, no vuelvan a cifrar/subir toda la nota ni binarios ya confirmados.
+**Persistencia incremental local implementada:** las notas nuevas ya no usan un único `note.v2.body` como autoridad. Usan metadata + manifiesto + chunks de texto estables y una cola cifrada `sync.v2.pending`.
 
-Al reabrir una nota, las revisiones ya guardadas/sincronizadas forman el baseline limpio. Solo cambios posteriores generan nuevos pendientes.
+Propiedades actuales:
+- chunks de texto con objetivo ~16 Ki caracteres y límites normales 8–24 Ki;
+- una edición localizada reescribe únicamente las unidades afectadas y el manifiesto pequeño;
+- cambios separados intentan resincronizarse con chunks intactos para no reescribir el tramo intermedio;
+- no-op de título/texto evita cifrado/escritura innecesarios;
+- writes/deletes + tombstones pendientes se confirman atómicamente;
+- notas `plain-text-v1` anteriores siguen legibles y migran perezosamente al editarse, sin borrar todavía el registro legacy;
+- reabrir lee solo los chunks referenciados por esa nota.
 
+**Aún pendiente:** el editor sigue guardando localmente al salir; falta autoguardado por idle. El coordinador remoto tampoco consume todavía `sync.v2.pending`, por lo que la confirmación remota/baseline definitivo sigue por implementar.
 
-DECIDED, todavía no conectada:
+DECIDED para el coordinador, todavía no conectada:
 
 - actividad de edición bloquea el trabajo pesado de sincronización;
 - cada modificación renueva la actividad;
@@ -138,11 +146,11 @@ No cargar archivos gigantes completos en RAM; mantener procesamiento por fragmen
 
 ## Próximo paso exacto
 
-1. Cerrar la validación física básica de la hoja actual: alineación, salto automático, scroll, teclado y Día/Noche.
-2. Antes de añadir imágenes/código/personalización compleja, diseñar e implementar el modelo incremental: manifiesto pequeño + bloques/chunks estables + apariencia separada + dirty queue + baseline de sync confirmado.
-3. Validar que editar una sola parte reescribe/sincroniza únicamente esa unidad y que reabrir no vuelve a marcar como pendiente lo ya confirmado.
-4. Después continuar con tipos/color de hoja y personalización contextual de carpetas.
-5. Con esa base, conectar el coordinador de sincronización consciente de actividad.
+1. Cerrar la validación física básica pendiente de la hoja actual en PWA/Android: alineación, salto automático, scroll, teclado y Día/Noche.
+2. Añadir autoguardado local seguro por idle sobre la persistencia incremental, actualizando el baseline del editor solo después de commit correcto y agrupando actividad para no guardar por tecla.
+3. Validar que cambios locales separados solo reescriben sus chunks/unidades y que un no-op no genera cifrado/escritura.
+4. Después implementar tipo/color de hoja como unidad visual independiente y personalización contextual de carpetas.
+5. Con esa base conectar el coordinador que consume `sync.v2.pending`, confirma revisiones remotas y elimina solo los pendientes realmente sincronizados.
 
 ## Continuidad
 
