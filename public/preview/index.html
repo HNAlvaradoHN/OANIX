@@ -124,6 +124,14 @@ button{cursor:pointer}
 .card-head .marks{margin-left:auto;font-size:11px}
 .card h3{font-size:14px;margin:4px 0 0}
 .card p{font-size:12px;color:var(--muted);margin:0}
+.dragging{opacity:1;transform:scale(1.08) rotate(1.5deg)!important;cursor:grabbing;
+  position:fixed!important;z-index:180;transition:none!important;filter:brightness(1.15);
+  box-shadow:0 18px 44px rgba(0,0,0,.55),0 0 0 2px #7c5cff,0 0 24px rgba(124,92,255,.5)!important;
+  pointer-events:none!important;margin:0!important}
+.armed{transform:scale(.97)!important;opacity:.75}
+body.is-dragging{user-select:none;-webkit-user-select:none;cursor:grabbing}
+body.is-dragging [data-ctx]:not(.dragging){opacity:.45}
+.drop-target{outline:2px dashed #7c5cff!important;outline-offset:3px}
 .tags{display:flex;gap:10px;flex-wrap:wrap}
 .tag{
   border-radius:999px;padding:9px 12px;border:1px solid rgba(118,92,255,.28);
@@ -297,6 +305,12 @@ const recents=[
   ['Notas rápidas','Recordatorios y cosas por ordenar…','hace 3 días']
 ];
 const save=()=>localStorage.setItem(KEY,JSON.stringify(db));
+const hashCode=async value=>{
+  if(!globalThis.crypto?.subtle)throw new Error('SHA-256 no está disponible en este navegador.');
+  const bytes=new TextEncoder().encode(value);
+  const digest=await crypto.subtle.digest('SHA-256',bytes);
+  return [...new Uint8Array(digest)].map(x=>x.toString(16).padStart(2,'0')).join('');
+};
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const grad=i=>`linear-gradient(135deg,${COLORS[i][0]},${COLORS[i][1]})`;
 function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),1700)}
@@ -311,23 +325,23 @@ applyTheme(localStorage.getItem(THEME)==='light'?'light':'dark');
 
 function itemMore(type,id){return `<button class="more" data-menu="${type}:${id}" aria-label="Opciones">⋯</button>`}
 function folderCard(f){
-  return `<article class="card">
+  return `<article class="card" data-ctx="folder:${f.id}" data-drag="folder:${f.id}" data-drag-scope="main">
     <div class="card-head"><span class="card-icon" style="background:${grad(f.ci)}">${f.icon}</span>
-    <span class="marks">${f.pinned?'📌 ':''}${f.fav?'★ ':''}${itemMore('folder',f.id)}</span></div>
+    <span class="marks">${f.pinned?'📌 ':''}${f.fav?'★ ':''}${f.hash?'🔒 ':''}${itemMore('folder',f.id)}</span></div>
     <h3>${esc(f.name)}</h3><p>${f.count} notas</p></article>`;
 }
 function tagChip(t){
-  return `<div class="tag"><span class="dot" style="background:${grad(t.ci)}"></span>
+  return `<div class="tag" data-ctx="tag:${t.id}" data-drag="tag:${t.id}" data-drag-scope="main"><span class="dot" style="background:${grad(t.ci)}"></span>
     <span>${esc(t.name)}</span><span>${t.pinned?'📌':''}${t.fav?'★':''}</span>${itemMore('tag',t.id)}</div>`;
 }
 function sideRow(type,o){
-  return `<div class="side-item"><span>${type==='folder'?o.icon:'●'}</span><span class="name">${esc(o.name)}</span>
-    <span>${o.pinned?'📌':''}${o.fav?'★':''}</span>${itemMore(type,o.id)}</div>`;
+  return `<div class="side-item" data-ctx="${type}:${o.id}" data-drag="${type}:${o.id}" data-drag-scope="side"><span>${type==='folder'?o.icon:'●'}</span><span class="name">${esc(o.name)}</span>
+    <span>${o.pinned?'📌':''}${o.fav?'★':''}${type==='folder'&&o.hash?'🔒':''}</span>${itemMore(type,o.id)}</div>`;
 }
 function quick(){
   const found=[],seen=new Set();
   for(const key of ['pinned','fav']){
-    for(const f of db.folders)if(f[key]&&!seen.has('f'+f.id)){seen.add('f'+f.id);found.push(`<button class="quick-chip">${f.icon} ${esc(f.name)} ${key==='pinned'?'📌':'★'}</button>`)}
+    for(const f of db.folders)if(f[key]&&!seen.has('f'+f.id)){seen.add('f'+f.id);found.push(`<button class="quick-chip" data-ctx="folder:${f.id}">${f.icon} ${esc(f.name)} ${key==='pinned'?'📌':'★'} ${f.hash?'🔒':''}</button>`)}
     for(const t of db.tags)if(t[key]&&!seen.has('t'+t.id)){seen.add('t'+t.id);found.push(`<button class="quick-chip"><span class="dot" style="background:${grad(t.ci)}"></span>${esc(t.name)} ${key==='pinned'?'📌':'★'}</button>`)}
   }
   $('#quick').innerHTML=found.join('');
@@ -396,27 +410,77 @@ function showRename(type,it){
 }
 function showCustomize(type,it){
   let ci=it.ci,icon=it.icon||ICONS[0];
+  let wantLock=type==='folder'&&!!it.hash;
   modal.innerHTML=`<h3>Personalizar ${type==='folder'?'carpeta':'etiqueta'}</h3>
     ${type==='folder'?`<div class="modal-label">Icono</div><div class="icon-row">${ICONS.map(x=>`<button class="pick-icon ${x===icon?'sel':''}" data-icon="${x}">${x}</button>`).join('')}</div>`:''}
     <div class="modal-label">Color</div><div class="color-row">${COLORS.map((c,i)=>`<button class="swatch ${i===ci?'sel':''}" data-color="${i}" style="background:${grad(i)}"></button>`).join('')}</div>
+    ${type==='folder'?`<div class="modal-label">Seguridad</div>
+      <button class="ghost" id="folder-lock" style="width:100%;text-align:left"></button>
+      <input id="folder-code" type="password" maxlength="64" autocomplete="new-password"
+        placeholder="${it.hash?'Nuevo código (vacío = conservar actual)':'Código: letras, números o símbolos'}"
+        style="display:none;margin-top:8px">`:''}
     <div class="actions"><button class="ghost" id="cancel">Cancelar</button><button class="primary" id="save">Guardar apariencia</button></div>`;
   overlay.classList.add('show');
+
+  const lockButton=$('#folder-lock'),codeInput=$('#folder-code');
+  function paintLock(){
+    if(!lockButton)return;
+    lockButton.textContent=wantLock?'🔒 Bloqueada — toca para quitar':'🔓 Sin bloqueo — toca para bloquear';
+    codeInput.style.display=wantLock?'block':'none';
+  }
+  paintLock();
+  if(lockButton)lockButton.onclick=()=>{wantLock=!wantLock;paintLock()};
+
   $$('.pick-icon').forEach(b=>b.onclick=()=>{icon=b.dataset.icon;$$('.pick-icon').forEach(x=>x.classList.toggle('sel',x===b))});
   $$('.swatch').forEach(b=>b.onclick=()=>{ci=+b.dataset.color;$$('.swatch').forEach(x=>x.classList.toggle('sel',x===b))});
-  $('#cancel').onclick=closeModal;$('#save').onclick=()=>{it.ci=ci;if(type==='folder')it.icon=icon;save();render();closeModal();toast('Apariencia guardada')}
+  $('#cancel').onclick=closeModal;
+  $('#save').onclick=async()=>{
+    let nextHash=it.hash;
+    if(type==='folder'){
+      if(wantLock){
+        const code=codeInput.value;
+        if(code) {
+          try{nextHash=await hashCode(code)}catch(error){toast(error instanceof Error?error.message:'No se pudo proteger la carpeta');return}
+        }
+        if(!nextHash){toast('Escribe un código de acceso');return}
+      }else nextHash=undefined;
+    }
+    it.ci=ci;
+    if(type==='folder'){it.icon=icon;it.hash=nextHash}
+    save();render();closeModal();toast('Apariencia guardada')
+  }
 }
 function showCreate(type){
-  const isF=type==='folder';let ci=0,icon=ICONS[0];
+  const isF=type==='folder';let ci=0,icon=ICONS[0],wantLock=false;
   modal.innerHTML=`<h3>${isF?'Nueva carpeta':'Nueva etiqueta'}</h3><input id="name" maxlength="30" placeholder="Nombre">
     ${isF?`<div class="modal-label">Icono</div><div class="icon-row">${ICONS.map((x,i)=>`<button class="pick-icon ${i===0?'sel':''}" data-icon="${x}">${x}</button>`).join('')}</div>`:''}
     <div class="modal-label">Color</div><div class="color-row">${COLORS.map((c,i)=>`<button class="swatch ${i===0?'sel':''}" data-color="${i}" style="background:${grad(i)}"></button>`).join('')}</div>
+    ${isF?`<div class="modal-label">Seguridad</div>
+      <button class="ghost" id="folder-lock" style="width:100%;text-align:left">🔓 Sin bloqueo — toca para bloquear</button>
+      <input id="folder-code" type="password" maxlength="64" autocomplete="new-password"
+        placeholder="Código: letras, números o símbolos" style="display:none;margin-top:8px">`:''}
     <div class="actions"><button class="ghost" id="cancel">Cancelar</button><button class="primary" id="save">Crear</button></div>`;
   overlay.classList.add('show');$('#name').focus();
+  const lockButton=$('#folder-lock'),codeInput=$('#folder-code');
+  if(lockButton)lockButton.onclick=()=>{
+    wantLock=!wantLock;
+    lockButton.textContent=wantLock?'🔒 Bloqueada — toca para quitar':'🔓 Sin bloqueo — toca para bloquear';
+    codeInput.style.display=wantLock?'block':'none';
+    if(wantLock)codeInput.focus();
+  };
   $$('.pick-icon').forEach(b=>b.onclick=()=>{icon=b.dataset.icon;$$('.pick-icon').forEach(x=>x.classList.toggle('sel',x===b))});
   $$('.swatch').forEach(b=>b.onclick=()=>{ci=+b.dataset.color;$$('.swatch').forEach(x=>x.classList.toggle('sel',x===b))});
-  $('#cancel').onclick=closeModal;$('#save').onclick=()=>{
+  $('#cancel').onclick=closeModal;$('#save').onclick=async()=>{
     const name=$('#name').value.trim();if(!name)return toast('Escribe un nombre');
-    const obj={id:Date.now(),name,ci,pinned:false,fav:false};if(isF){obj.icon=icon;obj.count=0;db.folders.push(obj)}else db.tags.push(obj);
+    const obj={id:Date.now(),name,ci,pinned:false,fav:false};
+    if(isF){
+      obj.icon=icon;obj.count=0;
+      if(wantLock){
+        if(!codeInput.value){toast('Escribe un código de acceso');return}
+        try{obj.hash=await hashCode(codeInput.value)}catch(error){toast(error instanceof Error?error.message:'No se pudo proteger la carpeta');return}
+      }
+      db.folders.push(obj);
+    }else db.tags.push(obj);
     save();render();closeModal();toast(isF?'Carpeta creada':'Etiqueta creada')
   }
 }
@@ -434,6 +498,68 @@ scrim.onclick=()=>{sidebar.classList.remove('open');scrim.classList.remove('show
 $('#bhome').onclick=()=>$('#main').scrollTo({top:0,behavior:'smooth'});
 $('#bfolders').onclick=()=>{$$('[data-tab]').forEach(x=>x.classList.toggle('active',x.dataset.tab==='folders'));tab='folders';renderView()};
 $('#bsearch').onclick=()=>toast('La búsqueda se conectará en la fase de notas');
+
+/* Drag/reorder del prototipo: mantener pulsado y mover. */
+let dragArmTimer=null,dragState=null;
+function clearDropTargets(){document.querySelectorAll('.drop-target').forEach(el=>el.classList.remove('drop-target'))}
+function cancelDragArm(){
+  clearTimeout(dragArmTimer);dragArmTimer=null;
+  document.querySelectorAll('.armed').forEach(el=>el.classList.remove('armed'));
+}
+function beginDrag(source,event){
+  const [type,id]=source.dataset.drag.split(':');
+  const rect=source.getBoundingClientRect();
+  const ghost=source.cloneNode(true);
+  ghost.classList.remove('armed');ghost.classList.add('dragging');
+  ghost.style.left=rect.left+'px';ghost.style.top=rect.top+'px';
+  ghost.style.width=rect.width+'px';ghost.style.height=rect.height+'px';
+  document.body.appendChild(ghost);
+  document.body.classList.add('is-dragging');
+  dragState={type,id,scope:source.dataset.dragScope,source,ghost,targetId:id,
+    dx:event.clientX-rect.left,dy:event.clientY-rect.top};
+}
+document.addEventListener('pointerdown',event=>{
+  if(event.pointerType==='mouse'&&event.button!==0)return;
+  if(event.target.closest('button,input,.ctx,.modal'))return;
+  const source=event.target.closest('[data-drag]');
+  if(!source)return;
+  cancelDragArm();
+  source.classList.add('armed');
+  dragArmTimer=setTimeout(()=>beginDrag(source,event),260);
+});
+document.addEventListener('pointermove',event=>{
+  if(!dragState){
+    const armed=document.querySelector('.armed');
+    if(armed&&event.buttons===0)cancelDragArm();
+    return;
+  }
+  event.preventDefault();
+  dragState.ghost.style.left=(event.clientX-dragState.dx)+'px';
+  dragState.ghost.style.top=(event.clientY-dragState.dy)+'px';
+  clearDropTargets();
+  const below=document.elementFromPoint(event.clientX,event.clientY);
+  const target=below?.closest?.(`[data-drag-scope="${dragState.scope}"][data-drag^="${dragState.type}:"]`);
+  if(target){
+    dragState.targetId=target.dataset.drag.split(':')[1];
+    if(target!==dragState.source)target.classList.add('drop-target');
+  }
+},{passive:false});
+function finishDrag(){
+  cancelDragArm();
+  if(!dragState)return;
+  const {type,id,targetId,ghost}=dragState;
+  ghost.remove();document.body.classList.remove('is-dragging');clearDropTargets();
+  dragState=null;
+  if(String(id)===String(targetId))return;
+  const arr=db[type+'s'];
+  const from=arr.findIndex(item=>String(item.id)===String(id));
+  const to=arr.findIndex(item=>String(item.id)===String(targetId));
+  if(from<0||to<0)return;
+  const [moved]=arr.splice(from,1);arr.splice(to,0,moved);
+  save();render();toast('Orden actualizado');
+}
+document.addEventListener('pointerup',finishDrag);
+document.addEventListener('pointercancel',finishDrag);
 </script>
 </body>
 </html>
