@@ -307,6 +307,20 @@ Aunque la UI legacy se elimine del árbol activo, Git conserva los puntos que va
 
 Estos commits son **referencia de comportamiento**, no código que deba volver a montarse tal cual. Recuperar solo las ideas/contratos que sigan siendo correctos sobre el editor nuevo.
 
+### Hoja del editor reemplazable — DECIDED
+
+La hoja visual del editor debe ser intercambiable sin tocar datos, cifrado, guardado, historial o sincronización.
+
+Reglas:
+- la apariencia de la hoja (renglones, márgenes, papel, fondos, espaciado visual y decoración) vive en una capa visual propia;
+- el contenido de la nota y su modelo no deben depender de un tema concreto de hoja;
+- cambiar de hoja después no debe requerir migrar notas ni modificar el formato persistido;
+- las métricas que sí afectan edición (por ejemplo el paso exacto de los renglones y `line-height`) se exponen mediante un contrato/tokens claros, no mediante valores duplicados dispersos;
+- cualquier hoja nueva debe funcionar en PC, móvil, Día y Noche;
+- si el usuario decide reemplazar completamente la hoja en el futuro, debe poder hacerse sustituyendo la capa visual y sus tokens, sin reescribir el editor ni los servicios críticos.
+
+La hoja aprobada inicialmente sigue siendo referencia visual, pero **no se convierte en dependencia arquitectónica permanente**.
+
 ### Editor y renglones
 
 El editor reconstruido recientemente no es autoridad visual porque perdió la alineación exacta entre texto y renglones.

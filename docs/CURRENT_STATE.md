@@ -65,6 +65,9 @@ Decisiones visuales vigentes:
 
 ## Editor nuevo
 
+La hoja visual del editor debe ser reemplazable mediante una capa/tokens propios. Cambiar renglones, papel, márgenes o estilo después no debe obligar a migrar notas ni tocar almacenamiento, cifrado, guardado o sincronización.
+
+
 No usar como referencia visual el editor reconstruido que perdió la alineación de renglones.
 
 Antes de implementar el nuevo editor:
