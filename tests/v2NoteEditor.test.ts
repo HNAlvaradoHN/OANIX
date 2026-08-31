@@ -20,7 +20,7 @@ test('ruled sheet keeps the historically validated 32px baseline contract in one
 test('sheet presentation is isolated from editor structure and storage concerns', () => {
   assert.match(editor, /data-oanix-sheet="ruled-v1"/)
   assert.match(editor, /import '\.\/sheets\/ruledSheet\.css'/)
-  assert.doesNotMatch(sheet, /IndexedDB|encrypt|sync|saveRebuildNote|note\.v2/)
+  assert.doesNotMatch(sheet, /IndexedDB|encryptVault|saveRebuildNote|NOTE_V2|recordType/)
   assert.doesNotMatch(structure, /repeating-linear-gradient|--oanix-sheet-row|--oanix-sheet-baseline-offset/)
 })
 
