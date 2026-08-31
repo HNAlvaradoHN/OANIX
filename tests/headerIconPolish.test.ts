@@ -18,7 +18,7 @@ const v2Css = readFileSync('src/features/notes/themes/infographic/infographicThe
 test('retired v38.3 header stays historical while the rebuild owns the unlocked shell', () => {
   assert.equal(existsSync('src/styles/header-icon-polish.css'), false)
   assert.doesNotMatch(main, /\.\/styles\/header-icon-polish\.css/)
-  assert.match(main, /\.\/app\/ThemeVisualStyles/)
+  assert.doesNotMatch(main, /ThemeVisualStyles/)
   assert.match(themeVisualStyles, /\.\.\/styles\/classic-theme-surfaces\.css/)
   assert.doesNotMatch(main, /\.\/styles\/classic-theme-surfaces\.css/)
   assert.doesNotMatch(main, /features\/notes\/v383WorkspaceVisual\.css/)
