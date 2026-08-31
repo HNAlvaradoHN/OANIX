@@ -1,0 +1,74 @@
+/*
+ * Ruled sheet v1.
+ *
+ * The 32px rhythm + 17px baseline offset + 24px content inset reproduces the
+ * baseline alignment validated historically in b5c5dd5. These values live
+ * together here so a future sheet can replace this visual layer without
+ * touching the editor, note format, storage or sync.
+ */
+.oanix-note-editor__sheet[data-oanix-sheet='ruled-v1'] {
+  --oanix-sheet-row: 32px;
+  --oanix-sheet-baseline-offset: 17px;
+  --oanix-sheet-content-inset: 24px;
+  --oanix-sheet-rule: color-mix(in srgb, #8f7aff 34%, transparent);
+  --oanix-sheet-paper: color-mix(in srgb, var(--rb-bg-1, #0d0d15) 94%, #ffffff 6%);
+  --oanix-sheet-edge: color-mix(in srgb, #8f7aff 16%, transparent);
+}
+
+.oanix-note-editor__sheet[data-oanix-sheet='ruled-v1'] .oanix-note-editor__body {
+  display: block;
+  padding:
+    var(--oanix-sheet-content-inset)
+    clamp(1rem, 3vw, 1.75rem)
+    calc(var(--oanix-sheet-content-inset) + env(safe-area-inset-bottom));
+  border: 1px solid var(--rb-line, rgba(255,255,255,.07));
+  border-radius: 1rem;
+  background-color: var(--oanix-sheet-paper);
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent calc(var(--oanix-sheet-row) - 1px),
+    var(--oanix-sheet-rule) calc(var(--oanix-sheet-row) - 1px),
+    var(--oanix-sheet-rule) var(--oanix-sheet-row)
+  );
+  background-position: 0 var(--oanix-sheet-baseline-offset);
+  background-repeat: repeat-y;
+  background-size: 100% var(--oanix-sheet-row);
+  background-attachment: local;
+  box-shadow:
+    inset 0 1px color-mix(in srgb, #fff 5%, transparent),
+    inset 1px 0 var(--oanix-sheet-edge);
+  color: var(--rb-text, #eceaf6);
+  caret-color: #a895ff;
+  font: inherit;
+  font-size: 1rem;
+  line-height: var(--oanix-sheet-row);
+  tab-size: 4;
+  hyphens: none;
+  -webkit-hyphens: none;
+  overflow-wrap: break-word;
+}
+
+.oanix-note-editor__sheet[data-oanix-sheet='ruled-v1'] .oanix-note-editor__body::placeholder {
+  color: color-mix(in srgb, var(--rb-muted, #9b97b0) 72%, transparent);
+}
+
+[data-oanix-theme-mode='light'] .oanix-note-editor__sheet[data-oanix-sheet='ruled-v1'] {
+  --oanix-sheet-rule: color-mix(in srgb, #6657c9 27%, transparent);
+  --oanix-sheet-paper: #fff;
+  --oanix-sheet-edge: color-mix(in srgb, #6657c9 12%, transparent);
+}
+
+[data-oanix-theme-mode='light'] .oanix-note-editor__sheet[data-oanix-sheet='ruled-v1'] .oanix-note-editor__body {
+  color: #1c1b25;
+  caret-color: #5f4bd8;
+}
+
+@media (max-width: 760px) {
+  .oanix-note-editor__sheet[data-oanix-sheet='ruled-v1'] .oanix-note-editor__body {
+    border-right: 0;
+    border-left: 0;
+    border-radius: 0;
+    padding-inline: clamp(.85rem, 4vw, 1.15rem);
+  }
+}
