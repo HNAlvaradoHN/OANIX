@@ -68,7 +68,7 @@ test('functional editor and privacy runtimes remain outside the legacy-only bloc
   assert.doesNotMatch(noteBulkPrivacy, /createPortal|selectionMode|Marcar notas/)
 })
 
-test('workspace v2 never inherits the legacy v38.3 prepaint class', () => {
-  assert.match(main, /if \(WORKSPACE_V2_ENABLED\) \{[\s\S]*oanix-workspace-v2-active[\s\S]*\} else \{[\s\S]*oanix-v383-visual/)
-  assert.match(main, /import \{ WORKSPACE_V2_ENABLED \} from '\.\/app\/workspaceExperience'/)
+test('rebuild startup does not apply legacy workspace authority classes', () => {
+  assert.doesNotMatch(main, /WORKSPACE_V2_ENABLED|oanix-workspace-v2-active|oanix-v383-visual/)
+  assert.doesNotMatch(main, /workspaceExperience|ThemeVisualStyles|LegacyWorkspaceRuntimeGate/)
 })
