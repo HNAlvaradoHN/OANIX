@@ -65,15 +65,18 @@ Decisiones visuales vigentes:
 
 ## Editor nuevo
 
-La hoja visual del editor debe ser reemplazable mediante una capa/tokens propios. Cambiar renglones, papel, márgenes o estilo después no debe obligar a migrar notas ni tocar almacenamiento, cifrado, guardado o sincronización.
+**Fundación v2 implementada en PR #538; validación visual física todavía pendiente.**
 
-
-No usar como referencia visual el editor reconstruido que perdió la alineación de renglones.
-
-Antes de implementar el nuevo editor:
-1. localizar en el historial la versión aprobada donde renglones y texto quedaban perfectamente alineados;
-2. comparar las modificaciones posteriores útiles;
-3. conservar esa apariencia/comportamiento sobre una arquitectura interna nueva.
+- Se recuperó la referencia histórica exacta que había alineado correctamente texto y renglones:
+  - `b5c5dd5e3f3c1fc4892e60ee2f4a600b5d391f81`: ritmo 32px, baseline 17px e inset 24px.
+  - `47107c3f5a3fe9f77f5af694c1941eaf1ec0be38`: contrato de pruebas que fijó esa alineación.
+- `NoteEditor` es ahora una pieza separada de `RebuildApp`.
+- El cuerpo de la nota usa un textarea **uncontrolled**: una tecla no copia el texto completo a estado React ni vuelve a renderizar Home.
+- El snapshot completo se lee solo en la frontera de guardado.
+- La hoja vive aparte en `src/features/editor/sheets/ruledSheet.css`; cambiar papel/renglones después no toca formato de nota, cifrado, almacenamiento ni sync.
+- El patrón usa `background-attachment: local` para desplazarse junto al contenido del textarea.
+- La implementación antigua restante de `features/editor` fue eliminada del árbol activo; Git conserva el historial.
+- Sigue siendo una primera etapa de texto plano v2. Imágenes, bloques especiales y sincronización se reincorporan después por capas.
 
 El camino crítico de una tecla no debe:
 - serializar todo el DOM;
@@ -81,6 +84,8 @@ El camino crítico de una tecla no debe:
 - escribir IndexedDB;
 - recorrer la bóveda;
 - disparar sync pesado.
+
+La alineación actual está respaldada por el contrato histórico y CI, pero no debe declararse visualmente aprobada en PWA/APK hasta verla físicamente.
 
 ## Sincronización futura del editor
 
@@ -123,12 +128,11 @@ No cargar archivos gigantes completos en RAM; mantener procesamiento por fragmen
 
 ## Próximo paso exacto
 
-1. Localizar en el historial la versión del editor aprobada donde renglones y texto quedaban perfectamente alineados.
-2. Identificar qué mejoras posteriores de ese editor sí conviene conservar.
-3. Construir el editor nuevo sobre la arquitectura v2, manteniendo el camino crítico de escritura solo en memoria/local state.
-4. Validar crear → escribir → salir/guardar cifrado → reabrir con texto idéntico en PWA y Android.
-5. Después completar personalización/portada de carpetas sobre la nueva base.
-6. Solo entonces conectar el nuevo coordinador de sincronización consciente de actividad.
+1. Validar físicamente la nueva hoja en PWA y Android: renglones, scroll, teclado, Día/Noche y PC/móvil.
+2. Validar crear → escribir una nota larga → salir/guardar cifrado → reabrir con texto idéntico.
+3. Corregir cualquier diferencia visual o de rendimiento sin acoplar la hoja al modelo de datos.
+4. Completar después personalización/portada de carpetas sobre la nueva base.
+5. Solo entonces conectar el coordinador nuevo de sincronización consciente de actividad.
 
 ## Continuidad
 
