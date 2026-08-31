@@ -52,15 +52,18 @@ test('legacy v2 whole-body notes are read only as a migration fallback', () => {
   assert.doesNotMatch(service, /recordType: NOTE_V2_BODY_TYPE, recordId: existing\.id/)
 })
 
-test('typing stays inside the lightweight editor and persistence happens only at the save boundary', () => {
+test('typing stays local and persistence happens only at idle or close save boundaries', () => {
   assert.match(rebuild, /<NoteEditor/)
+  assert.match(rebuild, /async function saveEditorSnapshot\(snapshot: NoteEditorSnapshot\)/)
   assert.match(rebuild, /async function closeEditor\(snapshot: NoteEditorSnapshot \| null\)/)
-  assert.match(rebuild, /await saveRebuildNote\(editor\.meta, editor\.text, snapshot\.title, snapshot\.text\)/)
+  assert.match(rebuild, /onRequestSave=\{saveEditorSnapshot\}/)
+  assert.match(rebuild, /editorRef = useRef<OpenedEditor \| null>/)
+  assert.match(rebuild, /current\.meta,[\s\S]*current\.text,[\s\S]*snapshot\.title,[\s\S]*snapshot\.text/)
   assert.match(noteEditor, /defaultValue=\{initialText\}/)
   assert.match(noteEditor, /defaultValue=\{initialTitle\}/)
-  assert.match(noteEditor, /textRef\.current\?\.value/)
-  assert.match(noteEditor, /titleRef\.current\?\.value/)
-  assert.match(noteEditor, /if \(dirtyRef\.current\) return/)
+  assert.match(noteEditor, /AUTOSAVE_IDLE_MS = 3_000/)
+  assert.match(noteEditor, /generationRef/)
+  assert.match(noteEditor, /saveInFlightRef/)
   assert.doesNotMatch(noteEditor, /value=\{.*initialText|setText\(|innerHTML|contentEditable|MutationObserver/)
 })
 
