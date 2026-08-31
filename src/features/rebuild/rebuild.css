@@ -610,72 +610,6 @@
   background: rgba(0,0,0,.48);
 }
 
-.rebuild-editor {
-  position: fixed;
-  z-index: 100;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  min-height: 100dvh;
-  background: var(--rb-bg-0);
-}
-
-.rebuild-editor > header {
-  display: flex;
-  align-items: center;
-  gap: .6rem;
-  flex: none;
-  min-height: 3.75rem;
-  padding: max(.55rem, env(safe-area-inset-top)) .75rem .55rem;
-  border-bottom: 1px solid var(--rb-line);
-  background: color-mix(in srgb, var(--rb-bg-1) 95%, transparent);
-}
-
-.rebuild-editor > header input {
-  min-width: 0;
-  flex: 1;
-  min-height: 2.5rem;
-  padding: .45rem .55rem;
-  border: 0;
-  outline: none;
-  background: transparent;
-  color: var(--rb-text);
-  font-size: 1rem;
-  font-weight: 700;
-}
-
-.rebuild-editor__surface {
-  width: min(100%, 62rem);
-  flex: 1;
-  min-height: 0;
-  margin: 0 auto;
-  padding: 1.4rem max(1rem, env(safe-area-inset-left)) max(2rem, env(safe-area-inset-bottom));
-  border: 0;
-  outline: none;
-  resize: none;
-  background: transparent;
-  color: var(--rb-text);
-  caret-color: #9a83ff;
-  font-size: 1rem;
-  line-height: 1.78;
-  overscroll-behavior: contain;
-}
-
-.rebuild-editor__surface::placeholder {
-  color: color-mix(in srgb, var(--rb-muted) 72%, transparent);
-}
-
-.rebuild-editor__error {
-  flex: none;
-  margin: .5rem .75rem 0;
-  padding: .65rem .75rem;
-  border: 1px solid rgba(255,77,109,.24);
-  border-radius: .7rem;
-  background: rgba(255,77,109,.08);
-  color: #ff8ca3;
-  font-size: .78rem;
-}
-
 .rebuild-modal-host {
   position: fixed;
   z-index: 140;
@@ -935,10 +869,6 @@
 @media (min-width: 900px) {
   .rebuild-note-row {
     padding-inline: 1rem;
-  }
-
-  .rebuild-editor__surface {
-    padding-inline: 1.5rem;
   }
 }
 

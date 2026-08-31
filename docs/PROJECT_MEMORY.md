@@ -321,6 +321,23 @@ Reglas:
 
 La hoja aprobada inicialmente sigue siendo referencia visual, pero **no se convierte en dependencia arquitectónica permanente**.
 
+### Editor v2 ligero — IMPLEMENTED / VALIDATION_DEBT
+
+PR #538 sustituye la implementación de editor antigua restante por una base nueva y separada:
+
+- `NoteEditor` posee el estado efímero de edición; `RebuildApp` solo recibe un snapshot cuando toca guardar.
+- El cuerpo grande es un textarea uncontrolled y se mantiene en el DOM nativo; no se replica la cadena completa en React state por cada tecla.
+- Solo el primer cambio activa el estado `dirty`; las pulsaciones posteriores no fuerzan renders de React por contenido.
+- La frontera de guardado lee título/texto una vez y delega en `saveRebuildNote`.
+- La hoja visual está aislada en `sheets/ruledSheet.css`.
+- Se eliminó el editor legacy del árbol activo, incluidos runtimes/observers/exportadores ligados a esa UI. Git conserva su historial si una capacidad futura necesita ser reconstruida correctamente.
+
+Referencia de alineación recuperada:
+- `b5c5dd5e3f3c1fc4892e60ee2f4a600b5d391f81`: `32px` por renglón, offset de baseline `17px`, inset de contenido `24px`.
+- `47107c3f5a3fe9f77f5af694c1941eaf1ec0be38`: prueba histórica que fijó ese contrato.
+
+La nueva hoja reproduce esas métricas mediante tokens únicos y usa `background-attachment: local` para que las líneas acompañen el scroll interno. Esto está implementado y cubierto por contratos automáticos; la aprobación visual física PWA/Android permanece como `VALIDATION_DEBT`.
+
 ### Editor y renglones
 
 El editor reconstruido recientemente no es autoridad visual porque perdió la alineación exacta entre texto y renglones.

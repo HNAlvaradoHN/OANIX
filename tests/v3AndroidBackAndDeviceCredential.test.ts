@@ -16,13 +16,14 @@ test('MainActivity registers Android back and device-security plugins', () => {
 test('Android back runtime closes the active rebuild layer through its explicit safe back contract', () => {
   const runtime = readFileSync('src/platform/android/AndroidBackRuntime.tsx', 'utf8')
   const rebuild = readFileSync('src/features/rebuild/RebuildApp.tsx', 'utf8')
+  const editor = readFileSync('src/features/editor/NoteEditor.tsx', 'utf8')
 
   assert.match(runtime, /\[data-oanix-back-close="true"\]/)
   assert.match(runtime, /modalBackClose\.click\(\)/)
   assert.doesNotMatch(runtime, /notes-shell--open|folderNavigationRuntime/)
-  assert.match(rebuild, /data-oanix-back-close="true"/)
-  assert.match(rebuild, /data-oanix-save-and-close="true"/)
-  assert.match(rebuild, /await saveRebuildNote\(editor\.meta, editor\.title, editor\.text\)/)
+  assert.match(editor, /data-oanix-back-close="true"/)
+  assert.match(editor, /data-oanix-save-and-close="true"/)
+  assert.match(rebuild, /await saveRebuildNote\(editor\.meta, snapshot\.title, snapshot\.text\)/)
 })
 
 test('Android back runtime confirms exit professionally and exits on the second back gesture', () => {

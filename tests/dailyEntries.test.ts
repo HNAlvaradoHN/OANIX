@@ -1,5 +1,4 @@
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
 import {
@@ -54,10 +53,4 @@ test('opening the same note again on the same day does not duplicate the marker'
 test('daily-entry validation rejects malformed dates', () => {
   const note = noteWith([{ id: 'entry-invalid', type: 'dailyEntry', date: '15/08/2026', title: '' } as never], new Date().toISOString())
   assert.equal(isNoteRecord(note), false)
-})
-
-test('generic empty-note placeholder never overlays a daily-entry block', () => {
-  const css = readFileSync('src/features/editor/editor.css', 'utf8')
-
-  assert.match(css, /\.editor-surface\[data-empty='true'\]:has\(> \[data-daily-entry-block='true'\]\)::before\s*\{[\s\S]*?content:\s*none;/)
 })
