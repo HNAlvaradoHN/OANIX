@@ -22,6 +22,10 @@ interface NoteEditorProps {
   onActivity?: () => void
 }
 
+function snapshotsMatch(left: NoteEditorSnapshot, right: NoteEditorSnapshot): boolean {
+  return left.title === right.title && left.text === right.text
+}
+
 /**
  * Editing stays local to this component. The large note body is intentionally uncontrolled:
  * ordinary keystrokes never copy the complete text into React state or re-render the Home shell.
@@ -48,6 +52,10 @@ export function NoteEditor({
   const saveInFlightRef = useRef<Promise<boolean> | null>(null)
   const autosaveFeedbackTimerRef = useRef<number | null>(null)
   const mountedRef = useRef(true)
+  const committedSnapshotRef = useRef<NoteEditorSnapshot>({
+    title: initialTitle,
+    text: initialText,
+  })
   const [dirty, setDirty] = useState(false)
   const [closing, setClosing] = useState(false)
   const [autosaveVisible, setAutosaveVisible] = useState(false)
@@ -127,6 +135,9 @@ export function NoteEditor({
     let succeeded = false
     try {
       succeeded = await operation
+      if (succeeded) {
+        committedSnapshotRef.current = snapshot
+      }
       if (succeeded && generationRef.current === generation) {
         markClean()
       }
@@ -228,12 +239,18 @@ export function NoteEditor({
         await saveInFlightRef.current
       }
 
-      if (!dirtyRef.current) {
+      const snapshot = readSnapshot()
+      if (snapshotsMatch(snapshot, committedSnapshotRef.current)) {
+        markClean()
         closed = await onRequestClose(null)
         return
       }
 
-      closed = await onRequestClose(readSnapshot())
+      closed = await onRequestClose(snapshot)
+      if (closed) {
+        committedSnapshotRef.current = snapshot
+        markClean()
+      }
     } finally {
       if (!closed && mountedRef.current) {
         closingRef.current = false
