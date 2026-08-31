@@ -4,7 +4,7 @@ Este documento conserva **decisiones duraderas y restricciones de producto/arqui
 
 Antes de trabajar: leer `AGENTS.md` y `docs/CURRENT_STATE.md`, verificar `main` y PR recientes. GitHub es la fuente de verdad del código actual.
 
-**Última actualización:** 2026-08-29
+**Última actualización:** 2026-08-31
 
 ## 1. Principios permanentes
 
@@ -55,7 +55,7 @@ Reglas duraderas:
 - no copiar datos demo, imágenes externas, Tailwind CDN, Phosphor CDN ni funciones simuladas del prototipo;
 - `+`, abrir, renombrar, eliminar, portada, color/icono, búsqueda, Atrás y reordenamiento reutilizan handlers/servicios existentes; un rediseño no justifica CRUD paralelo.
 
-### Tema de workspace intercambiable — IMPLEMENTED
+### Tema de workspace intercambiable — IMPLEMENTED históricamente / SUPERSEDED como dirección activa
 
 Decisión del usuario (2026-08-29): el diseño del workspace debe poder reemplazarse completo sin volver a conectar o reescribir la lógica de producto. El límite arquitectónico es un contrato de props/callbacks estable entre OANIX y la capa visual.
 
@@ -172,3 +172,116 @@ PR #219 amplió la prueba controlada a 100 MiB–1 GiB. La siguiente validación
 - `d6d847e7a053f05808518b4e18f871855eb0e9a7`: inmediatamente anterior a llevar la experiencia aprobada de imágenes a Android.
 
 El resto del historial de implementación pertenece a `CHANGELOG.md`, PRs e issues. No acumular aquí detalles triviales, números de CI o estados transitorios.
+
+
+## 10. Reconstrucción post-unlock y nueva experiencia — DECIDED (2026-08-31)
+
+### Cambio de dirección
+
+Se decidió **no seguir ampliando el workspace/editor actual como base principal**. OANIX conservará la seguridad y las piezas sanas del núcleo, pero reconstruirá de forma limpia toda la experiencia después del desbloqueo.
+
+Conservar:
+- bootstrap, bloqueo/desbloqueo y sesión de bóveda;
+- `contentCrypto.ts` y la frontera AES-GCM/AAD;
+- servicios de vault;
+- protocolo de sincronización E2EE y binarios/archivos inicialmente como piezas de infraestructura, no como coordinador de edición;
+- datos antiguos sin borrarlos de forma destructiva.
+
+Reconstruir:
+- Home, navegación, lista de notas, carpetas, etiquetas y editor;
+- capa de notas y diseño de almacenamiento v2;
+- coordinación de guardado/sincronización alrededor del nuevo editor.
+
+La experiencia infográfica anterior y sus runtimes quedan **SUPERSEDED como dirección activa de producto**, aunque permanecen en el historial/código hasta que la nueva base los reemplace de forma segura.
+
+### Primer hito funcional
+
+Objetivo de la nueva base:
+**desbloquear → Home nuevo → crear nota de texto → escribir → guardar cifrado localmente → cerrar → reabrir → texto idéntico**.
+
+Durante este hito no se debe introducir por impulso imágenes, Daily Entry, contactos, archivos grandes o sincronización dentro del camino crítico del editor. Se reincorporarán por capas después de demostrar que el núcleo nuevo es estable y rápido.
+
+### Arquitectura de UI reemplazable
+
+Requisito permanente: un rediseño futuro debe poder sustituir Home/editor/componentes visuales sin tocar seguridad, cifrado, almacenamiento o sincronización.
+
+Dirección:
+`UI → estado/servicios de pantalla → servicios de dominio → almacenamiento cifrado → vault/crypto`.
+
+La UI no debe escribir directamente en IndexedDB ni poseer la lógica de sincronización. Evitar tanto un archivo monolítico gigante como una fragmentación artificial.
+
+### Requisitos visuales permanentes
+
+Toda modificación visual se diseña y revisa desde el inicio en:
+- PC;
+- móvil;
+- modo Día;
+- modo Noche.
+
+No se considera terminada una superficie si solo funciona bien en uno de esos cuatro escenarios.
+
+El preview de diseño sigue siendo un laboratorio visual; cuando el usuario suministra o aprueba HTML de referencia, esa versión es la autoridad visual y no debe reinterpretarse libremente.
+
+### Carpetas: identidad visual y fondo
+
+DECIDED:
+- cada carpeta tiene color/icono propios;
+- la fila/tarjeta completa de carpeta debe usar un degradado suave y sutil, no solo un borde seco;
+- el mismo color debe reflejarse de forma coherente en icono, pestaña, lista y contexto de la carpeta;
+- al abrir una carpeta, **todo el espacio detrás de la lista de notas** puede usar su fondo;
+- por defecto se asigna un degradado estable al crear la carpeta;
+- opcionalmente el usuario puede elegir una imagen de fondo.
+
+La imagen de carpeta no debe almacenarse como base64 dentro del registro de carpeta. Debe guardarse como asset/blob separado, cifrado y referenciado por ID. Para rendimiento: cargar solo la portada de la carpeta activa, usar versiones optimizadas de alta calidad para móvil/escritorio y evitar blur costoso en tiempo real. La legibilidad se resuelve con overlays/tintes adaptados a Día/Noche.
+
+### Navegación principal aprobada
+
+La navegación inferior del diseño nuevo queda:
+**Inicio · Buscar · + · Recientes · Ajustes**.
+
+El botón central `+` crea **Nota / Carpeta / Etiqueta**. Papelera no ocupa un destino principal de la barra.
+
+### Sincronización consciente del editor — DECIDED, todavía no conectada
+
+No reutilizar `AutoSyncRuntime` actual como coordinador del nuevo editor. Se pueden conservar piezas sanas del protocolo/seguridad, pero la decisión de *cuándo sincronizar* debe ser nueva.
+
+Reglas:
+- mientras el usuario escribe o modifica la nota, no iniciar trabajo pesado de sync;
+- cada modificación marca actividad explícita del editor;
+- tras aproximadamente **3 s sin actividad**, OANIX puede intentar sincronizar cambios pendientes;
+- si el usuario vuelve a editar antes de empezar, cancelar/postergar el intento;
+- si una operación ya está en curso, detener cooperativamente el trabajo siguiente y no cortar una escritura atómica de forma insegura;
+- no aplicar cambios remotos sobre el editor activo mientras el usuario está editando;
+- no serializar todo el DOM, cifrar, escribir IndexedDB ni recorrer la bóveda por cada tecla;
+- no habrá botón manual de sincronizar en el editor.
+
+Al salir de una nota:
+- si todo está sincronizado, volver inmediatamente;
+- si queda trabajo pendiente y hay conexión, mostrar pantalla completa de sincronización y terminar antes de volver a la lista;
+- si no hay conexión, guardar cifrado local, marcar pendiente y permitir salir.
+
+### Feedback de operaciones largas
+
+Regla UX permanente: una operación perceptiblemente lenta no debe parecer que congeló OANIX.
+
+Si una operación supera aproximadamente **500–800 ms**, mostrar feedback visible. Para sincronización/transferencias importantes puede ser pantalla completa. Mostrar porcentaje solo cuando exista progreso real medible; si no, usar progreso indeterminado y fases reales como:
+**Guardando → Cifrando → Sincronizando → Verificando → Listo**.
+
+Aplicar el mismo principio a imágenes, archivos, restauración, importación/exportación y otras operaciones largas.
+
+### Editor y renglones
+
+El editor reconstruido recientemente no es autoridad visual porque perdió la alineación exacta entre texto y renglones.
+
+Para el editor nuevo:
+- recuperar como referencia la versión anterior suministrada/aprobada por el usuario donde texto y renglones quedaban perfectamente sincronizados;
+- revisar el historial antes de copiar para identificar mejoras posteriores útiles;
+- conservar el comportamiento visual bueno, pero con arquitectura interna nueva;
+- la misma métrica debe gobernar `line-height`, paso del patrón y offsets para evitar deriva;
+- mantener PC/móvil y Día/Noche desde el inicio.
+
+No copiar el editor actual a ciegas ni volver a interpretar el diseño si ya existe una referencia funcional aprobada.
+
+### Excepción temporal al roadmap
+
+Se prioriza esta reconstrucción post-unlock antes de continuar ampliando funciones pesadas porque los problemas de rendimiento/arquitectura del workspace/editor actual pueden contaminar cualquier función nueva. Los motores de archivos grandes ya existentes no se borran; quedan preservados y se retomarán sobre la nueva base cuando corresponda.
