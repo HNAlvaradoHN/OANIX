@@ -35,8 +35,12 @@ test('unchanged saves and title-only saves avoid unnecessary body work', () => {
   assert.match(service, /readEncryptedV2Record<NoteV2Manifest>/)
 })
 
-test('editor supplies the opened text as the persistence baseline only at save time', () => {
-  assert.match(rebuild, /saveRebuildNote\(editor\.meta, editor\.text, snapshot\.title, snapshot\.text\)/)
+test('editor keeps the latest committed baseline across idle and close saves', () => {
+  assert.match(rebuild, /editorRef = useRef<OpenedEditor \| null>/)
+  assert.match(rebuild, /async function saveEditorSnapshot/)
+  assert.match(rebuild, /commitOpenedEditor\(next\)/)
+  assert.match(rebuild, /async function closeEditor/)
+  assert.match(rebuild, /current\.meta,[\s\S]*current\.text,[\s\S]*snapshot\.title,[\s\S]*snapshot\.text/)
   assert.doesNotMatch(rebuild, /saveRebuildNote\([^\n]*onInput/)
 })
 
