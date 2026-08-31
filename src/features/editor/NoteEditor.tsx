@@ -274,7 +274,7 @@ export function NoteEditor({
           maxLength={160}
           aria-label="Título de la nota"
           autoComplete="off"
-          disabled={editingDisabled}
+          readOnly={editingDisabled}
         />
 
         {autosaveVisible && (
@@ -299,7 +299,7 @@ export function NoteEditor({
           autoFocus
           spellCheck
           wrap="soft"
-          disabled={editingDisabled}
+          readOnly={editingDisabled}
         />
       </div>
     </section>
