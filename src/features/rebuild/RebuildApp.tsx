@@ -7,6 +7,7 @@ import {
   type FormEvent,
 } from 'react'
 import { AccountPanel } from '../account/AccountPanel'
+import { NoteEditor, type NoteEditorSnapshot } from '../editor/NoteEditor'
 import { OanixIcon } from '../../shared/OanixIcon'
 import {
   AUTO_LOCK_OPTIONS,
@@ -40,11 +41,9 @@ interface RebuildAppProps {
   onLock: () => void
 }
 
-interface EditorDraft {
+interface OpenedEditor {
   meta: NoteV2Meta
-  title: string
   text: string
-  dirty: boolean
 }
 
 type ViewMode = 'home' | 'recents'
@@ -110,7 +109,7 @@ export function RebuildApp({ onLock }: RebuildAppProps) {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [createKind, setCreateKind] = useState<CreateKind>(null)
   const [createName, setCreateName] = useState('')
-  const [editor, setEditor] = useState<EditorDraft | null>(null)
+  const [editor, setEditor] = useState<OpenedEditor | null>(null)
   const [saving, setSaving] = useState(false)
   const [openingNote, setOpeningNote] = useState(false)
   const [accountOpen, setAccountOpen] = useState(false)
@@ -150,17 +149,6 @@ export function RebuildApp({ onLock }: RebuildAppProps) {
     window.addEventListener('oanix:theme-change', handleThemeChange)
     return () => window.removeEventListener('oanix:theme-change', handleThemeChange)
   }, [])
-
-  useEffect(() => {
-    if (!editor?.dirty) return
-
-    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-      event.preventDefault()
-    }
-
-    window.addEventListener('beforeunload', handleBeforeUnload)
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
-  }, [editor?.dirty])
 
   const folderById = useMemo(
     () => new Map(folders.map((folder) => [folder.id, folder])),
@@ -208,9 +196,7 @@ export function RebuildApp({ onLock }: RebuildAppProps) {
       const opened = await readRebuildNote(noteId)
       setEditor({
         meta: opened.meta,
-        title: opened.meta.title,
         text: opened.body.text,
-        dirty: false,
       })
     } catch (openError) {
       setError(openError instanceof Error ? openError.message : 'No se pudo abrir la nota.')
@@ -227,9 +213,7 @@ export function RebuildApp({ onLock }: RebuildAppProps) {
       setNotes((current) => [created.meta, ...current])
       setEditor({
         meta: created.meta,
-        title: created.meta.title,
         text: created.body.text,
-        dirty: false,
       })
       setCreateKind(null)
     } catch (createError) {
@@ -237,22 +221,24 @@ export function RebuildApp({ onLock }: RebuildAppProps) {
     }
   }
 
-  async function leaveEditor() {
-    if (!editor || saving) return
+  async function closeEditor(snapshot: NoteEditorSnapshot | null): Promise<boolean> {
+    if (!editor || saving) return false
 
-    if (!editor.dirty) {
+    if (!snapshot) {
       setEditor(null)
-      return
+      return true
     }
 
     setSaving(true)
     setError('')
     try {
-      const updated = await saveRebuildNote(editor.meta, editor.title, editor.text)
+      const updated = await saveRebuildNote(editor.meta, snapshot.title, snapshot.text)
       setNotes((current) => current.map((note) => note.id === updated.id ? updated : note))
       setEditor(null)
+      return true
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'No se pudo guardar la nota.')
+      return false
     } finally {
       setSaving(false)
     }
@@ -551,47 +537,15 @@ export function RebuildApp({ onLock }: RebuildAppProps) {
       )}
 
       {editor && (
-        <section
-          className="rebuild-editor"
-          aria-label="Editor de nota"
-          data-oanix-unsaved={editor.dirty ? 'true' : 'false'}
-        >
-          <header>
-            <button
-              type="button"
-              className="rebuild-icon-button back-button"
-              data-oanix-back-close="true"
-              data-oanix-save-and-close="true"
-              onClick={() => void leaveEditor()}
-              aria-label="Guardar y volver"
-            >
-              <OanixIcon name="back" />
-            </button>
-            <input
-              value={editor.title}
-              onChange={(event) => setEditor((current) => current ? {
-                ...current,
-                title: event.target.value,
-                dirty: true,
-              } : current)}
-              maxLength={160}
-              aria-label="Título de la nota"
-            />
-          </header>
-          {error && <div className="rebuild-editor__error" role="alert">{error}</div>}
-          <textarea
-            className="rebuild-editor__surface"
-            value={editor.text}
-            onChange={(event) => setEditor((current) => current ? {
-              ...current,
-              text: event.target.value,
-              dirty: true,
-            } : current)}
-            placeholder="Empieza a escribir…"
-            autoFocus
-            spellCheck
-          />
-        </section>
+        <NoteEditor
+          key={editor.meta.id}
+          noteId={editor.meta.id}
+          initialTitle={editor.meta.title}
+          initialText={editor.text}
+          saving={saving}
+          error={error}
+          onRequestClose={closeEditor}
+        />
       )}
 
       {createKind && (
