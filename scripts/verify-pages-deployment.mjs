@@ -47,6 +47,7 @@ const [css, js] = await Promise.all([
 if (Buffer.byteLength(css) <= 10000) throw new Error('Deployed CSS bundle is unexpectedly small.')
 if (Buffer.byteLength(js) <= 10000) throw new Error('Deployed JS bundle is unexpectedly small.')
 if (!css.includes('.vault-shell')) throw new Error('Deployed CSS bundle is missing the vault shell marker.')
-if (!js.includes('data-oanix-workspace-v2')) throw new Error('Deployed JS bundle is missing the workspace v2 marker.')
+if (!css.includes('.rebuild-shell')) throw new Error('Deployed CSS bundle is missing the active rebuild shell marker.')
+if (!js.includes('encrypted_records_v2')) throw new Error('Deployed JS bundle is missing the encrypted v2 storage marker.')
 
 console.log(`Verified deployed OANIX shell: ${cssPath} and ${jsPath}`)
