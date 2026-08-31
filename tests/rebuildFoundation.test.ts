@@ -8,6 +8,8 @@ const repository = readFileSync('src/storage/repositories/encryptedV2RecordRepos
 const service = readFileSync('src/features/rebuild/rebuildService.ts', 'utf8')
 const model = readFileSync('src/features/rebuild/rebuildModel.ts', 'utf8')
 const rebuild = readFileSync('src/features/rebuild/RebuildApp.tsx', 'utf8')
+const noteEditor = readFileSync('src/features/editor/NoteEditor.tsx', 'utf8')
+const sheetCss = readFileSync('src/features/editor/sheets/ruledSheet.css', 'utf8')
 const css = readFileSync('src/features/rebuild/rebuild.css', 'utf8')
 
 test('post-unlock rebuild keeps the vault gate and replaces the old workspace authority', () => {
@@ -39,13 +41,16 @@ test('v2 notes split list metadata from note body and persist both atomically', 
   assert.match(repository, /encrypted\.forEach\(\(record\) => store\.put\(record\)\)/)
 })
 
-test('typing stays in editor state and local persistence happens on leave', () => {
-  assert.match(rebuild, /text: event\.target\.value,[\s\S]*dirty: true/)
-  assert.match(rebuild, /title: event\.target\.value,[\s\S]*dirty: true/)
-  assert.match(rebuild, /async function leaveEditor\(\)/)
-  assert.match(rebuild, /await saveRebuildNote\(editor\.meta, editor\.title, editor\.text\)/)
-  assert.match(rebuild, /data-oanix-unsaved=\{editor\.dirty \? 'true' : 'false'\}/)
-  assert.doesNotMatch(rebuild, /replaceNoteContent|parseEditorBlocks|innerHTML/)
+test('typing stays inside the lightweight editor and persistence happens only at the save boundary', () => {
+  assert.match(rebuild, /<NoteEditor/)
+  assert.match(rebuild, /async function closeEditor\(snapshot: NoteEditorSnapshot \| null\)/)
+  assert.match(rebuild, /await saveRebuildNote\(editor\.meta, snapshot\.title, snapshot\.text\)/)
+  assert.match(noteEditor, /defaultValue=\{initialText\}/)
+  assert.match(noteEditor, /defaultValue=\{initialTitle\}/)
+  assert.match(noteEditor, /textRef\.current\?\.value/)
+  assert.match(noteEditor, /titleRef\.current\?\.value/)
+  assert.match(noteEditor, /if \(dirtyRef\.current\) return/)
+  assert.doesNotMatch(noteEditor, /value=\{.*initialText|setText\(|innerHTML|contentEditable|MutationObserver/)
 })
 
 test('slow operations expose delayed full-screen feedback instead of fake progress', () => {
