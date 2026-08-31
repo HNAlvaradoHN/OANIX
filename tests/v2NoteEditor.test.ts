@@ -28,10 +28,30 @@ test('typing path does not mirror a large note into React state', () => {
   assert.match(editor, /useRef<HTMLTextAreaElement/)
   assert.match(editor, /defaultValue=\{initialText\}/)
   assert.match(editor, /onInput=\{markActivity\}/)
-  assert.match(editor, /if \(dirtyRef\.current\) return/)
+  assert.match(editor, /generationRef\.current \+= 1/)
+  assert.match(editor, /if \(!dirtyRef\.current\) \{[\s\S]*setDirty\(true\)/)
   assert.match(editor, /textRef\.current\?\.value \?\? initialText/)
   assert.doesNotMatch(editor, /useState\(initialText|setText\(|onChange=.*text/)
   assert.doesNotMatch(editor, /innerHTML|querySelectorAll|MutationObserver|parseEditorBlocks/)
+})
+
+test('idle autosave batches typing and never saves in the per-key input path', () => {
+  assert.match(editor, /AUTOSAVE_IDLE_MS = 3_000/)
+  assert.match(editor, /idleTimerRef\.current !== null/)
+  assert.match(editor, /Date\.now\(\) - lastActivityAtRef\.current/)
+  assert.match(editor, /saveInFlightRef/)
+  assert.match(editor, /generationRef\.current === generation/)
+  assert.match(editor, /await onRequestSave\(snapshot\)/)
+  assert.match(editor, /if \(composingRef\.current\) return/)
+  assert.match(editor, /await saveInFlightRef\.current/)
+  assert.doesNotMatch(editor, /function markActivity\(\)[\s\S]{0,500}onRequestSave/)
+})
+
+test('slow autosave feedback stays local and nonblocking', () => {
+  assert.match(editor, /AUTOSAVE_FEEDBACK_DELAY_MS = 600/)
+  assert.match(editor, /oanix-note-editor__autosave-status/)
+  assert.match(editor, /Guardando…/)
+  assert.match(structure, /\.oanix-note-editor__autosave-status/)
 })
 
 test('editor covers desktop mobile day and night without a second implementation', () => {

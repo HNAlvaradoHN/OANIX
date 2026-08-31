@@ -110,6 +110,8 @@ export function RebuildApp({ onLock }: RebuildAppProps) {
   const [createKind, setCreateKind] = useState<CreateKind>(null)
   const [createName, setCreateName] = useState('')
   const [editor, setEditor] = useState<OpenedEditor | null>(null)
+  const editorRef = useRef<OpenedEditor | null>(null)
+  const blockingSaveRef = useRef(false)
   const [saving, setSaving] = useState(false)
   const [openingNote, setOpeningNote] = useState(false)
   const [accountOpen, setAccountOpen] = useState(false)
@@ -188,13 +190,18 @@ export function RebuildApp({ onLock }: RebuildAppProps) {
     window.requestAnimationFrame(() => searchRef.current?.focus())
   }
 
+  function commitOpenedEditor(next: OpenedEditor | null) {
+    editorRef.current = next
+    setEditor(next)
+  }
+
   async function openNote(noteId: string) {
     if (openingNote || saving) return
     setOpeningNote(true)
     setError('')
     try {
       const opened = await readRebuildNote(noteId)
-      setEditor({
+      commitOpenedEditor({
         meta: opened.meta,
         text: opened.text,
       })
@@ -211,7 +218,7 @@ export function RebuildApp({ onLock }: RebuildAppProps) {
     try {
       const created = await createRebuildNote(activeFolderId)
       setNotes((current) => [created.meta, ...current])
-      setEditor({
+      commitOpenedEditor({
         meta: created.meta,
         text: created.text,
       })
@@ -221,25 +228,60 @@ export function RebuildApp({ onLock }: RebuildAppProps) {
     }
   }
 
+  async function saveEditorSnapshot(snapshot: NoteEditorSnapshot): Promise<boolean> {
+    const current = editorRef.current
+    if (!current || blockingSaveRef.current) return false
+
+    setError('')
+    try {
+      const updated = await saveRebuildNote(
+        current.meta,
+        current.text,
+        snapshot.title,
+        snapshot.text,
+      )
+      if (editorRef.current?.meta.id !== current.meta.id) return false
+
+      const next: OpenedEditor = {
+        meta: updated,
+        text: snapshot.text,
+      }
+      commitOpenedEditor(next)
+      setNotes((notes) => notes.map((note) => note.id === updated.id ? updated : note))
+      return true
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : 'No se pudo guardar la nota.')
+      return false
+    }
+  }
+
   async function closeEditor(snapshot: NoteEditorSnapshot | null): Promise<boolean> {
-    if (!editor || saving) return false
+    const current = editorRef.current
+    if (!current || blockingSaveRef.current) return false
 
     if (!snapshot) {
-      setEditor(null)
+      commitOpenedEditor(null)
       return true
     }
 
+    blockingSaveRef.current = true
     setSaving(true)
     setError('')
     try {
-      const updated = await saveRebuildNote(editor.meta, editor.text, snapshot.title, snapshot.text)
-      setNotes((current) => current.map((note) => note.id === updated.id ? updated : note))
-      setEditor(null)
+      const updated = await saveRebuildNote(
+        current.meta,
+        current.text,
+        snapshot.title,
+        snapshot.text,
+      )
+      setNotes((notes) => notes.map((note) => note.id === updated.id ? updated : note))
+      commitOpenedEditor(null)
       return true
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'No se pudo guardar la nota.')
       return false
     } finally {
+      blockingSaveRef.current = false
       setSaving(false)
     }
   }
@@ -536,6 +578,7 @@ export function RebuildApp({ onLock }: RebuildAppProps) {
           initialText={editor.text}
           saving={saving}
           error={error}
+          onRequestSave={saveEditorSnapshot}
           onRequestClose={closeEditor}
         />
       )}

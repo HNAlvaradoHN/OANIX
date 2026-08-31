@@ -42,6 +42,18 @@
   box-shadow: 0 0 0 2px color-mix(in srgb, #8f7aff 30%, transparent);
 }
 
+.oanix-note-editor__autosave-status {
+  flex: none;
+  max-width: 7rem;
+  overflow: hidden;
+  color: color-mix(in srgb, currentColor 68%, transparent);
+  font-size: .72rem;
+  font-weight: 700;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .oanix-note-editor__error {
   flex: none;
   margin: .5rem .75rem 0;
