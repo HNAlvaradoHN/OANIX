@@ -36,8 +36,9 @@ test('touch startup keeps large blurred vault ambience static while preserving s
   assert.match(globalCss, /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.vault-core__ring[\s\S]*animation:\s*none !important/)
 })
 
-test('top tag plus owns professional tag creation with persisted icon and color after unlock', () => {
-  assert.match(app, /<WorkspaceRuntimeGate workspaceRevision=\{workspaceRevision\} \/>/)
+test('legacy tag creation remains preserved while rebuild owns active tag creation', () => {
+  assert.match(app, /<RebuildApp onLock=\{lockVault\} \/>/)
+  assert.doesNotMatch(app, /<WorkspaceRuntimeGate/)
   assert.doesNotMatch(legacyGate, /TagCreationRuntime/)
   assert.match(organic, /Agregar etiqueta/)
   assert.match(organic, /Eliminar etiqueta/)

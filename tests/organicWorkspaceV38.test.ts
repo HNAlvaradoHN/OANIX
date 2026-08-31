@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
-test('organic workspace uses real OANIX data and no external prototype dependencies', () => {
+test('historical organic workspace keeps real OANIX data and no external prototype dependencies', () => {
   const runtime = readFileSync('src/features/notes/OrganicWorkspaceRuntime.tsx', 'utf8')
   const css = readFileSync('src/features/notes/organicWorkspace.css', 'utf8')
   const app = readFileSync('src/app/App.tsx', 'utf8')
@@ -15,7 +15,8 @@ test('organic workspace uses real OANIX data and no external prototype dependenc
   assert.match(runtime, /loadFolderColors/)
   assert.doesNotMatch(runtime, /NOTE_TAB_COLORS|row\.dataset\.oanixNoteCategory|--oanix-note-tab-color/)
   assert.match(runtime, /persistTagOrder/)
-  assert.match(app, /<WorkspaceRuntimeGate workspaceRevision=\{workspaceRevision\} \/>/)
+  assert.match(app, /<RebuildApp onLock=\{lockVault\} \/>/)
+  assert.doesNotMatch(app, /<WorkspaceRuntimeGate/)
   assert.match(legacyGate, /<OrganicWorkspaceRuntime \/>/)
   assert.doesNotMatch(runtime + css + legacyGate, /cdn\.tailwindcss|unpkg\.com|@phosphor-icons/)
 })

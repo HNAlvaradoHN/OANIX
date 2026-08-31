@@ -29,16 +29,16 @@ const LEGACY_WORKSPACE_RUNTIMES = [
   'FolderGridRuntime',
 ] as const
 
-test('workspace v2 has one switch and legacy visual authorities live behind a lazy boundary', () => {
+test('post-unlock rebuild supersedes workspace v2 mounting while legacy authorities stay recoverable', () => {
   assert.match(experience, /export const WORKSPACE_V2_ENABLED = true/)
-  assert.match(app, /<WorkspaceRuntimeGate workspaceRevision=\{workspaceRevision\} \/>/)
-  assert.doesNotMatch(app, /NoteListReorderGestureRuntime|FolderGridRuntime/)
+  assert.match(app, /<RebuildApp onLock=\{lockVault\} \/>/)
+  assert.doesNotMatch(app, /<WorkspaceRuntimeGate|NoteListReorderGestureRuntime|FolderGridRuntime/)
   assert.match(gate, /lazy\(\(\) =>[\s\S]*import\('\.\/LegacyWorkspaceRuntimeGate'\)/)
   assert.match(gate, /!WORKSPACE_V2_ENABLED && \(/)
 
   for (const legacy of LEGACY_WORKSPACE_RUNTIMES) {
-    assert.ok(legacyGate.includes('<' + legacy), 'missing lazy legacy authority for ' + legacy)
-    assert.ok(!gate.includes(legacy), 'legacy authority is still eagerly referenced: ' + legacy)
+    assert.ok(legacyGate.includes('<' + legacy), 'missing historical legacy authority for ' + legacy)
+    assert.ok(!app.includes('<' + legacy), 'legacy authority leaked into active rebuild: ' + legacy)
   }
 })
 

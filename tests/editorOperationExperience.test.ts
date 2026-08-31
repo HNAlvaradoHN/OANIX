@@ -37,8 +37,9 @@ test('note deletion feedback blocks interaction behind the delete operation', ()
   assert.match(polish, /#oanix-note-delete-feedback[\s\S]*height: 100dvh !important/)
 })
 
-test('editor operation runtime mounts with the unlocked app lifecycle', () => {
-  assert.match(app, /<WorkspaceRuntimeGate workspaceRevision=\{workspaceRevision\} \/>/)
+test('legacy editor operation runtime remains available without mounting in the rebuild', () => {
+  assert.match(app, /<RebuildApp onLock=\{lockVault\} \/>/)
+  assert.doesNotMatch(app, /<EditorOperationRuntime \/>/)
   assert.match(gate, /import \{ EditorOperationRuntime \}/)
   assert.match(gate, /<EditorOperationRuntime \/>/)
   assert.doesNotMatch(gate, /if \(!active\) return null/)

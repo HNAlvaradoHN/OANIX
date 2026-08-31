@@ -31,7 +31,7 @@ test('remote envelopes are related to local records only after local decryption'
   assert.match(syncSource, /OANIX no sobrescribirá nada/)
 })
 
-test('E2EE still creates no parallel local database or cache', () => {
+test('E2EE keeps one local database while rebuild adds one shared indexed store', () => {
   const syncSource = readFileSync('src/features/sync/syncService.ts', 'utf8')
   const databaseSource = readFileSync('src/storage/local/database.ts', 'utf8')
 
@@ -41,7 +41,8 @@ test('E2EE still creates no parallel local database or cache', () => {
   assert.match(syncSource, /writeEncryptedRecord<SyncStateRecord>/)
 
   const createStoreCalls = databaseSource.match(/\.createObjectStore\(/g) ?? []
-  assert.equal(createStoreCalls.length, 2)
+  assert.equal(createStoreCalls.length, 3)
+  assert.match(databaseSource, /V2_ENCRYPTED_RECORDS_STORE = 'encrypted_records_v2'/)
 })
 
 test('remote mutations use optimistic version checks and never rewrite ownership columns', () => {

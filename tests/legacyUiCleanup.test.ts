@@ -28,9 +28,10 @@ test('retired notebook experiments and the hidden-view tilt runtime are physical
   assert.doesNotMatch(workspaceGate, /FolderTiltRuntime/)
 })
 
-test('workspace runtimes follow the unlocked app lifecycle instead of observing the whole document from main', () => {
+test('rebuild owns the unlocked lifecycle while historical workspace runtimes stay detached', () => {
   assert.doesNotMatch(main, /WorkspaceRuntimeGate/)
-  assert.match(app, /<WorkspaceRuntimeGate workspaceRevision=\{workspaceRevision\} \/>/)
+  assert.match(app, /<RebuildApp onLock=\{lockVault\} \/>/)
+  assert.doesNotMatch(app, /<WorkspaceRuntimeGate/)
   assert.doesNotMatch(workspaceGate, /MutationObserver/)
   assert.doesNotMatch(workspaceGate, /document\.querySelector/)
 })

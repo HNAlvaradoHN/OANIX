@@ -1,0 +1,90 @@
+export const NOTE_V2_META_TYPE = 'note.v2.meta'
+export const NOTE_V2_BODY_TYPE = 'note.v2.body'
+export const FOLDER_V2_TYPE = 'folder.v2'
+export const TAG_V2_TYPE = 'tag.v2'
+
+export const V2_FOLDER_GRADIENTS = [
+  ['#7c5cff', '#ff6ec7'],
+  ['#40c9ff', '#7c5cff'],
+  ['#00d68f', '#40c9ff'],
+  ['#ffb648', '#ff6ec7'],
+  ['#ff4d6d', '#ff9d4d'],
+  ['#8a8a92', '#3a3a46'],
+  ['#ff7a59', '#ffb347'],
+  ['#ffd166', '#f59e0b'],
+  ['#34d399', '#16a34a'],
+  ['#2dd4bf', '#06b6d4'],
+  ['#60a5fa', '#2563eb'],
+  ['#a78bfa', '#7c3aed'],
+  ['#f472b6', '#db2777'],
+  ['#fb7185', '#e11d48'],
+  ['#c084fc', '#8b5cf6'],
+  ['#94a3b8', '#475569'],
+] as const
+
+export const V2_FOLDER_ICONS = [
+  '📁', '💼', '🎯', '💡', '🧠', '🔧', '📚', '🎨', '🏠',
+  '💳', '✈️', '🧪', '⭐', '❤️', '🚀', '📷', '🎵', '🎮',
+  '🍽️', '🏋️', '🛒', '💰', '🗓️', '🔒', '👥', '🐾', '🌱',
+  '⚡', '🔥', '☕', '🎓', '🧳', '🩺', '📝', '📦', '🛠️',
+] as const
+
+export interface NoteV2Meta {
+  version: 2
+  id: string
+  title: string
+  folderId: string | null
+  tagIds: string[]
+  createdAt: string
+  updatedAt: string
+}
+
+export interface NoteV2Body {
+  version: 2
+  noteId: string
+  format: 'plain-text-v1'
+  text: string
+}
+
+export interface FolderV2Record {
+  version: 2
+  id: string
+  name: string
+  icon: string
+  gradientIndex: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface TagV2Record {
+  version: 2
+  id: string
+  name: string
+  color: string
+  createdAt: string
+  updatedAt: string
+}
+
+export function folderGradient(index: number): readonly [string, string] {
+  const normalized = Number.isSafeInteger(index)
+    ? Math.abs(index) % V2_FOLDER_GRADIENTS.length
+    : 0
+  return V2_FOLDER_GRADIENTS[normalized]
+}
+
+export function folderGradientCss(index: number, alpha = 1): string {
+  const [from, to] = folderGradient(index)
+  if (alpha >= 1) return `linear-gradient(135deg, ${from}, ${to})`
+
+  const a = Math.max(0, Math.min(1, alpha))
+  const hexToRgba = (hex: string) => {
+    const raw = hex.replace('#', '')
+    const value = Number.parseInt(raw, 16)
+    const red = (value >> 16) & 255
+    const green = (value >> 8) & 255
+    const blue = value & 255
+    return `rgba(${red}, ${green}, ${blue}, ${a})`
+  }
+
+  return `linear-gradient(135deg, ${hexToRgba(from)}, ${hexToRgba(to)})`
+}

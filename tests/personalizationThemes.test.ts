@@ -114,7 +114,7 @@ test('classic day explicitly opts out of mobile forced dark and hardens the shar
   assert.match(classicSurfacesCss, /data-oanix-theme='classic-day'[\s\S]*--theme-bg: #f4f7fb/)
 })
 
-test('legacy v38 fallback keeps one organic workspace surface authority', () => {
+test('legacy v38 styles remain historical while rebuild owns the unlocked surface', () => {
   assert.doesNotMatch(classicThemeContract, /data-oanix-theme='classic-day'[^\n]*\][\s\S]*\.notes-shell/)
   assert.doesNotMatch(classicThemeContract, /data-oanix-theme='classic-day'[^\n]*\][\s\S]*\.notes-sidebar/)
   assert.doesNotMatch(classicThemeContract, /data-oanix-theme='classic-day'[^\n]*\][\s\S]*\.notes-header/)
@@ -134,7 +134,8 @@ test('legacy v38 fallback keeps one organic workspace surface authority', () => 
   assert.ok(themeSurfaceIndex >= 0)
   assert.ok(visualIndex >= 0)
   assert.doesNotMatch(main, /features\/notes\/v383WorkspaceVisual\.css/)
-  assert.match(app, /<WorkspaceRuntimeGate workspaceRevision=\{workspaceRevision\} \/>/)
+  assert.match(app, /<RebuildApp onLock=\{lockVault\} \/>/)
+  assert.doesNotMatch(app, /<WorkspaceRuntimeGate/)
   assert.match(legacyGate, /<OrganicWorkspaceRuntime \/>/)
 })
 

@@ -88,16 +88,15 @@ test('automatic sync reacts quickly to local and remote changes without idle ful
   assert.match(runtime, /onRemoteAppliedRef\.current\(\)/)
 })
 
-test('remote changes refresh the workspace without reloading or relocking the vault', () => {
+test('legacy autosync is intentionally detached while the rebuild coordinator is pending', () => {
   const app = readFileSync('src/app/App.tsx', 'utf8')
 
-  assert.match(app, /workspaceRevision/)
-  assert.match(app, /<NotesWorkspace key=\{workspaceRevision\}/)
-  assert.match(app, /onRemoteApplied=\{\(\) => setWorkspaceRevision/)
+  assert.match(app, /<RebuildApp onLock=\{lockVault\} \/>/)
+  assert.doesNotMatch(app, /AutoSyncRuntime|workspaceRevision|<NotesWorkspace/)
   assert.doesNotMatch(app, /location\.reload\(\)/)
 })
 
-test('multi-device sync detects divergence and hands it to implemented conflict resolution without new stores', () => {
+test('multi-device sync keeps divergence safeguards while rebuild uses one additional shared v2 store', () => {
   const syncSource = readFileSync('src/features/sync/syncService.ts', 'utf8')
   const conflictCenter = readFileSync('src/features/sync/ConflictCenter.tsx', 'utf8')
   const roadmap = readFileSync('docs/ROADMAP.md', 'utf8')
@@ -114,5 +113,6 @@ test('multi-device sync detects divergence and hands it to implemented conflict 
   assert.match(memory, /VALIDATION_DEBT/)
 
   const createStoreCalls = databaseSource.match(/\.createObjectStore\(/g) ?? []
-  assert.equal(createStoreCalls.length, 2)
+  assert.equal(createStoreCalls.length, 3)
+  assert.match(databaseSource, /V2_ENCRYPTED_RECORDS_STORE = 'encrypted_records_v2'/)
 })

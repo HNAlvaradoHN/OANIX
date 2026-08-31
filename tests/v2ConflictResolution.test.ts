@@ -53,12 +53,12 @@ test('combine is disabled when note metadata diverges instead of inventing a mer
   assert.match(service, /Elige una versión para no inventar una mezcla/)
 })
 
-test('conflict center is wired into the unlocked application', () => {
+test('legacy conflict center remains implemented but is deferred with sync from the rebuild milestone', () => {
   const app = readFileSync('src/app/App.tsx', 'utf8')
   const center = readFileSync('src/features/sync/ConflictCenter.tsx', 'utf8')
 
-  assert.match(app, /ConflictCenter/)
-  assert.match(app, /onResolved=\{\(\) => setWorkspaceRevision/)
+  assert.match(app, /<RebuildApp onLock=\{lockVault\} \/>/)
+  assert.doesNotMatch(app, /ConflictCenter|setWorkspaceRevision/)
   assert.match(center, /scanSyncConflicts/)
   assert.match(center, /resolveSyncConflict/)
   assert.match(center, /oanix:sync-status/)

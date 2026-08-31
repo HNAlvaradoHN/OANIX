@@ -1,22 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
 import { VaultGate } from './VaultGate'
-import { WorkspaceRuntimeGate } from './WorkspaceRuntimeGate'
-import { NotesWorkspace } from '../features/notes/NotesWorkspace'
-import { AccountPanel } from '../features/account/AccountPanel'
-import { AutoSyncRuntime } from '../features/sync/AutoSyncRuntime'
-import { ConflictCenter } from '../features/sync/ConflictCenter'
-import { VersionHistoryCenter } from '../features/versionHistory/VersionHistoryCenter'
-import { NotePrivacyRuntime } from '../features/privacy/NotePrivacyRuntime'
-import { NoteBulkPrivacyRuntime, NOTE_PRIVACY_REFRESH_EVENT } from '../features/privacy/NoteBulkPrivacyRuntime'
-import { PrivateBoxListHint } from '../features/privacy/PrivateBoxListHint'
-import { NoteAttachmentsRuntime } from '../features/attachments/NoteAttachmentsRuntime'
-import { LargeObjectTransferIndicator } from '../features/largeObjects/LargeObjectTransferIndicator'
+import { RebuildApp } from '../features/rebuild/RebuildApp'
 import { AndroidAuthRuntime } from '../platform/android/AndroidAuthRuntime'
-import { NativeCameraRuntime } from '../platform/android/NativeCameraRuntime'
 import { NativeDocumentsRuntime } from '../platform/android/NativeDocumentsRuntime'
-import { NativeShareRuntime } from '../platform/android/NativeShareRuntime'
-import { NativeNoteShareRuntime } from '../platform/android/NativeNoteShareRuntime'
 import { AndroidBackRuntime } from '../platform/android/AndroidBackRuntime'
 import { AndroidBiometricRetryRuntime } from '../platform/android/AndroidBiometricRetryRuntime'
 import { AndroidKeystoreDiagnosticRuntime } from '../platform/android/AndroidKeystoreDiagnosticRuntime'
@@ -30,7 +16,6 @@ import {
   type AutoLockMinutes,
 } from '../security/session/autoLockPolicy'
 import { lockLocalVault } from '../security/vault/vaultService'
-import { OanixIcon } from '../shared/OanixIcon'
 
 type OanixUpdateWindow = Window & {
   __oanixApplyUpdate?: () => Promise<void>
@@ -44,10 +29,19 @@ async function prepareVisibleWorkspaceForUpdate() {
   const focused = document.activeElement
   if (focused instanceof HTMLElement) focused.blur()
 
+  const dirtyEditor = document.querySelector<HTMLElement>('[data-oanix-unsaved="true"]')
+  if (dirtyEditor) {
+    document.querySelector<HTMLButtonElement>('[data-oanix-save-and-close="true"]')?.click()
+  }
+
   const deadline = Date.now() + 6000
   while (Date.now() < deadline) {
-    const saveStatus = document.querySelector<HTMLElement>('.save-status')?.textContent?.trim() ?? ''
+    if (document.querySelector('[data-oanix-unsaved="true"]')) {
+      await wait(120)
+      continue
+    }
 
+    const saveStatus = document.querySelector<HTMLElement>('.save-status')?.textContent?.trim() ?? ''
     if (!saveStatus) return true
     if (/no se pudo guardar/i.test(saveStatus)) return false
     if (!/cambios pendientes|guardando/i.test(saveStatus)) return true
@@ -59,61 +53,11 @@ async function prepareVisibleWorkspaceForUpdate() {
 }
 
 function UnlockedApp({ lockVault }: { lockVault: () => void }) {
-  const [accountOpen, setAccountOpen] = useState(false)
-  const [accountHost, setAccountHost] = useState<HTMLElement | null>(null)
-  const [workspaceRevision, setWorkspaceRevision] = useState(0)
-  const [privacyRevision, setPrivacyRevision] = useState(0)
-
-  useEffect(() => {
-    setAccountHost(null)
-    const frame = window.requestAnimationFrame(() => {
-      setAccountHost(document.querySelector<HTMLElement>('.notes-header__actions'))
-    })
-    return () => window.cancelAnimationFrame(frame)
-  }, [workspaceRevision])
-
-  useEffect(() => {
-    const refreshPrivacy = () => setPrivacyRevision((value) => value + 1)
-    window.addEventListener(NOTE_PRIVACY_REFRESH_EVENT, refreshPrivacy)
-    return () => window.removeEventListener(NOTE_PRIVACY_REFRESH_EVENT, refreshPrivacy)
-  }, [])
-
-  useEffect(() => {
-    const refreshWorkspace = () => setWorkspaceRevision((value) => value + 1)
-    window.addEventListener('oanix:workspace-refresh', refreshWorkspace)
-    return () => window.removeEventListener('oanix:workspace-refresh', refreshWorkspace)
-  }, [])
-
   return (
     <>
-      <AutoSyncRuntime onRemoteApplied={() => setWorkspaceRevision((value) => value + 1)} />
       <AndroidBackRuntime />
-      <NativeCameraRuntime />
-      <NativeShareRuntime onImported={() => setWorkspaceRevision((value) => value + 1)} />
-      <NativeNoteShareRuntime />
       <AndroidKeystoreDiagnosticRuntime />
-      <NotesWorkspace key={workspaceRevision} onLock={lockVault} />
-      <WorkspaceRuntimeGate workspaceRevision={workspaceRevision} />
-      <NoteAttachmentsRuntime key={`attachments-${workspaceRevision}`} />
-      <NotePrivacyRuntime key={`privacy-${workspaceRevision}-${privacyRevision}`} />
-      <NoteBulkPrivacyRuntime key={`privacy-bulk-${workspaceRevision}`} />
-      <PrivateBoxListHint key={`private-hint-${workspaceRevision}`} />
-      <ConflictCenter onResolved={() => setWorkspaceRevision((value) => value + 1)} />
-      <VersionHistoryCenter onRestored={() => setWorkspaceRevision((value) => value + 1)} />
-      <LargeObjectTransferIndicator />
-      {accountHost && createPortal(
-        <button
-          className="icon-button account-header-action"
-          type="button"
-          onClick={() => setAccountOpen(true)}
-          aria-label="Cuenta de OANIX"
-          title="Cuenta de OANIX"
-        >
-          <OanixIcon name="user" />
-        </button>,
-        accountHost,
-      )}
-      {accountOpen && <AccountPanel onClose={() => setAccountOpen(false)} />}
+      <RebuildApp onLock={lockVault} />
     </>
   )
 }

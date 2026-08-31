@@ -48,9 +48,10 @@ test('camera JPEG crosses into WebView by private content URI rather than Base64
   assert.match(cameraBridgeSource, /return new File\(\[blob\]/)
 })
 
-test('Android camera UI reuses the existing encrypted image input and storage pipeline', () => {
+test('Android camera pipeline remains preserved but is deferred from the text-note rebuild milestone', () => {
   assert.match(mainActivitySource, /registerPlugin\(OanixCameraPlugin\.class\)/)
-  assert.match(appSource, /<NativeCameraRuntime \/>/)
+  assert.match(appSource, /<RebuildApp onLock=\{lockVault\} \/>/)
+  assert.doesNotMatch(appSource, /<NativeCameraRuntime \/>/)
   assert.match(cameraRuntimeSource, /input\.files = transfer\.files/)
   assert.match(cameraRuntimeSource, /input\.dispatchEvent\(new Event\('change'/)
   assert.match(imageEditorSource, /async function handleFileChange/)

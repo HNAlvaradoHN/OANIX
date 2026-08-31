@@ -1,8 +1,10 @@
 const DATABASE_NAME = 'oanix-vault'
-const DATABASE_VERSION = 2
+const DATABASE_VERSION = 3
 
 export const VAULT_METADATA_STORE = 'vault_metadata'
 export const ENCRYPTED_RECORDS_STORE = 'encrypted_records'
+export const V2_ENCRYPTED_RECORDS_STORE = 'encrypted_records_v2'
+export const V2_RECORD_TYPE_INDEX = 'by_record_type'
 
 export function openLocalDatabase(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -22,6 +24,13 @@ export function openLocalDatabase(): Promise<IDBDatabase> {
 
       if (!database.objectStoreNames.contains(ENCRYPTED_RECORDS_STORE)) {
         database.createObjectStore(ENCRYPTED_RECORDS_STORE, { keyPath: 'key' })
+      }
+
+      if (!database.objectStoreNames.contains(V2_ENCRYPTED_RECORDS_STORE)) {
+        const v2Store = database.createObjectStore(V2_ENCRYPTED_RECORDS_STORE, {
+          keyPath: ['recordType', 'recordId'],
+        })
+        v2Store.createIndex(V2_RECORD_TYPE_INDEX, 'recordType', { unique: false })
       }
     }
 

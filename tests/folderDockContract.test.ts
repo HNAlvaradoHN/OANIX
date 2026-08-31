@@ -37,8 +37,9 @@ test('folder appearance is rendered directly without observer repaint', () => {
   assert.doesNotMatch(grid, /paintFolders|decorateCustomizer/)
 })
 
-test('legacy folder dock and v38.3 CSS stay in the lazy fallback chunk with stable override order', () => {
-  assert.match(app, /<WorkspaceRuntimeGate workspaceRevision=\{workspaceRevision\} \/>/)
+test('legacy folder dock and v38.3 CSS stay preserved outside the active rebuild', () => {
+  assert.match(app, /<RebuildApp onLock=\{lockVault\} \/>/)
+  assert.doesNotMatch(app, /<WorkspaceRuntimeGate/)
   assert.match(visualRuntime, /\.\/v383WorkspaceVisual\.css/)
   assert.doesNotMatch(legacyGate, /folderDockContract\.css/)
   assert.match(visualRuntime, /\.\/folderDockContract\.css/)

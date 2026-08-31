@@ -6,14 +6,13 @@ const runtime = readFileSync('src/features/privacy/NoteBulkPrivacyRuntime.tsx', 
 const app = readFileSync('src/app/App.tsx', 'utf8')
 const theme = readFileSync('src/features/notes/themes/infographic/InfographicWorkspace.tsx', 'utf8')
 
-test('new notes keep the isolated privacy refresh bridge', () => {
+test('legacy privacy refresh bridge stays preserved but is not mounted in the first rebuild milestone', () => {
   assert.match(runtime, /NOTE_PRIVACY_REFRESH_EVENT = 'oanix:note-privacy-refresh'/)
   assert.match(runtime, /knownRowIdsRef/)
   assert.match(runtime, /foundNewNote/)
   assert.match(runtime, /dispatchPrivacyRefresh\(\)/)
-  assert.match(app, /privacyRevision/)
-  assert.match(app, /NOTE_PRIVACY_REFRESH_EVENT/)
-  assert.match(app, /privacy-\$\{workspaceRevision\}-\$\{privacyRevision\}/)
+  assert.match(app, /<RebuildApp onLock=\{lockVault\} \/>/)
+  assert.doesNotMatch(app, /privacyRevision|NOTE_PRIVACY_REFRESH_EVENT|<NoteBulkPrivacyRuntime/)
 })
 
 test('the active create-note button now calls the real create handler directly', () => {
@@ -32,8 +31,8 @@ test('bulk selection UI and bulk deletion are retired from the active runtime', 
   assert.doesNotMatch(runtime, /noteBulkPrivacy\.css/)
 })
 
-test('individual privacy remains under NotePrivacyRuntime', () => {
-  assert.match(app, /<NotePrivacyRuntime/)
+test('individual privacy implementation remains preserved for later rebuild integration', () => {
+  assert.doesNotMatch(app, /<NotePrivacyRuntime/)
   assert.match(theme, /oanix:open-note-privacy/)
   assert.match(theme, /aria-label="Privacidad de la nota"/)
 })

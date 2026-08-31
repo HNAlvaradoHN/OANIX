@@ -98,13 +98,14 @@ test('pinned notes stay first and manual order wins inside each pin group', () =
   ])
 })
 
-test('V1 keeps local storage compact instead of creating a store per feature', () => {
+test('V1 stores stay intact while the rebuild adds one shared indexed v2 store', () => {
   const databaseSource = readFileSync('src/storage/local/database.ts', 'utf8')
   const createStoreCalls = databaseSource.match(/\.createObjectStore\(/g) ?? []
 
-  assert.equal(createStoreCalls.length, 2)
+  assert.equal(createStoreCalls.length, 3)
   assert.match(databaseSource, /VAULT_METADATA_STORE = 'vault_metadata'/)
   assert.match(databaseSource, /ENCRYPTED_RECORDS_STORE = 'encrypted_records'/)
+  assert.match(databaseSource, /V2_ENCRYPTED_RECORDS_STORE = 'encrypted_records_v2'/)
 })
 
 test('pinning and direct drag ordering reuse encrypted note records without another store', () => {
