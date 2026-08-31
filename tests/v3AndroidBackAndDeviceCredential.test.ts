@@ -27,10 +27,21 @@ test('Android back runtime closes the active rebuild layer through its explicit 
   assert.match(rebuild, /current\.meta,[\s\S]*current\.text,[\s\S]*snapshot\.title,[\s\S]*snapshot\.text/)
 })
 
-test('Android gesture back is routed through the OANIX callback until predictive back is migrated safely', () => {
+test('Android back uses the supported modern dispatcher and preserves a legacy fallback', () => {
   const manifest = readFileSync('android/app/src/main/AndroidManifest.xml', 'utf8')
+  const plugin = readFileSync(
+    'android/app/src/main/java/io/github/hnalvaradohn/oanix/OanixBackPlugin.java',
+    'utf8',
+  )
 
-  assert.match(manifest, /android:enableOnBackInvokedCallback="false"/)
+  assert.match(manifest, /android:enableOnBackInvokedCallback="true"/)
+  assert.match(plugin, /Build\.VERSION\.SDK_INT >= Build\.VERSION_CODES\.TIRAMISU/)
+  assert.match(plugin, /OnBackInvokedDispatcher/)
+  assert.match(plugin, /registerOnBackInvokedCallback/)
+  assert.match(plugin, /unregisterOnBackInvokedCallback/)
+  assert.match(plugin, /OnBackPressedCallback/)
+  assert.match(plugin, /legacyCallback\.setEnabled\(enabled\)/)
+  assert.match(plugin, /notifyListeners\("backPressed"/)
 })
 
 test('Android back runtime confirms exit professionally and exits on the second back gesture', () => {
@@ -47,7 +58,6 @@ test('Android back runtime confirms exit professionally and exits on the second 
   assert.match(runtime, /boxShadow: '0 22px 70px/)
   assert.match(runtime, /Cancelar/)
   assert.match(runtime, /Salir/)
-  assert.match(plugin, /OnBackPressedCallback/)
   assert.match(plugin, /notifyListeners\("backPressed"/)
   assert.match(plugin, /activity::finish/)
 })
