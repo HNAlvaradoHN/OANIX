@@ -63,6 +63,13 @@ test('slow operations expose delayed full-screen feedback instead of fake progre
   assert.doesNotMatch(rebuild, /\d+%/)
 })
 
+test('appearance is controlled from Settings without a duplicate top-bar toggle', () => {
+  assert.match(rebuild, /<strong>Apariencia<\/strong>/)
+  assert.match(rebuild, /chooseTheme\('classic-day'\)/)
+  assert.match(rebuild, /chooseTheme\('classic-night'\)/)
+  assert.doesNotMatch(rebuild, /Cambiar a modo día|Cambiar a modo noche/)
+})
+
 test('folder identity and rebuild layout cover desktop mobile day and night', () => {
   assert.match(model, /V2_FOLDER_GRADIENTS/)
   assert.match(service, /gradientIndex: secureRandomIndex\(V2_FOLDER_GRADIENTS\.length\)/)
