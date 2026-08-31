@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import { useFolderNavigationRuntime } from '../../features/folders/folderNavigationRuntime'
 import {
   addAndroidBackPressedListener,
   exitAndroidApp,
@@ -8,8 +7,6 @@ import {
 } from './androidBack'
 
 export function AndroidBackRuntime() {
-  useFolderNavigationRuntime()
-
   const [exitPromptVisible, setExitPromptVisible] = useState(false)
   const exitPromptVisibleRef = useRef(false)
 
@@ -36,22 +33,6 @@ export function AndroidBackRuntime() {
       )
       if (modalBackClose) {
         modalBackClose.click()
-        return
-      }
-
-      const openNoteBack = document.querySelector<HTMLButtonElement>(
-        '.notes-shell--open .back-button',
-      )
-      if (openNoteBack) {
-        openNoteBack.click()
-        return
-      }
-
-      const folderHomeBack = document.querySelector<HTMLButtonElement>(
-        '[data-oanix-folder-home-back="true"]',
-      )
-      if (folderHomeBack) {
-        folderHomeBack.click()
         return
       }
 
