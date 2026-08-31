@@ -29,6 +29,9 @@ No asumir que un chat, una memoria externa o una descripción antigua representa
 - El transporte normal de sincronización mantiene E2EE y sobres opacos. La recuperación por correo es una excepción explícita del modelo de confianza documentada en `docs/PROJECT_MEMORY.md`.
 - La misma base React + TypeScript + Vite/PWA está empaquetada también como aplicación Android mediante Capacitor; no mantener dos lógicas de negocio paralelas.
 - La arquitectura debe ser modular: un cambio debe afectar lo mínimo posible al resto del sistema, sin crear una proliferación innecesaria de carpetas, stores, cachés o capas paralelas.
+- Cada módulo debe tener una responsabilidad clara y vivir en la capa/carpeta que le corresponde. Evitar archivos monolíticos, lógica de dominio dentro de componentes visuales y utilidades genéricas usadas como cajón de sastre.
+- Comentar decisiones, invariantes, fronteras, riesgos y motivos no obvios. No sobrecomentar líneas evidentes ni usar comentarios como sustituto de nombres claros, tipos o funciones pequeñas y bien separadas.
+- Antes de añadir una nueva pieza, comprobar si pertenece a un módulo existente. Si una función crece hasta mezclar responsabilidades, separarla por comportamiento real, no por fragmentación artificial.
 - No crear persistencia paralela cuando pueda reutilizarse de forma segura el modelo existente.
 - Ante una duda de sincronización, se prioriza conservar datos sobre sobrescribirlos silenciosamente.
 - La contraseña maestra y la clave de bóveda no se persisten en texto plano. Las integraciones nativas deben respetar las fronteras de seguridad registradas para Android Keystore, biometría y temporales/URIs nativos.
