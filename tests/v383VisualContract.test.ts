@@ -10,8 +10,9 @@ const runtime = readFileSync('src/features/notes/V383WorkspaceVisualRuntime.tsx'
 const css = readFileSync('src/features/notes/v383WorkspaceVisual.css', 'utf8')
 const personalization = readFileSync('src/features/notes/WorkspacePersonalizationRuntime.tsx', 'utf8')
 
-test('legacy fallback keeps one scoped v38.3 layer behind the unlocked runtime boundary', () => {
-  assert.match(app, /<WorkspaceRuntimeGate workspaceRevision=\{workspaceRevision\} \/>/)
+test('legacy v38.3 layer remains preserved but detached from the active rebuild', () => {
+  assert.match(app, /<RebuildApp onLock=\{lockVault\} \/>/)
+  assert.doesNotMatch(app, /<WorkspaceRuntimeGate/)
   assert.match(legacyGate, /<V383WorkspaceVisualRuntime \/>/)
   assert.match(runtime, /classList\.add\('oanix-v383-visual'\)/)
   assert.doesNotMatch(main, /\.\/styles\/header-icon-polish\.css/)

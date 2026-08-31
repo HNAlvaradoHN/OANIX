@@ -327,7 +327,7 @@ export function RebuildApp({ onLock }: RebuildAppProps) {
             className="rebuild-icon-button"
             type="button"
             onClick={() => setAccountOpen(true)}
-            aria-label="Cuenta"
+            aria-label="Cuenta de OANIX"
           >
             <OanixIcon name="user" />
           </button>

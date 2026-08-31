@@ -45,7 +45,7 @@ test('native share intents are queued only in memory and signal repeated warm de
   assert.doesNotMatch(plugin, /saveInstanceState|restoreState/)
 })
 
-test('incoming content is prepared only after the unlocked runtime asks for it', () => {
+test('legacy incoming-share pipeline stays preserved but is deferred from the rebuild milestone', () => {
   const app = readFileSync('src/app/App.tsx', 'utf8')
   const runtime = readFileSync('src/platform/android/NativeShareRuntime.tsx', 'utf8')
   const service = readFileSync('src/platform/android/nativeShare.ts', 'utf8')
@@ -55,7 +55,8 @@ test('incoming content is prepared only after the unlocked runtime asks for it',
   )
 
   assert.match(app, /function UnlockedApp/)
-  assert.match(app, /<NativeShareRuntime/)
+  assert.match(app, /<RebuildApp onLock=\{lockVault\} \/>/)
+  assert.doesNotMatch(app, /<NativeShareRuntime/)
   assert.match(runtime, /importPendingAndroidShare\(/)
   assert.match(runtime, /addAndroidShareReceivedListener/)
   assert.match(service, /nativeShare\.consumePendingShare\(\)/)

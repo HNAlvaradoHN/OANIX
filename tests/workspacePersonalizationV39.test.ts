@@ -83,9 +83,10 @@ test('la nueva presentación usa el logo real y mantiene fondo legible con Día 
   assert.match(css, /env\(safe-area-inset-bottom\)/)
 })
 
-test('los runtimes del workspace se montan con el ciclo de vida desbloqueado sin observar notes-sidebar', () => {
+test('los runtimes históricos quedan preservados sin montarse sobre el rebuild activo', () => {
   assert.doesNotMatch(main, /WorkspaceRuntimeGate/)
-  assert.match(app, /<WorkspaceRuntimeGate workspaceRevision=\{workspaceRevision\} \/>/)
+  assert.match(app, /<RebuildApp onLock=\{lockVault\} \/>/)
+  assert.doesNotMatch(app, /<WorkspaceRuntimeGate/)
   assert.doesNotMatch(gate, /document\.querySelector/)
   assert.doesNotMatch(gate, /MutationObserver/)
   assert.match(legacyGate, /<WorkspacePersonalizationRuntime \/>/)

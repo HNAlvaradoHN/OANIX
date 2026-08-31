@@ -8,8 +8,9 @@ const gateSource = readFileSync('src/app/WorkspaceRuntimeGate.tsx', 'utf8')
 const helpSource = readFileSync('src/features/privacy/PrivacyStatusHelp.tsx', 'utf8')
 const polishCss = readFileSync('src/features/privacy/PrivacyStatusHelp.css', 'utf8')
 
-test('privacy manager removes redundant status rows and keeps help beside real actions', () => {
-  assert.match(appSource, /<WorkspaceRuntimeGate workspaceRevision=\{workspaceRevision\} \/>/)
+test('legacy privacy help remains preserved outside the first rebuild milestone', () => {
+  assert.match(appSource, /<RebuildApp onLock=\{lockVault\} \/>/)
+  assert.doesNotMatch(appSource, /<WorkspaceRuntimeGate|<PrivacyStatusHelp/)
   assert.match(gateSource, /<PrivacyStatusHelp \/>/)
   assert.doesNotMatch(mainSource, /PrivacyStatusHelp\.css|privacy-status-polish\.css/)
   assert.match(helpSource, /import '\.\/PrivacyStatusHelp\.css'/)

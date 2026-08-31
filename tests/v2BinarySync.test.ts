@@ -26,7 +26,7 @@ test('binary object paths reveal only account ownership and random storage ident
   assert.doesNotMatch(source, /file\.name|imageId|recordId.*objectPrefix/)
 })
 
-test('image changes enter the same automatic sync runtime without another local store', () => {
+test('legacy image autosync remains compact while rebuild adds one shared v2 store', () => {
   const runtime = readFileSync('src/features/sync/AutoSyncRuntime.tsx', 'utf8')
   const blobs = readFileSync('src/storage/repositories/encryptedBlobRepository.ts', 'utf8')
   const binary = readFileSync('src/features/sync/binarySyncService.ts', 'utf8')
@@ -40,7 +40,8 @@ test('image changes enter the same automatic sync runtime without another local 
   assert.doesNotMatch(binary, /localStorage|sessionStorage|indexedDB|caches\.open/)
 
   const createStoreCalls = database.match(/\.createObjectStore\(/g) ?? []
-  assert.equal(createStoreCalls.length, 2)
+  assert.equal(createStoreCalls.length, 3)
+  assert.match(database, /V2_ENCRYPTED_RECORDS_STORE = 'encrypted_records_v2'/)
 })
 
 test('binary transfer verifies each bounded ciphertext chunk before rebuilding the local payload', () => {

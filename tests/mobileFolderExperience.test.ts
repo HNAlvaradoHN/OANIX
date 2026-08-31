@@ -20,9 +20,10 @@ test('approved workspace class is present before the first React paint', () => {
   assert.match(main, /document\.body\.classList\.add\('oanix-v383-visual'\)/)
 })
 
-test('workspace-dependent runtimes mount with the unlocked app instead of observing the lock screen DOM', () => {
+test('historical folder runtimes stay detached while the rebuild owns unlocked mobile UI', () => {
   assert.doesNotMatch(main, /WorkspaceRuntimeGate/)
-  assert.match(app, /<WorkspaceRuntimeGate workspaceRevision=\{workspaceRevision\} \/>/)
+  assert.match(app, /<RebuildApp onLock=\{lockVault\} \/>/)
+  assert.doesNotMatch(app, /<WorkspaceRuntimeGate/)
   assert.doesNotMatch(gate, /MutationObserver/)
   assert.doesNotMatch(gate, /document\.querySelector/)
   assert.match(legacyGate, /<OrganicWorkspaceRuntime \/>/)

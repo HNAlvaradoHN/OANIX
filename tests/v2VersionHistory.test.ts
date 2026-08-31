@@ -83,12 +83,13 @@ test('restoring a version creates a reversible checkpoint and refuses incomplete
   assert.match(blobRepository, /getKey\(encryptedBlobKey/)
 })
 
-test('version history is connected to the unlocked app with a responsive restoration UI', () => {
+test('version history implementation remains preserved for later rebuild integration', () => {
   const app = readFileSync('src/app/App.tsx', 'utf8')
   const center = readFileSync('src/features/versionHistory/VersionHistoryCenter.tsx', 'utf8')
   const css = readFileSync('src/features/versionHistory/versionHistory.css', 'utf8')
 
-  assert.match(app, /<VersionHistoryCenter onRestored=/)
+  assert.match(app, /<RebuildApp onLock=\{lockVault\} \/>/)
+  assert.doesNotMatch(app, /<VersionHistoryCenter/)
   assert.match(center, /Historial de versiones/)
   assert.match(center, /Restaurar esta versión/)
   assert.match(center, /NOTE_HISTORY_MAX_SNAPSHOTS_PER_NOTE/)

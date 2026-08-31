@@ -12,20 +12,20 @@ const css = readFileSync('src/features/rebuild/rebuild.css', 'utf8')
 
 test('post-unlock rebuild keeps the vault gate and replaces the old workspace authority', () => {
   assert.match(app, /<VaultGate/)
-  assert.match(app, /<RebuildApp onLock={lockVault} />/)
+  assert.match(app, /<RebuildApp onLock=\{lockVault\} \/>/)
   assert.doesNotMatch(app, /<AutoSyncRuntime/)
   assert.doesNotMatch(app, /<NotesWorkspace/)
-  assert.match(app, /<AndroidBackRuntime />/)
+  assert.match(app, /<AndroidBackRuntime \/>/)
 })
 
 test('v2 encrypted records use their own indexed additive store', () => {
   assert.match(database, /DATABASE_VERSION = 3/)
   assert.match(database, /V2_ENCRYPTED_RECORDS_STORE = 'encrypted_records_v2'/)
-  assert.match(database, /keyPath: ['recordType', 'recordId']/)
-  assert.match(database, /createIndex(V2_RECORD_TYPE_INDEX, 'recordType'/)
-  assert.match(repository, /.index(V2_RECORD_TYPE_INDEX)/)
-  assert.match(repository, /IDBKeyRange.only(recordType)/)
-  assert.doesNotMatch(repository, /.getAll()[\s\S]*parseEncryptedRecordKey/)
+  assert.match(database, /keyPath: \['recordType', 'recordId'\]/)
+  assert.match(database, /createIndex\(V2_RECORD_TYPE_INDEX, 'recordType'/)
+  assert.match(repository, /\.index\(V2_RECORD_TYPE_INDEX\)/)
+  assert.match(repository, /IDBKeyRange\.only\(recordType\)/)
+  assert.doesNotMatch(repository, /\.getAll\(\)[\s\S]*parseEncryptedRecordKey/)
 })
 
 test('v2 notes split list metadata from note body and persist both atomically', () => {

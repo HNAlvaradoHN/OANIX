@@ -9,10 +9,10 @@ const driveSource = readFileSync(new URL('../src/features/attachments/largeAttac
 const providerSource = readFileSync(new URL('../src/features/largeObjects/googleDriveStorageProvider.ts', import.meta.url), 'utf8')
 const contractSource = readFileSync(new URL('../src/features/largeObjects/largeObjectTransferContract.ts', import.meta.url), 'utf8')
 
-test('note attachments runtime is mounted only inside the unlocked application tree', () => {
-  assert.match(appSource, /import \{ NoteAttachmentsRuntime \}/)
-  assert.match(appSource, /<NotesWorkspace[^>]*\/>[\s\S]*<NoteAttachmentsRuntime/)
-  assert.doesNotMatch(appSource.split('export function App()')[1] ?? '', /<NoteAttachmentsRuntime/)
+test('attachment engine stays preserved but is deferred from the first rebuild milestone', () => {
+  assert.match(appSource, /<RebuildApp onLock=\{lockVault\} \/>/)
+  assert.doesNotMatch(appSource, /NoteAttachmentsRuntime|<NotesWorkspace/)
+  assert.match(runtimeSource, /storeEncryptedAttachment/)
 })
 
 test('normal attachment picker routes files above the local threshold through the large-object service', () => {

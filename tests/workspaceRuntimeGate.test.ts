@@ -8,10 +8,11 @@ const gate = readFileSync('src/app/WorkspaceRuntimeGate.tsx', 'utf8')
 const legacyGate = readFileSync('src/app/LegacyWorkspaceRuntimeGate.tsx', 'utf8')
 const visualRuntime = readFileSync('src/features/notes/V383WorkspaceVisualRuntime.tsx', 'utf8')
 
-test('workspace data runtimes mount only inside the unlocked app lifecycle', () => {
+test('rebuild owns the unlocked app lifecycle while the old workspace gate stays historical', () => {
   assert.doesNotMatch(main, /WorkspaceRuntimeGate/)
   assert.match(app, /function UnlockedApp/)
-  assert.match(app, /<WorkspaceRuntimeGate workspaceRevision=\{workspaceRevision\} \/>/)
+  assert.match(app, /<RebuildApp onLock=\{lockVault\} \/>/)
+  assert.doesNotMatch(app, /<WorkspaceRuntimeGate/)
   assert.doesNotMatch(gate, /MutationObserver/)
   assert.doesNotMatch(gate, /document\.querySelector/)
   assert.match(gate, /import\('\.\/LegacyWorkspaceRuntimeGate'\)/)

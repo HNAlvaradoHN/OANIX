@@ -9,12 +9,13 @@ const visualRuntime = readFileSync('src/features/notes/V383WorkspaceVisualRuntim
 const visual = readFileSync('src/features/notes/v383WorkspaceVisual.css', 'utf8')
 const notes = readFileSync('src/features/notes/NotesWorkspace.tsx', 'utf8')
 const app = readFileSync('src/app/App.tsx', 'utf8')
+const rebuild = readFileSync('src/features/rebuild/RebuildApp.tsx', 'utf8')
 const history = readFileSync('src/features/versionHistory/VersionHistoryCenter.tsx', 'utf8')
 const sidebar = readFileSync('src/features/notes/themes/infographic/InfographicWorkspace.tsx', 'utf8')
 const icons = readFileSync('src/shared/OanixIcon.tsx', 'utf8')
 const v2Css = readFileSync('src/features/notes/themes/infographic/infographicTheme.css', 'utf8')
 
-test('v38.3 header authority is isolated to the lazy fallback and retired icon polish is absent', () => {
+test('retired v38.3 header stays historical while the rebuild owns the unlocked shell', () => {
   assert.equal(existsSync('src/styles/header-icon-polish.css'), false)
   assert.doesNotMatch(main, /\.\/styles\/header-icon-polish\.css/)
   assert.match(main, /\.\/app\/ThemeVisualStyles/)
@@ -22,17 +23,18 @@ test('v38.3 header authority is isolated to the lazy fallback and retired icon p
   assert.doesNotMatch(main, /\.\/styles\/classic-theme-surfaces\.css/)
   assert.doesNotMatch(main, /features\/notes\/v383WorkspaceVisual\.css/)
   assert.match(visualRuntime, /\.\/v383WorkspaceVisual\.css/)
-  assert.match(app, /<WorkspaceRuntimeGate workspaceRevision=\{workspaceRevision\} \/>/)
+  assert.match(app, /<RebuildApp onLock=\{lockVault\} \/>/)
+  assert.doesNotMatch(app, /<WorkspaceRuntimeGate/)
   assert.match(legacyGate, /<OrganicWorkspaceRuntime \/>/)
   assert.match(legacyGate, /<V383WorkspaceVisualRuntime \/>/)
 })
 
-test('workspace v2 visible header actions use the shared lightweight vector family', () => {
+test('rebuild visible header actions use the shared lightweight vector family', () => {
   assert.match(sidebar, /<OanixIcon name="search"/)
   assert.match(sidebar, /<OanixIcon name="lock"/)
   assert.match(sidebar, /<OanixIcon name="menu"/)
   assert.match(history, /<OanixIcon name="history"/)
-  assert.match(app, /<OanixIcon name="user"/)
+  assert.match(rebuild, /<OanixIcon name="user"/)
   for (const iconName of ['search', 'lock', 'menu', 'history', 'user']) {
     assert.ok(icons.includes(`'${iconName}'`), `missing shared icon ${iconName}`)
   }
@@ -51,7 +53,7 @@ test('icon replacement preserves the real accessible actions', () => {
   assert.match(notes, /aria-label=\{searchOpen \? 'Cerrar búsqueda' : 'Buscar en notas'\}/)
   assert.match(notes, /aria-label="Bloquear OANIX"/)
   assert.match(history, /aria-label="Historial de versiones"/)
-  assert.match(app, /aria-label="Cuenta de OANIX"/)
+  assert.match(rebuild, /aria-label="Cuenta de OANIX"/)
 })
 
 
