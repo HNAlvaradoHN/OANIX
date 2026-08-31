@@ -34,6 +34,7 @@ OANIX comenzó como bloc de notas privado y evoluciona para permitir guardar den
 Decisión vigente: **no dividir por ahora OANIX en Free/Pro ni bloquear funciones artificialmente**. Primero terminar una OANIX realmente buena y útil. La arquitectura puede permitir monetización futura, pero no debe diseñarse alrededor de candados Premium ni impedir probar el producto.
 
 La apariencia global expone únicamente **Día** y **Noche**. Los ambientes/presets visuales antiguos no forman parte del producto activo; una preferencia antigua debe migrar al modo base claro u oscuro equivalente sin afectar datos de la bóveda.
+La identidad visual global por defecto debe ser neutral: Noche usa una base carbón/grafito con acentos fríos sobrios; Día usa blanco/gris claro con acentos neutros. Los rosados u otros colores marcados no forman parte del acento global por defecto, pero pueden usarse libremente como elección contextual de una carpeta.
 
 ## 3. Experiencia de imágenes aprobada
 
@@ -253,6 +254,11 @@ El preview de diseño sigue siendo un laboratorio visual; cuando el usuario sumi
 
 ### Carpetas: identidad visual y fondo
 
+Además del fondo/portada, la carpeta activa puede aportar un **acento contextual de carpeta** a la superficie principal mediante variables visuales compartidas (por ejemplo degradado/acento suave). Al cambiar de carpeta, cambia ese acento; en `Todas` se vuelve al acento neutral global de OANIX.
+
+El acento contextual no sustituye Día/Noche ni debe teñir superficies sensibles como seguridad, errores, Cuenta o Ajustes. Día/Noche controla legibilidad global; la carpeta controla identidad visual local.
+
+
 DECIDED:
 - cada carpeta tiene color/icono propios;
 - la fila/tarjeta completa de carpeta debe usar un degradado suave y sutil, no solo un borde seco;
@@ -306,6 +312,26 @@ Aunque la UI legacy se elimine del árbol activo, Git conserva los puntos que va
 - `b57a415ef31b233ae4334c4fed9bdc93e6e75fc4`: previews cifradas ligeras, flujo de texto alrededor de imágenes y deshacer.
 
 Estos commits son **referencia de comportamiento**, no código que deba volver a montarse tal cual. Recuperar solo las ideas/contratos que sigan siendo correctos sobre el editor nuevo.
+
+### Tipos y color de hoja — DECIDED
+
+La personalización de hoja se diseña desde el inicio como configuración visual por nota, independiente del contenido.
+
+Tipos de hoja previstos:
+- rayada;
+- cuadriculada;
+- punteada;
+- lisa/blanca.
+
+Cada tipo puede usar un **tinte de color suave** elegido por el usuario. No usar fondos planos/intensos que compitan con el texto. El sistema debe derivar automáticamente contraste, líneas/puntos/cuadrícula y matiz según Día/Noche para mantener legibilidad y una apariencia cuidada.
+
+La configuración visual de hoja no debe:
+- cambiar el formato del cuerpo de la nota;
+- requerir migrar contenido;
+- afectar cifrado, guardado, imágenes o sincronización;
+- duplicar implementaciones por plataforma.
+
+La selección de tipo/color se expresa mediante un contrato pequeño de apariencia y tokens visuales. Cambiar de tipo o color debe sustituir solo la capa de hoja.
 
 ### Hoja del editor reemplazable — DECIDED
 

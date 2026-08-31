@@ -62,6 +62,8 @@ Decisiones visuales vigentes:
 - fondo por defecto = degradado estable; imagen personalizada = opcional;
 - las portadas deben mantener alta calidad, cargar solo la activa y usar overlays distintos para Día/Noche;
 - evitar blur grande en tiempo real y base64 dentro del registro de carpeta.
+- base visual global = neutral: Noche carbón/grafito con acento frío sobrio; Día blanco/gris claro con acento neutro;
+- carpeta activa = acento contextual opcional mediante su degradado/color; `Todas` vuelve al acento neutral global;
 
 ## Editor nuevo
 
@@ -74,6 +76,9 @@ Decisiones visuales vigentes:
 - El cuerpo de la nota usa un textarea **uncontrolled**: una tecla no copia el texto completo a estado React ni vuelve a renderizar Home.
 - El snapshot completo se lee solo en la frontera de guardado.
 - La hoja vive aparte en `src/features/editor/sheets/ruledSheet.css`; cambiar papel/renglones después no toca formato de nota, cifrado, almacenamiento ni sync.
+- tipos previstos: rayada, cuadriculada, punteada y lisa;
+- cada hoja podrá usar un tinte de color suave por nota, con contraste derivado para Día/Noche;
+- tipo/color de hoja son configuración visual; no deben cambiar ni migrar el cuerpo persistido de la nota.
 - El patrón usa `background-attachment: local` para desplazarse junto al contenido del textarea.
 - La implementación antigua restante de `features/editor` fue eliminada del árbol activo; Git conserva el historial.
 - Sigue siendo una primera etapa de texto plano v2. Imágenes, bloques especiales y sincronización se reincorporan después por capas.
