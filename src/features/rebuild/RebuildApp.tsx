@@ -315,14 +315,6 @@ export function RebuildApp({ onLock }: RebuildAppProps) {
           <button
             className="rebuild-icon-button"
             type="button"
-            onClick={() => chooseTheme(theme === 'classic-night' ? 'classic-day' : 'classic-night')}
-            aria-label={theme === 'classic-night' ? 'Cambiar a modo día' : 'Cambiar a modo noche'}
-          >
-            <OanixIcon name={theme === 'classic-night' ? 'sun' : 'moon'} />
-          </button>
-          <button
-            className="rebuild-icon-button"
-            type="button"
             onClick={() => setAccountOpen(true)}
             aria-label="Cuenta de OANIX"
           >
