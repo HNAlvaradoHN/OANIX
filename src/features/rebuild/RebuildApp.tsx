@@ -144,6 +144,17 @@ export function RebuildApp({ onLock }: RebuildAppProps) {
     return () => window.removeEventListener('oanix:theme-change', handleThemeChange)
   }, [])
 
+  useEffect(() => {
+    if (!editor?.dirty) return
+
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault()
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [editor?.dirty])
+
   const folderById = useMemo(
     () => new Map(folders.map((folder) => [folder.id, folder])),
     [folders],
@@ -529,12 +540,17 @@ export function RebuildApp({ onLock }: RebuildAppProps) {
       )}
 
       {editor && (
-        <section className="rebuild-editor" aria-label="Editor de nota">
+        <section
+          className="rebuild-editor"
+          aria-label="Editor de nota"
+          data-oanix-unsaved={editor.dirty ? 'true' : 'false'}
+        >
           <header>
             <button
               type="button"
               className="rebuild-icon-button back-button"
               data-oanix-back-close="true"
+              data-oanix-save-and-close="true"
               onClick={() => void leaveEditor()}
               aria-label="Guardar y volver"
             >
