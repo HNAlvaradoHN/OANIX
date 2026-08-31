@@ -250,6 +250,14 @@ body.light .topbar,body.light .ftabs{background:rgba(255,255,255,.94)}
 body.light .bnav{background:rgba(255,255,255,.96)}
 body.light .ftab-create,body.light .tchip-create{box-shadow:-10px 0 16px rgba(244,244,248,.96),0 4px 14px rgba(124,92,255,.12)}
 body.light .b-code{color:#1c2b4a;background:rgba(0,0,0,.05)}
+@media(max-width:520px){
+  .sidebar{width:100vw;padding:12px 8px}
+  .s-columns{gap:6px}
+  .s-section{border-radius:12px}
+  .srow{padding:8px 5px;gap:5px}
+  .smarks{display:none}
+  .s-labelrow{padding-left:8px;padding-right:8px}
+}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
@@ -625,7 +633,7 @@ body.light .b-code{color:#1c2b4a;background:rgba(0,0,0,.05)}
     var arr=db[type+'s'];
     modal.innerHTML='<h3 style="margin-bottom:6px">'+(type==='folder'?'Ordenar carpetas':'Ordenar etiquetas')+'</h3>'+
       '<p class="reorder-note">Arrastra con ≡ hasta la posición que quieras.</p>'+
-      '<div class="reorder-list" id="reorder-list">'+arr.map(function(it){return reorderRow(type,it)}).join('')+'</div>'+
+      '<div class="reorder-list" id="reorder-list" data-reorder-type="'+type+'">'+arr.map(function(it){return reorderRow(type,it)}).join('')+'</div>'+
       '<div class="m-actions"><button class="btn-primary" id="m-done">Listo</button></div>';
     overlay.classList.add('show');
     $('#m-done').onclick=function(){closeOverlay();render();toast('Orden guardado')};
@@ -661,7 +669,7 @@ body.light .b-code{color:#1c2b4a;background:rgba(0,0,0,.05)}
     item.classList.remove('dragging');
     document.body.classList.remove('is-dragging');
     var ids=Array.from(list.querySelectorAll('.reorder-item')).map(function(el){return +el.dataset.reorderId});
-    var type=list.querySelector('.reorder-item .r-icon .sdot')?'tag':'folder';
+    var type=list.dataset.reorderType;
     var arr=db[type+'s'];
     var ordered=ids.map(function(id){return arr.find(function(it){return it.id===id})}).filter(Boolean);
     if(ordered.length===arr.length)arr.splice.apply(arr,[0,arr.length].concat(ordered));
