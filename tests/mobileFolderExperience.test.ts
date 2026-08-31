@@ -13,11 +13,10 @@ const desktopDragRuntime = readFileSync('src/features/folders/FolderGridRuntime.
 const dragCss = readFileSync('src/features/folders/folderMobileDrag.css', 'utf8')
 const folderService = readFileSync('src/features/folders/folderService.ts', 'utf8')
 
-test('approved workspace class is present before the first React paint', () => {
-  const marker = main.indexOf("document.documentElement.classList.add('oanix-v383-visual')")
+test('rebuild startup applies no legacy workspace class before the first React paint', () => {
   const render = main.indexOf("createRoot(document.getElementById('root')!).render")
-  assert.ok(marker >= 0 && render > marker)
-  assert.match(main, /document\.body\.classList\.add\('oanix-v383-visual'\)/)
+  assert.ok(render >= 0)
+  assert.doesNotMatch(main, /oanix-v383-visual|oanix-workspace-v2-active|WORKSPACE_V2_ENABLED/)
 })
 
 test('historical folder runtimes stay detached while the rebuild owns unlocked mobile UI', () => {
