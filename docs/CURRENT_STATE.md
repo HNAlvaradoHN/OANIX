@@ -26,6 +26,17 @@ Se reconstruye:
 
 La dirección infográfica anterior queda **SUPERSEDED como dirección activa**, aunque su historial/código sigue disponible hasta reemplazarlo de forma segura.
 
+PR #532 aisló la nueva superficie post-unlock de la UI/runtime legacy: los runtimes visuales antiguos ya no se montan en el arranque nuevo, el rebuild dejó de reutilizar clases `.notes-shell`, y Android Back dejó de depender de navegación histórica de carpetas. El código viejo puede conservarse como referencia o infraestructura no conectada, pero no debe interferir con la aplicación nueva.
+
+## Regla operativa de cierre
+
+Un trabajo de OANIX no se da por terminado con gates reales en rojo.
+
+- Si OANIX CI, OANIX Android o GitHub Pages fallan, corregir la causa y volver a validar hasta verde.
+- Si un check sigue ejecutándose, continuar consultándolo dentro del mismo flujo cuando sea posible; no cerrar solo por estar esperando.
+- No crear timers/recordatorios para sustituir esa espera activa.
+- Qwen automático no es gate técnico cuando falla por API/cuota; no debe bloquear un merge que ya tenga los gates reales verdes.
+
 ## Primer hito funcional
 
 Meta inmediata:
@@ -109,12 +120,12 @@ No cargar archivos gigantes completos en RAM; mantener procesamiento por fragmen
 
 ## Próximo paso exacto
 
-1. Revisar el `main` actual antes de tocar código y fijar la frontera exacta entre seguridad conservada y experiencia nueva.
-2. Crear la nueva capa post-unlock de forma modular.
-3. Llevar Home/navegación/carpetas/etiquetas aprobadas del preview a la nueva base.
-4. Implementar el primer flujo de nota de texto con guardado cifrado local y reapertura idéntica.
-5. Recuperar la referencia de editor/renglones aprobada y construir el editor nuevo sobre esa métrica.
-6. Solo después conectar el coordinador nuevo de sincronización consciente de actividad.
+1. Localizar en el historial la versión del editor aprobada donde renglones y texto quedaban perfectamente alineados.
+2. Identificar qué mejoras posteriores de ese editor sí conviene conservar.
+3. Construir el editor nuevo sobre la arquitectura v2, manteniendo el camino crítico de escritura solo en memoria/local state.
+4. Validar crear → escribir → salir/guardar cifrado → reabrir con texto idéntico en PWA y Android.
+5. Después completar personalización/portada de carpetas sobre la nueva base.
+6. Solo entonces conectar el nuevo coordinador de sincronización consciente de actividad.
 
 ## Continuidad
 

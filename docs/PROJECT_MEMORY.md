@@ -16,6 +16,8 @@ Antes de trabajar: leer `AGENTS.md` y `docs/CURRENT_STATE.md`, verificar `main` 
 - Si el `remoteKey` conocido de un registro quedó eliminado o desapareció y existe una única fila remota activa que descifra al mismo `localKey`, OANIX presenta la situación como eliminación/estado local frente a esa versión remota activa y permite elegir. No debe bloquearla como dos identidades incompatibles ni decidir silenciosamente cuál conservar.
 - Cambios pequeños y aislados. No refactorizar ampliamente para arreglar un problema local.
 - Una función importante usa rama + PR. OANIX CI y OANIX Android deben pasar antes de fusionar.
+- Regla operativa de cierre: si un cambio de OANIX dispara gates reales, el trabajo no se considera terminado mientras OANIX CI, OANIX Android o GitHub Pages estén rojos. Si falla un gate real, investigar la causa y corregir en el mismo flujo hasta volver a verde. Un servicio externo no autoritativo, como una revisión automática de Qwen que falle por API/cuota, no debe bloquear ni teñir de rojo artificialmente el estado del proyecto.
+- No usar esperas programadas, recordatorios o timers como sustituto de continuar una validación ya iniciada. Si los checks siguen corriendo, seguir consultándolos dentro del mismo trabajo cuando sea posible hasta tener resultado final.
 - Seguridad, cifrado, bóveda, notas y sync no se modifican por comodidad.
 - No guardar secretos, tokens Google, refresh tokens ni credenciales en código, repositorio, notas, localStorage, IndexedDB o bóveda.
 
@@ -193,6 +195,15 @@ Reconstruir:
 - coordinación de guardado/sincronización alrededor del nuevo editor.
 
 La experiencia infográfica anterior y sus runtimes quedan **SUPERSEDED como dirección activa de producto**, aunque permanecen en el historial/código hasta que la nueva base los reemplace de forma segura.
+
+### Aislamiento real del rebuild — IMPLEMENTED
+
+PR #532 dejó la nueva superficie post-unlock aislada de la UI/runtime legacy:
+- `src/main.tsx` ya no monta `ThemeMenu`, `PwaImagePreviewRuntime`, `DesktopImageViewportRuntime`, `mobileBackKeyboardGuard` ni `ThemeVisualStyles`;
+- el rebuild ya no reutiliza `.notes-shell` / `.notes-shell--open`;
+- `AndroidBackRuntime` ya no monta la navegación histórica de carpetas;
+- el bloqueo automático se conserva mediante la política de seguridad existente, integrado en Ajustes del rebuild;
+- conservar código histórico ya no implica ejecutarlo ni permitir que afecte la UI nueva.
 
 ### Primer hito funcional
 
