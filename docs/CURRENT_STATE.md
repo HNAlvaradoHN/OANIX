@@ -94,6 +94,11 @@ La alineación actual está respaldada por el contrato histórico y CI, pero no 
 
 ## Sincronización futura del editor
 
+**Persistencia incremental requerida:** la fundación actual todavía guarda `note.v2.body` como una sola unidad. Antes de ampliar el editor con imágenes/código/hojas personalizadas, evolucionar a manifiesto + bloques/chunks estables + registros separados de apariencia/assets y una dirty queue. El objetivo es que guardar y sincronizar procesen solo lo nuevo/modificado, no vuelvan a cifrar/subir toda la nota ni binarios ya confirmados.
+
+Al reabrir una nota, las revisiones ya guardadas/sincronizadas forman el baseline limpio. Solo cambios posteriores generan nuevos pendientes.
+
+
 DECIDED, todavía no conectada:
 
 - actividad de edición bloquea el trabajo pesado de sincronización;
@@ -133,11 +138,11 @@ No cargar archivos gigantes completos en RAM; mantener procesamiento por fragmen
 
 ## Próximo paso exacto
 
-1. Validar físicamente la nueva hoja en PWA y Android: renglones, scroll, teclado, Día/Noche y PC/móvil.
-2. Validar crear → escribir una nota larga → salir/guardar cifrado → reabrir con texto idéntico.
-3. Corregir cualquier diferencia visual o de rendimiento sin acoplar la hoja al modelo de datos.
-4. Completar después personalización/portada de carpetas sobre la nueva base.
-5. Solo entonces conectar el coordinador nuevo de sincronización consciente de actividad.
+1. Cerrar la validación física básica de la hoja actual: alineación, salto automático, scroll, teclado y Día/Noche.
+2. Antes de añadir imágenes/código/personalización compleja, diseñar e implementar el modelo incremental: manifiesto pequeño + bloques/chunks estables + apariencia separada + dirty queue + baseline de sync confirmado.
+3. Validar que editar una sola parte reescribe/sincroniza únicamente esa unidad y que reabrir no vuelve a marcar como pendiente lo ya confirmado.
+4. Después continuar con tipos/color de hoja y personalización contextual de carpetas.
+5. Con esa base, conectar el coordinador de sincronización consciente de actividad.
 
 ## Continuidad
 
