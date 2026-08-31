@@ -18,6 +18,7 @@ export default defineConfig(({ mode }) => {
           // if Vite emits one as a separate asset in a future build.
           globPatterns: ['**/*.{js,css,html,wasm}'],
           navigateFallback: 'index.html',
+          navigateFallbackDenylist: [/^\/OANIX\/preview(?:\/|$)/],
           cleanupOutdatedCaches: true,
           // Activate the newly installed shell immediately so an older controller cannot
           // keep serving HTML that references asset hashes removed by a later Pages deploy.
