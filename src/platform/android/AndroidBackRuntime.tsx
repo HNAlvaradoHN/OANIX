@@ -39,23 +39,32 @@ export function AndroidBackRuntime() {
       setExitPromptVisible(true)
     }
 
-    void setAndroidBackHandlingEnabled(true)
-      .then(() => addAndroidBackPressedListener(handleBack))
-      .then((handle) => {
+    void addAndroidBackPressedListener(handleBack)
+      .then(async (handle) => {
         if (!active) {
-          void handle.remove()
+          await handle.remove()
           return
         }
+
         listenerHandle = handle
+        try {
+          await setAndroidBackHandlingEnabled(true)
+        } catch (error) {
+          listenerHandle = null
+          await handle.remove()
+          await setAndroidBackHandlingEnabled(false).catch(() => undefined)
+          throw error
+        }
       })
       .catch(() => {
-        // If native back interception is unavailable, Android keeps its default behavior.
+        // Never leave Android back intercepted without a live JS listener.
+        void setAndroidBackHandlingEnabled(false).catch(() => undefined)
       })
 
     return () => {
       active = false
       if (listenerHandle) void listenerHandle.remove()
-      void setAndroidBackHandlingEnabled(false)
+      void setAndroidBackHandlingEnabled(false).catch(() => undefined)
     }
   }, [])
 
