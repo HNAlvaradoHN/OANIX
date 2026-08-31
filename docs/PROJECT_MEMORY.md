@@ -196,6 +196,18 @@ Reconstruir:
 
 La experiencia infográfica anterior y sus runtimes quedan **SUPERSEDED como dirección activa de producto**, aunque permanecen en el historial/código hasta que la nueva base los reemplace de forma segura.
 
+### Política de limpieza de código legacy
+
+Una vez que una superficie vieja ya fue reemplazada y no participa en la arquitectura nueva, no mantenerla cargada ni conservarla indefinidamente en el árbol activo solo "por si acaso". Git ya conserva el historial.
+
+Se puede borrar UI/runtime/CSS/tests legacy cuando:
+- no sea autoridad activa;
+- sus servicios de dominio/datos reutilizables queden separados y preservados;
+- cualquier comportamiento útil que deba rescatarse tenga referencia histórica clara;
+- CI, Android y Pages vuelvan a verde después de la limpieza.
+
+No borrar por esta política seguridad, cifrado, vault, almacenamiento, formatos de datos o protocolos reutilizables sin una migración/decisión específica.
+
 ### Aislamiento real del rebuild — IMPLEMENTED
 
 PR #532 dejó la nueva superficie post-unlock aislada de la UI/runtime legacy:
@@ -279,6 +291,15 @@ Si una operación supera aproximadamente **500–800 ms**, mostrar feedback visi
 **Guardando → Cifrando → Sincronizando → Verificando → Listo**.
 
 Aplicar el mismo principio a imágenes, archivos, restauración, importación/exportación y otras operaciones largas.
+
+### Referencias históricas útiles del editor/imágenes
+
+Aunque la UI legacy se elimine del árbol activo, Git conserva los puntos que vale consultar al reconstruir:
+- `1936bd00185fc3d64bfa0b4fd6e32afab52124f6`: menú explícito/colapsado `⋯` de acciones de imagen, mejoras de zoom móvil y pulido de interacción de bloques.
+- `4bb5aa9df5d0a82b245f61c44dfc0889f956e09e`: dirección adaptativa del menú según espacio disponible y zona final de escritura fiable después de imágenes.
+- `b57a415ef31b233ae4334c4fed9bdc93e6e75fc4`: previews cifradas ligeras, flujo de texto alrededor de imágenes y deshacer.
+
+Estos commits son **referencia de comportamiento**, no código que deba volver a montarse tal cual. Recuperar solo las ideas/contratos que sigan siendo correctos sobre el editor nuevo.
 
 ### Editor y renglones
 
