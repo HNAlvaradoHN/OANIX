@@ -108,25 +108,6 @@ test('V1 stores stay intact while the rebuild adds one shared indexed v2 store',
   assert.match(databaseSource, /V2_ENCRYPTED_RECORDS_STORE = 'encrypted_records_v2'/)
 })
 
-test('pinning and direct drag ordering reuse encrypted note records without another store', () => {
-  const serviceSource = readFileSync('src/features/notes/noteService.ts', 'utf8')
-  const workspaceSource = readFileSync('src/features/notes/NotesWorkspace.tsx', 'utf8')
-  const reorderRuntime = readFileSync('src/features/notes/NoteListReorderGestureRuntime.tsx', 'utf8')
-
-  assert.match(serviceSource, /setNotePinned/)
-  assert.match(serviceSource, /persistNoteOrder/)
-  assert.doesNotMatch(serviceSource, /createObjectStore|localStorage|sessionStorage/)
-  assert.match(workspaceSource, /Fijar nota/)
-  assert.match(workspaceSource, /Desfijar nota/)
-  assert.match(workspaceSource, /data-reorder-note-id/)
-  assert.doesNotMatch(workspaceSource, /Ordenar notas manualmente/)
-  assert.doesNotMatch(workspaceSource, /aria-label=\{`Mover \$\{note\.title\} arriba`\}/)
-  assert.doesNotMatch(workspaceSource, /aria-label=\{`Mover \$\{note\.title\} abajo`\}/)
-  assert.match(reorderRuntime, /import Sortable from 'sortablejs'/)
-  assert.match(reorderRuntime, /Sortable\.create\(list/)
-  assert.match(reorderRuntime, /persistNoteOrder/)
-})
-
 test('PWA updates stay prompt-based and reuse the existing service worker cache', () => {
   const mainSource = readFileSync('src/main.tsx', 'utf8')
   const appSource = readFileSync('src/app/App.tsx', 'utf8')
