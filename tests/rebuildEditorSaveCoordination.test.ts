@@ -3,6 +3,8 @@ import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
 const rebuild = readFileSync('src/features/rebuild/RebuildApp.tsx', 'utf8')
+const host = readFileSync('src/features/editor/EditorSurface.tsx', 'utf8')
+const registry = readFileSync('src/features/editor/editorSurfaceRegistry.ts', 'utf8')
 
 test('rebuild editor keeps one save coordinator per mounted app runtime', () => {
   assert.match(rebuild, /createEditorSaveCoordinator/)
@@ -34,7 +36,30 @@ test('safe close blocks new autosaves, drains queued work, then saves the final 
   assert.ok(latestCurrent > finalRun)
 })
 
-test('plain text surface still does not receive rich block callbacks from the app', () => {
-  assert.match(rebuild, /<EditorSurface[\s\S]*onRequestSave=\{saveEditorSnapshot\}[\s\S]*onRequestClose=\{closeEditor\}/)
-  assert.doesNotMatch(rebuild, /loadBlocks=|onRequestBlockSave=/)
+test('block reads are serialized and map storage records into the generic editor contract', () => {
+  assert.match(
+    rebuild,
+    /loadEditorBlocks[\s\S]*editorSaveCoordinator\.run\(async \(\) => \{[\s\S]*readRebuildBlocks\(noteId\)[\s\S]*id: block\.blockId[\s\S]*kind: block\.kind[\s\S]*data: block\.data/,
+  )
+})
+
+test('accepted block saves survive close draining and skip state churn on storage no-ops', () => {
+  const saveStart = rebuild.indexOf('async function saveEditorBlocks')
+  const runStart = rebuild.indexOf('editorSaveCoordinator.run(async () => {', saveStart)
+  const closeStart = rebuild.indexOf('async function closeEditor', saveStart)
+  const beforeRun = rebuild.slice(saveStart, runStart)
+  const insideRun = rebuild.slice(runStart, closeStart)
+
+  assert.match(beforeRun, /blockingSaveRef\.current/)
+  assert.doesNotMatch(insideRun, /blockingSaveRef\.current/)
+  assert.match(insideRun, /saveRebuildBlocks\(current\.meta/)
+  assert.match(insideRun, /blockId: block\.id/)
+  assert.match(insideRun, /if \(updated === current\.meta\) return true/)
+})
+
+test('application supplies block callbacks but host withholds them while richBlocks is disabled', () => {
+  assert.match(rebuild, /loadBlocks=\{loadEditorBlocks\}/)
+  assert.match(rebuild, /onRequestBlockSave=\{saveEditorBlocks\}/)
+  assert.match(host, /activeEditorSurface\.capabilities\.richBlocks[\s\S]*loadBlocks: undefined[\s\S]*onRequestBlockSave: undefined/)
+  assert.match(registry, /richBlocks: false/)
 })
