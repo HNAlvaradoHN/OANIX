@@ -243,7 +243,15 @@ export function QwenSheetSurface({
             <textarea ref={bodyRef} className="oanix-qwen-sheet__body" defaultValue={initialText} placeholder="Empieza a escribir…" aria-label="Contenido de la nota" autoFocus spellCheck wrap="soft" readOnly={editingDisabled} onInput={markActivity} onCompositionStart={handleCompositionStart} onCompositionEnd={handleCompositionEnd} />
           </div>
 
-          {blockSession && <QwenRichBlocks session={blockSession} disabled={editingDisabled} onActivity={markActivity} />}
+          {blockSession && (
+            <QwenRichBlocks
+              session={blockSession}
+              disabled={editingDisabled}
+              onActivity={markActivity}
+              onCompositionStart={handleCompositionStart}
+              onCompositionEnd={handleCompositionEnd}
+            />
+          )}
         </div>
       </main>
     </section>
