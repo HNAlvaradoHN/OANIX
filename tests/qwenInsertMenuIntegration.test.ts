@@ -10,6 +10,7 @@ test('Qwen exposes Insertar at real positions in the ordered rich flow', () => {
   assert.match(richBlocks, />\s*\+ Insertar\s*</)
   assert.match(richBlocks, /renderInsertPoint\(0\)/)
   assert.match(richBlocks, /renderInsertPoint\(index \+ 1\)/)
+  assert.match(richBlocks, /insertBlock\('text', index\)/)
   assert.match(richBlocks, /insertBlock\('checklist', index\)/)
   assert.match(richBlocks, /insertBlock\('code', index\)/)
   assert.match(richBlocks, /role="menu"/)
@@ -27,14 +28,14 @@ test('positional insertion is one in-memory buffer mutation before the shared ch
 test('one visual controller loads rich blocks once and preserves unknown positions', () => {
   assert.equal((richBlocks.match(/session\.load\(\)/g) ?? []).length, 1)
   assert.match(richBlocks, /blocks\.map\(\(rawBlock, index\) =>/)
-  assert.match(richBlocks, /decodeChecklistBlock\(rawBlock\)[\s\S]*decodeCodeBlock\(rawBlock\)/)
+  assert.match(richBlocks, /decodeTextBlock\(rawBlock\)[\s\S]*decodeChecklistBlock\(rawBlock\)[\s\S]*decodeCodeBlock\(rawBlock\)/)
   assert.match(richBlocks, /data-oanix-unknown-block-kind=\{rawBlock\.kind\}/)
   assert.match(richBlocks, /data-oanix-rich-block-flow="ordered"/)
 })
 
-test('legacy body is explicitly represented as the compatibility text segment before rich flow', () => {
+test('legacy body remains a compatibility segment before the incremental rich flow', () => {
   assert.match(surface, /data-oanix-flow-segment="legacy-text"/)
   assert.match(surface, /<textarea[\s\S]*ref=\{bodyRef\}/)
   assert.match(richBlocks, /data-oanix-flow-anchor="after-legacy-text"/)
-  assert.doesNotMatch(surface, /encodeChecklistBlock|encodeCodeBlock/)
+  assert.doesNotMatch(surface, /encodeTextBlock|encodeChecklistBlock|encodeCodeBlock/)
 })
