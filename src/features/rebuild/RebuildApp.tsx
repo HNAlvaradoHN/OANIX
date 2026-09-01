@@ -27,6 +27,10 @@ import {
   deleteRebuildTag,
 } from './rebuildDeletionService'
 import {
+  createEditorSaveCoordinator,
+  type EditorSaveCoordinator,
+} from './editorSaveCoordinator'
+import {
   createRebuildFolder,
   createRebuildNote,
   createRebuildTag,
@@ -119,6 +123,11 @@ export function RebuildApp({ onLock }: RebuildAppProps) {
   const [editor, setEditor] = useState<OpenedEditor | null>(null)
   const editorRef = useRef<OpenedEditor | null>(null)
   const blockingSaveRef = useRef(false)
+  const editorSaveCoordinatorRef = useRef<EditorSaveCoordinator | null>(null)
+  if (editorSaveCoordinatorRef.current === null) {
+    editorSaveCoordinatorRef.current = createEditorSaveCoordinator()
+  }
+  const editorSaveCoordinator = editorSaveCoordinatorRef.current
   const [saving, setSaving] = useState(false)
   const [openingNote, setOpeningNote] = useState(false)
   const [accountOpen, setAccountOpen] = useState(false)
@@ -245,26 +254,30 @@ export function RebuildApp({ onLock }: RebuildAppProps) {
   }
 
   async function saveEditorSnapshot(snapshot: EditorSurfaceSnapshot): Promise<boolean> {
-    const current = editorRef.current
-    if (!current || blockingSaveRef.current) return false
+    if (!editorRef.current || blockingSaveRef.current) return false
 
     setError('')
     try {
-      const updated = await saveRebuildNote(
-        current.meta,
-        current.text,
-        snapshot.title,
-        snapshot.text,
-      )
-      if (editorRef.current?.meta.id !== current.meta.id) return false
+      return await editorSaveCoordinator.run(async () => {
+        const current = editorRef.current
+        if (!current || blockingSaveRef.current) return false
 
-      const next: OpenedEditor = {
-        meta: updated,
-        text: snapshot.text,
-      }
-      commitOpenedEditor(next)
-      setNotes((notes) => notes.map((note) => note.id === updated.id ? updated : note))
-      return true
+        const updated = await saveRebuildNote(
+          current.meta,
+          current.text,
+          snapshot.title,
+          snapshot.text,
+        )
+        if (editorRef.current?.meta.id !== current.meta.id) return false
+
+        const next: OpenedEditor = {
+          meta: updated,
+          text: snapshot.text,
+        }
+        commitOpenedEditor(next)
+        setNotes((notes) => notes.map((note) => note.id === updated.id ? updated : note))
+        return true
+      })
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'No se pudo guardar la nota.')
       return false
@@ -272,27 +285,33 @@ export function RebuildApp({ onLock }: RebuildAppProps) {
   }
 
   async function closeEditor(snapshot: EditorSurfaceSnapshot | null): Promise<boolean> {
-    const current = editorRef.current
-    if (!current || blockingSaveRef.current) return false
-
-    if (!snapshot) {
-      commitOpenedEditor(null)
-      return true
-    }
+    if (!editorRef.current || blockingSaveRef.current) return false
 
     blockingSaveRef.current = true
     setSaving(true)
     setError('')
     try {
-      const updated = await saveRebuildNote(
-        current.meta,
-        current.text,
-        snapshot.title,
-        snapshot.text,
-      )
-      setNotes((notes) => notes.map((note) => note.id === updated.id ? updated : note))
-      commitOpenedEditor(null)
-      return true
+      await editorSaveCoordinator.idle()
+
+      if (!snapshot) {
+        commitOpenedEditor(null)
+        return true
+      }
+
+      return await editorSaveCoordinator.run(async () => {
+        const current = editorRef.current
+        if (!current) return false
+
+        const updated = await saveRebuildNote(
+          current.meta,
+          current.text,
+          snapshot.title,
+          snapshot.text,
+        )
+        setNotes((notes) => notes.map((note) => note.id === updated.id ? updated : note))
+        commitOpenedEditor(null)
+        return true
+      })
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'No se pudo guardar la nota.')
       return false
