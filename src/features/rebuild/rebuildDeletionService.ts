@@ -2,17 +2,22 @@ import {
   applyEncryptedV2Changes,
   listEncryptedV2Records,
   readEncryptedV2Record,
+  readEncryptedV2Records,
   type EncryptedV2RecordIdentity,
   type EncryptedV2Write,
 } from '../../storage/repositories/encryptedV2RecordRepository'
+import { blockIdentity } from './incrementalNoteBlocks'
 import { createPendingSyncWrite, textChunkIdentity } from './incrementalNoteText'
 import {
   FOLDER_V2_TYPE,
+  NOTE_V2_BLOCK_MANIFEST_TYPE,
   NOTE_V2_BODY_TYPE,
   NOTE_V2_MANIFEST_TYPE,
   NOTE_V2_META_TYPE,
   TAG_V2_TYPE,
   type FolderV2Record,
+  type NoteV2BlockManifest,
+  type NoteV2BlockRecord,
   type NoteV2Body,
   type NoteV2Manifest,
   type NoteV2Meta,
@@ -86,11 +91,24 @@ export async function deleteRebuildTag(tagId: string): Promise<NoteV2Meta[]> {
 }
 
 export async function deleteRebuildNote(noteId: string): Promise<void> {
-  const [meta, body, manifest] = await Promise.all([
+  const [meta, body, manifest, blockManifest] = await Promise.all([
     readEncryptedV2Record<NoteV2Meta>(NOTE_V2_META_TYPE, noteId),
     readEncryptedV2Record<NoteV2Body>(NOTE_V2_BODY_TYPE, noteId),
     readEncryptedV2Record<NoteV2Manifest>(NOTE_V2_MANIFEST_TYPE, noteId),
+    readEncryptedV2Record<NoteV2BlockManifest>(NOTE_V2_BLOCK_MANIFEST_TYPE, noteId),
   ])
+  const validBlockIds = blockManifest?.version === 2
+    && blockManifest.noteId === noteId
+    && blockManifest.format === 'blocks-v1'
+    && Array.isArray(blockManifest.blockIds)
+    ? blockManifest.blockIds
+    : []
+  const blockRecords = validBlockIds.length > 0
+    ? await readEncryptedV2Records<NoteV2BlockRecord>(
+        validBlockIds.map((blockId) => blockIdentity(noteId, blockId)),
+      )
+    : []
+
   const queuedAt = new Date().toISOString()
   const writes: EncryptedV2Write[] = []
   const deletes: EncryptedV2RecordIdentity[] = [
@@ -143,6 +161,32 @@ export async function deleteRebuildNote(noteId: string): Promise<void> {
         queuedAt,
       ))
     }
+  }
+
+  if (blockManifest?.version === 2 && blockManifest.noteId === noteId && blockManifest.format === 'blocks-v1') {
+    deletes.push({ recordType: NOTE_V2_BLOCK_MANIFEST_TYPE, recordId: noteId })
+    writes.push(createPendingSyncWrite(
+      noteId,
+      NOTE_V2_BLOCK_MANIFEST_TYPE,
+      noteId,
+      Math.max(1, blockManifest.revision) + 1,
+      'delete',
+      queuedAt,
+    ))
+
+    validBlockIds.forEach((blockId, index) => {
+      const identity = blockIdentity(noteId, blockId)
+      const revision = blockRecords[index]?.revision ?? 1
+      deletes.push(identity)
+      writes.push(createPendingSyncWrite(
+        noteId,
+        identity.recordType,
+        identity.recordId,
+        Math.max(1, revision) + 1,
+        'delete',
+        queuedAt,
+      ))
+    })
   }
 
   await applyEncryptedV2Changes({ writes, deletes })
