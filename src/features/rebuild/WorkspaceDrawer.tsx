@@ -21,11 +21,23 @@ interface WorkspaceDrawerProps {
   onReorderTags: (orderedIds: string[]) => Promise<void>
 }
 
+function readOrderedIds(node: HTMLElement): string[] {
+  return Array.from(node.querySelectorAll<HTMLElement>('[data-workspace-item-id]'))
+    .map((item) => item.dataset.workspaceItemId)
+    .filter((id): id is string => Boolean(id))
+}
+
+function ordersMatch(left: string[], right: string[]): boolean {
+  return left.length === right.length && left.every((id, index) => id === right[index])
+}
+
 function createSortable(
   node: HTMLElement,
   group: string,
   onPersist: (orderedIds: string[]) => Promise<void>,
 ): Sortable {
+  let orderBeforeDrag: string[] | null = null
+
   return Sortable.create(node, {
     animation: 160,
     delay: 320,
@@ -37,10 +49,17 @@ function createSortable(
     chosenClass: 'workspace-drawer__item--chosen',
     dragClass: 'workspace-drawer__item--dragging',
     group: { name: group, pull: false, put: false },
+    onStart: () => {
+      orderBeforeDrag = readOrderedIds(node)
+    },
     onEnd: () => {
-      const orderedIds = Array.from(node.querySelectorAll<HTMLElement>('[data-workspace-item-id]'))
-        .map((item) => item.dataset.workspaceItemId)
-        .filter((id): id is string => Boolean(id))
+      const orderedIds = readOrderedIds(node)
+      const previousOrder = orderBeforeDrag
+      orderBeforeDrag = null
+
+      // Sortable may finish a gesture without changing position. Avoid encrypting and
+      // writing an order record when the persisted semantic value is unchanged.
+      if (previousOrder && ordersMatch(previousOrder, orderedIds)) return
       void onPersist(orderedIds)
     },
   })
