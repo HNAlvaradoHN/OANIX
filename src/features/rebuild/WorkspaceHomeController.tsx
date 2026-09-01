@@ -3,6 +3,7 @@ import type { FolderV2Record, TagV2Record } from './rebuildModel'
 import { WorkspaceDrawer } from './WorkspaceDrawer'
 import {
   WorkspaceCustomizationDialog,
+  type WorkspaceCustomizationTarget,
   type WorkspaceFolderCustomization,
   type WorkspaceTagCustomization,
 } from './WorkspaceCustomizationDialog'
@@ -36,6 +37,8 @@ interface WorkspaceHomeControllerProps {
   onSelectTag: (tagId: string) => void
   onFoldersChange: (folders: FolderV2Record[]) => void
   onTagsChange: (tags: TagV2Record[]) => void
+  onDeleteFolder: (folderId: string) => Promise<void>
+  onDeleteTag: (tagId: string) => Promise<void>
   onActiveCoverChange: (dataUrl: string | null) => void
   onError: (message: string) => void
 }
@@ -57,6 +60,8 @@ export function WorkspaceHomeController({
   onSelectTag,
   onFoldersChange,
   onTagsChange,
+  onDeleteFolder,
+  onDeleteTag,
   onActiveCoverChange,
   onError,
 }: WorkspaceHomeControllerProps) {
@@ -196,6 +201,26 @@ export function WorkspaceHomeController({
     }
   }
 
+  async function deleteTarget(current: WorkspaceCustomizationTarget): Promise<boolean> {
+    if (busy) return false
+    setBusy(true)
+    try {
+      if (current.kind === 'folder') await onDeleteFolder(current.value.id)
+      else await onDeleteTag(current.value.id)
+      return true
+    } catch (error) {
+      onError(errorMessage(
+        error,
+        current.kind === 'folder'
+          ? 'No se pudo eliminar la carpeta.'
+          : 'No se pudo eliminar la etiqueta.',
+      ))
+      return false
+    } finally {
+      setBusy(false)
+    }
+  }
+
   return (
     <>
       <WorkspaceDrawer
@@ -222,6 +247,7 @@ export function WorkspaceHomeController({
         onSaveTag={saveTag}
         onChooseFolderCover={chooseCover}
         onRemoveFolderCover={removeCover}
+        onDelete={deleteTarget}
       />
     </>
   )
