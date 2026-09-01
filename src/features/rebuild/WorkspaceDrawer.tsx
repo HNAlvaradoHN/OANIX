@@ -66,6 +66,7 @@ export function WorkspaceDrawer({
   const tagsRef = useRef<HTMLDivElement | null>(null)
   const reorderFoldersRef = useRef(onReorderFolders)
   const reorderTagsRef = useRef(onReorderTags)
+  const logoSrc = `${import.meta.env.BASE_URL}oanix-logo.webp`
 
   reorderFoldersRef.current = onReorderFolders
   reorderTagsRef.current = onReorderTags
@@ -108,7 +109,7 @@ export function WorkspaceDrawer({
         aria-hidden={!open}
       >
         <header>
-          <img className="workspace-drawer__logo" src="/oanix-logo.webp" alt="OANIX" />
+          <img className="workspace-drawer__logo" src={logoSrc} alt="OANIX" />
           <strong>OANIX</strong>
           <button
             className="workspace-drawer__create"
