@@ -2,6 +2,8 @@ export const NOTE_V2_META_TYPE = 'note.v2.meta'
 export const NOTE_V2_BODY_TYPE = 'note.v2.body'
 export const NOTE_V2_MANIFEST_TYPE = 'note.v2.manifest'
 export const NOTE_V2_TEXT_CHUNK_TYPE = 'note.v2.text-chunk'
+export const NOTE_V2_BLOCK_MANIFEST_TYPE = 'note.v2.block-manifest'
+export const NOTE_V2_BLOCK_TYPE = 'note.v2.block'
 export const SYNC_V2_PENDING_TYPE = 'sync.v2.pending'
 export const FOLDER_V2_TYPE = 'folder.v2'
 export const TAG_V2_TYPE = 'tag.v2'
@@ -70,6 +72,35 @@ export interface NoteV2TextChunk {
   chunkId: string
   revision: number
   text: string
+}
+
+export type NoteV2BlockValue =
+  | null
+  | boolean
+  | number
+  | string
+  | NoteV2BlockValue[]
+  | { [key: string]: NoteV2BlockValue }
+
+export interface NoteV2BlockRecord {
+  version: 2
+  noteId: string
+  blockId: string
+  revision: number
+  kind: string
+  data: { [key: string]: NoteV2BlockValue }
+}
+
+/**
+ * Ordering is intentionally separated from block payloads. Editing one block only
+ * rewrites that encrypted block; the manifest changes solely when topology/order does.
+ */
+export interface NoteV2BlockManifest {
+  version: 2
+  noteId: string
+  format: 'blocks-v1'
+  revision: number
+  blockIds: string[]
 }
 
 export interface SyncV2PendingRecord {
