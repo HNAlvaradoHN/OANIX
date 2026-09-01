@@ -11,8 +11,24 @@ import type {
  * editor therefore changes this module (and the implementation it selects), while
  * persistence, encryption, navigation and the Home workspace remain untouched.
  */
-export function EditorSurface(props: EditorSurfaceProps) {
-  return <NoteEditor {...props} />
+export function EditorSurface({
+  initialTitle,
+  initialText,
+  saving,
+  error,
+  onRequestSave,
+  onRequestClose,
+}: EditorSurfaceProps) {
+  return (
+    <NoteEditor
+      initialTitle={initialTitle}
+      initialText={initialText}
+      saving={saving}
+      error={error}
+      onRequestSave={onRequestSave}
+      onRequestClose={onRequestClose}
+    />
+  )
 }
 
 /** Capabilities of the currently selected surface implementation. */
