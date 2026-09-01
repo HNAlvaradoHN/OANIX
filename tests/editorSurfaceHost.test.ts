@@ -4,6 +4,10 @@ import test from 'node:test'
 
 const home = readFileSync('src/features/rebuild/RebuildApp.tsx', 'utf8')
 const host = readFileSync('src/features/editor/EditorSurface.tsx', 'utf8')
+const plainTextAdapter = readFileSync(
+  'src/features/editor/implementations/PlainTextEditorSurface.tsx',
+  'utf8',
+)
 
 test('Home depends on the replaceable editor host instead of a concrete sheet implementation', () => {
   assert.match(home, /import \{ EditorSurface \} from '\.\.\/editor\/EditorSurface'/)
@@ -20,17 +24,32 @@ test('Home depends on the replaceable editor host instead of a concrete sheet im
   )
 })
 
-test('the host is the only place that selects and adapts the current editor implementation', () => {
-  assert.match(host, /import \{ NoteEditor \} from '\.\/NoteEditor'/)
-  assert.match(host, /export function EditorSurface\(\{/)
-  assert.match(host, /\}: EditorSurfaceProps\)/)
-  assert.match(host, /<NoteEditor/)
-  assert.match(host, /initialTitle=\{initialTitle\}/)
-  assert.match(host, /initialText=\{initialText\}/)
-  assert.match(host, /onRequestSave=\{onRequestSave\}/)
-  assert.match(host, /onRequestClose=\{onRequestClose\}/)
-  assert.doesNotMatch(host, /<NoteEditor \{\.\.\.props\}/)
-  assert.match(host, /plainText: true/)
-  assert.match(host, /richBlocks: false/)
-  assert.match(host, /attachments: false/)
+test('the host selects only an isolated editor-surface implementation', () => {
+  assert.match(
+    host,
+    /from '\.\/implementations\/PlainTextEditorSurface'/,
+  )
+  assert.match(host, /export function EditorSurface\(props: EditorSurfaceProps\)/)
+  assert.match(host, /<PlainTextEditorSurface \{\.\.\.props\} \/>/)
+  assert.doesNotMatch(host, /from '\.\/NoteEditor'/)
+  assert.doesNotMatch(
+    host,
+    /^\s*import .*from ['"][^'"]*(?:ruledSheet|Aurora|qwen)[^'"]*['"]/im,
+  )
+  assert.match(host, /plainTextEditorSurfaceCapabilities/)
+})
+
+test('the transitional adapter alone knows the current plain-text editor', () => {
+  assert.match(plainTextAdapter, /import \{ NoteEditor \} from '\.\.\/NoteEditor'/)
+  assert.match(plainTextAdapter, /export function PlainTextEditorSurface\(\{/)
+  assert.match(plainTextAdapter, /\}: EditorSurfaceProps\)/)
+  assert.match(plainTextAdapter, /<NoteEditor/)
+  assert.match(plainTextAdapter, /initialTitle=\{initialTitle\}/)
+  assert.match(plainTextAdapter, /initialText=\{initialText\}/)
+  assert.match(plainTextAdapter, /onRequestSave=\{onRequestSave\}/)
+  assert.match(plainTextAdapter, /onRequestClose=\{onRequestClose\}/)
+  assert.doesNotMatch(plainTextAdapter, /<NoteEditor \{\.\.\.props\}/)
+  assert.match(plainTextAdapter, /plainText: true/)
+  assert.match(plainTextAdapter, /richBlocks: false/)
+  assert.match(plainTextAdapter, /attachments: false/)
 })
