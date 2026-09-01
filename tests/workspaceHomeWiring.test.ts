@@ -19,8 +19,8 @@ test('active Home applies persistent folder colors to folder surfaces', () => {
 })
 
 test('active Home loads only the selected folder cover and never scans all cover assets', () => {
-  assert.match(controller, /activeFolderId \? folderById\.get\(activeFolderId\)/)
-  assert.match(controller, /readWorkspaceFolderCover\(assetId\)/)
+  assert.match(controller, /const activeCoverAssetId = activeFolderId[\s\S]*folderById\.get\(activeFolderId\)\?\.coverAssetId/)
+  assert.match(controller, /onActiveCoverChange\(null\)[\s\S]*readWorkspaceFolderCover\(activeCoverAssetId\)/)
   assert.doesNotMatch(controller, /Promise\.all\(folders|folders\.map\([^\n]*readWorkspaceFolderCover/)
 })
 
