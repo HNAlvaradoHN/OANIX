@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   CODE_BLOCK_KIND,
   MAX_CODE_BLOCK_LANGUAGE_LENGTH,
@@ -13,6 +13,7 @@ import './qwenCodeBlocks.css'
 interface QwenCodeBlocksProps {
   session: EditorBlockSession
   disabled: boolean
+  insertRequest: number
   onActivity: () => void
 }
 
@@ -23,11 +24,13 @@ function newCodeBlockId(): string {
 export function QwenCodeBlocks({
   session,
   disabled,
+  insertRequest,
   onActivity,
 }: QwenCodeBlocksProps) {
   const [blocks, setBlocks] = useState<EditorCodeBlock[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const handledInsertRequestRef = useRef(insertRequest)
 
   useEffect(() => {
     let active = true
@@ -76,6 +79,12 @@ export function QwenCodeBlocks({
     })
   }
 
+  useEffect(() => {
+    if (loading || disabled || insertRequest === handledInsertRequestRef.current) return
+    handledInsertRequestRef.current = insertRequest
+    addCodeBlock()
+  }, [insertRequest, loading, disabled])
+
   function removeCodeBlock(blockId: string) {
     setBlocks((current) => current.filter((block) => block.id !== blockId))
     onActivity()
@@ -84,23 +93,10 @@ export function QwenCodeBlocks({
     })
   }
 
+  if (!loading && !error && blocks.length === 0) return null
+
   return (
     <section className="oanix-qwen-sheet__code-blocks" aria-label="Bloques de código de la nota">
-      <div className="oanix-qwen-sheet__blocks-heading">
-        <div>
-          <span className="oanix-qwen-sheet__blocks-kicker">Bloques</span>
-          <strong>Código</strong>
-        </div>
-        <button
-          type="button"
-          className="oanix-qwen-sheet__add-code-block"
-          disabled={disabled || loading}
-          onClick={addCodeBlock}
-        >
-          + Código
-        </button>
-      </div>
-
       {loading && (
         <p className="oanix-qwen-sheet__blocks-hint" role="status">
           Abriendo bloques cifrados…
@@ -110,12 +106,6 @@ export function QwenCodeBlocks({
       {error && (
         <p className="oanix-qwen-sheet__blocks-error" role="alert">
           {error}
-        </p>
-      )}
-
-      {!loading && blocks.length === 0 && (
-        <p className="oanix-qwen-sheet__blocks-hint">
-          Añade fragmentos técnicos sin mezclarlos con el cuerpo principal de la nota.
         </p>
       )}
 
