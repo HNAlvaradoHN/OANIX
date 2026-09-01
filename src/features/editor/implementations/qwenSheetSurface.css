@@ -215,10 +215,15 @@
   background: linear-gradient(90deg, var(--q-line-2), transparent 88%);
 }
 
+.oanix-qwen-sheet__legacy-text-segment {
+  position: relative;
+  min-width: 0;
+}
+
 .oanix-qwen-sheet__body {
   display: block;
   width: 100%;
-  min-height: max(58dvh, 430px);
+  min-height: max(34dvh, 260px);
   resize: none;
   overflow: auto;
   overscroll-behavior: contain;
@@ -255,7 +260,7 @@
   }
 
   .oanix-qwen-sheet__body {
-    min-height: 66dvh;
+    min-height: max(38dvh, 240px);
     font-size: 16.5px;
   }
 }
