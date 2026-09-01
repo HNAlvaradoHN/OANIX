@@ -95,5 +95,10 @@ test('quick unlock presents explicit device credential and biometric actions wit
   )
 
   assert.match(biometricPlugin, /BiometricPrompt/)
-  assert.match(credentialPlugin, /KeyguardManager/)
+  assert.match(credentialPlugin, /BiometricPrompt/)
+  assert.match(credentialPlugin, /BiometricManager\.Authenticators\.DEVICE_CREDENTIAL/)
+  assert.match(
+    credentialPlugin,
+    /setAllowedAuthenticators\(BiometricManager\.Authenticators\.DEVICE_CREDENTIAL\)/,
+  )
 })
