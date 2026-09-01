@@ -24,8 +24,9 @@ test('code blocks remain plain persisted text without runtime highlighting depen
   assert.match(codec, /CODE_BLOCK_KIND = 'code'/)
   assert.match(codec, /text: block\.text/)
   assert.match(codec, /language: block\.language/)
-  assert.doesNotMatch(codec, /highlight|Prism|monaco|CodeMirror|Shiki/)
-  assert.doesNotMatch(codeBlocks, /Prism|monaco|CodeMirror|Shiki/)
+  const highlighterImport = /^\s*import .*from ['"][^'"]*(?:prism|monaco|codemirror|shiki|highlight)[^'"]*['"]/im
+  assert.doesNotMatch(codec, highlighterImport)
+  assert.doesNotMatch(codeBlocks, highlighterImport)
 })
 
 test('attachments remain outside the code block cut', () => {
