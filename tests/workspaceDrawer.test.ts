@@ -4,6 +4,9 @@ import test from 'node:test'
 
 const drawer = readFileSync('src/features/rebuild/WorkspaceDrawer.tsx', 'utf8')
 const css = readFileSync('src/features/rebuild/workspaceDrawer.css', 'utf8')
+const model = readFileSync('src/features/rebuild/rebuildModel.ts', 'utf8')
+const customization = readFileSync('src/features/rebuild/WorkspaceCustomizationDialog.tsx', 'utf8')
+const customizationService = readFileSync('src/features/rebuild/workspaceCustomizationService.ts', 'utf8')
 
 test('Home drawer remains a replaceable surface wired through callbacks', () => {
   assert.match(drawer, /interface WorkspaceDrawerProps/)
@@ -41,4 +44,18 @@ test('mobile drawer gives folders and tags equal independent scroll areas', () =
   assert.match(css, /@media \(max-width: 680px\)[\s\S]*\.workspace-drawer \.rebuild-drawer__list \{[\s\S]*overflow-y: auto/)
   assert.match(css, /@media \(max-width: 680px\)[\s\S]*overscroll-behavior-y: contain/)
   assert.doesNotMatch(css, /@media \(max-width: 680px\)[\s\S]*overflow: visible/)
+})
+
+test('folder pin and favorite state is persisted in the encrypted v2 record and surfaced without parallel storage', () => {
+  assert.match(model, /pinned\?: boolean/)
+  assert.match(model, /favorite\?: boolean/)
+  assert.match(customization, /aria-pressed=\{pinned\}/)
+  assert.match(customization, /aria-pressed=\{favorite\}/)
+  assert.match(customizationService, /nextPinned/)
+  assert.match(customizationService, /nextFavorite/)
+  assert.match(customizationService, /writeEncryptedV2Records/)
+  assert.match(drawer, /folder\.pinned === true/)
+  assert.match(drawer, /folder\.favorite === true/)
+  assert.match(drawer, /workspace-drawer__marks/)
+  assert.doesNotMatch(customization, /localStorage|sessionStorage|indexedDB/)
 })
