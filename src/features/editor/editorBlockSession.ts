@@ -1,11 +1,11 @@
 import {
   createEditorBlockChangeBuffer,
   type EditorBlockChangeBuffer,
-} from './editorBlockChangeBuffer'
+} from './editorBlockChangeBuffer.ts'
 import type {
   EditorSurfaceBlock,
   EditorSurfaceBlockChangeSet,
-} from './editorSurfaceContract'
+} from './editorSurfaceContract.ts'
 
 export interface EditorBlockSession {
   load(): Promise<EditorSurfaceBlock[]>
