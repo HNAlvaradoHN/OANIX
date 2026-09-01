@@ -156,6 +156,22 @@
   background: color-mix(in srgb, var(--folder-soft) 86%, var(--rb-bg-1));
 }
 
+.workspace-drawer__marks {
+  display: inline-flex;
+  align-items: center;
+  gap: .16rem;
+  flex: none;
+  margin-left: auto;
+  font-size: .72rem;
+  line-height: 1;
+}
+
+.workspace-drawer__marks > span {
+  display: inline-grid;
+  place-items: center;
+  min-width: .85rem;
+}
+
 .workspace-drawer__item--ghost {
   opacity: .35;
 }

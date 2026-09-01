@@ -12,6 +12,8 @@ export interface WorkspaceFolderCustomization {
   icon: string
   gradientIndex: number
   customColor: string | null
+  pinned: boolean
+  favorite: boolean
 }
 
 export interface WorkspaceTagCustomization {
@@ -46,6 +48,8 @@ export function WorkspaceCustomizationDialog({
   const [icon, setIcon] = useState<string>(V2_FOLDER_ICONS[0])
   const [gradientIndex, setGradientIndex] = useState(0)
   const [customColor, setCustomColor] = useState<string | null>(null)
+  const [pinned, setPinned] = useState(false)
+  const [favorite, setFavorite] = useState(false)
   const [tagColor, setTagColor] = useState('#7c5cff')
 
   useEffect(() => {
@@ -55,6 +59,8 @@ export function WorkspaceCustomizationDialog({
       setIcon(target.value.icon)
       setGradientIndex(target.value.gradientIndex)
       setCustomColor(target.value.customColor ?? null)
+      setPinned(target.value.pinned === true)
+      setFavorite(target.value.favorite === true)
     } else {
       setTagColor(target.value.color)
     }
@@ -67,7 +73,14 @@ export function WorkspaceCustomizationDialog({
     if (!target || busy) return
 
     const saved = target.kind === 'folder'
-      ? await onSaveFolder(target.value.id, { name, icon, gradientIndex, customColor })
+      ? await onSaveFolder(target.value.id, {
+          name,
+          icon,
+          gradientIndex,
+          customColor,
+          pinned,
+          favorite,
+        })
       : await onSaveTag(target.value.id, { name, color: tagColor })
     if (saved) onClose()
   }
@@ -119,6 +132,32 @@ export function WorkspaceCustomizationDialog({
 
           {target.kind === 'folder' ? (
             <>
+              <fieldset className="workspace-customization__group">
+                <legend>Acceso rápido</legend>
+                <div className="workspace-customization__flags">
+                  <button
+                    type="button"
+                    className={pinned ? 'is-active' : ''}
+                    onClick={() => setPinned((value) => !value)}
+                    aria-pressed={pinned}
+                    disabled={busy}
+                  >
+                    <span aria-hidden="true">📌</span>
+                    <strong>{pinned ? 'Fijada' : 'Fijar carpeta'}</strong>
+                  </button>
+                  <button
+                    type="button"
+                    className={favorite ? 'is-active' : ''}
+                    onClick={() => setFavorite((value) => !value)}
+                    aria-pressed={favorite}
+                    disabled={busy}
+                  >
+                    <span aria-hidden="true">★</span>
+                    <strong>{favorite ? 'Favorita' : 'Marcar favorita'}</strong>
+                  </button>
+                </div>
+              </fieldset>
+
               <fieldset className="workspace-customization__group">
                 <legend>Icono</legend>
                 <div className="workspace-customization__icons">

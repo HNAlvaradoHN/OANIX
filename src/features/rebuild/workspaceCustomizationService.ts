@@ -15,6 +15,8 @@ export interface FolderCustomizationInput {
   gradientIndex?: number
   customColor?: string | null
   coverAssetId?: string | null
+  pinned?: boolean
+  favorite?: boolean
 }
 
 export interface TagCustomizationInput {
@@ -80,6 +82,8 @@ export async function customizeRebuildFolder(
   const nextCoverAssetId = input.coverAssetId === undefined
     ? existing.coverAssetId ?? null
     : normalizeCoverAssetId(input.coverAssetId) ?? null
+  const nextPinned = input.pinned === undefined ? existing.pinned === true : input.pinned === true
+  const nextFavorite = input.favorite === undefined ? existing.favorite === true : input.favorite === true
 
   if (
     nextName === existing.name
@@ -87,6 +91,8 @@ export async function customizeRebuildFolder(
     && nextGradientIndex === existing.gradientIndex
     && nextColor === (existing.customColor ?? null)
     && nextCoverAssetId === (existing.coverAssetId ?? null)
+    && nextPinned === (existing.pinned === true)
+    && nextFavorite === (existing.favorite === true)
   ) {
     return existing
   }
@@ -98,6 +104,8 @@ export async function customizeRebuildFolder(
     gradientIndex: nextGradientIndex,
     customColor: nextColor,
     coverAssetId: nextCoverAssetId,
+    ...(nextPinned ? { pinned: true } : { pinned: false }),
+    ...(nextFavorite ? { favorite: true } : { favorite: false }),
     updatedAt: new Date().toISOString(),
   }
 

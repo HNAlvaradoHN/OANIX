@@ -91,6 +91,8 @@ export interface FolderV2Record {
   customColor?: string | null
   coverAssetId?: string | null
   order?: number
+  pinned?: boolean
+  favorite?: boolean
   createdAt: string
   updatedAt: string
 }
