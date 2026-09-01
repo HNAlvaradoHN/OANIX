@@ -1,25 +1,41 @@
 .oanix-qwen-sheet__rich-content {
-  margin-top: 30px;
-  padding-top: 24px;
-  border-top: 1px solid var(--q-line);
+  margin-top: 4px;
 }
 
-.oanix-qwen-sheet__insert {
+.oanix-qwen-sheet__rich-flow {
+  display: grid;
+  gap: 0;
+}
+
+.oanix-qwen-sheet__insert-point {
   position: relative;
+  min-height: 42px;
   display: flex;
+  align-items: center;
   justify-content: center;
-  margin-bottom: 18px;
+}
+
+.oanix-qwen-sheet__insert-point::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--q-line) 16%, var(--q-line) 84%, transparent);
 }
 
 .oanix-qwen-sheet__insert-trigger {
-  min-height: 38px;
-  padding: 8px 16px;
+  position: relative;
+  z-index: 1;
+  min-height: 36px;
+  padding: 7px 14px;
   border: 1px solid var(--q-line-2);
   border-radius: 999px;
-  background: var(--q-card);
+  background: var(--q-paper);
   color: var(--q-ink-soft);
   font: inherit;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
 }
 
@@ -37,7 +53,7 @@
 .oanix-qwen-sheet__insert-menu {
   position: absolute;
   z-index: 3;
-  top: calc(100% + 8px);
+  top: calc(50% + 24px);
   left: 50%;
   width: min(320px, calc(100vw - 40px));
   padding: 6px;
@@ -76,13 +92,9 @@
   font-size: 11px;
 }
 
-.oanix-qwen-sheet__checklists {
-  margin-top: 14px;
-}
-
 .oanix-qwen-sheet__blocks-hint,
 .oanix-qwen-sheet__blocks-error {
-  margin: 10px 0 0;
+  margin: 10px 0;
   font-size: 12px;
   line-height: 1.5;
 }
@@ -91,10 +103,15 @@
 .oanix-qwen-sheet__blocks-error { color: #a22d22; }
 [data-oanix-theme-mode="dark"] .oanix-qwen-sheet__blocks-error { color: #ffaaa1; }
 
-.oanix-qwen-sheet__checklist-stack {
-  display: grid;
-  gap: 14px;
-  margin-top: 14px;
+.oanix-qwen-sheet__unknown-block {
+  min-height: 54px;
+  display: flex;
+  align-items: center;
+  padding: 12px 14px;
+  border: 1px dashed var(--q-line-2);
+  border-radius: 12px;
+  color: var(--q-ink-faint);
+  font-size: 11px;
 }
 
 .oanix-qwen-sheet__checklist {
@@ -190,5 +207,13 @@
 .oanix-qwen-sheet__checklist-item input:disabled { opacity: .5; }
 
 @media (max-width: 560px) {
+  .oanix-qwen-sheet__insert-point {
+    min-height: 46px;
+  }
+
+  .oanix-qwen-sheet__insert-trigger {
+    min-height: 38px;
+  }
+
   .oanix-qwen-sheet__checklist { padding: 12px; }
 }
