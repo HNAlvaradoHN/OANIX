@@ -12,6 +12,12 @@ declare module 'sortablejs' {
     newIndex?: number
   }
 
+  export interface SortableGroupOptions {
+    name: string
+    pull?: boolean
+    put?: boolean
+  }
+
   export interface SortableOptions {
     animation?: number
     easing?: string
@@ -27,6 +33,8 @@ declare module 'sortablejs' {
     ghostClass?: string
     dragClass?: string
     draggable?: string
+    handle?: string
+    group?: string | SortableGroupOptions
     filter?: string | ((event: Event, target: HTMLElement, sortable: Sortable) => boolean)
     preventOnFilter?: boolean
     direction?: 'vertical' | 'horizontal'
