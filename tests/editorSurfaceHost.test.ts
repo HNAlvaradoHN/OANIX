@@ -20,10 +20,16 @@ test('Home depends on the replaceable editor host instead of a concrete sheet im
   )
 })
 
-test('the host is the only place that selects the current editor implementation', () => {
+test('the host is the only place that selects and adapts the current editor implementation', () => {
   assert.match(host, /import \{ NoteEditor \} from '\.\/NoteEditor'/)
-  assert.match(host, /export function EditorSurface\(props: EditorSurfaceProps\)/)
-  assert.match(host, /return <NoteEditor \{\.\.\.props\} \/>/)
+  assert.match(host, /export function EditorSurface\(\{/)
+  assert.match(host, /\}: EditorSurfaceProps\)/)
+  assert.match(host, /<NoteEditor/)
+  assert.match(host, /initialTitle=\{initialTitle\}/)
+  assert.match(host, /initialText=\{initialText\}/)
+  assert.match(host, /onRequestSave=\{onRequestSave\}/)
+  assert.match(host, /onRequestClose=\{onRequestClose\}/)
+  assert.doesNotMatch(host, /<NoteEditor \{\.\.\.props\}/)
   assert.match(host, /plainText: true/)
   assert.match(host, /richBlocks: false/)
   assert.match(host, /attachments: false/)
