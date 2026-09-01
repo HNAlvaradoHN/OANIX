@@ -17,6 +17,7 @@ test('Android back runtime closes the active rebuild layer through its explicit 
   const runtime = readFileSync('src/platform/android/AndroidBackRuntime.tsx', 'utf8')
   const rebuild = readFileSync('src/features/rebuild/RebuildApp.tsx', 'utf8')
   const drawer = readFileSync('src/features/rebuild/WorkspaceDrawer.tsx', 'utf8')
+  const editorSurface = readFileSync('src/features/editor/EditorSurface.tsx', 'utf8')
   const editor = readFileSync('src/features/editor/NoteEditor.tsx', 'utf8')
 
   assert.match(runtime, /querySelectorAll<HTMLButtonElement>/)
@@ -24,11 +25,13 @@ test('Android back runtime closes the active rebuild layer through its explicit 
   assert.match(runtime, /activeBackClose\.click\(\)/)
   assert.doesNotMatch(runtime, /document\.querySelector<HTMLButtonElement>\([\s\S]*data-oanix-back-close/)
   assert.doesNotMatch(runtime, /notes-shell--open|folderNavigationRuntime/)
+  assert.match(editorSurface, /<NoteEditor/)
+  assert.match(editorSurface, /onRequestClose=\{onRequestClose\}/)
   assert.match(editor, /data-oanix-back-close="true"/)
   assert.match(editor, /data-oanix-save-and-close="true"/)
   assert.match(drawer, /aria-hidden={!open}/)
   assert.match(drawer, /data-oanix-back-close="true"/)
-  assert.match(rebuild, /async function closeEditor\(snapshot: NoteEditorSnapshot \| null\)/)
+  assert.match(rebuild, /async function closeEditor\(snapshot: EditorSurfaceSnapshot \| null\)/)
   assert.match(rebuild, /current\.meta,[\s\S]*current\.text,[\s\S]*snapshot\.title,[\s\S]*snapshot\.text/)
 })
 
