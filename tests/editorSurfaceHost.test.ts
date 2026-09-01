@@ -17,7 +17,10 @@ const plainTextAdapter = readFileSync(
 
 test('Home depends on the replaceable editor host instead of a concrete sheet implementation', () => {
   assert.match(home, /import \{ EditorSurface \} from '\.\.\/editor\/EditorSurface'/)
-  assert.match(home, /import type \{ EditorSurfaceSnapshot \} from '\.\.\/editor\/editorSurfaceContract'/)
+  assert.match(
+    home,
+    /import type \{[^}]*EditorSurfaceSnapshot[^}]*\} from '\.\.\/editor\/editorSurfaceContract'/,
+  )
   assert.match(home, /<EditorSurface[\s\S]*onRequestSave=\{saveEditorSnapshot\}[\s\S]*onRequestClose=\{closeEditor\}/)
   assert.doesNotMatch(home, /from '\.\.\/editor\/NoteEditor'/)
   assert.doesNotMatch(

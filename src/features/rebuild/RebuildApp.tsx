@@ -8,7 +8,11 @@ import {
 } from 'react'
 import { AccountPanel } from '../account/AccountPanel'
 import { EditorSurface } from '../editor/EditorSurface'
-import type { EditorSurfaceSnapshot } from '../editor/editorSurfaceContract'
+import type {
+  EditorSurfaceBlock,
+  EditorSurfaceBlockChangeSet,
+  EditorSurfaceSnapshot,
+} from '../editor/editorSurfaceContract'
 import { OanixIcon } from '../../shared/OanixIcon'
 import {
   AUTO_LOCK_OPTIONS,
@@ -21,6 +25,7 @@ import {
   readSavedOanixTheme,
   type OanixThemePreset,
 } from '../personalization/themeCatalog'
+import { readRebuildBlocks, saveRebuildBlocks } from './rebuildBlockService'
 import {
   deleteRebuildFolder,
   deleteRebuildNote,
@@ -280,6 +285,54 @@ export function RebuildApp({ onLock }: RebuildAppProps) {
       })
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'No se pudo guardar la nota.')
+      return false
+    }
+  }
+
+  async function loadEditorBlocks(): Promise<EditorSurfaceBlock[]> {
+    const noteId = editorRef.current?.meta.id
+    if (!noteId) return []
+
+    return editorSaveCoordinator.run(async () => {
+      if (editorRef.current?.meta.id !== noteId) return []
+      const blocks = await readRebuildBlocks(noteId)
+      if (editorRef.current?.meta.id !== noteId) return []
+      return blocks.map((block) => ({
+        id: block.blockId,
+        kind: block.kind,
+        data: block.data,
+      }))
+    })
+  }
+
+  async function saveEditorBlocks(changes: EditorSurfaceBlockChangeSet): Promise<boolean> {
+    const noteId = editorRef.current?.meta.id
+    if (!noteId || blockingSaveRef.current) return false
+
+    setError('')
+    try {
+      return await editorSaveCoordinator.run(async () => {
+        const current = editorRef.current
+        if (!current || current.meta.id !== noteId) return false
+
+        const updated = await saveRebuildBlocks(current.meta, {
+          upserts: changes.upserts?.map((block) => ({
+            blockId: block.id,
+            kind: block.kind,
+            data: block.data,
+          })),
+          deletes: changes.deletes,
+          order: changes.order,
+        })
+        if (updated === current.meta) return true
+        if (editorRef.current?.meta.id !== noteId) return false
+
+        commitOpenedEditor({ meta: updated, text: current.text })
+        setNotes((notes) => notes.map((note) => note.id === updated.id ? updated : note))
+        return true
+      })
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : 'No se pudieron guardar los bloques de la nota.')
       return false
     }
   }
@@ -613,6 +666,8 @@ export function RebuildApp({ onLock }: RebuildAppProps) {
           error={error}
           onRequestSave={saveEditorSnapshot}
           onRequestClose={closeEditor}
+          loadBlocks={loadEditorBlocks}
+          onRequestBlockSave={saveEditorBlocks}
         />
       )}
 
