@@ -71,6 +71,9 @@ export function WorkspaceHomeController({
     () => new Map(tags.map((tag) => [tag.id, tag])),
     [tags],
   )
+  const activeCoverAssetId = activeFolderId
+    ? folderById.get(activeFolderId)?.coverAssetId ?? null
+    : null
 
   const dialogTarget = useMemo(() => {
     if (!target) return null
@@ -83,18 +86,16 @@ export function WorkspaceHomeController({
   }, [target, folderById, tagById])
 
   useEffect(() => {
-    const activeFolder = activeFolderId ? folderById.get(activeFolderId) ?? null : null
-    const assetId = activeFolder?.coverAssetId ?? null
     let current = true
+    onActiveCoverChange(null)
 
-    if (!assetId) {
-      onActiveCoverChange(null)
+    if (!activeCoverAssetId) {
       return () => {
         current = false
       }
     }
 
-    void readWorkspaceFolderCover(assetId)
+    void readWorkspaceFolderCover(activeCoverAssetId)
       .then((dataUrl) => {
         if (current) onActiveCoverChange(dataUrl)
       })
@@ -107,7 +108,7 @@ export function WorkspaceHomeController({
     return () => {
       current = false
     }
-  }, [activeFolderId, folderById, onActiveCoverChange, onError])
+  }, [activeCoverAssetId, onActiveCoverChange, onError])
 
   async function reorderFolders(orderedIds: string[]) {
     try {
