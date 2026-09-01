@@ -13,7 +13,6 @@ test('selected sheet creates a block session only when both rich callbacks are a
     surface,
     /blockSessionRef\.current === null[\s\S]*&& loadBlocks[\s\S]*&& onRequestBlockSave[\s\S]*createEditorBlockSession\(/,
   )
-  assert.doesNotMatch(surface, /useEffect\([\s\S]{0,260}loadBlocks\(/)
   assert.doesNotMatch(surface, /readRebuildBlocks|saveRebuildBlocks|indexedDB|localStorage|sessionStorage/)
 })
 
@@ -39,10 +38,10 @@ test('block session owns buffering only and receives persistence as callbacks', 
   assert.doesNotMatch(session, /indexedDB|localStorage|sessionStorage|fetch\(|XMLHttpRequest|setTimeout|setInterval/)
 })
 
-test('current production capability still withholds rich callbacks and therefore does zero block work', () => {
-  assert.match(registry, /richBlocks: false/)
+test('active rich capability passes the existing generic callbacks through the host', () => {
+  assert.match(registry, /richBlocks: true/)
   assert.match(
     host,
-    /activeEditorSurface\.capabilities\.richBlocks[\s\S]*loadBlocks: undefined[\s\S]*onRequestBlockSave: undefined/,
+    /activeEditorSurface\.capabilities\.richBlocks[\s\S]*\? props[\s\S]*loadBlocks: undefined[\s\S]*onRequestBlockSave: undefined/,
   )
 })
