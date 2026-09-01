@@ -21,9 +21,11 @@ test('Home depends on the replaceable editor host instead of a concrete sheet im
   )
 })
 
-test('the host delegates concrete selection to the editor surface registry', () => {
+test('the host delegates concrete selection to the editor surface registry and mounts it lazily', () => {
+  assert.match(host, /import \{ lazy, Suspense \} from 'react'/)
   assert.match(host, /from '\.\/editorSurfaceRegistry'/)
-  assert.match(host, /const ActiveSurface = activeEditorSurface\.component/)
+  assert.match(host, /const ActiveSurface = lazy\(activeEditorSurface\.load\)/)
+  assert.match(host, /<Suspense fallback=\{null\}>/)
   assert.match(host, /<ActiveSurface \{\.\.\.props\} \/>/)
   assert.match(host, /activeEditorSurface\.capabilities/)
   assert.doesNotMatch(host, /from '\.\/NoteEditor'/)
@@ -34,11 +36,15 @@ test('the host delegates concrete selection to the editor surface registry', () 
   )
 })
 
-test('the registry is the only composition point that selects the current implementation', () => {
-  assert.match(registry, /from '\.\/implementations\/PlainTextEditorSurface'/)
+test('the registry is the only composition point and does not eagerly import the current implementation', () => {
   assert.match(registry, /export const activeEditorSurface: EditorSurfaceDefinition/)
-  assert.match(registry, /component: PlainTextEditorSurface/)
-  assert.match(registry, /capabilities: plainTextEditorSurfaceCapabilities/)
+  assert.match(registry, /load: async \(\) => \{/)
+  assert.match(registry, /await import\([\s\S]*\.\/implementations\/PlainTextEditorSurface/)
+  assert.match(registry, /return \{ default: PlainTextEditorSurface \}/)
+  assert.match(registry, /plainText: true/)
+  assert.match(registry, /richBlocks: false/)
+  assert.match(registry, /attachments: false/)
+  assert.doesNotMatch(registry, /^\s*import .*PlainTextEditorSurface/m)
   assert.doesNotMatch(registry, /from '\.\/NoteEditor'/)
   assert.doesNotMatch(
     registry,
@@ -56,7 +62,5 @@ test('the transitional adapter alone knows the current plain-text editor', () =>
   assert.match(plainTextAdapter, /onRequestSave=\{onRequestSave\}/)
   assert.match(plainTextAdapter, /onRequestClose=\{onRequestClose\}/)
   assert.doesNotMatch(plainTextAdapter, /<NoteEditor \{\.\.\.props\}/)
-  assert.match(plainTextAdapter, /plainText: true/)
-  assert.match(plainTextAdapter, /richBlocks: false/)
-  assert.match(plainTextAdapter, /attachments: false/)
+  assert.doesNotMatch(plainTextAdapter, /EditorSurfaceCapabilities|plainTextEditorSurfaceCapabilities/)
 })
