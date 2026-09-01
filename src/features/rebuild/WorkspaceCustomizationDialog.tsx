@@ -43,7 +43,7 @@ export function WorkspaceCustomizationDialog({
   onRemoveFolderCover,
 }: WorkspaceCustomizationDialogProps) {
   const [name, setName] = useState('')
-  const [icon, setIcon] = useState(V2_FOLDER_ICONS[0])
+  const [icon, setIcon] = useState<string>(V2_FOLDER_ICONS[0])
   const [gradientIndex, setGradientIndex] = useState(0)
   const [customColor, setCustomColor] = useState<string | null>(null)
   const [tagColor, setTagColor] = useState('#7c5cff')
