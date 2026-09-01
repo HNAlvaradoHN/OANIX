@@ -3,29 +3,28 @@ import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
 const surface = readFileSync('src/features/editor/implementations/QwenSheetSurface.tsx', 'utf8')
-const checklist = readFileSync('src/features/editor/implementations/QwenChecklistBlocks.tsx', 'utf8')
+const richBlocks = readFileSync('src/features/editor/implementations/QwenRichBlocks.tsx', 'utf8')
 const registry = readFileSync('src/features/editor/editorSurfaceRegistry.ts', 'utf8')
 
 test('checklist UI stays above persistence and uses the generic block session', () => {
-  assert.match(checklist, /decodeChecklistBlock/)
-  assert.match(checklist, /encodeChecklistBlock/)
-  assert.match(checklist, /session\.load\(\)/)
-  assert.match(checklist, /session\.upsert\(encodeChecklistBlock\(next\)\)/)
-  assert.match(checklist, /session\.remove\(blockId\)/)
+  assert.match(richBlocks, /decodeChecklistBlock/)
+  assert.match(richBlocks, /encodeChecklistBlock/)
+  assert.match(richBlocks, /session\.load\(\)/)
+  assert.match(richBlocks, /session\.upsert\(next\)/)
+  assert.match(richBlocks, /session\.remove\(blockId\)/)
   assert.doesNotMatch(
-    checklist,
+    richBlocks,
     /readRebuildBlocks|saveRebuildBlocks|indexedDB|localStorage|sessionStorage|applyEncrypted|fetch\(|XMLHttpRequest/,
   )
 })
 
 test('checklist supports create, edit, toggle, add item and delete interactions', () => {
-  assert.match(checklist, /function addChecklist\(\)/)
-  assert.match(checklist, /function addItem\(block: EditorChecklistBlock\)/)
-  assert.match(checklist, /function removeItem\(block: EditorChecklistBlock, itemIndex: number\)/)
-  assert.match(checklist, /onChange=\{\(event\) => queueBlock\(withItem\(/)
-  assert.match(checklist, /checked: event\.target\.checked/)
-  assert.match(checklist, /text: event\.target\.value/)
-  assert.match(checklist, /removeChecklist\(block\.id\)/)
+  assert.match(richBlocks, /kind === 'checklist'/)
+  assert.match(richBlocks, /MAX_CHECKLIST_ITEMS/)
+  assert.match(richBlocks, /checked: event\.target\.checked/)
+  assert.match(richBlocks, /text: event\.target\.value/)
+  assert.match(richBlocks, /Eliminar checklist/)
+  assert.match(richBlocks, />\+ Añadir tarea</)
 })
 
 test('block-only autosave skips the plain text write and flushes the shared block checkpoint', () => {
@@ -42,6 +41,6 @@ test('block-only autosave skips the plain text write and flushes the shared bloc
 test('rich blocks are active while attachment transport remains disabled', () => {
   assert.match(registry, /richBlocks: true/)
   assert.match(registry, /attachments: false/)
-  assert.match(surface, /<QwenChecklistBlocks/)
+  assert.match(surface, /<QwenRichBlocks/)
   assert.match(surface, /onActivity=\{markActivity\}/)
 })
