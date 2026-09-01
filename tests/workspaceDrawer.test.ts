@@ -35,3 +35,10 @@ test('drawer styling is isolated under workspace-drawer classes', () => {
   assert.match(css, /\.workspace-drawer__item/)
   assert.match(css, /\.workspace-drawer__logo/)
 })
+
+test('mobile drawer gives folders and tags equal independent scroll areas', () => {
+  assert.match(css, /@media \(max-width: 680px\)[\s\S]*grid-template-rows: minmax\(0, 1fr\) minmax\(0, 1fr\)/)
+  assert.match(css, /@media \(max-width: 680px\)[\s\S]*\.workspace-drawer \.rebuild-drawer__list \{[\s\S]*overflow-y: auto/)
+  assert.match(css, /@media \(max-width: 680px\)[\s\S]*overscroll-behavior-y: contain/)
+  assert.doesNotMatch(css, /@media \(max-width: 680px\)[\s\S]*overflow: visible/)
+})
