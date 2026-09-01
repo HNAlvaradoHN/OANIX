@@ -190,6 +190,12 @@ export function WorkspaceDrawer({
                     >
                       <span className="workspace-drawer__folder-icon" aria-hidden="true">{folder.icon}</span>
                       <strong>{folder.name}</strong>
+                      {(folder.pinned === true || folder.favorite === true) && (
+                        <span className="workspace-drawer__marks" aria-label="Estado de carpeta">
+                          {folder.pinned === true && <span title="Fijada" aria-label="Fijada">📌</span>}
+                          {folder.favorite === true && <span title="Favorita" aria-label="Favorita">★</span>}
+                        </span>
+                      )}
                     </button>
                     <button
                       type="button"
