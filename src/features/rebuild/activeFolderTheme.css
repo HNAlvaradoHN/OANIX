@@ -66,31 +66,52 @@
   background: color-mix(in srgb, var(--rb-bg-1) 78%, transparent);
 }
 
-/* Night mode keeps the same visual hierarchy with darker glass and clear divisions. */
+/*
+ * Night mode deliberately lifts only its own veil and glass surfaces. The light
+ * theme above remains byte-for-byte unchanged. A very soft cool highlight restores
+ * detail in dark covers without turning the interface grey or adding blur work.
+ */
+[data-oanix-theme-mode="dark"] .rebuild-main[style] .rebuild-notes::after {
+  background:
+    radial-gradient(
+      circle at 52% 18%,
+      rgba(222, 228, 255, .07) 0,
+      rgba(222, 228, 255, .025) 32%,
+      transparent 56%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(8, 8, 14, .15),
+      rgba(8, 8, 14, .24) 72%,
+      rgba(8, 8, 14, .34)
+    );
+}
+
 [data-oanix-theme-mode="dark"] .rebuild-main[style] .rebuild-topbar,
 [data-oanix-theme-mode="dark"] .rebuild-main[style] .rebuild-folders,
 [data-oanix-theme-mode="dark"] .rebuild-main[style] .rebuild-tags {
-  background: color-mix(in srgb, var(--rb-bg-1) 80%, transparent);
-  border-bottom-color: rgba(255, 255, 255, .10);
+  background: color-mix(in srgb, var(--rb-bg-1) 68%, transparent);
+  border-bottom-color: rgba(255, 255, 255, .14);
 }
 
 [data-oanix-theme-mode="dark"] .rebuild-main[style] .rebuild-bottom-nav {
-  background: color-mix(in srgb, var(--rb-bg-1) 84%, transparent);
-  border-top-color: rgba(255, 255, 255, .10);
+  background: color-mix(in srgb, var(--rb-bg-1) 72%, transparent);
+  border-top-color: rgba(255, 255, 255, .14);
 }
 
 [data-oanix-theme-mode="dark"] .rebuild-main[style] .rebuild-tag {
-  background: color-mix(in srgb, var(--rb-bg-1) 58%, transparent);
+  background: color-mix(in srgb, var(--rb-bg-1) 46%, transparent);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .035);
 }
 
 [data-oanix-theme-mode="dark"] .rebuild-main[style] .rebuild-note-row {
-  background: color-mix(in srgb, var(--rb-bg-0) 58%, transparent);
-  border-bottom-color: rgba(255, 255, 255, .11);
+  background: color-mix(in srgb, var(--rb-bg-1) 42%, transparent);
+  border-bottom-color: rgba(255, 255, 255, .15);
 }
 
 [data-oanix-theme-mode="dark"] .rebuild-main[style] .rebuild-note-row:hover,
 [data-oanix-theme-mode="dark"] .rebuild-main[style] .rebuild-note-row:focus-visible {
-  background: color-mix(in srgb, var(--rb-bg-2) 74%, transparent);
+  background: color-mix(in srgb, var(--rb-bg-2) 58%, transparent);
 }
 
 /* The central create action follows the active folder and carries a small light reflection. */
