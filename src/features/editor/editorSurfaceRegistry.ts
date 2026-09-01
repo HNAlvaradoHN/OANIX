@@ -29,7 +29,7 @@ export const activeEditorSurface: EditorSurfaceDefinition = {
   },
   capabilities: {
     plainText: true,
-    richBlocks: false,
+    richBlocks: true,
     attachments: false,
   },
 }
