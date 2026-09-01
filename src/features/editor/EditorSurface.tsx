@@ -12,21 +12,25 @@ import type {
  * persistence, encryption, navigation and the Home workspace remain untouched.
  */
 export function EditorSurface({
+  noteId,
   initialTitle,
   initialText,
   saving,
   error,
   onRequestSave,
   onRequestClose,
+  onActivity,
 }: EditorSurfaceProps) {
   return (
     <NoteEditor
+      noteId={noteId}
       initialTitle={initialTitle}
       initialText={initialText}
       saving={saving}
       error={error}
       onRequestSave={onRequestSave}
       onRequestClose={onRequestClose}
+      onActivity={onActivity}
     />
   )
 }
