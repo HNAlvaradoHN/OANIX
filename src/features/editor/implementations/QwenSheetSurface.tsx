@@ -8,6 +8,7 @@ import type {
   EditorSurfaceSnapshot,
 } from '../editorSurfaceContract'
 import { QwenChecklistBlocks } from './QwenChecklistBlocks'
+import { QwenCodeBlocks } from './QwenCodeBlocks'
 import './qwenSheetSurface.css'
 
 const AUTOSAVE_IDLE_MS = 3_000
@@ -34,7 +35,7 @@ function BackIcon() {
  * lifecycle actions exclusively through EditorSurfaceProps.
  *
  * Rich blocks use the same inactivity checkpoint as title/body edits. The visual
- * sheet buffers checklist changes in the editor session and never owns encrypted
+ * sheet buffers rich-block changes in the editor session and never owns encrypted
  * storage, sync or note revision state itself.
  */
 export function QwenSheetSurface({
@@ -358,11 +359,18 @@ export function QwenSheetSurface({
           />
 
           {blockSession && (
-            <QwenChecklistBlocks
-              session={blockSession}
-              disabled={editingDisabled}
-              onActivity={markActivity}
-            />
+            <>
+              <QwenChecklistBlocks
+                session={blockSession}
+                disabled={editingDisabled}
+                onActivity={markActivity}
+              />
+              <QwenCodeBlocks
+                session={blockSession}
+                disabled={editingDisabled}
+                onActivity={markActivity}
+              />
+            </>
           )}
         </div>
       </main>
