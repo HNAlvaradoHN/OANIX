@@ -7,7 +7,8 @@ import {
   type FormEvent,
 } from 'react'
 import { AccountPanel } from '../account/AccountPanel'
-import { NoteEditor, type NoteEditorSnapshot } from '../editor/NoteEditor'
+import { EditorSurface } from '../editor/EditorSurface'
+import type { EditorSurfaceSnapshot } from '../editor/editorSurfaceContract'
 import { OanixIcon } from '../../shared/OanixIcon'
 import {
   AUTO_LOCK_OPTIONS,
@@ -232,7 +233,7 @@ export function RebuildApp({ onLock }: RebuildAppProps) {
     }
   }
 
-  async function saveEditorSnapshot(snapshot: NoteEditorSnapshot): Promise<boolean> {
+  async function saveEditorSnapshot(snapshot: EditorSurfaceSnapshot): Promise<boolean> {
     const current = editorRef.current
     if (!current || blockingSaveRef.current) return false
 
@@ -259,7 +260,7 @@ export function RebuildApp({ onLock }: RebuildAppProps) {
     }
   }
 
-  async function closeEditor(snapshot: NoteEditorSnapshot | null): Promise<boolean> {
+  async function closeEditor(snapshot: EditorSurfaceSnapshot | null): Promise<boolean> {
     const current = editorRef.current
     if (!current || blockingSaveRef.current) return false
 
@@ -530,7 +531,7 @@ export function RebuildApp({ onLock }: RebuildAppProps) {
       />
 
       {editor && (
-        <NoteEditor
+        <EditorSurface
           key={editor.meta.id}
           noteId={editor.meta.id}
           initialTitle={editor.meta.title}
