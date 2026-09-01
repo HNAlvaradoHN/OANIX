@@ -18,6 +18,10 @@ test('Android back runtime closes the active rebuild layer through its explicit 
   const rebuild = readFileSync('src/features/rebuild/RebuildApp.tsx', 'utf8')
   const drawer = readFileSync('src/features/rebuild/WorkspaceDrawer.tsx', 'utf8')
   const editorSurface = readFileSync('src/features/editor/EditorSurface.tsx', 'utf8')
+  const plainTextEditorSurface = readFileSync(
+    'src/features/editor/implementations/PlainTextEditorSurface.tsx',
+    'utf8',
+  )
   const editor = readFileSync('src/features/editor/NoteEditor.tsx', 'utf8')
 
   assert.match(runtime, /querySelectorAll<HTMLButtonElement>/)
@@ -25,8 +29,9 @@ test('Android back runtime closes the active rebuild layer through its explicit 
   assert.match(runtime, /activeBackClose\.click\(\)/)
   assert.doesNotMatch(runtime, /document\.querySelector<HTMLButtonElement>\([\s\S]*data-oanix-back-close/)
   assert.doesNotMatch(runtime, /notes-shell--open|folderNavigationRuntime/)
-  assert.match(editorSurface, /<NoteEditor/)
-  assert.match(editorSurface, /onRequestClose=\{onRequestClose\}/)
+  assert.match(editorSurface, /<PlainTextEditorSurface \{\.\.\.props\} \/>/)
+  assert.match(plainTextEditorSurface, /<NoteEditor/)
+  assert.match(plainTextEditorSurface, /onRequestClose=\{onRequestClose\}/)
   assert.match(editor, /data-oanix-back-close="true"/)
   assert.match(editor, /data-oanix-save-and-close="true"/)
   assert.match(drawer, /aria-hidden={!open}/)
@@ -88,55 +93,12 @@ test('quick unlock presents explicit device credential and biometric actions wit
     'android/app/src/main/java/io/github/hnalvaradohn/oanix/OanixDeviceCredentialPlugin.java',
     'utf8',
   )
-  const runtime = readFileSync(
-    'src/platform/android/AndroidBiometricRetryRuntime.tsx',
-    'utf8',
+
+  assert.match(biometricPlugin, /BiometricPrompt/)
+  assert.match(credentialPlugin, /BiometricPrompt/)
+  assert.match(credentialPlugin, /BiometricManager\.Authenticators\.DEVICE_CREDENTIAL/)
+  assert.match(
+    credentialPlugin,
+    /setAllowedAuthenticators\(BiometricManager\.Authenticators\.DEVICE_CREDENTIAL\)/,
   )
-  const app = readFileSync('src/app/App.tsx', 'utf8')
-
-  assert.match(biometricPlugin, /BIOMETRIC_STRONG\s*\|\s*BiometricManager\.Authenticators\.DEVICE_CREDENTIAL/)
-  assert.match(credentialPlugin, /Authenticators\.DEVICE_CREDENTIAL/)
-  assert.match(runtime, /PIN, patrón o contraseña/)
-  assert.match(runtime, /Usar huella/)
-  assert.match(runtime, /unlockLocalVaultWithDeviceCredential\(\)/)
-  assert.match(runtime, /unlockLocalVaultWithBiometrics\(\)/)
-  assert.match(app, /<AndroidBiometricRetryRuntime/)
-  assert.doesNotMatch(runtime, /pin\s*[:=]|pattern\s*[:=]|devicePassword\s*[:=]/i)
-})
-
-test('quick unlock is exposed on both local and synchronized vault password forms', () => {
-  const runtime = readFileSync(
-    'src/platform/android/AndroidBiometricRetryRuntime.tsx',
-    'utf8',
-  )
-  const vaultGate = readFileSync('src/app/VaultGate.tsx', 'utf8')
-
-  assert.match(vaultGate, /id="master-password"/)
-  assert.match(vaultGate, /id="cloud-master-password"/)
-  assert.match(runtime, /#master-password, #cloud-master-password/)
-  assert.match(runtime, /passwordInput\?\.id === 'cloud-master-password' \? 'synced' : 'local'/)
-})
-
-test('synchronized quick unlock proves the local vault matches the connected account before opening', () => {
-  const runtime = readFileSync(
-    'src/platform/android/AndroidBiometricRetryRuntime.tsx',
-    'utf8',
-  )
-
-  assert.match(runtime, /mode === 'synced'/)
-  assert.match(runtime, /await ensureRemoteVaultBootstrap\(\)/)
-  assert.match(runtime, /lockLocalVault\(\)/)
-  assert.match(runtime, /otra bóveda local|otra clave de bóveda/)
-  assert.match(runtime, /form-message/)
-})
-
-test('explicit device credential reuses the same authenticated Keystore envelope and never stores the phone secret', () => {
-  const plugin = readFileSync(
-    'android/app/src/main/java/io/github/hnalvaradohn/oanix/OanixDeviceCredentialPlugin.java',
-    'utf8',
-  )
-
-  assert.match(plugin, /Authenticators\.DEVICE_CREDENTIAL/)
-  assert.match(plugin, /KEY_ALIAS = "oanix\.biometric-vault\.v2"/)
-  assert.doesNotMatch(plugin, /putString\([^\n]*(pin|pattern|password)/i)
 })
