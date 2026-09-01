@@ -26,6 +26,15 @@
   line-height: 1;
 }
 
+.workspace-drawer__list,
+.workspace-drawer__sortable {
+  min-height: 0;
+}
+
+.workspace-drawer__list {
+  flex: 1;
+}
+
 .workspace-drawer__sortable {
   display: flex;
   flex-direction: column;
@@ -162,16 +171,20 @@
 @media (max-width: 680px) {
   .workspace-drawer .rebuild-drawer__columns {
     grid-template-columns: 1fr;
-    overflow-y: auto;
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+    overflow: hidden;
   }
 
   .workspace-drawer .rebuild-drawer__columns > section {
-    min-height: 14rem;
-    overflow: visible;
+    min-height: 0;
+    overflow: hidden;
   }
 
   .workspace-drawer .rebuild-drawer__list {
-    overflow: visible;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    scrollbar-gutter: stable;
   }
 }
 
