@@ -29,12 +29,13 @@ import {
   saveRebuildNote,
 } from './rebuildService'
 import {
-  folderGradient,
-  folderGradientCss,
+  folderAccent,
+  folderSurfaceCss,
   type FolderV2Record,
   type NoteV2Meta,
   type TagV2Record,
 } from './rebuildModel'
+import { WorkspaceHomeController } from './WorkspaceHomeController'
 import './rebuild.css'
 
 interface RebuildAppProps {
@@ -88,11 +89,10 @@ function useDelayedBusy(active: boolean, delay = 600): boolean {
 }
 
 function folderStyle(folder: FolderV2Record): CSSProperties {
-  const [accent] = folderGradient(folder.gradientIndex)
   return {
-    '--folder-accent': accent,
-    '--folder-soft': folderGradientCss(folder.gradientIndex, 0.16),
-    '--folder-strong': folderGradientCss(folder.gradientIndex),
+    '--folder-accent': folderAccent(folder),
+    '--folder-soft': folderSurfaceCss(folder, 0.16),
+    '--folder-strong': folderSurfaceCss(folder),
   } as CSSProperties
 }
 
@@ -104,6 +104,7 @@ export function RebuildApp({ onLock }: RebuildAppProps) {
   const [error, setError] = useState('')
   const [activeFolderId, setActiveFolderId] = useState<string | null>(null)
   const [activeTagId, setActiveTagId] = useState<string | null>(null)
+  const [activeCover, setActiveCover] = useState<string | null>(null)
   const [query, setQuery] = useState('')
   const [viewMode, setViewMode] = useState<ViewMode>('home')
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -119,6 +120,7 @@ export function RebuildApp({ onLock }: RebuildAppProps) {
   const [theme, setTheme] = useState<OanixThemePreset['id']>(() => readSavedOanixTheme())
   const [autoLockMinutes, setAutoLockMinutes] = useState<AutoLockMinutes>(() => readSavedAutoLockMinutes())
   const searchRef = useRef<HTMLInputElement | null>(null)
+  const logoSrc = `${import.meta.env.BASE_URL}oanix-logo.webp`
 
   const showSavingOverlay = useDelayedBusy(saving)
   const showOpeningOverlay = useDelayedBusy(openingNote)
@@ -172,8 +174,10 @@ export function RebuildApp({ onLock }: RebuildAppProps) {
 
   const mainStyle = activeFolder
     ? ({
-        '--active-folder-cover': folderGradientCss(activeFolder.gradientIndex, 0.28),
-        '--active-folder-accent': folderGradient(activeFolder.gradientIndex)[0],
+        '--active-folder-cover': activeCover
+          ? `linear-gradient(rgba(8, 8, 12, .28), rgba(8, 8, 12, .28)), url("${activeCover}") center / cover no-repeat`
+          : folderSurfaceCss(activeFolder, 0.28),
+        '--active-folder-accent': folderAccent(activeFolder),
       } as CSSProperties)
     : undefined
 
@@ -299,9 +303,7 @@ export function RebuildApp({ onLock }: RebuildAppProps) {
         setViewMode('home')
       } else {
         const tag = await createRebuildTag(createName)
-        setTags((current) => [...current, tag].sort((left, right) =>
-          left.name.localeCompare(right.name, 'es', { sensitivity: 'base' }),
-        ))
+        setTags((current) => [...current, tag])
       }
       setCreateName('')
       setCreateKind(null)
@@ -336,7 +338,13 @@ export function RebuildApp({ onLock }: RebuildAppProps) {
           </button>
 
           <div className="rebuild-brand">
-            <span className="rebuild-brand__badge" aria-hidden="true">O</span>
+            <img
+              className="rebuild-brand__badge"
+              src={logoSrc}
+              alt=""
+              aria-hidden="true"
+              style={{ objectFit: 'contain' }}
+            />
             <span>OANIX</span>
           </div>
 
@@ -493,82 +501,33 @@ export function RebuildApp({ onLock }: RebuildAppProps) {
         </nav>
       </section>
 
-      <aside className={`rebuild-drawer${drawerOpen ? ' is-open' : ''}`} aria-hidden={!drawerOpen}>
-        <header>
-          <button
-            type="button"
-            className="rebuild-icon-button"
-            onClick={() => setDrawerOpen(false)}
-            data-oanix-back-close="true"
-            aria-label="Cerrar panel"
-          >
-            <OanixIcon name="back" />
-          </button>
-          <strong>OANIX</strong>
-          <button
-            type="button"
-            className="rebuild-icon-button"
-            onClick={() => setCreateKind('chooser')}
-            aria-label="Crear carpeta o etiqueta"
-          >
-            <OanixIcon name="plus" />
-          </button>
-        </header>
-
-        <div className="rebuild-drawer__columns">
-          <section>
-            <h3>Carpetas <small>{folders.length}</small></h3>
-            <div className="rebuild-drawer__list">
-              {folders.map((folder) => (
-                <button
-                  key={folder.id}
-                  type="button"
-                  className="rebuild-drawer__folder"
-                  style={folderStyle(folder)}
-                  onClick={() => {
-                    setActiveFolderId(folder.id)
-                    setViewMode('home')
-                    setDrawerOpen(false)
-                  }}
-                >
-                  <span>{folder.icon}</span>
-                  <strong>{folder.name}</strong>
-                </button>
-              ))}
-              {folders.length === 0 && <p>Sin carpetas todavía.</p>}
-            </div>
-          </section>
-
-          <section>
-            <h3>Etiquetas <small>{tags.length}</small></h3>
-            <div className="rebuild-drawer__list">
-              {tags.map((tag) => (
-                <button
-                  key={tag.id}
-                  type="button"
-                  className="rebuild-drawer__tag"
-                  onClick={() => {
-                    setActiveTagId(tag.id)
-                    setDrawerOpen(false)
-                  }}
-                >
-                  <i style={{ background: tag.color }} />
-                  <strong>{tag.name}</strong>
-                </button>
-              ))}
-              {tags.length === 0 && <p>Sin etiquetas todavía.</p>}
-            </div>
-          </section>
-        </div>
-      </aside>
-      {drawerOpen && (
-        <button
-          className="rebuild-scrim"
-          type="button"
-          onClick={() => setDrawerOpen(false)}
-          aria-label="Cerrar panel"
-        />
-      )}
+      <WorkspaceHomeController
+        drawerOpen={drawerOpen}
+        folders={folders}
+        tags={tags}
+        activeFolderId={activeFolderId}
+        activeTagId={activeTagId}
+        onCloseDrawer={() => setDrawerOpen(false)}
+        onCreate={() => setCreateKind('chooser')}
+        onSelectAllFolders={() => {
+          setActiveFolderId(null)
+          setViewMode('home')
+          setDrawerOpen(false)
+        }}
+        onSelectFolder={(folderId) => {
+          setActiveFolderId(folderId)
+          setViewMode('home')
+          setDrawerOpen(false)
+        }}
+        onSelectTag={(tagId) => {
+          setActiveTagId((current) => current === tagId ? null : tagId)
+          setDrawerOpen(false)
+        }}
+        onFoldersChange={setFolders}
+        onTagsChange={setTags}
+        onActiveCoverChange={setActiveCover}
+        onError={setError}
+      />
 
       {editor && (
         <NoteEditor
