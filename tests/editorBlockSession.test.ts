@@ -76,6 +76,29 @@ test('equivalent edits do not produce a persistence call', async () => {
   assert.equal(saves, 0)
 })
 
+test('indexed insertion preserves the requested sequence in one checkpoint', async () => {
+  const calls: EditorSurfaceBlockChangeSet[] = []
+  const session = createEditorBlockSession({
+    loadBlocks: async () => [block('a', 'one'), block('c', 'three')],
+    saveChanges: async (changes) => {
+      calls.push(changes)
+      return true
+    },
+  })
+
+  assert.equal(await session.insert(block('b', 'two'), 1), true)
+  assert.deepEqual(await session.load(), [
+    block('a', 'one'),
+    block('b', 'two'),
+    block('c', 'three'),
+  ])
+  assert.equal(await session.flush(), true)
+  assert.deepEqual(calls, [{
+    upserts: [block('b', 'two')],
+    order: ['a', 'b', 'c'],
+  }])
+})
+
 test('flush sends compact dirty changes and commits them once', async () => {
   const calls: EditorSurfaceBlockChangeSet[] = []
   const session = createEditorBlockSession({
