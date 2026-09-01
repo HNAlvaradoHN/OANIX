@@ -142,6 +142,22 @@
   line-height: 1.45;
 }
 
+.workspace-customization__dialog footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.workspace-customization__footer-spacer {
+  flex: 1;
+}
+
+.workspace-customization__delete {
+  border-color: rgba(255, 77, 109, .28) !important;
+  background: rgba(255, 77, 109, .09) !important;
+  color: #ff6f8c !important;
+}
+
 @media (max-width: 560px) {
   .workspace-customization__dialog {
     width: calc(100vw - 18px);
