@@ -20,3 +20,34 @@
     rgba(8, 8, 12, .15)
   );
 }
+
+/*
+ * Keep Home surfaces translucent without changing their geometry. These values are
+ * intentionally moderate: enough of the active-folder atmosphere comes through,
+ * while text and row boundaries stay readable. No extra blur/filter is introduced.
+ */
+[data-oanix-theme-mode="light"] .rebuild-main[style] .rebuild-folders {
+  background: color-mix(in srgb, var(--rb-bg-1) 72%, transparent);
+}
+
+[data-oanix-theme-mode="light"] .rebuild-main[style] .rebuild-tags {
+  background: color-mix(in srgb, var(--rb-bg-1) 62%, transparent);
+}
+
+[data-oanix-theme-mode="light"] .rebuild-main[style] .rebuild-bottom-nav {
+  background: color-mix(in srgb, var(--rb-bg-1) 78%, transparent);
+}
+
+[data-oanix-theme-mode="light"] .rebuild-main[style] .rebuild-tag {
+  background: color-mix(in srgb, var(--rb-bg-1) 48%, transparent);
+}
+
+[data-oanix-theme-mode="light"] .rebuild-main[style] .rebuild-note-row {
+  background: color-mix(in srgb, var(--rb-bg-1) 54%, transparent);
+  border-bottom-color: rgba(20, 20, 32, .14);
+}
+
+[data-oanix-theme-mode="light"] .rebuild-main[style] .rebuild-note-row:hover,
+[data-oanix-theme-mode="light"] .rebuild-main[style] .rebuild-note-row:focus-visible {
+  background: color-mix(in srgb, var(--rb-bg-1) 68%, transparent);
+}
