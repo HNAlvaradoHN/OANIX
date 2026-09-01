@@ -6,6 +6,20 @@ import {
   setAndroidBackHandlingEnabled,
 } from './androidBack'
 
+function findActiveBackClose(): HTMLButtonElement | null {
+  const candidates = document.querySelectorAll<HTMLButtonElement>(
+    '[data-oanix-back-close="true"]',
+  )
+
+  for (const candidate of candidates) {
+    if (candidate.closest('[aria-hidden="true"]')) continue
+    if (candidate.disabled) continue
+    return candidate
+  }
+
+  return null
+}
+
 export function AndroidBackRuntime() {
   const [exitPromptVisible, setExitPromptVisible] = useState(false)
   const exitPromptVisibleRef = useRef(false)
@@ -28,11 +42,9 @@ export function AndroidBackRuntime() {
         return
       }
 
-      const modalBackClose = document.querySelector<HTMLButtonElement>(
-        '[data-oanix-back-close="true"]',
-      )
-      if (modalBackClose) {
-        modalBackClose.click()
+      const activeBackClose = findActiveBackClose()
+      if (activeBackClose) {
+        activeBackClose.click()
         return
       }
 
