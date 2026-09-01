@@ -1,0 +1,22 @@
+/* Active-folder presentation only. Persistence and folder data remain owned by the rebuild model. */
+
+.rebuild-bottom-nav > button:first-child.is-active {
+  background: color-mix(
+    in srgb,
+    var(--active-folder-accent, #7c5cff) 18%,
+    transparent
+  );
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--active-folder-accent, #7c5cff) 22%, transparent),
+    0 0 1.25rem color-mix(in srgb, var(--active-folder-accent, #7c5cff) 12%, transparent);
+}
+
+/* In light mode, preserve cover contrast instead of washing the image with a white veil. */
+[data-oanix-theme-mode="light"] .rebuild-main[style] .rebuild-notes::after {
+  background: linear-gradient(
+    180deg,
+    rgba(8, 8, 12, .07),
+    rgba(8, 8, 12, .11) 72%,
+    rgba(8, 8, 12, .15)
+  );
+}
