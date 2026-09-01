@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, type CSSProperties } from 'react'
 import Sortable from 'sortablejs'
 import type { FolderV2Record, TagV2Record } from './rebuildModel'
 import { folderAccent, folderSurfaceCss } from './rebuildModel'
@@ -152,7 +152,7 @@ export function WorkspaceDrawer({
                       '--folder-accent': folderAccent(folder),
                       '--folder-soft': folderSurfaceCss(folder, .16),
                       '--folder-strong': folderSurfaceCss(folder),
-                    } as React.CSSProperties}
+                    } as CSSProperties}
                   >
                     <button
                       type="button"
