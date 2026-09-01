@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   CHECKLIST_BLOCK_KIND,
   MAX_CHECKLIST_ITEMS,
@@ -12,6 +12,7 @@ import './qwenChecklistBlocks.css'
 interface QwenChecklistBlocksProps {
   session: EditorBlockSession
   disabled: boolean
+  insertRequest: number
   onActivity: () => void
 }
 
@@ -33,11 +34,13 @@ function withItem(
 export function QwenChecklistBlocks({
   session,
   disabled,
+  insertRequest,
   onActivity,
 }: QwenChecklistBlocksProps) {
   const [blocks, setBlocks] = useState<EditorChecklistBlock[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const handledInsertRequestRef = useRef(insertRequest)
 
   useEffect(() => {
     let active = true
@@ -85,6 +88,12 @@ export function QwenChecklistBlocks({
     })
   }
 
+  useEffect(() => {
+    if (loading || disabled || insertRequest === handledInsertRequestRef.current) return
+    handledInsertRequestRef.current = insertRequest
+    addChecklist()
+  }, [insertRequest, loading, disabled])
+
   function removeChecklist(blockId: string) {
     setBlocks((current) => current.filter((block) => block.id !== blockId))
     onActivity()
@@ -108,23 +117,10 @@ export function QwenChecklistBlocks({
     })
   }
 
+  if (!loading && !error && blocks.length === 0) return null
+
   return (
     <section className="oanix-qwen-sheet__checklists" aria-label="Checklists de la nota">
-      <div className="oanix-qwen-sheet__blocks-heading">
-        <div>
-          <span className="oanix-qwen-sheet__blocks-kicker">Bloques</span>
-          <strong>Checklist</strong>
-        </div>
-        <button
-          type="button"
-          className="oanix-qwen-sheet__add-checklist"
-          disabled={disabled || loading}
-          onClick={addChecklist}
-        >
-          + Checklist
-        </button>
-      </div>
-
       {loading && (
         <p className="oanix-qwen-sheet__blocks-hint" role="status">
           Abriendo bloques cifrados…
@@ -134,12 +130,6 @@ export function QwenChecklistBlocks({
       {error && (
         <p className="oanix-qwen-sheet__blocks-error" role="alert">
           {error}
-        </p>
-      )}
-
-      {!loading && blocks.length === 0 && (
-        <p className="oanix-qwen-sheet__blocks-hint">
-          Añade tareas cuando necesites una lista verificable dentro de esta nota.
         </p>
       )}
 
