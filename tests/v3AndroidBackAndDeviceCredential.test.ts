@@ -31,7 +31,7 @@ test('Android back runtime closes the active rebuild layer through its explicit 
   assert.doesNotMatch(runtime, /notes-shell--open|folderNavigationRuntime/)
   assert.match(editorSurface, /const ActiveSurface = lazy\(activeEditorSurface\.load\)/)
   assert.match(editorSurface, /<Suspense fallback=\{null\}>/)
-  assert.match(editorSurface, /<ActiveSurface \{\.\.\.props\} \/>/)
+  assert.match(editorSurface, /<ActiveSurface \{\.\.\.surfaceProps\} \/>/)
   assert.match(editorSurfaceRegistry, /await import\([\s\S]*QwenSheetSurface/)
   assert.match(selectedEditorSurface, /data-oanix-back-close="true"/)
   assert.match(selectedEditorSurface, /data-oanix-save-and-close="true"/)
