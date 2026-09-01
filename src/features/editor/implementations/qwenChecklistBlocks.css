@@ -1,0 +1,188 @@
+.oanix-qwen-sheet__checklists {
+  margin-top: 30px;
+  padding-top: 24px;
+  border-top: 1px solid var(--q-line);
+}
+
+.oanix-qwen-sheet__blocks-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.oanix-qwen-sheet__blocks-heading > div {
+  display: grid;
+  gap: 2px;
+}
+
+.oanix-qwen-sheet__blocks-heading strong {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.15rem;
+}
+
+.oanix-qwen-sheet__blocks-kicker {
+  color: var(--q-ink-faint);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 10px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.oanix-qwen-sheet__add-checklist,
+.oanix-qwen-sheet__checklist-add-item,
+.oanix-qwen-sheet__checklist-remove,
+.oanix-qwen-sheet__checklist-item-remove {
+  border: 1px solid var(--q-line-2);
+  background: var(--q-card);
+  color: var(--q-ink-soft);
+  font: inherit;
+}
+
+.oanix-qwen-sheet__add-checklist {
+  min-height: 36px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.oanix-qwen-sheet__add-checklist:hover,
+.oanix-qwen-sheet__add-checklist:focus-visible,
+.oanix-qwen-sheet__checklist-add-item:hover,
+.oanix-qwen-sheet__checklist-add-item:focus-visible {
+  border-color: var(--q-accent);
+  color: var(--q-accent-deep);
+}
+
+.oanix-qwen-sheet__blocks-hint,
+.oanix-qwen-sheet__blocks-error {
+  margin: 10px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.oanix-qwen-sheet__blocks-hint {
+  color: var(--q-ink-faint);
+}
+
+.oanix-qwen-sheet__blocks-error {
+  color: #a22d22;
+}
+
+[data-oanix-theme-mode="dark"] .oanix-qwen-sheet__blocks-error {
+  color: #ffaaa1;
+}
+
+.oanix-qwen-sheet__checklist-stack {
+  display: grid;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.oanix-qwen-sheet__checklist {
+  padding: 14px;
+  border: 1px solid var(--q-line);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--q-card) 86%, transparent);
+}
+
+.oanix-qwen-sheet__checklist-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+  color: var(--q-ink-faint);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 10px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.oanix-qwen-sheet__checklist-remove {
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: transparent;
+  font-size: 10px;
+  text-transform: none;
+}
+
+.oanix-qwen-sheet__checklist-items {
+  display: grid;
+  gap: 7px;
+}
+
+.oanix-qwen-sheet__checklist-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  min-height: 38px;
+}
+
+.oanix-qwen-sheet__checklist-item > input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--q-accent);
+}
+
+.oanix-qwen-sheet__checklist-item > input[type="text"] {
+  width: 100%;
+  min-height: 36px;
+  padding: 5px 2px;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  outline: 0;
+  background: transparent;
+  color: var(--q-ink);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 15px;
+}
+
+.oanix-qwen-sheet__checklist-item > input[type="text"]:focus {
+  border-bottom-color: var(--q-line-2);
+}
+
+.oanix-qwen-sheet__checklist-item > input[type="checkbox"]:checked + input[type="text"] {
+  color: var(--q-ink-faint);
+  text-decoration: line-through;
+}
+
+.oanix-qwen-sheet__checklist-item-remove {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 8px;
+  background: transparent;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.oanix-qwen-sheet__checklist-add-item {
+  margin-top: 10px;
+  padding: 6px 10px;
+  border-radius: 9px;
+  background: transparent;
+  font-size: 11px;
+}
+
+.oanix-qwen-sheet__add-checklist:disabled,
+.oanix-qwen-sheet__checklist-add-item:disabled,
+.oanix-qwen-sheet__checklist-remove:disabled,
+.oanix-qwen-sheet__checklist-item-remove:disabled,
+.oanix-qwen-sheet__checklist-item input:disabled {
+  opacity: .5;
+}
+
+@media (max-width: 560px) {
+  .oanix-qwen-sheet__blocks-heading {
+    align-items: flex-end;
+  }
+
+  .oanix-qwen-sheet__checklist {
+    padding: 12px;
+  }
+}

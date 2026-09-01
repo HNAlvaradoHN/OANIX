@@ -58,9 +58,9 @@ test('rich block boundary stays generic and does not import persistence or a con
   assert.doesNotMatch(contract, /QwenSheetSurface|PlainTextEditorSurface|NoteEditor/)
 })
 
-test('the host withholds rich callbacks while the selected surface capability is disabled', () => {
+test('the host still gates rich callbacks through the selected surface capability', () => {
   assert.match(host, /activeEditorSurface\.capabilities\.richBlocks[\s\S]*\? props[\s\S]*loadBlocks: undefined[\s\S]*onRequestBlockSave: undefined/)
-  assert.match(registry, /richBlocks: false/)
+  assert.match(registry, /richBlocks: true/)
 })
 
 test('the registry is the only composition point and lazily selects the sanitized sheet', () => {
@@ -70,7 +70,7 @@ test('the registry is the only composition point and lazily selects the sanitize
   assert.match(registry, /await import\([\s\S]*\.\/implementations\/QwenSheetSurface/)
   assert.match(registry, /return \{ default: QwenSheetSurface \}/)
   assert.match(registry, /plainText: true/)
-  assert.match(registry, /richBlocks: false/)
+  assert.match(registry, /richBlocks: true/)
   assert.match(registry, /attachments: false/)
   assert.doesNotMatch(registry, /^\s*import .*QwenSheetSurface/m)
   assert.doesNotMatch(registry, /from '\.\/NoteEditor'/)

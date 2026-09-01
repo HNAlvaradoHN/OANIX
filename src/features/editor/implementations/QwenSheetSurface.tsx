@@ -7,6 +7,7 @@ import type {
   EditorSurfaceProps,
   EditorSurfaceSnapshot,
 } from '../editorSurfaceContract'
+import { QwenChecklistBlocks } from './QwenChecklistBlocks'
 import './qwenSheetSurface.css'
 
 const AUTOSAVE_IDLE_MS = 3_000
@@ -32,9 +33,9 @@ function BackIcon() {
  * intentionally not carried into OANIX. This component receives note data and
  * lifecycle actions exclusively through EditorSurfaceProps.
  *
- * The current production cut keeps the proven OANIX plain-text UI while preparing
- * a lazy rich-block editing session behind the capability gate. No block payload is
- * loaded unless both rich callbacks are supplied and block work is actually requested.
+ * Rich blocks use the same inactivity checkpoint as title/body edits. The visual
+ * sheet buffers checklist changes in the editor session and never owns encrypted
+ * storage, sync or note revision state itself.
  */
 export function QwenSheetSurface({
   noteId,
@@ -136,11 +137,20 @@ export function QwenSheetSurface({
 
     const generation = generationRef.current
     const snapshot = readSnapshot()
+    const snapshotChanged = !snapshotsMatch(snapshot, committedSnapshotRef.current)
+    const blockSession = blockSessionRef.current
     startAutosaveFeedback()
 
+    let textSaved = !snapshotChanged
     const operation = (async () => {
       try {
-        return await onRequestSave(snapshot)
+        if (snapshotChanged) {
+          textSaved = await onRequestSave(snapshot)
+          if (!textSaved) return false
+        }
+
+        if (blockSession?.hasPending() && !(await blockSession.flush())) return false
+        return true
       } catch {
         return false
       }
@@ -150,8 +160,14 @@ export function QwenSheetSurface({
     let succeeded = false
     try {
       succeeded = await operation
-      if (succeeded) committedSnapshotRef.current = snapshot
-      if (succeeded && generationRef.current === generation) markClean()
+      if (textSaved && snapshotChanged) committedSnapshotRef.current = snapshot
+      if (
+        succeeded
+        && generationRef.current === generation
+        && !blockSession?.hasPending()
+      ) {
+        markClean()
+      }
       return succeeded
     } finally {
       if (saveInFlightRef.current === operation) saveInFlightRef.current = null
@@ -263,6 +279,7 @@ export function QwenSheetSurface({
   }, [dirty])
 
   const editingDisabled = saving || closing
+  const blockSession = blockSessionRef.current
 
   return (
     <section
@@ -339,6 +356,14 @@ export function QwenSheetSurface({
             onCompositionStart={handleCompositionStart}
             onCompositionEnd={handleCompositionEnd}
           />
+
+          {blockSession && (
+            <QwenChecklistBlocks
+              session={blockSession}
+              disabled={editingDisabled}
+              onActivity={markActivity}
+            />
+          )}
         </div>
       </main>
     </section>

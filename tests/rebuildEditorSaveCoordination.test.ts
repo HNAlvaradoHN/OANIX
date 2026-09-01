@@ -57,9 +57,9 @@ test('accepted block saves survive close draining and skip state churn on storag
   assert.match(insideRun, /if \(updated === current\.meta\) return true/)
 })
 
-test('application supplies block callbacks but host withholds them while richBlocks is disabled', () => {
+test('application callbacks are exposed only through the active rich capability gate', () => {
   assert.match(rebuild, /loadBlocks=\{loadEditorBlocks\}/)
   assert.match(rebuild, /onRequestBlockSave=\{saveEditorBlocks\}/)
   assert.match(host, /activeEditorSurface\.capabilities\.richBlocks[\s\S]*loadBlocks: undefined[\s\S]*onRequestBlockSave: undefined/)
-  assert.match(registry, /richBlocks: false/)
+  assert.match(registry, /richBlocks: true/)
 })
