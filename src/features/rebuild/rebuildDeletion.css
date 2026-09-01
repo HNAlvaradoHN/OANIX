@@ -1,0 +1,55 @@
+.rebuild-note-row__open {
+  min-width: 0;
+  min-height: 3.75rem;
+  display: flex;
+  align-items: center;
+  gap: .78rem;
+  flex: 1;
+  padding: 0;
+  border: 0;
+  border-radius: .72rem;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+
+.rebuild-note-row__open:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--active-folder-accent, #7c5cff) 42%, transparent);
+  outline-offset: 2px;
+}
+
+.rebuild-note-row__delete {
+  width: 2.25rem;
+  height: 2.25rem;
+  display: grid;
+  place-items: center;
+  flex: none;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, #ff4d6d 24%, var(--rb-line));
+  border-radius: .66rem;
+  background: color-mix(in srgb, #ff4d6d 7%, transparent);
+  color: var(--rb-muted);
+  font-size: .88rem;
+  opacity: .72;
+}
+
+.rebuild-note-row__delete:hover,
+.rebuild-note-row__delete:focus-visible {
+  outline: none;
+  border-color: color-mix(in srgb, #ff4d6d 46%, var(--rb-line));
+  background: color-mix(in srgb, #ff4d6d 13%, transparent);
+  color: #ff8097;
+  opacity: 1;
+}
+
+.rebuild-note-row__delete:active {
+  transform: scale(.95);
+}
+
+@media (max-width: 560px) {
+  .rebuild-note-row__delete {
+    width: 2.1rem;
+    height: 2.1rem;
+    font-size: .82rem;
+  }
+}

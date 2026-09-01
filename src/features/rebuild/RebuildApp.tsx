@@ -22,6 +22,11 @@ import {
   type OanixThemePreset,
 } from '../personalization/themeCatalog'
 import {
+  deleteRebuildFolder,
+  deleteRebuildNote,
+  deleteRebuildTag,
+} from './rebuildDeletionService'
+import {
   createRebuildFolder,
   createRebuildNote,
   createRebuildTag,
@@ -200,6 +205,12 @@ export function RebuildApp({ onLock }: RebuildAppProps) {
     setEditor(next)
   }
 
+  function mergeUpdatedNoteMetadata(updated: NoteV2Meta[]) {
+    if (updated.length === 0) return
+    const byId = new Map(updated.map((note) => [note.id, note]))
+    setNotes((current) => current.map((note) => byId.get(note.id) ?? note))
+  }
+
   async function openNote(noteId: string) {
     if (openingNote || saving) return
     setOpeningNote(true)
@@ -288,6 +299,37 @@ export function RebuildApp({ onLock }: RebuildAppProps) {
     } finally {
       blockingSaveRef.current = false
       setSaving(false)
+    }
+  }
+
+  async function removeFolder(folderId: string) {
+    const updatedNotes = await deleteRebuildFolder(folderId)
+    mergeUpdatedNoteMetadata(updatedNotes)
+    setFolders((current) => current.filter((folder) => folder.id !== folderId))
+    if (activeFolderId === folderId) {
+      setActiveFolderId(null)
+      setActiveCover(null)
+      setViewMode('home')
+    }
+  }
+
+  async function removeTag(tagId: string) {
+    const updatedNotes = await deleteRebuildTag(tagId)
+    mergeUpdatedNoteMetadata(updatedNotes)
+    setTags((current) => current.filter((tag) => tag.id !== tagId))
+    if (activeTagId === tagId) setActiveTagId(null)
+  }
+
+  async function removeNote(note: NoteV2Meta) {
+    if (openingNote || saving) return
+    if (!window.confirm(`¿Eliminar la nota “${note.title}”?\n\nEsta acción eliminará la nota y su contenido.`)) return
+
+    setError('')
+    try {
+      await deleteRebuildNote(note.id)
+      setNotes((current) => current.filter((item) => item.id !== note.id))
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : 'No se pudo eliminar la nota.')
     }
   }
 
@@ -438,25 +480,35 @@ export function RebuildApp({ onLock }: RebuildAppProps) {
               {visibleNotes.map((note) => {
                 const folder = note.folderId ? folderById.get(note.folderId) ?? null : null
                 return (
-                  <button
-                    key={note.id}
-                    type="button"
-                    className="rebuild-note-row"
-                    onClick={() => void openNote(note.id)}
-                  >
-                    <span
-                      className="rebuild-note-row__avatar"
-                      style={folder ? folderStyle(folder) : undefined}
-                      aria-hidden="true"
+                  <div key={note.id} className="rebuild-note-row">
+                    <button
+                      type="button"
+                      className="rebuild-note-row__open"
+                      onClick={() => void openNote(note.id)}
                     >
-                      {folder?.icon ?? '📝'}
-                    </span>
-                    <span className="rebuild-note-row__main">
-                      <strong>{note.title}</strong>
-                      <small>{folder?.name ?? 'Sin carpeta'}</small>
-                    </span>
-                    <span className="rebuild-note-row__time">{formatNoteTime(note.updatedAt)}</span>
-                  </button>
+                      <span
+                        className="rebuild-note-row__avatar"
+                        style={folder ? folderStyle(folder) : undefined}
+                        aria-hidden="true"
+                      >
+                        {folder?.icon ?? '📝'}
+                      </span>
+                      <span className="rebuild-note-row__main">
+                        <strong>{note.title}</strong>
+                        <small>{folder?.name ?? 'Sin carpeta'}</small>
+                      </span>
+                      <span className="rebuild-note-row__time">{formatNoteTime(note.updatedAt)}</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="rebuild-note-row__delete"
+                      onClick={() => void removeNote(note)}
+                      aria-label={`Eliminar ${note.title}`}
+                      title="Eliminar nota"
+                    >
+                      🗑️
+                    </button>
+                  </div>
                 )
               })}
             </div>
@@ -526,6 +578,8 @@ export function RebuildApp({ onLock }: RebuildAppProps) {
         }}
         onFoldersChange={setFolders}
         onTagsChange={setTags}
+        onDeleteFolder={removeFolder}
+        onDeleteTag={removeTag}
         onActiveCoverChange={setActiveCover}
         onError={setError}
       />

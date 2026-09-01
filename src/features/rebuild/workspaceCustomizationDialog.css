@@ -1,3 +1,5 @@
+@import './rebuildDeletion.css';
+
 .workspace-customization__dialog {
   width: min(560px, calc(100vw - 28px));
   max-height: min(760px, calc(100dvh - 28px));
@@ -140,6 +142,22 @@
 .workspace-customization__group small {
   opacity: .66;
   line-height: 1.45;
+}
+
+.workspace-customization__dialog footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.workspace-customization__footer-spacer {
+  flex: 1;
+}
+
+.workspace-customization__delete {
+  border-color: rgba(255, 77, 109, .28) !important;
+  background: rgba(255, 77, 109, .09) !important;
+  color: #ff6f8c !important;
 }
 
 @media (max-width: 560px) {

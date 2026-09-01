@@ -21,7 +21,7 @@ export interface WorkspaceTagCustomization {
   color: string
 }
 
-type WorkspaceCustomizationTarget =
+export type WorkspaceCustomizationTarget =
   | { kind: 'folder'; value: FolderV2Record; hasCover: boolean }
   | { kind: 'tag'; value: TagV2Record }
 
@@ -33,6 +33,7 @@ interface WorkspaceCustomizationDialogProps {
   onSaveTag: (tagId: string, input: WorkspaceTagCustomization) => Promise<boolean>
   onChooseFolderCover: (folderId: string, file: File) => Promise<boolean>
   onRemoveFolderCover: (folderId: string) => Promise<boolean>
+  onDelete: (target: WorkspaceCustomizationTarget) => Promise<boolean>
 }
 
 export function WorkspaceCustomizationDialog({
@@ -43,6 +44,7 @@ export function WorkspaceCustomizationDialog({
   onSaveTag,
   onChooseFolderCover,
   onRemoveFolderCover,
+  onDelete,
 }: WorkspaceCustomizationDialogProps) {
   const [name, setName] = useState('')
   const [icon, setIcon] = useState<string>(V2_FOLDER_ICONS[0])
@@ -93,6 +95,17 @@ export function WorkspaceCustomizationDialog({
   async function removeCover() {
     if (target?.kind !== 'folder' || busy) return
     await onRemoveFolderCover(target.value.id)
+  }
+
+  async function removeTarget() {
+    if (!target || busy) return
+    const confirmed = window.confirm(
+      target.kind === 'folder'
+        ? `¿Eliminar la carpeta “${target.value.name}”?\n\nLas notas no se eliminarán; quedarán sin carpeta.`
+        : `¿Eliminar la etiqueta “${target.value.name}”?\n\nLa etiqueta se quitará de las notas, pero las notas no se eliminarán.`,
+    )
+    if (!confirmed) return
+    if (await onDelete(target)) onClose()
   }
 
   return (
@@ -245,6 +258,15 @@ export function WorkspaceCustomizationDialog({
           )}
 
           <footer>
+            <button
+              type="button"
+              className="workspace-customization__delete"
+              onClick={() => void removeTarget()}
+              disabled={busy}
+            >
+              Eliminar
+            </button>
+            <span className="workspace-customization__footer-spacer" />
             <button type="button" onClick={onClose} disabled={busy}>Cancelar</button>
             <button type="submit" disabled={busy}>{busy ? 'Guardando…' : 'Guardar'}</button>
           </footer>
