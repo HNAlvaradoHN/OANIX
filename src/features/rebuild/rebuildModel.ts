@@ -88,9 +88,9 @@ export interface FolderV2Record {
   name: string
   icon: string
   gradientIndex: number
-  customColor: string | null
-  coverAssetId: string | null
-  order: number
+  customColor?: string | null
+  coverAssetId?: string | null
+  order?: number
   createdAt: string
   updatedAt: string
 }
@@ -100,7 +100,7 @@ export interface TagV2Record {
   id: string
   name: string
   color: string
-  order: number
+  order?: number
   createdAt: string
   updatedAt: string
 }
