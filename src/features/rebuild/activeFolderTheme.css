@@ -11,43 +11,105 @@
     0 0 1.25rem color-mix(in srgb, var(--active-folder-accent, #7c5cff) 12%, transparent);
 }
 
-/* In light mode, preserve cover contrast instead of washing the image with a white veil. */
+/* Let the active cover sit behind the complete Home chrome so translucency is coherent. */
+.rebuild-main[style] .rebuild-notes::before,
+.rebuild-main[style] .rebuild-notes::after {
+  top: 0;
+}
+
+/* Preserve cover contrast in light mode instead of washing the image with a white veil. */
 [data-oanix-theme-mode="light"] .rebuild-main[style] .rebuild-notes::after {
   background: linear-gradient(
     180deg,
-    rgba(8, 8, 12, .07),
-    rgba(8, 8, 12, .11) 72%,
-    rgba(8, 8, 12, .15)
+    rgba(8, 8, 12, .06),
+    rgba(8, 8, 12, .10) 72%,
+    rgba(8, 8, 12, .14)
   );
 }
 
 /*
- * Keep Home surfaces translucent without changing their geometry. These values are
- * intentionally moderate: enough of the active-folder atmosphere comes through,
- * while text and row boundaries stay readable. No extra blur/filter is introduced.
+ * The Home bars keep their existing geometry and separators. They are deliberately
+ * only mildly translucent: the folder atmosphere should be visible, never compete
+ * with labels or navigation. No additional backdrop-filter is introduced here.
  */
+[data-oanix-theme-mode="light"] .rebuild-main[style] .rebuild-topbar {
+  background: color-mix(in srgb, var(--rb-bg-1) 86%, transparent);
+  border-bottom-color: rgba(20, 20, 32, .12);
+}
+
 [data-oanix-theme-mode="light"] .rebuild-main[style] .rebuild-folders {
-  background: color-mix(in srgb, var(--rb-bg-1) 72%, transparent);
+  background: color-mix(in srgb, var(--rb-bg-1) 84%, transparent);
+  border-bottom-color: rgba(20, 20, 32, .12);
 }
 
 [data-oanix-theme-mode="light"] .rebuild-main[style] .rebuild-tags {
-  background: color-mix(in srgb, var(--rb-bg-1) 62%, transparent);
+  background: color-mix(in srgb, var(--rb-bg-1) 82%, transparent);
+  border-bottom-color: rgba(20, 20, 32, .13);
 }
 
 [data-oanix-theme-mode="light"] .rebuild-main[style] .rebuild-bottom-nav {
-  background: color-mix(in srgb, var(--rb-bg-1) 78%, transparent);
+  background: color-mix(in srgb, var(--rb-bg-1) 86%, transparent);
+  border-top-color: rgba(20, 20, 32, .13);
 }
 
 [data-oanix-theme-mode="light"] .rebuild-main[style] .rebuild-tag {
-  background: color-mix(in srgb, var(--rb-bg-1) 48%, transparent);
+  background: color-mix(in srgb, var(--rb-bg-1) 62%, transparent);
 }
 
 [data-oanix-theme-mode="light"] .rebuild-main[style] .rebuild-note-row {
-  background: color-mix(in srgb, var(--rb-bg-1) 54%, transparent);
-  border-bottom-color: rgba(20, 20, 32, .14);
+  background: color-mix(in srgb, var(--rb-bg-1) 68%, transparent);
+  border-bottom-color: rgba(20, 20, 32, .18);
 }
 
 [data-oanix-theme-mode="light"] .rebuild-main[style] .rebuild-note-row:hover,
 [data-oanix-theme-mode="light"] .rebuild-main[style] .rebuild-note-row:focus-visible {
-  background: color-mix(in srgb, var(--rb-bg-1) 68%, transparent);
+  background: color-mix(in srgb, var(--rb-bg-1) 78%, transparent);
+}
+
+/* Night mode keeps the same visual hierarchy with darker glass and clear divisions. */
+[data-oanix-theme-mode="dark"] .rebuild-main[style] .rebuild-topbar,
+[data-oanix-theme-mode="dark"] .rebuild-main[style] .rebuild-folders,
+[data-oanix-theme-mode="dark"] .rebuild-main[style] .rebuild-tags {
+  background: color-mix(in srgb, var(--rb-bg-1) 80%, transparent);
+  border-bottom-color: rgba(255, 255, 255, .10);
+}
+
+[data-oanix-theme-mode="dark"] .rebuild-main[style] .rebuild-bottom-nav {
+  background: color-mix(in srgb, var(--rb-bg-1) 84%, transparent);
+  border-top-color: rgba(255, 255, 255, .10);
+}
+
+[data-oanix-theme-mode="dark"] .rebuild-main[style] .rebuild-tag {
+  background: color-mix(in srgb, var(--rb-bg-1) 58%, transparent);
+}
+
+[data-oanix-theme-mode="dark"] .rebuild-main[style] .rebuild-note-row {
+  background: color-mix(in srgb, var(--rb-bg-0) 58%, transparent);
+  border-bottom-color: rgba(255, 255, 255, .11);
+}
+
+[data-oanix-theme-mode="dark"] .rebuild-main[style] .rebuild-note-row:hover,
+[data-oanix-theme-mode="dark"] .rebuild-main[style] .rebuild-note-row:focus-visible {
+  background: color-mix(in srgb, var(--rb-bg-2) 74%, transparent);
+}
+
+/* The central create action follows the active folder and carries a small light reflection. */
+.rebuild-main[style] .rebuild-fab {
+  background:
+    radial-gradient(
+      circle at 31% 23%,
+      rgba(255, 255, 255, .82) 0,
+      rgba(255, 255, 255, .28) 12%,
+      transparent 31%
+    ),
+    linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--active-folder-accent, #7c5cff) 68%, white),
+      var(--active-folder-accent, #7c5cff) 54%,
+      color-mix(in srgb, var(--active-folder-accent, #7c5cff) 72%, #17171f)
+    );
+  box-shadow:
+    0 10px 28px color-mix(in srgb, var(--active-folder-accent, #7c5cff) 34%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, .58),
+    inset 0 -8px 18px rgba(0, 0, 0, .10);
 }
