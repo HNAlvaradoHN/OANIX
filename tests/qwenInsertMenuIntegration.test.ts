@@ -3,33 +3,27 @@ import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
 const surface = readFileSync('src/features/editor/implementations/QwenSheetSurface.tsx', 'utf8')
-const checklist = readFileSync('src/features/editor/implementations/QwenChecklistBlocks.tsx', 'utf8')
-const code = readFileSync('src/features/editor/implementations/QwenCodeBlocks.tsx', 'utf8')
+const richBlocks = readFileSync('src/features/editor/implementations/QwenRichBlocks.tsx', 'utf8')
 
 test('Qwen exposes one central Insertar action for supported rich blocks', () => {
-  assert.match(surface, />\+ Insertar</)
-  assert.match(surface, /insertBlock\('checklist'\)/)
-  assert.match(surface, /insertBlock\('code'\)/)
-  assert.match(surface, /role="menu"/)
-  assert.match(surface, /aria-label="Insertar bloque"/)
-  assert.doesNotMatch(checklist, />\+ Checklist</)
-  assert.doesNotMatch(code, />\+ Código</)
-})
-
-test('insert requests stay in memory and reuse the existing block session', () => {
-  assert.match(surface, /setChecklistInsertRequest\(\(value\) => value \+ 1\)/)
-  assert.match(surface, /setCodeInsertRequest\(\(value\) => value \+ 1\)/)
-  assert.match(surface, /insertRequest=\{checklistInsertRequest\}/)
-  assert.match(surface, /insertRequest=\{codeInsertRequest\}/)
+  assert.match(richBlocks, />\+ Insertar</)
+  assert.match(richBlocks, /insertBlock\('checklist'\)/)
+  assert.match(richBlocks, /insertBlock\('code'\)/)
+  assert.match(richBlocks, /role="menu"/)
+  assert.match(richBlocks, /aria-label="Insertar bloque"/)
   assert.equal((surface.match(/createEditorBlockSession\(/g) ?? []).length, 1)
-  assert.doesNotMatch(surface, /localStorage|sessionStorage|indexedDB|fetch\(|XMLHttpRequest/)
 })
 
-test('block components consume each insert request once after their shared load', () => {
-  for (const source of [checklist, code]) {
-    assert.match(source, /handledInsertRequestRef = useRef\(insertRequest\)/)
-    assert.match(source, /if \(loading \|\| disabled \|\| insertRequest === handledInsertRequestRef\.current\) return/)
-    assert.match(source, /handledInsertRequestRef\.current = insertRequest/)
-    assert.doesNotMatch(source, /setTimeout|setInterval/)
-  }
+test('insertion stays in memory and reuses the existing block session', () => {
+  assert.match(surface, /<QwenRichBlocks session=\{blockSession\}/)
+  assert.match(richBlocks, /session\.upsert\(next\)/)
+  assert.match(richBlocks, /setBlocks\(\(current\) => \[\.\.\.current, next\]\)/)
+  assert.doesNotMatch(richBlocks, /setTimeout|setInterval|localStorage|sessionStorage|indexedDB|fetch\(|XMLHttpRequest/)
+})
+
+test('one visual controller loads rich blocks and preserves their stored sequence', () => {
+  assert.equal((richBlocks.match(/session\.load\(\)/g) ?? []).length, 1)
+  assert.match(richBlocks, /blocks\.map\(\(rawBlock\) =>/)
+  assert.match(richBlocks, /decodeChecklistBlock\(rawBlock\)[\s\S]*decodeCodeBlock\(rawBlock\)/)
+  assert.match(richBlocks, /data-oanix-rich-block-flow="ordered"/)
 })
