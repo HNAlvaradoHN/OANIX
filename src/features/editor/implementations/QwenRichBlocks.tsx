@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import {
   CHECKLIST_BLOCK_KIND,
   MAX_CHECKLIST_ITEMS,
@@ -49,8 +49,9 @@ function withChecklistItem(
 export function QwenRichBlocks({ session, disabled, onActivity }: QwenRichBlocksProps) {
   const [blocks, setBlocks] = useState<EditorSurfaceBlock[]>([])
   const [loading, setLoading] = useState(true)
+  const [ready, setReady] = useState(false)
   const [error, setError] = useState('')
-  const [insertMenuOpen, setInsertMenuOpen] = useState(false)
+  const [activeInsertIndex, setActiveInsertIndex] = useState<number | null>(null)
 
   useEffect(() => {
     let active = true
@@ -58,10 +59,13 @@ export function QwenRichBlocks({ session, disabled, onActivity }: QwenRichBlocks
       .then((loaded) => {
         if (!active) return
         setBlocks(loaded)
+        setReady(true)
         setError('')
       })
       .catch(() => {
-        if (active) setError('No se pudieron abrir los bloques de esta nota.')
+        if (!active) return
+        setReady(false)
+        setError('No se pudieron abrir los bloques de esta nota.')
       })
       .finally(() => {
         if (active) setLoading(false)
@@ -78,40 +82,46 @@ export function QwenRichBlocks({ session, disabled, onActivity }: QwenRichBlocks
     void session.upsert(next).catch(() => setError(message))
   }
 
-  function appendBlock(next: EditorSurfaceBlock, message: string) {
-    setBlocks((current) => [...current, next])
-    onActivity()
-    void session.upsert(next).catch(() => setError(message))
-  }
-
   function removeBlock(blockId: string, message: string) {
     setBlocks((current) => current.filter((block) => block.id !== blockId))
     onActivity()
     void session.remove(blockId).catch(() => setError(message))
   }
 
-  function insertBlock(kind: InsertBlockKind) {
-    setInsertMenuOpen(false)
-    if (kind === 'checklist') {
-      appendBlock(encodeChecklistBlock({
-        id: newChecklistId(),
-        kind: CHECKLIST_BLOCK_KIND,
-        items: [{ text: '', checked: false }],
-      }), 'No se pudo preparar el checklist nuevo.')
-      return
-    }
+  function insertBlock(kind: InsertBlockKind, index: number) {
+    setActiveInsertIndex(null)
 
-    appendBlock(encodeCodeBlock({
-      id: newCodeBlockId(),
-      kind: CODE_BLOCK_KIND,
-      text: '',
-      language: '',
-    }), 'No se pudo preparar el bloque de código nuevo.')
+    const next = kind === 'checklist'
+      ? encodeChecklistBlock({
+          id: newChecklistId(),
+          kind: CHECKLIST_BLOCK_KIND,
+          items: [{ text: '', checked: false }],
+        })
+      : encodeCodeBlock({
+          id: newCodeBlockId(),
+          kind: CODE_BLOCK_KIND,
+          text: '',
+          language: '',
+        })
+
+    setBlocks((current) => [
+      ...current.slice(0, index),
+      next,
+      ...current.slice(index),
+    ])
+    onActivity()
+
+    void session.insert(next, index).catch(() => {
+      setBlocks((current) => current.filter((block) => block.id !== next.id))
+      setError(kind === 'checklist'
+        ? 'No se pudo preparar el checklist nuevo.'
+        : 'No se pudo preparar el bloque de código nuevo.')
+    })
   }
 
   function renderChecklist(block: EditorChecklistBlock) {
     return (
-      <article className="oanix-qwen-sheet__checklist" key={block.id}>
+      <article className="oanix-qwen-sheet__checklist">
         <div className="oanix-qwen-sheet__checklist-topline">
           <span>Checklist</span>
           <button type="button" className="oanix-qwen-sheet__checklist-remove" disabled={disabled} onClick={() => removeBlock(block.id, 'No se pudo preparar la eliminación del checklist.')} aria-label="Eliminar checklist">Eliminar</button>
@@ -132,7 +142,7 @@ export function QwenRichBlocks({ session, disabled, onActivity }: QwenRichBlocks
 
   function renderCode(block: EditorCodeBlock) {
     return (
-      <article className="oanix-qwen-sheet__code-block" key={block.id}>
+      <article className="oanix-qwen-sheet__code-block">
         <div className="oanix-qwen-sheet__code-topline">
           <input type="text" value={block.language} maxLength={MAX_CODE_BLOCK_LANGUAGE_LENGTH} disabled={disabled} placeholder="Lenguaje (opcional)" aria-label="Lenguaje del bloque de código" onChange={(event) => queueBlock(encodeCodeBlock({ ...block, language: event.target.value }), 'No se pudo preparar el cambio del bloque de código.')} />
           <button type="button" className="oanix-qwen-sheet__code-remove" disabled={disabled} onClick={() => removeBlock(block.id, 'No se pudo preparar la eliminación del bloque de código.')} aria-label="Eliminar bloque de código">Eliminar</button>
@@ -142,30 +152,63 @@ export function QwenRichBlocks({ session, disabled, onActivity }: QwenRichBlocks
     )
   }
 
-  return (
-    <section className="oanix-qwen-sheet__rich-content" aria-label="Bloques de la nota">
-      <div className="oanix-qwen-sheet__insert">
-        <button type="button" className="oanix-qwen-sheet__insert-trigger" aria-expanded={insertMenuOpen} aria-controls="oanix-qwen-insert-menu" disabled={disabled || loading} onClick={() => setInsertMenuOpen((open) => !open)}>+ Insertar</button>
-        {insertMenuOpen && (
-          <div id="oanix-qwen-insert-menu" className="oanix-qwen-sheet__insert-menu" role="menu" aria-label="Insertar bloque">
-            <button type="button" role="menuitem" onClick={() => insertBlock('checklist')}><strong>Checklist</strong><span>Lista de tareas verificable</span></button>
-            <button type="button" role="menuitem" onClick={() => insertBlock('code')}><strong>Código</strong><span>Fragmento técnico con lenguaje opcional</span></button>
+  function renderBlock(rawBlock: EditorSurfaceBlock) {
+    const checklist = decodeChecklistBlock(rawBlock)
+    if (checklist) return renderChecklist(checklist)
+
+    const code = decodeCodeBlock(rawBlock)
+    if (code) return renderCode(code)
+
+    return (
+      <article className="oanix-qwen-sheet__unknown-block" data-oanix-unknown-block-kind={rawBlock.kind}>
+        <span>Bloque no disponible en esta versión</span>
+      </article>
+    )
+  }
+
+  function renderInsertPoint(index: number) {
+    const menuId = `oanix-qwen-insert-menu-${index}`
+    const open = activeInsertIndex === index
+
+    return (
+      <div className="oanix-qwen-sheet__insert-point" data-oanix-insert-index={index}>
+        <button
+          type="button"
+          className="oanix-qwen-sheet__insert-trigger"
+          aria-expanded={open}
+          aria-controls={menuId}
+          aria-label={`Insertar bloque en la posición ${index + 1}`}
+          disabled={disabled}
+          onClick={() => setActiveInsertIndex((current) => current === index ? null : index)}
+        >
+          + Insertar
+        </button>
+        {open && (
+          <div id={menuId} className="oanix-qwen-sheet__insert-menu" role="menu" aria-label="Insertar bloque">
+            <button type="button" role="menuitem" onClick={() => insertBlock('checklist', index)}><strong>Checklist</strong><span>Lista de tareas verificable</span></button>
+            <button type="button" role="menuitem" onClick={() => insertBlock('code', index)}><strong>Código</strong><span>Fragmento técnico con lenguaje opcional</span></button>
           </div>
         )}
       </div>
+    )
+  }
 
+  return (
+    <section className="oanix-qwen-sheet__rich-content" aria-label="Bloques de la nota" data-oanix-flow-anchor="after-legacy-text">
       {loading && <p className="oanix-qwen-sheet__blocks-hint" role="status">Abriendo bloques cifrados…</p>}
       {error && <p className="oanix-qwen-sheet__blocks-error" role="alert">{error}</p>}
 
-      <div className="oanix-qwen-sheet__checklist-stack" data-oanix-rich-block-flow="ordered">
-        {blocks.map((rawBlock) => {
-          const checklist = decodeChecklistBlock(rawBlock)
-          if (checklist) return renderChecklist(checklist)
-          const code = decodeCodeBlock(rawBlock)
-          if (code) return renderCode(code)
-          return null
-        })}
-      </div>
+      {ready && (
+        <div className="oanix-qwen-sheet__rich-flow" data-oanix-rich-block-flow="ordered">
+          {renderInsertPoint(0)}
+          {blocks.map((rawBlock, index) => (
+            <Fragment key={rawBlock.id}>
+              {renderBlock(rawBlock)}
+              {renderInsertPoint(index + 1)}
+            </Fragment>
+          ))}
+        </div>
+      )}
     </section>
   )
 }

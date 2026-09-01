@@ -17,6 +17,7 @@ export interface PreparedEditorBlockChanges {
 
 export interface EditorBlockChangeBuffer {
   upsert(block: EditorSurfaceBlock): boolean
+  insert(block: EditorSurfaceBlock, index: number): boolean
   remove(blockId: string): boolean
   reorder(order: readonly string[]): boolean
   hasPending(): boolean
@@ -111,6 +112,25 @@ export function createEditorBlockChangeBuffer(
       currentOrder = [...currentOrder, block.id]
       markOrderDirty()
     }
+    return true
+  }
+
+  function insert(block: EditorSurfaceBlock, index: number): boolean {
+    if (!Number.isInteger(index) || index < 0 || index > currentOrder.length) {
+      throw new Error('Block insertion index is outside the current order.')
+    }
+    if (currentBlocks.has(block.id)) {
+      throw new Error('Inserted block id must be new to the current order.')
+    }
+
+    currentBlocks.set(block.id, block)
+    markBlockDirty(block.id)
+    currentOrder = [
+      ...currentOrder.slice(0, index),
+      block.id,
+      ...currentOrder.slice(index),
+    ]
+    markOrderDirty()
     return true
   }
 
@@ -215,6 +235,7 @@ export function createEditorBlockChangeBuffer(
 
   return {
     upsert,
+    insert,
     remove,
     reorder,
     hasPending,

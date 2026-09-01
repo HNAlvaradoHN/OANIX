@@ -39,6 +39,31 @@ test('editing and reverting before a save collapses to a no-op', () => {
   assert.equal(buffer.hasPending(), false)
 })
 
+test('indexed insertion adds a new block directly at its requested position', () => {
+  const buffer = createEditorBlockChangeBuffer([
+    block('a', 'one'),
+    block('c', 'three'),
+  ])
+
+  assert.equal(buffer.insert(block('b', 'two'), 1), true)
+  assert.deepEqual(buffer.current(), [
+    block('a', 'one'),
+    block('b', 'two'),
+    block('c', 'three'),
+  ])
+
+  const prepared = buffer.prepare()
+  assert.ok(prepared)
+  assert.deepEqual(prepared.changes, {
+    upserts: [block('b', 'two')],
+    order: ['a', 'b', 'c'],
+  })
+
+  assert.throws(() => buffer.insert(block('d', 'four'), -1), /outside the current order/)
+  assert.throws(() => buffer.insert(block('d', 'four'), 4), /outside the current order/)
+  assert.throws(() => buffer.insert(block('a', 'duplicate'), 0), /must be new/)
+})
+
 test('adds deletes and order changes are emitted as one compact change set', () => {
   const buffer = createEditorBlockChangeBuffer([
     block('a', 'one'),

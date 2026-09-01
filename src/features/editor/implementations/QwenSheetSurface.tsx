@@ -238,7 +238,10 @@ export function QwenSheetSurface({
           <div className="oanix-qwen-sheet__meta" aria-hidden="true"><span className="oanix-qwen-sheet__meta-chip">Nota</span><span className="oanix-qwen-sheet__meta-dot">•</span><span className="oanix-qwen-sheet__save-dot" /></div>
           <input ref={titleRef} className="oanix-qwen-sheet__title" defaultValue={initialTitle} maxLength={160} autoComplete="off" aria-label="Título de la nota" readOnly={editingDisabled} onInput={markActivity} />
           <div className="oanix-qwen-sheet__divider" aria-hidden="true" />
-          <textarea ref={bodyRef} className="oanix-qwen-sheet__body" defaultValue={initialText} placeholder="Empieza a escribir…" aria-label="Contenido de la nota" autoFocus spellCheck wrap="soft" readOnly={editingDisabled} onInput={markActivity} onCompositionStart={handleCompositionStart} onCompositionEnd={handleCompositionEnd} />
+
+          <div className="oanix-qwen-sheet__legacy-text-segment" data-oanix-flow-segment="legacy-text">
+            <textarea ref={bodyRef} className="oanix-qwen-sheet__body" defaultValue={initialText} placeholder="Empieza a escribir…" aria-label="Contenido de la nota" autoFocus spellCheck wrap="soft" readOnly={editingDisabled} onInput={markActivity} onCompositionStart={handleCompositionStart} onCompositionEnd={handleCompositionEnd} />
+          </div>
 
           {blockSession && <QwenRichBlocks session={blockSession} disabled={editingDisabled} onActivity={markActivity} />}
         </div>
