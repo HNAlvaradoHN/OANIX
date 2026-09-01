@@ -4,6 +4,7 @@ import { registerSW } from 'virtual:pwa-register'
 import { App } from './app/App'
 import { applyOanixTheme, readSavedOanixTheme } from './features/personalization/themeCatalog'
 import './styles/global.css'
+import './features/rebuild/activeFolderTheme.css'
 import './app/VaultVisualStyles'
 
 // The rebuild owns the unlocked presentation. Legacy workspace runtimes and CSS are not loaded here.
