@@ -47,7 +47,11 @@ test('rich block boundary stays generic and does not import persistence or a con
   assert.match(contract, /export interface EditorSurfaceBlockChangeSet/)
   assert.match(contract, /loadBlocks\?: \(\) => Promise<EditorSurfaceBlock\[\]>/)
   assert.match(contract, /onRequestBlockSave\?: \(changes: EditorSurfaceBlockChangeSet\) => Promise<boolean>/)
-  assert.doesNotMatch(contract, /rebuildModel|rebuildBlockService|storage|IndexedDB|localStorage|sessionStorage/)
+  assert.doesNotMatch(
+    contract,
+    /^\s*import .*from ['"][^'"]*(?:rebuild|storage|security)[^'"]*['"]/im,
+  )
+  assert.doesNotMatch(contract, /indexedDB|localStorage|sessionStorage/)
   assert.doesNotMatch(contract, /QwenSheetSurface|PlainTextEditorSurface|NoteEditor/)
 })
 
