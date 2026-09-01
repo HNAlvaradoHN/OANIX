@@ -9,6 +9,7 @@ const service = readFileSync('src/features/rebuild/rebuildService.ts', 'utf8')
 const model = readFileSync('src/features/rebuild/rebuildModel.ts', 'utf8')
 const rebuild = readFileSync('src/features/rebuild/RebuildApp.tsx', 'utf8')
 const editorSurface = readFileSync('src/features/editor/EditorSurface.tsx', 'utf8')
+const editorSurfaceRegistry = readFileSync('src/features/editor/editorSurfaceRegistry.ts', 'utf8')
 const plainTextEditorSurface = readFileSync(
   'src/features/editor/implementations/PlainTextEditorSurface.tsx',
   'utf8',
@@ -64,7 +65,9 @@ test('typing stays local and persistence happens only at idle or close save boun
   assert.match(rebuild, /onRequestSave=\{saveEditorSnapshot\}/)
   assert.match(rebuild, /editorRef = useRef<OpenedEditor \| null>/)
   assert.match(rebuild, /current\.meta,[\s\S]*current\.text,[\s\S]*snapshot\.title,[\s\S]*snapshot\.text/)
-  assert.match(editorSurface, /<PlainTextEditorSurface \{\.\.\.props\} \/>/)
+  assert.match(editorSurface, /const ActiveSurface = activeEditorSurface\.component/)
+  assert.match(editorSurface, /<ActiveSurface \{\.\.\.props\} \/>/)
+  assert.match(editorSurfaceRegistry, /component: PlainTextEditorSurface/)
   assert.match(plainTextEditorSurface, /<NoteEditor/)
   assert.match(plainTextEditorSurface, /onRequestSave=\{onRequestSave\}/)
   assert.match(plainTextEditorSurface, /onRequestClose=\{onRequestClose\}/)

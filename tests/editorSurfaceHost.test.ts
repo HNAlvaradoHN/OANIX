@@ -4,6 +4,7 @@ import test from 'node:test'
 
 const home = readFileSync('src/features/rebuild/RebuildApp.tsx', 'utf8')
 const host = readFileSync('src/features/editor/EditorSurface.tsx', 'utf8')
+const registry = readFileSync('src/features/editor/editorSurfaceRegistry.ts', 'utf8')
 const plainTextAdapter = readFileSync(
   'src/features/editor/implementations/PlainTextEditorSurface.tsx',
   'utf8',
@@ -14,29 +15,35 @@ test('Home depends on the replaceable editor host instead of a concrete sheet im
   assert.match(home, /import type \{ EditorSurfaceSnapshot \} from '\.\.\/editor\/editorSurfaceContract'/)
   assert.match(home, /<EditorSurface[\s\S]*onRequestSave=\{saveEditorSnapshot\}[\s\S]*onRequestClose=\{closeEditor\}/)
   assert.doesNotMatch(home, /from '\.\.\/editor\/NoteEditor'/)
-
-  // Guard architectural dependencies, not arbitrary prose or identifiers. Home must
-  // never import a legacy/template-specific module; the active surface is selected
-  // only by EditorSurface.
   assert.doesNotMatch(
     home,
     /^\s*import .*from ['"][^'"]*(?:ruledSheet|Aurora|qwen)[^'"]*['"]/im,
   )
 })
 
-test('the host selects only an isolated editor-surface implementation', () => {
-  assert.match(
-    host,
-    /from '\.\/implementations\/PlainTextEditorSurface'/,
-  )
-  assert.match(host, /export function EditorSurface\(props: EditorSurfaceProps\)/)
-  assert.match(host, /<PlainTextEditorSurface \{\.\.\.props\} \/>/)
+test('the host delegates concrete selection to the editor surface registry', () => {
+  assert.match(host, /from '\.\/editorSurfaceRegistry'/)
+  assert.match(host, /const ActiveSurface = activeEditorSurface\.component/)
+  assert.match(host, /<ActiveSurface \{\.\.\.props\} \/>/)
+  assert.match(host, /activeEditorSurface\.capabilities/)
   assert.doesNotMatch(host, /from '\.\/NoteEditor'/)
+  assert.doesNotMatch(host, /from '\.\/implementations\//)
   assert.doesNotMatch(
     host,
     /^\s*import .*from ['"][^'"]*(?:ruledSheet|Aurora|qwen)[^'"]*['"]/im,
   )
-  assert.match(host, /plainTextEditorSurfaceCapabilities/)
+})
+
+test('the registry is the only composition point that selects the current implementation', () => {
+  assert.match(registry, /from '\.\/implementations\/PlainTextEditorSurface'/)
+  assert.match(registry, /export const activeEditorSurface: EditorSurfaceDefinition/)
+  assert.match(registry, /component: PlainTextEditorSurface/)
+  assert.match(registry, /capabilities: plainTextEditorSurfaceCapabilities/)
+  assert.doesNotMatch(registry, /from '\.\/NoteEditor'/)
+  assert.doesNotMatch(
+    registry,
+    /^\s*import .*from ['"][^'"]*(?:ruledSheet|Aurora|qwen)[^'"]*['"]/im,
+  )
 })
 
 test('the transitional adapter alone knows the current plain-text editor', () => {

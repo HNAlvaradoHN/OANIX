@@ -2,22 +2,20 @@ import type {
   EditorSurfaceCapabilities,
   EditorSurfaceProps,
 } from './editorSurfaceContract'
-import {
-  PlainTextEditorSurface,
-  plainTextEditorSurfaceCapabilities,
-} from './implementations/PlainTextEditorSurface'
+import { activeEditorSurface } from './editorSurfaceRegistry'
 
 /**
- * Single composition point for the active note editor surface.
+ * Stable host for the active note editor surface.
  *
- * Home imports this host instead of a concrete sheet/template. Replacing the visual
- * editor therefore changes only this composition point, while persistence,
- * encryption, navigation and the Home workspace remain untouched.
+ * Home imports this host instead of a concrete sheet/template. The concrete
+ * implementation is selected only by editorSurfaceRegistry, keeping persistence,
+ * encryption, navigation and the Home workspace independent from visual sheets.
  */
 export function EditorSurface(props: EditorSurfaceProps) {
-  return <PlainTextEditorSurface {...props} />
+  const ActiveSurface = activeEditorSurface.component
+  return <ActiveSurface {...props} />
 }
 
 /** Capabilities of the currently selected surface implementation. */
 export const editorSurfaceCapabilities: EditorSurfaceCapabilities =
-  plainTextEditorSurfaceCapabilities
+  activeEditorSurface.capabilities
