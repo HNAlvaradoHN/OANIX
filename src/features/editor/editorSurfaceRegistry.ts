@@ -3,14 +3,10 @@ import type {
   EditorSurfaceCapabilities,
   EditorSurfaceProps,
 } from './editorSurfaceContract'
-import {
-  PlainTextEditorSurface,
-  plainTextEditorSurfaceCapabilities,
-} from './implementations/PlainTextEditorSurface'
 
 export interface EditorSurfaceDefinition {
   id: string
-  component: ComponentType<EditorSurfaceProps>
+  load: () => Promise<{ default: ComponentType<EditorSurfaceProps> }>
   capabilities: EditorSurfaceCapabilities
 }
 
@@ -18,11 +14,22 @@ export interface EditorSurfaceDefinition {
  * Active editor-surface composition.
  *
  * This is the only module that selects a concrete visual editor implementation.
- * Future sheet replacements should register/select their implementation here so
- * Home, persistence, encryption, sync and navigation remain untouched.
+ * The implementation is loaded only when the editor host is actually mounted,
+ * so Home does not pay the runtime/bundle cost of a sheet that is not in use.
+ * Future replacements should change only this composition point while Home,
+ * persistence, encryption, sync and navigation remain untouched.
  */
 export const activeEditorSurface: EditorSurfaceDefinition = {
   id: 'plain-text-transition',
-  component: PlainTextEditorSurface,
-  capabilities: plainTextEditorSurfaceCapabilities,
+  load: async () => {
+    const { PlainTextEditorSurface } = await import(
+      './implementations/PlainTextEditorSurface'
+    )
+    return { default: PlainTextEditorSurface }
+  },
+  capabilities: {
+    plainText: true,
+    richBlocks: false,
+    attachments: false,
+  },
 }
