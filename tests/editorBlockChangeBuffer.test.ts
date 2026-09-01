@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { createEditorBlockChangeBuffer } from '../src/features/editor/editorBlockChangeBuffer'
-import type { EditorSurfaceBlock } from '../src/features/editor/editorSurfaceContract'
+import { createEditorBlockChangeBuffer } from '../src/features/editor/editorBlockChangeBuffer.ts'
+import type { EditorSurfaceBlock } from '../src/features/editor/editorSurfaceContract.ts'
 
 function block(id: string, text: string): EditorSurfaceBlock {
   return {
