@@ -14,18 +14,32 @@ import {
   encodeCodeBlock,
   type EditorCodeBlock,
 } from '../codeBlockCodec.ts'
+import {
+  MAX_TEXT_BLOCK_TEXT_LENGTH,
+  TEXT_BLOCK_KIND,
+  decodeTextBlock,
+  encodeTextBlock,
+  type EditorTextBlock,
+} from '../textBlockCodec.ts'
 import type { EditorBlockSession } from '../editorBlockSession.ts'
 import type { EditorSurfaceBlock } from '../editorSurfaceContract.ts'
 import './qwenChecklistBlocks.css'
 import './qwenCodeBlocks.css'
+import './qwenTextBlocks.css'
 
 interface QwenRichBlocksProps {
   session: EditorBlockSession
   disabled: boolean
   onActivity: () => void
+  onCompositionStart: () => void
+  onCompositionEnd: () => void
 }
 
-type InsertBlockKind = 'checklist' | 'code'
+type InsertBlockKind = 'text' | 'checklist' | 'code'
+
+function newTextBlockId(): string {
+  return `text-${crypto.randomUUID()}`
+}
 
 function newChecklistId(): string {
   return `checklist-${crypto.randomUUID()}`
@@ -46,7 +60,13 @@ function withChecklistItem(
   }
 }
 
-export function QwenRichBlocks({ session, disabled, onActivity }: QwenRichBlocksProps) {
+export function QwenRichBlocks({
+  session,
+  disabled,
+  onActivity,
+  onCompositionStart,
+  onCompositionEnd,
+}: QwenRichBlocksProps) {
   const [blocks, setBlocks] = useState<EditorSurfaceBlock[]>([])
   const [loading, setLoading] = useState(true)
   const [ready, setReady] = useState(false)
@@ -82,6 +102,14 @@ export function QwenRichBlocks({ session, disabled, onActivity }: QwenRichBlocks
     void session.upsert(next).catch(() => setError(message))
   }
 
+  function queueTextBlock(next: EditorSurfaceBlock) {
+    // Text entry is intentionally left uncontrolled in React. The DOM owns the
+    // active value while the in-memory block session receives the latest full
+    // string. This avoids cloning/re-rendering the complete rich flow per key.
+    onActivity()
+    void session.upsert(next).catch(() => setError('No se pudo preparar el cambio del texto.'))
+  }
+
   function removeBlock(blockId: string, message: string) {
     setBlocks((current) => current.filter((block) => block.id !== blockId))
     onActivity()
@@ -91,18 +119,27 @@ export function QwenRichBlocks({ session, disabled, onActivity }: QwenRichBlocks
   function insertBlock(kind: InsertBlockKind, index: number) {
     setActiveInsertIndex(null)
 
-    const next = kind === 'checklist'
-      ? encodeChecklistBlock({
-          id: newChecklistId(),
-          kind: CHECKLIST_BLOCK_KIND,
-          items: [{ text: '', checked: false }],
-        })
-      : encodeCodeBlock({
-          id: newCodeBlockId(),
-          kind: CODE_BLOCK_KIND,
-          text: '',
-          language: '',
-        })
+    let next: EditorSurfaceBlock
+    if (kind === 'text') {
+      next = encodeTextBlock({
+        id: newTextBlockId(),
+        kind: TEXT_BLOCK_KIND,
+        text: '',
+      })
+    } else if (kind === 'checklist') {
+      next = encodeChecklistBlock({
+        id: newChecklistId(),
+        kind: CHECKLIST_BLOCK_KIND,
+        items: [{ text: '', checked: false }],
+      })
+    } else {
+      next = encodeCodeBlock({
+        id: newCodeBlockId(),
+        kind: CODE_BLOCK_KIND,
+        text: '',
+        language: '',
+      })
+    }
 
     setBlocks((current) => [
       ...current.slice(0, index),
@@ -113,10 +150,41 @@ export function QwenRichBlocks({ session, disabled, onActivity }: QwenRichBlocks
 
     void session.insert(next, index).catch(() => {
       setBlocks((current) => current.filter((block) => block.id !== next.id))
-      setError(kind === 'checklist'
-        ? 'No se pudo preparar el checklist nuevo.'
-        : 'No se pudo preparar el bloque de código nuevo.')
+      const message = kind === 'text'
+        ? 'No se pudo preparar el tramo de texto nuevo.'
+        : kind === 'checklist'
+          ? 'No se pudo preparar el checklist nuevo.'
+          : 'No se pudo preparar el bloque de código nuevo.'
+      setError(message)
     })
+  }
+
+  function renderText(block: EditorTextBlock) {
+    return (
+      <article className="oanix-qwen-sheet__text-block" data-oanix-text-segment={block.id}>
+        <textarea
+          defaultValue={block.text}
+          maxLength={MAX_TEXT_BLOCK_TEXT_LENGTH}
+          disabled={disabled}
+          spellCheck
+          wrap="soft"
+          placeholder="Continúa escribiendo…"
+          aria-label="Tramo de texto"
+          onInput={(event) => queueTextBlock(encodeTextBlock({ ...block, text: event.currentTarget.value }))}
+          onCompositionStart={onCompositionStart}
+          onCompositionEnd={onCompositionEnd}
+        />
+        <button
+          type="button"
+          className="oanix-qwen-sheet__text-remove"
+          disabled={disabled}
+          onClick={() => removeBlock(block.id, 'No se pudo preparar la eliminación del tramo de texto.')}
+          aria-label="Eliminar tramo de texto"
+        >
+          Eliminar tramo
+        </button>
+      </article>
+    )
   }
 
   function renderChecklist(block: EditorChecklistBlock) {
@@ -153,6 +221,9 @@ export function QwenRichBlocks({ session, disabled, onActivity }: QwenRichBlocks
   }
 
   function renderBlock(rawBlock: EditorSurfaceBlock) {
+    const text = decodeTextBlock(rawBlock)
+    if (text) return renderText(text)
+
     const checklist = decodeChecklistBlock(rawBlock)
     if (checklist) return renderChecklist(checklist)
 
@@ -185,6 +256,7 @@ export function QwenRichBlocks({ session, disabled, onActivity }: QwenRichBlocks
         </button>
         {open && (
           <div id={menuId} className="oanix-qwen-sheet__insert-menu" role="menu" aria-label="Insertar bloque">
+            <button type="button" role="menuitem" onClick={() => insertBlock('text', index)}><strong>Texto</strong><span>Continúa escribiendo dentro del flujo</span></button>
             <button type="button" role="menuitem" onClick={() => insertBlock('checklist', index)}><strong>Checklist</strong><span>Lista de tareas verificable</span></button>
             <button type="button" role="menuitem" onClick={() => insertBlock('code', index)}><strong>Código</strong><span>Fragmento técnico con lenguaje opcional</span></button>
           </div>
