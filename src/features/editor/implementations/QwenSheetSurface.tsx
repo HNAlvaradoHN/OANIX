@@ -14,6 +14,8 @@ import './qwenSheetSurface.css'
 const AUTOSAVE_IDLE_MS = 3_000
 const AUTOSAVE_FEEDBACK_DELAY_MS = 600
 
+type InsertBlockKind = 'checklist' | 'code'
+
 function snapshotsMatch(left: EditorSurfaceSnapshot, right: EditorSurfaceSnapshot): boolean {
   return left.title === right.title && left.text === right.text
 }
@@ -26,18 +28,6 @@ function BackIcon() {
   )
 }
 
-/**
- * Sanitized OANIX port of the selected qwen.html/appquen.js sheet.
- *
- * The original prototype supplied the visual language only. Runtime persistence,
- * demo state, remote assets/CDNs and the duplicate inline JavaScript authority are
- * intentionally not carried into OANIX. This component receives note data and
- * lifecycle actions exclusively through EditorSurfaceProps.
- *
- * Rich blocks use the same inactivity checkpoint as title/body edits. The visual
- * sheet buffers rich-block changes in the editor session and never owns encrypted
- * storage, sync or note revision state itself.
- */
 export function QwenSheetSurface({
   noteId,
   initialTitle,
@@ -62,29 +52,19 @@ export function QwenSheetSurface({
   const autosaveFeedbackTimerRef = useRef<number | null>(null)
   const mountedRef = useRef(true)
   const blockSessionRef = useRef<EditorBlockSession | null>(null)
-  if (
-    blockSessionRef.current === null
-    && loadBlocks
-    && onRequestBlockSave
-  ) {
-    blockSessionRef.current = createEditorBlockSession({
-      loadBlocks,
-      saveChanges: onRequestBlockSave,
-    })
+  if (blockSessionRef.current === null && loadBlocks && onRequestBlockSave) {
+    blockSessionRef.current = createEditorBlockSession({ loadBlocks, saveChanges: onRequestBlockSave })
   }
-  const committedSnapshotRef = useRef<EditorSurfaceSnapshot>({
-    title: initialTitle,
-    text: initialText,
-  })
+  const committedSnapshotRef = useRef<EditorSurfaceSnapshot>({ title: initialTitle, text: initialText })
   const [dirty, setDirty] = useState(false)
   const [closing, setClosing] = useState(false)
   const [autosaveVisible, setAutosaveVisible] = useState(false)
+  const [insertMenuOpen, setInsertMenuOpen] = useState(false)
+  const [checklistInsertRequest, setChecklistInsertRequest] = useState(0)
+  const [codeInsertRequest, setCodeInsertRequest] = useState(0)
 
   function readSnapshot(): EditorSurfaceSnapshot {
-    return {
-      title: titleRef.current?.value ?? initialTitle,
-      text: bodyRef.current?.value ?? initialText,
-    }
+    return { title: titleRef.current?.value ?? initialTitle, text: bodyRef.current?.value ?? initialText }
   }
 
   function clearIdleTimer() {
@@ -115,15 +95,7 @@ export function QwenSheetSurface({
   }
 
   function armAutosaveTimer() {
-    if (
-      !dirtyRef.current
-      || closingRef.current
-      || composingRef.current
-      || idleTimerRef.current !== null
-    ) {
-      return
-    }
-
+    if (!dirtyRef.current || closingRef.current || composingRef.current || idleTimerRef.current !== null) return
     const elapsed = Math.max(0, Date.now() - lastActivityAtRef.current)
     const delay = Math.max(0, AUTOSAVE_IDLE_MS - elapsed)
     idleTimerRef.current = window.setTimeout(() => {
@@ -149,7 +121,6 @@ export function QwenSheetSurface({
           textSaved = await onRequestSave(snapshot)
           if (!textSaved) return false
         }
-
         if (blockSession?.hasPending() && !(await blockSession.flush())) return false
         return true
       } catch {
@@ -162,43 +133,27 @@ export function QwenSheetSurface({
     try {
       succeeded = await operation
       if (textSaved && snapshotChanged) committedSnapshotRef.current = snapshot
-      if (
-        succeeded
-        && generationRef.current === generation
-        && !blockSession?.hasPending()
-      ) {
-        markClean()
-      }
+      if (succeeded && generationRef.current === generation && !blockSession?.hasPending()) markClean()
       return succeeded
     } finally {
       if (saveInFlightRef.current === operation) saveInFlightRef.current = null
       stopAutosaveFeedback()
-      if (
-        succeeded
-        && dirtyRef.current
-        && generationRef.current !== generation
-        && !closingRef.current
-      ) {
-        armAutosaveTimer()
-      }
+      if (succeeded && dirtyRef.current && generationRef.current !== generation && !closingRef.current) armAutosaveTimer()
     }
   }
 
   async function runAutosaveIfIdle() {
     if (!dirtyRef.current || closingRef.current || composingRef.current) return
-
     if (saveInFlightRef.current) {
       await saveInFlightRef.current
       if (dirtyRef.current && !closingRef.current) armAutosaveTimer()
       return
     }
-
     const elapsed = Math.max(0, Date.now() - lastActivityAtRef.current)
     if (elapsed < AUTOSAVE_IDLE_MS) {
       armAutosaveTimer()
       return
     }
-
     await saveCurrentSnapshot()
   }
 
@@ -226,9 +181,14 @@ export function QwenSheetSurface({
     if (dirtyRef.current) armAutosaveTimer()
   }
 
+  function insertBlock(kind: InsertBlockKind) {
+    setInsertMenuOpen(false)
+    if (kind === 'checklist') setChecklistInsertRequest((value) => value + 1)
+    else setCodeInsertRequest((value) => value + 1)
+  }
+
   async function requestClose() {
     if (saving || closingRef.current) return
-
     closingRef.current = true
     setClosing(true)
     clearIdleTimer()
@@ -236,17 +196,14 @@ export function QwenSheetSurface({
     let closed = false
     try {
       if (saveInFlightRef.current) await saveInFlightRef.current
-
       const blockSession = blockSessionRef.current
       if (blockSession && !(await blockSession.flush())) return
-
       const snapshot = readSnapshot()
       if (snapshotsMatch(snapshot, committedSnapshotRef.current)) {
         markClean()
         closed = await onRequestClose(null)
         return
       }
-
       closed = await onRequestClose(snapshot)
       if (closed) {
         committedSnapshotRef.current = snapshot
@@ -261,15 +218,10 @@ export function QwenSheetSurface({
     }
   }
 
-  useEffect(() => {
-    return () => {
-      mountedRef.current = false
-      clearIdleTimer()
-      if (autosaveFeedbackTimerRef.current !== null) {
-        window.clearTimeout(autosaveFeedbackTimerRef.current)
-        autosaveFeedbackTimerRef.current = null
-      }
-    }
+  useEffect(() => () => {
+    mountedRef.current = false
+    clearIdleTimer()
+    if (autosaveFeedbackTimerRef.current !== null) window.clearTimeout(autosaveFeedbackTimerRef.current)
   }, [])
 
   useEffect(() => {
@@ -283,94 +235,37 @@ export function QwenSheetSurface({
   const blockSession = blockSessionRef.current
 
   return (
-    <section
-      className="oanix-qwen-sheet"
-      aria-label="Editor de nota"
-      aria-busy={saving || closing}
-      data-oanix-note-id={noteId}
-      data-oanix-unsaved={dirty ? 'true' : 'false'}
-      data-oanix-sheet="qwen-sanitized-v1"
-    >
+    <section className="oanix-qwen-sheet" aria-label="Editor de nota" aria-busy={saving || closing} data-oanix-note-id={noteId} data-oanix-unsaved={dirty ? 'true' : 'false'} data-oanix-sheet="qwen-sanitized-v1">
       <div className="oanix-qwen-sheet__grain" aria-hidden="true" />
-
       <header className="oanix-qwen-sheet__topbar">
-        <button
-          type="button"
-          className="oanix-qwen-sheet__icon-button"
-          data-oanix-back-close="true"
-          data-oanix-save-and-close="true"
-          aria-label="Guardar y volver"
-          disabled={editingDisabled}
-          onClick={() => void requestClose()}
-        >
-          <BackIcon />
-        </button>
-
-        <div className="oanix-qwen-sheet__brand" aria-label="OANIX">
-          <b>✦</b>
-          <span>OANIX</span>
-        </div>
-
-        <div className="oanix-qwen-sheet__status" role="status" aria-live="polite">
-          {autosaveVisible || saving ? 'Guardando…' : dirty ? 'Pendiente' : 'Guardado'}
-        </div>
+        <button type="button" className="oanix-qwen-sheet__icon-button" data-oanix-back-close="true" data-oanix-save-and-close="true" aria-label="Guardar y volver" disabled={editingDisabled} onClick={() => void requestClose()}><BackIcon /></button>
+        <div className="oanix-qwen-sheet__brand" aria-label="OANIX"><b>✦</b><span>OANIX</span></div>
+        <div className="oanix-qwen-sheet__status" role="status" aria-live="polite">{autosaveVisible || saving ? 'Guardando…' : dirty ? 'Pendiente' : 'Guardado'}</div>
       </header>
 
-      {error && (
-        <div className="oanix-qwen-sheet__error" role="alert">
-          {error}
-        </div>
-      )}
+      {error && <div className="oanix-qwen-sheet__error" role="alert">{error}</div>}
 
       <main className="oanix-qwen-sheet__page">
         <div className="oanix-qwen-sheet__canvas">
-          <div className="oanix-qwen-sheet__meta" aria-hidden="true">
-            <span className="oanix-qwen-sheet__meta-chip">Nota</span>
-            <span className="oanix-qwen-sheet__meta-dot">•</span>
-            <span className="oanix-qwen-sheet__save-dot" />
-          </div>
-
-          <input
-            ref={titleRef}
-            className="oanix-qwen-sheet__title"
-            defaultValue={initialTitle}
-            maxLength={160}
-            autoComplete="off"
-            aria-label="Título de la nota"
-            readOnly={editingDisabled}
-            onInput={markActivity}
-          />
-
+          <div className="oanix-qwen-sheet__meta" aria-hidden="true"><span className="oanix-qwen-sheet__meta-chip">Nota</span><span className="oanix-qwen-sheet__meta-dot">•</span><span className="oanix-qwen-sheet__save-dot" /></div>
+          <input ref={titleRef} className="oanix-qwen-sheet__title" defaultValue={initialTitle} maxLength={160} autoComplete="off" aria-label="Título de la nota" readOnly={editingDisabled} onInput={markActivity} />
           <div className="oanix-qwen-sheet__divider" aria-hidden="true" />
-
-          <textarea
-            ref={bodyRef}
-            className="oanix-qwen-sheet__body"
-            defaultValue={initialText}
-            placeholder="Empieza a escribir…"
-            aria-label="Contenido de la nota"
-            autoFocus
-            spellCheck
-            wrap="soft"
-            readOnly={editingDisabled}
-            onInput={markActivity}
-            onCompositionStart={handleCompositionStart}
-            onCompositionEnd={handleCompositionEnd}
-          />
+          <textarea ref={bodyRef} className="oanix-qwen-sheet__body" defaultValue={initialText} placeholder="Empieza a escribir…" aria-label="Contenido de la nota" autoFocus spellCheck wrap="soft" readOnly={editingDisabled} onInput={markActivity} onCompositionStart={handleCompositionStart} onCompositionEnd={handleCompositionEnd} />
 
           {blockSession && (
-            <>
-              <QwenChecklistBlocks
-                session={blockSession}
-                disabled={editingDisabled}
-                onActivity={markActivity}
-              />
-              <QwenCodeBlocks
-                session={blockSession}
-                disabled={editingDisabled}
-                onActivity={markActivity}
-              />
-            </>
+            <div className="oanix-qwen-sheet__rich-content">
+              <div className="oanix-qwen-sheet__insert">
+                <button type="button" className="oanix-qwen-sheet__insert-trigger" aria-expanded={insertMenuOpen} aria-controls="oanix-qwen-insert-menu" disabled={editingDisabled} onClick={() => setInsertMenuOpen((open) => !open)}>+ Insertar</button>
+                {insertMenuOpen && (
+                  <div id="oanix-qwen-insert-menu" className="oanix-qwen-sheet__insert-menu" role="menu" aria-label="Insertar bloque">
+                    <button type="button" role="menuitem" onClick={() => insertBlock('checklist')}><strong>Checklist</strong><span>Lista de tareas verificable</span></button>
+                    <button type="button" role="menuitem" onClick={() => insertBlock('code')}><strong>Código</strong><span>Fragmento técnico con lenguaje opcional</span></button>
+                  </div>
+                )}
+              </div>
+              <QwenChecklistBlocks session={blockSession} disabled={editingDisabled} insertRequest={checklistInsertRequest} onActivity={markActivity} />
+              <QwenCodeBlocks session={blockSession} disabled={editingDisabled} insertRequest={codeInsertRequest} onActivity={markActivity} />
+            </div>
           )}
         </div>
       </main>
