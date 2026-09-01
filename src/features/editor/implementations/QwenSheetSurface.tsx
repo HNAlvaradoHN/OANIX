@@ -1,4 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
+import {
+  createEditorBlockSession,
+  type EditorBlockSession,
+} from '../editorBlockSession'
 import type {
   EditorSurfaceProps,
   EditorSurfaceSnapshot,
@@ -28,10 +32,9 @@ function BackIcon() {
  * intentionally not carried into OANIX. This component receives note data and
  * lifecycle actions exclusively through EditorSurfaceProps.
  *
- * The first production cut keeps the proven OANIX plain-text data contract while
- * establishing the selected sheet's paper/canvas visual surface. Rich blocks and
- * attachments remain disabled until their payload contracts can be added without
- * creating parallel storage or migrations.
+ * The current production cut keeps the proven OANIX plain-text UI while preparing
+ * a lazy rich-block editing session behind the capability gate. No block payload is
+ * loaded unless both rich callbacks are supplied and block work is actually requested.
  */
 export function QwenSheetSurface({
   noteId,
@@ -41,6 +44,8 @@ export function QwenSheetSurface({
   error = '',
   onRequestSave,
   onRequestClose,
+  loadBlocks,
+  onRequestBlockSave,
   onActivity,
 }: EditorSurfaceProps) {
   const titleRef = useRef<HTMLInputElement | null>(null)
@@ -54,6 +59,17 @@ export function QwenSheetSurface({
   const saveInFlightRef = useRef<Promise<boolean> | null>(null)
   const autosaveFeedbackTimerRef = useRef<number | null>(null)
   const mountedRef = useRef(true)
+  const blockSessionRef = useRef<EditorBlockSession | null>(null)
+  if (
+    blockSessionRef.current === null
+    && loadBlocks
+    && onRequestBlockSave
+  ) {
+    blockSessionRef.current = createEditorBlockSession({
+      loadBlocks,
+      saveChanges: onRequestBlockSave,
+    })
+  }
   const committedSnapshotRef = useRef<EditorSurfaceSnapshot>({
     title: initialTitle,
     text: initialText,
@@ -203,6 +219,9 @@ export function QwenSheetSurface({
     let closed = false
     try {
       if (saveInFlightRef.current) await saveInFlightRef.current
+
+      const blockSession = blockSessionRef.current
+      if (blockSession && !(await blockSession.flush())) return
 
       const snapshot = readSnapshot()
       if (snapshotsMatch(snapshot, committedSnapshotRef.current)) {
