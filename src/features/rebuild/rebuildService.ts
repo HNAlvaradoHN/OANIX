@@ -28,6 +28,7 @@ import {
   type NoteV2TextChunk,
   type TagV2Record,
 } from './rebuildModel'
+import { sortWorkspaceFolders, sortWorkspaceTags } from './workspaceCustomizationService'
 
 export interface RebuildWorkspaceSnapshot {
   notes: NoteV2Meta[]
@@ -119,7 +120,10 @@ function validateFolder(value: FolderV2Record): FolderV2Record {
     !value.id ||
     !value.name ||
     !value.icon ||
-    !Number.isSafeInteger(value.gradientIndex)
+    !Number.isSafeInteger(value.gradientIndex) ||
+    (value.customColor != null && !/^#[0-9a-f]{6}$/i.test(value.customColor)) ||
+    (value.coverAssetId != null && typeof value.coverAssetId !== 'string') ||
+    (value.order != null && (!Number.isSafeInteger(value.order) || value.order < 0))
   ) {
     throw new Error('La carpeta v2 no es válida.')
   }
@@ -127,7 +131,13 @@ function validateFolder(value: FolderV2Record): FolderV2Record {
 }
 
 function validateTag(value: TagV2Record): TagV2Record {
-  if (value.version !== 2 || !value.id || !value.name || !/^#[0-9a-f]{6}$/i.test(value.color)) {
+  if (
+    value.version !== 2
+    || !value.id
+    || !value.name
+    || !/^#[0-9a-f]{6}$/i.test(value.color)
+    || (value.order != null && (!Number.isSafeInteger(value.order) || value.order < 0))
+  ) {
     throw new Error('La etiqueta v2 no es válida.')
   }
   return value
@@ -166,12 +176,8 @@ export async function loadRebuildWorkspace(): Promise<RebuildWorkspaceSnapshot> 
   const notes = noteRecords
     .map((record) => validateNoteMeta(record.value))
     .sort((left, right) => Date.parse(right.updatedAt) - Date.parse(left.updatedAt))
-  const folders = folderRecords
-    .map((record) => validateFolder(record.value))
-    .sort((left, right) => Date.parse(left.createdAt) - Date.parse(right.createdAt))
-  const tags = tagRecords
-    .map((record) => validateTag(record.value))
-    .sort((left, right) => left.name.localeCompare(right.name, 'es', { sensitivity: 'base' }))
+  const folders = sortWorkspaceFolders(folderRecords.map((record) => validateFolder(record.value)))
+  const tags = sortWorkspaceTags(tagRecords.map((record) => validateTag(record.value)))
 
   return { notes, folders, tags }
 }
@@ -292,6 +298,8 @@ export async function createRebuildFolder(name: string): Promise<FolderV2Record>
     name: normalizeName(name, 60, 'Escribe un nombre para la carpeta.'),
     icon: V2_FOLDER_ICONS[secureRandomIndex(V2_FOLDER_ICONS.length)],
     gradientIndex: secureRandomIndex(V2_FOLDER_GRADIENTS.length),
+    customColor: null,
+    coverAssetId: null,
     createdAt: now,
     updatedAt: now,
   }

@@ -88,6 +88,9 @@ export interface FolderV2Record {
   name: string
   icon: string
   gradientIndex: number
+  customColor?: string | null
+  coverAssetId?: string | null
+  order?: number
   createdAt: string
   updatedAt: string
 }
@@ -97,6 +100,7 @@ export interface TagV2Record {
   id: string
   name: string
   color: string
+  order?: number
   createdAt: string
   updatedAt: string
 }
@@ -108,19 +112,28 @@ export function folderGradient(index: number): readonly [string, string] {
   return V2_FOLDER_GRADIENTS[normalized]
 }
 
+function colorWithAlpha(hex: string, alpha: number): string {
+  const raw = hex.replace('#', '')
+  const value = Number.parseInt(raw, 16)
+  const red = (value >> 16) & 255
+  const green = (value >> 8) & 255
+  const blue = value & 255
+  const a = Math.max(0, Math.min(1, alpha))
+  return `rgba(${red}, ${green}, ${blue}, ${a})`
+}
+
 export function folderGradientCss(index: number, alpha = 1): string {
   const [from, to] = folderGradient(index)
   if (alpha >= 1) return `linear-gradient(135deg, ${from}, ${to})`
+  return `linear-gradient(135deg, ${colorWithAlpha(from, alpha)}, ${colorWithAlpha(to, alpha)})`
+}
 
-  const a = Math.max(0, Math.min(1, alpha))
-  const hexToRgba = (hex: string) => {
-    const raw = hex.replace('#', '')
-    const value = Number.parseInt(raw, 16)
-    const red = (value >> 16) & 255
-    const green = (value >> 8) & 255
-    const blue = value & 255
-    return `rgba(${red}, ${green}, ${blue}, ${a})`
-  }
+export function folderAccent(folder: FolderV2Record): string {
+  return folder.customColor ?? folderGradient(folder.gradientIndex)[0]
+}
 
-  return `linear-gradient(135deg, ${hexToRgba(from)}, ${hexToRgba(to)})`
+export function folderSurfaceCss(folder: FolderV2Record, alpha = 1): string {
+  if (!folder.customColor) return folderGradientCss(folder.gradientIndex, alpha)
+  const color = alpha >= 1 ? folder.customColor : colorWithAlpha(folder.customColor, alpha)
+  return `linear-gradient(135deg, ${color}, ${color})`
 }
