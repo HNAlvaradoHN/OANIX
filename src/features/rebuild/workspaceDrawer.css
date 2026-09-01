@@ -1,0 +1,182 @@
+.workspace-drawer__logo {
+  width: 2.55rem;
+  height: 2.55rem;
+  flex: none;
+  object-fit: contain;
+}
+
+.workspace-drawer__create,
+.workspace-drawer__drag,
+.workspace-drawer__edit {
+  display: grid;
+  place-items: center;
+  flex: none;
+  border: 1px solid var(--rb-line);
+  background: var(--rb-bg-2);
+  color: var(--rb-muted);
+}
+
+.workspace-drawer__create {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: .75rem;
+  background: var(--rb-grad-soft);
+  color: var(--rb-text);
+  font-size: 1.45rem;
+  line-height: 1;
+}
+
+.workspace-drawer__sortable {
+  display: flex;
+  flex-direction: column;
+  gap: .35rem;
+}
+
+.workspace-drawer__item,
+.workspace-drawer__all {
+  width: 100%;
+  min-height: 3.1rem;
+  display: flex;
+  align-items: center;
+  gap: .35rem;
+  border: 1px solid var(--rb-line);
+  border-radius: .78rem;
+  background: var(--rb-bg-2);
+  color: var(--rb-text);
+}
+
+.workspace-drawer__item {
+  --folder-accent: #7c5cff;
+  --folder-soft: var(--rb-grad-soft);
+  --folder-strong: var(--rb-grad);
+  padding: .3rem .35rem;
+  transition: border-color .15s ease, transform .15s ease, background .15s ease;
+}
+
+.workspace-drawer__item:not(.workspace-drawer__item--tag) {
+  border-color: color-mix(in srgb, var(--folder-accent) 30%, var(--rb-line));
+  background: var(--folder-soft);
+}
+
+.workspace-drawer__item.is-active {
+  border-color: color-mix(in srgb, var(--folder-accent, #7c5cff) 58%, var(--rb-line));
+  box-shadow: inset 3px 0 var(--folder-accent, #7c5cff);
+}
+
+.workspace-drawer__item--tag.is-active {
+  border-color: rgba(124, 92, 255, .48);
+  box-shadow: inset 3px 0 #7c5cff;
+}
+
+.workspace-drawer__all {
+  padding: .42rem .55rem;
+  margin-bottom: .35rem;
+  text-align: left;
+}
+
+.workspace-drawer__all.is-active {
+  border-color: rgba(124, 92, 255, .45);
+  background: var(--rb-grad-soft);
+}
+
+.workspace-drawer__all > span {
+  width: 2rem;
+  height: 2rem;
+  display: grid;
+  place-items: center;
+}
+
+.workspace-drawer__drag,
+.workspace-drawer__edit {
+  width: 2rem;
+  height: 2rem;
+  border-radius: .58rem;
+  touch-action: none;
+}
+
+.workspace-drawer__drag {
+  cursor: grab;
+  font-size: .8rem;
+  letter-spacing: -.2em;
+}
+
+.workspace-drawer__drag:active {
+  cursor: grabbing;
+}
+
+.workspace-drawer__edit {
+  font-size: .9rem;
+}
+
+.workspace-drawer__select {
+  min-width: 0;
+  min-height: 2.2rem;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  flex: 1;
+  padding: .2rem .25rem;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+
+.workspace-drawer__select strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: .82rem;
+}
+
+.workspace-drawer__select i {
+  width: .55rem;
+  height: .55rem;
+  flex: none;
+  border-radius: 50%;
+}
+
+.workspace-drawer__folder-icon {
+  width: 2rem;
+  height: 2rem;
+  display: grid;
+  place-items: center;
+  flex: none;
+  border-radius: .6rem;
+  background: color-mix(in srgb, var(--folder-soft) 86%, var(--rb-bg-1));
+}
+
+.workspace-drawer__item--ghost {
+  opacity: .35;
+}
+
+.workspace-drawer__item--chosen {
+  transform: scale(1.015);
+}
+
+.workspace-drawer__item--dragging {
+  box-shadow: 0 14px 34px rgba(0, 0, 0, .28);
+}
+
+@media (max-width: 680px) {
+  .workspace-drawer .rebuild-drawer__columns {
+    grid-template-columns: 1fr;
+    overflow-y: auto;
+  }
+
+  .workspace-drawer .rebuild-drawer__columns > section {
+    min-height: 14rem;
+    overflow: visible;
+  }
+
+  .workspace-drawer .rebuild-drawer__list {
+    overflow: visible;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .workspace-drawer__item {
+    transition: none;
+  }
+}
