@@ -7,14 +7,11 @@ import type {
   EditorSurfaceProps,
   EditorSurfaceSnapshot,
 } from '../editorSurfaceContract'
-import { QwenChecklistBlocks } from './QwenChecklistBlocks'
-import { QwenCodeBlocks } from './QwenCodeBlocks'
+import { QwenRichBlocks } from './QwenRichBlocks'
 import './qwenSheetSurface.css'
 
 const AUTOSAVE_IDLE_MS = 3_000
 const AUTOSAVE_FEEDBACK_DELAY_MS = 600
-
-type InsertBlockKind = 'checklist' | 'code'
 
 function snapshotsMatch(left: EditorSurfaceSnapshot, right: EditorSurfaceSnapshot): boolean {
   return left.title === right.title && left.text === right.text
@@ -59,9 +56,6 @@ export function QwenSheetSurface({
   const [dirty, setDirty] = useState(false)
   const [closing, setClosing] = useState(false)
   const [autosaveVisible, setAutosaveVisible] = useState(false)
-  const [insertMenuOpen, setInsertMenuOpen] = useState(false)
-  const [checklistInsertRequest, setChecklistInsertRequest] = useState(0)
-  const [codeInsertRequest, setCodeInsertRequest] = useState(0)
 
   function readSnapshot(): EditorSurfaceSnapshot {
     return { title: titleRef.current?.value ?? initialTitle, text: bodyRef.current?.value ?? initialText }
@@ -181,12 +175,6 @@ export function QwenSheetSurface({
     if (dirtyRef.current) armAutosaveTimer()
   }
 
-  function insertBlock(kind: InsertBlockKind) {
-    setInsertMenuOpen(false)
-    if (kind === 'checklist') setChecklistInsertRequest((value) => value + 1)
-    else setCodeInsertRequest((value) => value + 1)
-  }
-
   async function requestClose() {
     if (saving || closingRef.current) return
     closingRef.current = true
@@ -252,21 +240,7 @@ export function QwenSheetSurface({
           <div className="oanix-qwen-sheet__divider" aria-hidden="true" />
           <textarea ref={bodyRef} className="oanix-qwen-sheet__body" defaultValue={initialText} placeholder="Empieza a escribir…" aria-label="Contenido de la nota" autoFocus spellCheck wrap="soft" readOnly={editingDisabled} onInput={markActivity} onCompositionStart={handleCompositionStart} onCompositionEnd={handleCompositionEnd} />
 
-          {blockSession && (
-            <div className="oanix-qwen-sheet__rich-content">
-              <div className="oanix-qwen-sheet__insert">
-                <button type="button" className="oanix-qwen-sheet__insert-trigger" aria-expanded={insertMenuOpen} aria-controls="oanix-qwen-insert-menu" disabled={editingDisabled} onClick={() => setInsertMenuOpen((open) => !open)}>+ Insertar</button>
-                {insertMenuOpen && (
-                  <div id="oanix-qwen-insert-menu" className="oanix-qwen-sheet__insert-menu" role="menu" aria-label="Insertar bloque">
-                    <button type="button" role="menuitem" onClick={() => insertBlock('checklist')}><strong>Checklist</strong><span>Lista de tareas verificable</span></button>
-                    <button type="button" role="menuitem" onClick={() => insertBlock('code')}><strong>Código</strong><span>Fragmento técnico con lenguaje opcional</span></button>
-                  </div>
-                )}
-              </div>
-              <QwenChecklistBlocks session={blockSession} disabled={editingDisabled} insertRequest={checklistInsertRequest} onActivity={markActivity} />
-              <QwenCodeBlocks session={blockSession} disabled={editingDisabled} insertRequest={codeInsertRequest} onActivity={markActivity} />
-            </div>
-          )}
+          {blockSession && <QwenRichBlocks session={blockSession} disabled={editingDisabled} onActivity={markActivity} />}
         </div>
       </main>
     </section>
