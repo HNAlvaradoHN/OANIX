@@ -7,6 +7,7 @@ import {
   type EditorChecklistBlock,
 } from '../checklistBlockCodec.ts'
 import type { EditorBlockSession } from '../editorBlockSession.ts'
+import './qwenChecklistBlocks.css'
 
 interface QwenChecklistBlocksProps {
   session: EditorBlockSession
