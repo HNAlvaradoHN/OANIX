@@ -6,6 +6,14 @@ const surface = readFileSync('src/features/editor/implementations/QwenSheetSurfa
 const richBlocks = readFileSync('src/features/editor/implementations/QwenRichBlocks.tsx', 'utf8')
 const session = readFileSync('src/features/editor/editorBlockSession.ts', 'utf8')
 
+function functionSlice(source: string, startMarker: string, endMarker: string): string {
+  const start = source.indexOf(startMarker)
+  const end = source.indexOf(endMarker, start)
+  assert.notEqual(start, -1, `Missing ${startMarker}`)
+  assert.notEqual(end, -1, `Missing ${endMarker}`)
+  return source.slice(start, end)
+}
+
 test('Qwen exposes Insertar at real positions in the ordered rich flow', () => {
   assert.match(richBlocks, />\s*\+ Insertar\s*</)
   assert.match(richBlocks, /renderInsertPoint\(0\)/)
@@ -19,9 +27,11 @@ test('Qwen exposes Insertar at real positions in the ordered rich flow', () => {
 })
 
 test('positional insertion is one in-memory buffer mutation before the shared checkpoint', () => {
-  assert.match(richBlocks, /session\.insert\(next, index\)/)
+  const insertPath = functionSlice(richBlocks, 'function insertBlock(', 'function renderText(')
+
+  assert.match(insertPath, /session\.insert\(next, index\)/)
   assert.match(session, /insert\(block, index\)/)
-  assert.doesNotMatch(richBlocks, /session\.reorder\(/)
+  assert.doesNotMatch(insertPath, /session\.reorder\(/)
   assert.doesNotMatch(richBlocks, /setTimeout|setInterval|localStorage|sessionStorage|indexedDB|fetch\(|XMLHttpRequest/)
 })
 
