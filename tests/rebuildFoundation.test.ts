@@ -10,12 +10,10 @@ const model = readFileSync('src/features/rebuild/rebuildModel.ts', 'utf8')
 const rebuild = readFileSync('src/features/rebuild/RebuildApp.tsx', 'utf8')
 const editorSurface = readFileSync('src/features/editor/EditorSurface.tsx', 'utf8')
 const editorSurfaceRegistry = readFileSync('src/features/editor/editorSurfaceRegistry.ts', 'utf8')
-const plainTextEditorSurface = readFileSync(
-  'src/features/editor/implementations/PlainTextEditorSurface.tsx',
+const selectedEditorSurface = readFileSync(
+  'src/features/editor/implementations/QwenSheetSurface.tsx',
   'utf8',
 )
-const noteEditor = readFileSync('src/features/editor/NoteEditor.tsx', 'utf8')
-const sheetCss = readFileSync('src/features/editor/sheets/ruledSheet.css', 'utf8')
 const css = readFileSync('src/features/rebuild/rebuild.css', 'utf8')
 
 test('post-unlock rebuild keeps the vault gate and replaces the old workspace authority', () => {
@@ -68,16 +66,17 @@ test('typing stays local and persistence happens only at idle or close save boun
   assert.match(editorSurface, /const ActiveSurface = lazy\(activeEditorSurface\.load\)/)
   assert.match(editorSurface, /<Suspense fallback=\{null\}>/)
   assert.match(editorSurface, /<ActiveSurface \{\.\.\.props\} \/>/)
-  assert.match(editorSurfaceRegistry, /await import\([\s\S]*PlainTextEditorSurface/)
-  assert.match(plainTextEditorSurface, /<NoteEditor/)
-  assert.match(plainTextEditorSurface, /onRequestSave=\{onRequestSave\}/)
-  assert.match(plainTextEditorSurface, /onRequestClose=\{onRequestClose\}/)
-  assert.match(noteEditor, /defaultValue=\{initialText\}/)
-  assert.match(noteEditor, /defaultValue=\{initialTitle\}/)
-  assert.match(noteEditor, /AUTOSAVE_IDLE_MS = 3_000/)
-  assert.match(noteEditor, /generationRef/)
-  assert.match(noteEditor, /saveInFlightRef/)
-  assert.doesNotMatch(noteEditor, /value=\{.*initialText|setText\(|innerHTML|contentEditable|MutationObserver/)
+  assert.match(editorSurfaceRegistry, /await import\([\s\S]*QwenSheetSurface/)
+  assert.match(selectedEditorSurface, /defaultValue=\{initialText\}/)
+  assert.match(selectedEditorSurface, /defaultValue=\{initialTitle\}/)
+  assert.match(selectedEditorSurface, /AUTOSAVE_IDLE_MS = 3_000/)
+  assert.match(selectedEditorSurface, /generationRef/)
+  assert.match(selectedEditorSurface, /saveInFlightRef/)
+  assert.match(selectedEditorSurface, /async function saveCurrentSnapshot/)
+  assert.match(selectedEditorSurface, /await onRequestSave\(snapshot\)/)
+  assert.match(selectedEditorSurface, /async function requestClose/)
+  assert.match(selectedEditorSurface, /await onRequestClose\(snapshot\)/)
+  assert.doesNotMatch(selectedEditorSurface, /value=\{.*initialText|setText\(|innerHTML|contentEditable|MutationObserver/)
 })
 
 test('slow operations expose delayed full-screen feedback instead of fake progress', () => {
