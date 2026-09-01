@@ -10,6 +10,7 @@ import type {
 export interface EditorBlockSession {
   load(): Promise<EditorSurfaceBlock[]>
   upsert(block: EditorSurfaceBlock): Promise<boolean>
+  insert(block: EditorSurfaceBlock, index: number): Promise<boolean>
   remove(blockId: string): Promise<boolean>
   reorder(order: readonly string[]): Promise<boolean>
   hasPending(): boolean
@@ -91,6 +92,9 @@ export function createEditorBlockSession({
     },
     async upsert(block) {
       return (await ensureBuffer()).upsert(block)
+    },
+    async insert(block, index) {
+      return (await ensureBuffer()).insert(block, index)
     },
     async remove(blockId) {
       return (await ensureBuffer()).remove(blockId)
