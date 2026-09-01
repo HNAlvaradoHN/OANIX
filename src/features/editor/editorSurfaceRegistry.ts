@@ -20,12 +20,12 @@ export interface EditorSurfaceDefinition {
  * persistence, encryption, sync and navigation remain untouched.
  */
 export const activeEditorSurface: EditorSurfaceDefinition = {
-  id: 'plain-text-transition',
+  id: 'qwen-sanitized-v1',
   load: async () => {
-    const { PlainTextEditorSurface } = await import(
-      './implementations/PlainTextEditorSurface'
+    const { QwenSheetSurface } = await import(
+      './implementations/QwenSheetSurface'
     )
-    return { default: PlainTextEditorSurface }
+    return { default: QwenSheetSurface }
   },
   capabilities: {
     plainText: true,
