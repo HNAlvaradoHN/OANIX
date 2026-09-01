@@ -4,6 +4,7 @@ import test from 'node:test'
 
 const home = readFileSync('src/features/rebuild/RebuildApp.tsx', 'utf8')
 const host = readFileSync('src/features/editor/EditorSurface.tsx', 'utf8')
+const contract = readFileSync('src/features/editor/editorSurfaceContract.ts', 'utf8')
 const registry = readFileSync('src/features/editor/editorSurfaceRegistry.ts', 'utf8')
 const selectedSurface = readFileSync(
   'src/features/editor/implementations/QwenSheetSurface.tsx',
@@ -30,7 +31,7 @@ test('the host delegates concrete selection to the editor surface registry and m
   assert.match(host, /from '\.\/editorSurfaceRegistry'/)
   assert.match(host, /const ActiveSurface = lazy\(activeEditorSurface\.load\)/)
   assert.match(host, /<Suspense fallback=\{null\}>/)
-  assert.match(host, /<ActiveSurface \{\.\.\.props\} \/>/)
+  assert.match(host, /<ActiveSurface \{\.\.\.surfaceProps\} \/>/)
   assert.match(host, /activeEditorSurface\.capabilities/)
   assert.doesNotMatch(host, /from '\.\/NoteEditor'/)
   assert.doesNotMatch(host, /from '\.\/implementations\//)
@@ -38,6 +39,21 @@ test('the host delegates concrete selection to the editor surface registry and m
     host,
     /^\s*import .*from ['"][^'"]*(?:ruledSheet|Aurora|qwen)[^'"]*['"]/im,
   )
+})
+
+test('rich block boundary stays generic and does not import persistence or a concrete sheet', () => {
+  assert.match(contract, /export type EditorSurfaceBlockValue/)
+  assert.match(contract, /export interface EditorSurfaceBlock/)
+  assert.match(contract, /export interface EditorSurfaceBlockChangeSet/)
+  assert.match(contract, /loadBlocks\?: \(\) => Promise<EditorSurfaceBlock\[\]>/)
+  assert.match(contract, /onRequestBlockSave\?: \(changes: EditorSurfaceBlockChangeSet\) => Promise<boolean>/)
+  assert.doesNotMatch(contract, /rebuildModel|rebuildBlockService|storage|IndexedDB|localStorage|sessionStorage/)
+  assert.doesNotMatch(contract, /QwenSheetSurface|PlainTextEditorSurface|NoteEditor/)
+})
+
+test('the host withholds rich callbacks while the selected surface capability is disabled', () => {
+  assert.match(host, /activeEditorSurface\.capabilities\.richBlocks[\s\S]*\? props[\s\S]*loadBlocks: undefined[\s\S]*onRequestBlockSave: undefined/)
+  assert.match(registry, /richBlocks: false/)
 })
 
 test('the registry is the only composition point and lazily selects the sanitized sheet', () => {
