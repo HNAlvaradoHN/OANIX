@@ -10,7 +10,14 @@ test('Home depends on the replaceable editor host instead of a concrete sheet im
   assert.match(home, /import type \{ EditorSurfaceSnapshot \} from '\.\.\/editor\/editorSurfaceContract'/)
   assert.match(home, /<EditorSurface[\s\S]*onRequestSave=\{saveEditorSnapshot\}[\s\S]*onRequestClose=\{closeEditor\}/)
   assert.doesNotMatch(home, /from '\.\.\/editor\/NoteEditor'/)
-  assert.doesNotMatch(home, /ruledSheet|Aurora|qwen/i)
+
+  // Guard architectural dependencies, not arbitrary prose or identifiers. Home must
+  // never import a legacy/template-specific module; the active surface is selected
+  // only by EditorSurface.
+  assert.doesNotMatch(
+    home,
+    /^\s*import .*from ['"][^'"]*(?:ruledSheet|Aurora|qwen)[^'"]*['"]/im,
+  )
 })
 
 test('the host is the only place that selects the current editor implementation', () => {
