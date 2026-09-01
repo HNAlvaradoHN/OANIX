@@ -5,6 +5,10 @@ import test from 'node:test'
 const home = readFileSync('src/features/rebuild/RebuildApp.tsx', 'utf8')
 const host = readFileSync('src/features/editor/EditorSurface.tsx', 'utf8')
 const registry = readFileSync('src/features/editor/editorSurfaceRegistry.ts', 'utf8')
+const selectedSurface = readFileSync(
+  'src/features/editor/implementations/QwenSheetSurface.tsx',
+  'utf8',
+)
 const plainTextAdapter = readFileSync(
   'src/features/editor/implementations/PlainTextEditorSurface.tsx',
   'utf8',
@@ -36,23 +40,33 @@ test('the host delegates concrete selection to the editor surface registry and m
   )
 })
 
-test('the registry is the only composition point and does not eagerly import the current implementation', () => {
+test('the registry is the only composition point and lazily selects the sanitized sheet', () => {
   assert.match(registry, /export const activeEditorSurface: EditorSurfaceDefinition/)
+  assert.match(registry, /id: 'qwen-sanitized-v1'/)
   assert.match(registry, /load: async \(\) => \{/)
-  assert.match(registry, /await import\([\s\S]*\.\/implementations\/PlainTextEditorSurface/)
-  assert.match(registry, /return \{ default: PlainTextEditorSurface \}/)
+  assert.match(registry, /await import\([\s\S]*\.\/implementations\/QwenSheetSurface/)
+  assert.match(registry, /return \{ default: QwenSheetSurface \}/)
   assert.match(registry, /plainText: true/)
   assert.match(registry, /richBlocks: false/)
   assert.match(registry, /attachments: false/)
-  assert.doesNotMatch(registry, /^\s*import .*PlainTextEditorSurface/m)
+  assert.doesNotMatch(registry, /^\s*import .*QwenSheetSurface/m)
   assert.doesNotMatch(registry, /from '\.\/NoteEditor'/)
-  assert.doesNotMatch(
-    registry,
-    /^\s*import .*from ['"][^'"]*(?:ruledSheet|Aurora|qwen)[^'"]*['"]/im,
-  )
 })
 
-test('the transitional adapter alone knows the current plain-text editor', () => {
+test('the selected sheet owns only visual editing and the EditorSurface lifecycle', () => {
+  assert.match(selectedSurface, /export function QwenSheetSurface\(\{/)
+  assert.match(selectedSurface, /\}: EditorSurfaceProps\)/)
+  assert.match(selectedSurface, /defaultValue=\{initialTitle\}/)
+  assert.match(selectedSurface, /defaultValue=\{initialText\}/)
+  assert.match(selectedSurface, /AUTOSAVE_IDLE_MS = 3_000/)
+  assert.match(selectedSurface, /await onRequestSave\(snapshot\)/)
+  assert.match(selectedSurface, /await onRequestClose\(snapshot\)/)
+  assert.match(selectedSurface, /data-oanix-save-and-close="true"/)
+  assert.match(selectedSurface, /data-oanix-back-close="true"/)
+  assert.doesNotMatch(selectedSurface, /NoteEditor|PlainTextEditorSurface/)
+})
+
+test('the superseded plain-text adapter remains isolated and reusable during transition', () => {
   assert.match(plainTextAdapter, /import \{ NoteEditor \} from '\.\.\/NoteEditor'/)
   assert.match(plainTextAdapter, /export function PlainTextEditorSurface\(\{/)
   assert.match(plainTextAdapter, /\}: EditorSurfaceProps\)/)

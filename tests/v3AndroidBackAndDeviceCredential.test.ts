@@ -19,11 +19,10 @@ test('Android back runtime closes the active rebuild layer through its explicit 
   const drawer = readFileSync('src/features/rebuild/WorkspaceDrawer.tsx', 'utf8')
   const editorSurface = readFileSync('src/features/editor/EditorSurface.tsx', 'utf8')
   const editorSurfaceRegistry = readFileSync('src/features/editor/editorSurfaceRegistry.ts', 'utf8')
-  const plainTextEditorSurface = readFileSync(
-    'src/features/editor/implementations/PlainTextEditorSurface.tsx',
+  const selectedEditorSurface = readFileSync(
+    'src/features/editor/implementations/QwenSheetSurface.tsx',
     'utf8',
   )
-  const editor = readFileSync('src/features/editor/NoteEditor.tsx', 'utf8')
 
   assert.match(runtime, /querySelectorAll<HTMLButtonElement>/)
   assert.match(runtime, /candidate\.closest\('\[aria-hidden="true"\]'\)/)
@@ -33,11 +32,11 @@ test('Android back runtime closes the active rebuild layer through its explicit 
   assert.match(editorSurface, /const ActiveSurface = lazy\(activeEditorSurface\.load\)/)
   assert.match(editorSurface, /<Suspense fallback=\{null\}>/)
   assert.match(editorSurface, /<ActiveSurface \{\.\.\.props\} \/>/)
-  assert.match(editorSurfaceRegistry, /await import\([\s\S]*PlainTextEditorSurface/)
-  assert.match(plainTextEditorSurface, /<NoteEditor/)
-  assert.match(plainTextEditorSurface, /onRequestClose=\{onRequestClose\}/)
-  assert.match(editor, /data-oanix-back-close="true"/)
-  assert.match(editor, /data-oanix-save-and-close="true"/)
+  assert.match(editorSurfaceRegistry, /await import\([\s\S]*QwenSheetSurface/)
+  assert.match(selectedEditorSurface, /data-oanix-back-close="true"/)
+  assert.match(selectedEditorSurface, /data-oanix-save-and-close="true"/)
+  assert.match(selectedEditorSurface, /async function requestClose/)
+  assert.match(selectedEditorSurface, /await onRequestClose\(snapshot\)/)
   assert.match(drawer, /aria-hidden={!open}/)
   assert.match(drawer, /data-oanix-back-close="true"/)
   assert.match(rebuild, /async function closeEditor\(snapshot: EditorSurfaceSnapshot \| null\)/)
