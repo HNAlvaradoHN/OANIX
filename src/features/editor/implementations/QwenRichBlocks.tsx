@@ -26,6 +26,7 @@ import type { EditorSurfaceBlock } from '../editorSurfaceContract.ts'
 import './qwenChecklistBlocks.css'
 import './qwenCodeBlocks.css'
 import './qwenTextBlocks.css'
+import './qwenBlockOrderControls.css'
 
 interface QwenRichBlocksProps {
   session: EditorBlockSession
@@ -94,6 +95,24 @@ export function QwenRichBlocks({ session, disabled, onActivity, onCompositionSta
     void session.remove(blockId).catch(() => setError(message))
   }
 
+  function moveBlock(blockIndex: number, offset: -1 | 1) {
+    const targetIndex = blockIndex + offset
+    if (targetIndex < 0 || targetIndex >= blocks.length) return
+
+    const next = [...blocks]
+    const [moved] = next.splice(blockIndex, 1)
+    next.splice(targetIndex, 0, moved)
+    const nextOrder = next.map((block) => block.id)
+
+    void session.reorder(nextOrder).then((changed) => {
+      if (!changed) return
+      setBlocks(next)
+      setActiveInsertIndex(null)
+      setError('')
+      onActivity()
+    }).catch(() => setError('No se pudo preparar el nuevo orden de los bloques.'))
+  }
+
   function insertBlock(kind: InsertBlockKind, index: number) {
     setActiveInsertIndex(null)
     let next: EditorSurfaceBlock
@@ -144,6 +163,16 @@ export function QwenRichBlocks({ session, disabled, onActivity, onCompositionSta
     return <article className="oanix-qwen-sheet__unknown-block" data-oanix-unknown-block-kind={rawBlock.kind}><span>Bloque no disponible en esta versión</span></article>
   }
 
+  function renderOrderedBlock(rawBlock: EditorSurfaceBlock, index: number) {
+    return <div className="oanix-qwen-sheet__block-shell" data-oanix-order-index={index}>
+      <div className="oanix-qwen-sheet__block-order" role="group" aria-label={`Mover bloque ${index + 1}`}>
+        <button type="button" disabled={disabled || index === 0} onClick={() => moveBlock(index, -1)} aria-label="Mover bloque arriba">↑</button>
+        <button type="button" disabled={disabled || index === blocks.length - 1} onClick={() => moveBlock(index, 1)} aria-label="Mover bloque abajo">↓</button>
+      </div>
+      {renderBlock(rawBlock)}
+    </div>
+  }
+
   function renderInsertPoint(index: number) {
     const menuId = `oanix-qwen-insert-menu-${index}`
     const open = activeInsertIndex === index
@@ -162,7 +191,7 @@ export function QwenRichBlocks({ session, disabled, onActivity, onCompositionSta
     {error && <p className="oanix-qwen-sheet__blocks-error" role="alert">{error}</p>}
     {ready && <div ref={flowRef} className="oanix-qwen-sheet__rich-flow" data-oanix-rich-block-flow="ordered">
       {renderInsertPoint(0)}
-      {blocks.map((rawBlock, index) => <Fragment key={rawBlock.id}>{renderBlock(rawBlock)}{renderInsertPoint(index + 1)}</Fragment>)}
+      {blocks.map((rawBlock, index) => <Fragment key={rawBlock.id}>{renderOrderedBlock(rawBlock, index)}{renderInsertPoint(index + 1)}</Fragment>)}
     </div>}
   </section>
 }
