@@ -86,6 +86,7 @@ export function createEditorBlockChangeBuffer(
   let generation = 0
   let orderGeneration = 0
   let orderDirty = false
+  let activePrepared: PreparedEditorBlockChanges | null = null
 
   function markBlockDirty(blockId: string) {
     generation += 1
@@ -133,28 +134,35 @@ export function createEditorBlockChangeBuffer(
   }
 
   function hasPending(): boolean {
-    return dirtyGenerations.size > 0 || orderDirty
+    return activePrepared !== null || dirtyGenerations.size > 0 || orderDirty
   }
 
   function prepare(): PreparedEditorBlockChanges | null {
+    if (activePrepared) return activePrepared
     if (!hasPending()) return null
 
     const upserts: EditorSurfaceBlock[] = []
     const deletes: string[] = []
     const entries = new Map<string, PreparedBlockEntry>()
 
-    for (const [blockId, blockGeneration] of dirtyGenerations) {
+    for (const [blockId, blockGeneration] of [...dirtyGenerations]) {
       const block = currentBlocks.get(blockId) ?? null
-      entries.set(blockId, { block, generation: blockGeneration })
+      const committed = committedBlocks.get(blockId) ?? null
 
-      const committed = committedBlocks.get(blockId)
-      if (block === null) {
-        if (committed) deletes.push(blockId)
-      } else if (!committed || !blocksEqual(committed, block)) {
-        upserts.push(block)
+      if (
+        (block === null && committed === null)
+        || (block !== null && committed !== null && blocksEqual(committed, block))
+      ) {
+        dirtyGenerations.delete(blockId)
+        continue
       }
+
+      entries.set(blockId, { block, generation: blockGeneration })
+      if (block === null) deletes.push(blockId)
+      else upserts.push(block)
     }
 
+    orderDirty = !ordersEqual(currentOrder, committedOrder)
     const order = orderDirty ? [...currentOrder] : null
     const changes: EditorSurfaceBlockChangeSet = {}
     if (upserts.length > 0) changes.upserts = upserts
@@ -163,15 +171,20 @@ export function createEditorBlockChangeBuffer(
 
     if (!changes.upserts && !changes.deletes && !changes.order) return null
 
-    return {
+    activePrepared = {
       changes,
       entries,
       order,
       orderGeneration,
     }
+    return activePrepared
   }
 
   function commit(prepared: PreparedEditorBlockChanges) {
+    if (activePrepared !== prepared) {
+      throw new Error('Only the active block change checkpoint can be committed.')
+    }
+
     for (const [blockId, entry] of prepared.entries) {
       if (entry.block) committedBlocks.set(blockId, entry.block)
       else committedBlocks.delete(blockId)
@@ -189,6 +202,8 @@ export function createEditorBlockChangeBuffer(
         orderDirty = !ordersEqual(currentOrder, committedOrder)
       }
     }
+
+    activePrepared = null
   }
 
   function current(): EditorSurfaceBlock[] {
