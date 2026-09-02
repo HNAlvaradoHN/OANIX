@@ -29,15 +29,17 @@ test('Qwen exposes Insertar at real positions in the ordered rich flow', () => {
 test('positional insertion is one in-memory buffer mutation before the shared checkpoint', () => {
   const insertPath = functionSlice(richBlocks, 'function insertBlock(', 'function renderText(')
 
-  assert.match(insertPath, /session\.insert\(next, index\)/)
+  assert.match(insertPath, /session\.insert\(nextBlock, index\)/)
+  assert.match(insertPath, /\.\.\.presentationBlocks/)
   assert.match(session, /insert\(block, index\)/)
   assert.doesNotMatch(insertPath, /session\.reorder\(/)
   assert.doesNotMatch(richBlocks, /setTimeout|setInterval|localStorage|sessionStorage|indexedDB|fetch\(|XMLHttpRequest/)
 })
 
-test('one visual controller loads rich blocks once and preserves unknown positions', () => {
+test('one visual controller loads rich blocks once and preserves hidden presentation records', () => {
   assert.equal((richBlocks.match(/session\.load\(\)/g) ?? []).length, 1)
-  assert.match(richBlocks, /blocks\.map\(\(rawBlock, index\) =>/)
+  assert.match(richBlocks, /visibleBlocks\.map\(\(rawBlock, index\) =>/)
+  assert.match(richBlocks, /presentationBlocks = blocks\.filter/)
   assert.match(richBlocks, /decodeTextBlock\(rawBlock\)[\s\S]*decodeChecklistBlock\(rawBlock\)[\s\S]*decodeCodeBlock\(rawBlock\)/)
   assert.match(richBlocks, /data-oanix-unknown-block-kind=\{rawBlock\.kind\}/)
   assert.match(richBlocks, /data-oanix-rich-block-flow="ordered"/)
