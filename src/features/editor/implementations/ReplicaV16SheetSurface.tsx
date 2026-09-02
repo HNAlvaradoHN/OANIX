@@ -368,6 +368,7 @@ export function ReplicaV16SheetSurface({
             {attachmentsEnabled && (
               <ReplicaV16Attachments
                 disabled={editingDisabled}
+                blockSession={blockSession}
                 loadAttachments={loadAttachments}
                 onRequestAttachmentStore={onRequestAttachmentStore}
                 loadAttachmentFile={loadAttachmentFile}
