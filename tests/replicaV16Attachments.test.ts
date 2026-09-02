@@ -61,12 +61,26 @@ test('image presentation controls persist through the shared block session witho
   assert.doesNotMatch(attachments, /storeEncryptedAttachment|loadEncryptedAttachmentFile|encrypted_records_v2/)
 })
 
-test('replica presentation records stay invisible to the normal rich block flow and survive content reorder', () => {
-  assert.match(richBlocks, /REPLICA_ATTACHMENT_PRESENTATION_KIND/)
-  assert.match(richBlocks, /visibleBlocks = blocks\.filter/)
-  assert.match(richBlocks, /presentationBlocks = blocks\.filter/)
-  assert.match(richBlocks, /const next = \[\.\.\.nextVisible, \.\.\.presentationBlocks\]/)
+test('attachment flow anchors render inline and hidden presentation metadata stays outside visual order', () => {
+  assert.match(attachments, /createReplicaAttachmentFlowRef/)
+  assert.match(attachments, /encodeReplicaAttachmentFlowRef/)
+  assert.match(attachments, /decodeReplicaAttachmentFlowRef/)
+  assert.match(attachments, /replicaFlowIndexToOrderIndex/)
+  assert.match(attachments, /ReplicaV16AttachmentFlowContext\.Provider/)
+  assert.match(richBlocks, /decodeReplicaAttachmentFlowRef/)
+  assert.match(richBlocks, /ReplicaV16AttachmentBlock/)
+  assert.match(richBlocks, /splitReplicaEditorBlocks\(blocks\)/)
   assert.match(richBlocks, /visibleBlocks\.map/)
+  assert.match(richBlocks, /insertAttachment\('image', index\)/)
+  assert.match(richBlocks, /insertAttachment\('file', index\)/)
+})
+
+test('existing attachments without anchors migrate by adding only lightweight flow references', () => {
+  assert.match(attachments, /anchoredIds/)
+  assert.match(attachments, /if \(anchoredIds\.has\(item\.id\)\) continue/)
+  assert.match(attachments, /blockSession\.insert\(encoded, rawIndex\)/)
+  assert.match(attachments, /createReplicaAttachmentFlowRef\(item\.id, isImage\(item\) \? 'image' : 'file'\)/)
+  assert.doesNotMatch(attachments, /blob:|data:image|readAsArrayBuffer|arrayBuffer\(\)/)
 })
 
 test('host memoizes attachment callbacks by note so typing does not reload metadata', () => {
