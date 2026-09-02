@@ -11,7 +11,7 @@ test('text segments are first-class ordered blocks without migrating legacy text
   assert.match(richBlocks, /encodeTextBlock/)
   assert.match(richBlocks, /decodeTextBlock/)
   assert.match(richBlocks, /insertBlock\('text', index\)/)
-  assert.match(richBlocks, /session\.insert\(next, index\)/)
+  assert.match(richBlocks, /session\.insert\(nextBlock, index\)/)
   assert.match(surface, /data-oanix-flow-segment="legacy-text"/)
   assert.doesNotMatch(surface, /TEXT_BLOCK_KIND|encodeTextBlock|decodeTextBlock/)
 })
