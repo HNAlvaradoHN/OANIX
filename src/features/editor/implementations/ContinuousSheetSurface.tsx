@@ -3,14 +3,10 @@ import { createEditorBlockSession, type EditorBlockSession } from '../editorBloc
 import type { EditorSurfaceProps, EditorSurfaceSnapshot } from '../editorSurfaceContract'
 import {
   QwenRichBlocks,
+  type QwenExternalInsertKind,
   type QwenExternalInsertRequest,
-  type QwenInsertBlockKind,
 } from './QwenRichBlocks'
-import {
-  ReplicaV16Attachments,
-  type ReplicaAttachmentInsertKind,
-  type ReplicaAttachmentInsertRequest,
-} from './ReplicaV16Attachments'
+import { ReplicaV16Attachments } from './ReplicaV16Attachments'
 import './continuousSheetSurface.css'
 
 const AUTOSAVE_IDLE_MS = 2_200
@@ -70,9 +66,7 @@ export function ContinuousSheetSurface({
   const [design, setDesign] = useState<SheetDesign>('plain')
   const [activeInsertionIndex, setActiveInsertionIndex] = useState(0)
   const [insertRequest, setInsertRequest] = useState<QwenExternalInsertRequest | null>(null)
-  const [attachmentInsertRequest, setAttachmentInsertRequest] = useState<ReplicaAttachmentInsertRequest | null>(null)
   const insertTokenRef = useRef(0)
-  const attachmentTokenRef = useRef(0)
 
   function snapshot(): EditorSurfaceSnapshot {
     return {
@@ -174,15 +168,9 @@ export function ContinuousSheetSurface({
     }
   }
 
-  function requestBlock(kind: QwenInsertBlockKind) {
+  function requestInsert(kind: QwenExternalInsertKind) {
     insertTokenRef.current += 1
     setInsertRequest({ token: insertTokenRef.current, kind, index: activeInsertionIndex })
-    setInsertOpen(false)
-  }
-
-  function requestAttachment(kind: ReplicaAttachmentInsertKind) {
-    attachmentTokenRef.current += 1
-    setAttachmentInsertRequest({ token: attachmentTokenRef.current, kind })
     setInsertOpen(false)
   }
 
@@ -273,7 +261,6 @@ export function ContinuousSheetSurface({
             loadAttachmentFile={loadAttachmentFile}
             onRequestAttachmentRemove={onRequestAttachmentRemove}
             onActivity={markActivity}
-            insertRequest={attachmentInsertRequest}
           >{richFlow}</ReplicaV16Attachments> : richFlow}
         </div>
       </article>
@@ -286,14 +273,14 @@ export function ContinuousSheetSurface({
       {insertOpen && <div className="oanix-continuous-sheet__menu oanix-continuous-sheet__menu--insert" role="menu" aria-label="Insertar contenido">
         <div className="oanix-continuous-sheet__menu-title"><strong>Insertar</strong><span>En la posición activa</span></div>
         <div className="oanix-continuous-sheet__insert-grid">
-          {blockSession && <button type="button" onClick={() => requestBlock('text')}><b>¶</b><span>Texto</span></button>}
-          {blockSession && <button type="button" onClick={() => requestBlock('entry')}><b>◫</b><span>Entrada</span></button>}
-          {attachmentsEnabled && <button type="button" onClick={() => requestAttachment('image')}><b>▧</b><span>Imagen</span></button>}
-          {attachmentsEnabled && <button type="button" onClick={() => requestAttachment('file')}><b>⌑</b><span>Archivo</span></button>}
-          {blockSession && <button type="button" onClick={() => requestBlock('checklist')}><b>☑</b><span>Checklist</span></button>}
-          {blockSession && <button type="button" onClick={() => requestBlock('contact')}><b>◎</b><span>Contacto</span></button>}
-          {blockSession && <button type="button" onClick={() => requestBlock('code')}><b>&lt;/&gt;</b><span>Código</span></button>}
-          {blockSession && <button type="button" onClick={() => requestBlock('separator')}><b>—</b><span>Separador</span></button>}
+          {blockSession && <button type="button" onClick={() => requestInsert('text')}><b>¶</b><span>Texto</span></button>}
+          {blockSession && <button type="button" onClick={() => requestInsert('entry')}><b>◫</b><span>Entrada</span></button>}
+          {attachmentsEnabled && <button type="button" onClick={() => requestInsert('image')}><b>▧</b><span>Imagen</span></button>}
+          {attachmentsEnabled && <button type="button" onClick={() => requestInsert('file')}><b>⌑</b><span>Archivo</span></button>}
+          {blockSession && <button type="button" onClick={() => requestInsert('checklist')}><b>☑</b><span>Checklist</span></button>}
+          {blockSession && <button type="button" onClick={() => requestInsert('contact')}><b>◎</b><span>Contacto</span></button>}
+          {blockSession && <button type="button" onClick={() => requestInsert('code')}><b>&lt;/&gt;</b><span>Código</span></button>}
+          {blockSession && <button type="button" onClick={() => requestInsert('separator')}><b>—</b><span>Separador</span></button>}
         </div>
       </div>}
 
