@@ -47,6 +47,7 @@ export function ContinuousSheetSurface({
 }: EditorSurfaceProps) {
   const titleRef = useRef<HTMLTextAreaElement | null>(null)
   const bodyRef = useRef<HTMLTextAreaElement | null>(null)
+  const bodyCursorRef = useRef({ active: false, position: 0 })
   const blockSessionRef = useRef<EditorBlockSession | null>(null)
   const saveTimerRef = useRef<number | null>(null)
   const savePromiseRef = useRef<Promise<boolean> | null>(null)
@@ -134,7 +135,23 @@ export function ContinuousSheetSurface({
 
   function handleCompositionEnd() {
     composingRef.current = false
+    rememberBodyCursor()
     markActivity()
+  }
+
+  function rememberBodyCursor() {
+    const body = bodyRef.current
+    if (!body) return
+    bodyCursorRef.current = {
+      active: true,
+      position: body.selectionStart ?? body.value.length,
+    }
+    setActiveInsertionIndex(0)
+  }
+
+  function handleFlowInsertionIndex(index: number) {
+    bodyCursorRef.current.active = false
+    setActiveInsertionIndex(index)
   }
 
   async function closeEditor() {
@@ -170,8 +187,30 @@ export function ContinuousSheetSurface({
 
   function requestInsert(kind: QwenExternalInsertKind) {
     insertTokenRef.current += 1
-    setInsertRequest({ token: insertTokenRef.current, kind, index: activeInsertionIndex })
+    const body = bodyRef.current
+    const cursor = bodyCursorRef.current
+    const legacySplit = body && cursor.active
+      ? {
+          before: body.value.slice(0, cursor.position),
+          after: body.value.slice(cursor.position),
+        }
+      : undefined
+
+    setInsertRequest({
+      token: insertTokenRef.current,
+      kind,
+      index: legacySplit ? 0 : activeInsertionIndex,
+      legacySplit,
+    })
     setInsertOpen(false)
+  }
+
+  function handleExternalInsertPrepared(token: number) {
+    if (!insertRequest?.legacySplit || insertRequest.token !== token) return
+    const body = bodyRef.current
+    if (body) body.value = ''
+    bodyCursorRef.current = { active: false, position: 0 }
+    markActivity()
   }
 
   useEffect(() => () => clearSaveTimer(), [])
@@ -197,7 +236,8 @@ export function ContinuousSheetSurface({
       onCompositionEnd={handleCompositionEnd}
       externalInsertRequest={insertRequest}
       continuousWriting
-      onInsertionIndexChange={setActiveInsertionIndex}
+      onInsertionIndexChange={handleFlowInsertionIndex}
+      onExternalInsertPrepared={handleExternalInsertPrepared}
     />
   ) : null
 
@@ -232,6 +272,7 @@ export function ContinuousSheetSurface({
           aria-label="Título de la nota"
           placeholder="Sin título"
           readOnly={disabled}
+          onFocus={() => { bodyCursorRef.current.active = false }}
           onInput={markActivity}
           onCompositionStart={handleCompositionStart}
           onCompositionEnd={handleCompositionEnd}
@@ -246,8 +287,11 @@ export function ContinuousSheetSurface({
           spellCheck
           wrap="soft"
           readOnly={disabled}
-          onFocus={() => setActiveInsertionIndex(0)}
-          onInput={markActivity}
+          onFocus={rememberBodyCursor}
+          onClick={rememberBodyCursor}
+          onKeyUp={rememberBodyCursor}
+          onSelect={rememberBodyCursor}
+          onInput={() => { rememberBodyCursor(); markActivity() }}
           onCompositionStart={handleCompositionStart}
           onCompositionEnd={handleCompositionEnd}
         />
