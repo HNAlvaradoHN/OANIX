@@ -62,6 +62,10 @@ export interface QwenExternalInsertRequest {
   token: number
   kind: QwenExternalInsertKind
   index?: number
+  legacySplit?: {
+    before: string
+    after: string
+  }
 }
 
 interface QwenRichBlocksProps {
@@ -73,6 +77,7 @@ interface QwenRichBlocksProps {
   externalInsertRequest?: QwenExternalInsertRequest | null
   continuousWriting?: boolean
   onInsertionIndexChange?: (index: number) => void
+  onExternalInsertPrepared?: (token: number) => void
 }
 
 function newTextBlockId(): string { return `text-${crypto.randomUUID()}` }
@@ -111,6 +116,7 @@ export function QwenRichBlocks({
   externalInsertRequest = null,
   continuousWriting = false,
   onInsertionIndexChange,
+  onExternalInsertPrepared,
 }: QwenRichBlocksProps) {
   const [blocks, setBlocks] = useState<EditorSurfaceBlock[]>([])
   const [loading, setLoading] = useState(true)
@@ -235,6 +241,14 @@ export function QwenRichBlocks({
     return encodeSeparatorBlock({ id: newSeparatorId(), kind: SEPARATOR_BLOCK_KIND })
   }
 
+  function createTextBlock(text: string): EditorSurfaceBlock {
+    return encodeTextBlock({
+      id: newTextBlockId(),
+      kind: TEXT_BLOCK_KIND,
+      text: text.slice(0, MAX_TEXT_BLOCK_TEXT_LENGTH),
+    })
+  }
+
   function insertPreparedBlock(nextBlock: EditorSurfaceBlock, index: number, kind: QwenInsertBlockKind) {
     setActiveInsertIndex(null)
     const boundedIndex = Math.min(Math.max(0, index), visibleBlocks.length)
@@ -264,11 +278,7 @@ export function QwenRichBlocks({
   function insertWritingText(index: number, text: string) {
     const value = text.slice(0, MAX_TEXT_BLOCK_TEXT_LENGTH)
     if (!value) return
-    insertPreparedBlock(
-      encodeTextBlock({ id: newTextBlockId(), kind: TEXT_BLOCK_KIND, text: value }),
-      index,
-      'text',
-    )
+    insertPreparedBlock(createTextBlock(value), index, 'text')
   }
 
   function insertAttachment(kind: 'image' | 'file', index: number) {
@@ -277,11 +287,74 @@ export function QwenRichBlocks({
     attachmentFlow?.requestInsert(kind, index)
   }
 
+  async function prepareLegacyCursorInsertion(request: QwenExternalInsertRequest, requestedIndex: number) {
+    const split = request.legacySplit
+    if (!split) return false
+
+    const attachmentKind = request.kind === 'image' || request.kind === 'file'
+    if (attachmentKind && !attachmentFlow?.enabled) {
+      setError('Los adjuntos todavía no están disponibles en esta nota.')
+      return true
+    }
+
+    const beforeBlock = split.before ? createTextBlock(split.before) : null
+    const afterBlock = split.after ? createTextBlock(split.after) : null
+    const targetBlock = attachmentKind ? null : createBlock(request.kind as QwenInsertBlockKind)
+    const inserted: EditorSurfaceBlock[] = []
+    if (beforeBlock) inserted.push(beforeBlock)
+    if (targetBlock) inserted.push(targetBlock)
+    if (afterBlock) inserted.push(afterBlock)
+
+    const rawIndex = replicaFlowIndexToOrderIndex(blocks, requestedIndex)
+    try {
+      for (let offset = 0; offset < inserted.length; offset += 1) {
+        await session.insert(inserted[offset], rawIndex + offset)
+      }
+
+      if (inserted.length > 0) {
+        setBlocks([
+          ...visibleBlocks.slice(0, requestedIndex),
+          ...inserted,
+          ...visibleBlocks.slice(requestedIndex),
+          ...presentationBlocks,
+        ])
+        onActivity()
+      }
+
+      onExternalInsertPrepared?.(request.token)
+
+      const targetIndex = requestedIndex + (beforeBlock ? 1 : 0)
+      if (attachmentKind) {
+        attachmentFlow?.requestInsert(request.kind, targetIndex)
+        onInsertionIndexChange?.(targetIndex + 1)
+        return true
+      }
+
+      if (targetBlock && request.kind !== 'separator') pendingFocusIdRef.current = targetBlock.id
+      onInsertionIndexChange?.(targetIndex + 1)
+      return true
+    } catch {
+      try {
+        setBlocks(await session.load())
+      } catch {
+        // Keep the current render if even the recovery read fails.
+      }
+      setError('No se pudo preservar el texto alrededor de la inserción.')
+      return true
+    }
+  }
+
   useEffect(() => {
     if (!ready || disabled || !externalInsertRequest) return
     if (consumedExternalInsertRef.current === externalInsertRequest.token) return
     consumedExternalInsertRef.current = externalInsertRequest.token
     const requestedIndex = Math.min(Math.max(0, externalInsertRequest.index ?? visibleBlocks.length), visibleBlocks.length)
+
+    if (externalInsertRequest.legacySplit) {
+      void prepareLegacyCursorInsertion(externalInsertRequest, requestedIndex)
+      return
+    }
+
     if (externalInsertRequest.kind === 'image' || externalInsertRequest.kind === 'file') {
       insertAttachment(externalInsertRequest.kind, requestedIndex)
       return
