@@ -290,6 +290,17 @@ export function ReplicaV16SheetSurface({
   const attachmentsEnabled = Boolean(loadAttachments && onRequestAttachmentStore && loadAttachmentFile && onRequestAttachmentRemove)
   const sheetClass = `oanix-replica-v16 oanix-replica-v16--${design}`
 
+  const richBlocks = blockSession && (
+    <QwenRichBlocks
+      session={blockSession}
+      disabled={editingDisabled}
+      onActivity={markActivity}
+      onCompositionStart={handleCompositionStart}
+      onCompositionEnd={handleCompositionEnd}
+      externalInsertRequest={insertRequest}
+    />
+  )
+
   return (
     <section
       className={sheetClass}
@@ -354,18 +365,7 @@ export function ReplicaV16SheetSurface({
               onCompositionEnd={handleCompositionEnd}
             />
 
-            {blockSession && (
-              <QwenRichBlocks
-                session={blockSession}
-                disabled={editingDisabled}
-                onActivity={markActivity}
-                onCompositionStart={handleCompositionStart}
-                onCompositionEnd={handleCompositionEnd}
-                externalInsertRequest={insertRequest}
-              />
-            )}
-
-            {attachmentsEnabled && (
+            {attachmentsEnabled ? (
               <ReplicaV16Attachments
                 disabled={editingDisabled}
                 blockSession={blockSession}
@@ -375,8 +375,10 @@ export function ReplicaV16SheetSurface({
                 onRequestAttachmentRemove={onRequestAttachmentRemove}
                 onActivity={markActivity}
                 insertRequest={attachmentInsertRequest}
-              />
-            )}
+              >
+                {richBlocks}
+              </ReplicaV16Attachments>
+            ) : richBlocks}
             <div className="oanix-replica-v16__tail" aria-hidden="true" />
           </section>
         </div>
