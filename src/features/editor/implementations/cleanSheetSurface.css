@@ -1,5 +1,10 @@
 .clean-sheet {
-  min-height: 100%;
+  position: fixed;
+  inset: 0;
+  z-index: 160;
+  min-height: 100dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   background: var(--surface, #f3f4f6);
   color: var(--text-primary, #161616);
 }
