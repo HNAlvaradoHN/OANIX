@@ -1,26 +1,46 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, type ComponentType, type LazyExoticComponent } from 'react'
 import type {
   EditorSurfaceCapabilities,
   EditorSurfaceProps,
 } from './editorSurfaceContract'
-import { activeEditorSurface } from './editorSurfaceRegistry'
+import {
+  activeEditorSurface,
+  resolveEditorSurface,
+  type EditorSurfaceId,
+} from './editorSurfaceRegistry'
 
 const ActiveSurface = lazy(activeEditorSurface.load)
+const lazySurfaceCache = new Map<string, LazyExoticComponent<ComponentType<EditorSurfaceProps>>>()
+
+function lazySurfaceFor(surfaceId?: EditorSurfaceId) {
+  if (!surfaceId || surfaceId === activeEditorSurface.id) return ActiveSurface
+
+  const definition = resolveEditorSurface(surfaceId)
+  const cached = lazySurfaceCache.get(definition.id)
+  if (cached) return cached
+
+  const loaded = lazy(definition.load)
+  lazySurfaceCache.set(definition.id, loaded)
+  return loaded
+}
+
+export interface EditorSurfaceHostProps extends EditorSurfaceProps {
+  /** Optional presentation-only selection. Note data is independent from this value. */
+  surfaceId?: EditorSurfaceId
+}
 
 /**
- * Stable host for the active note editor surface.
+ * Stable host for a note editor surface.
  *
- * Home imports this host instead of a concrete sheet/template. The concrete
- * implementation is selected only by editorSurfaceRegistry and loaded on demand,
- * keeping persistence, encryption, navigation and the Home workspace independent
- * from visual sheets while avoiding editor work until a note is actually opened.
- *
- * Rich-block authority is capability-gated here. A plain-text implementation never
- * receives the loader/save callbacks, which prevents accidental block decryption or
- * persistence work while richBlocks is disabled.
+ * Home imports this host instead of a concrete sheet/template. Concrete surfaces are
+ * registered in editorSurfaceRegistry and loaded only when mounted. Selecting the
+ * experimental replica changes presentation only; storage, crypto, navigation and
+ * note identity continue through the same EditorSurfaceProps contract.
  */
-export function EditorSurface(props: EditorSurfaceProps) {
-  const surfaceProps = activeEditorSurface.capabilities.richBlocks
+export function EditorSurface({ surfaceId, ...props }: EditorSurfaceHostProps) {
+  const selectedSurface = resolveEditorSurface(surfaceId)
+  const SelectedSurface = lazySurfaceFor(surfaceId)
+  const surfaceProps = selectedSurface.capabilities.richBlocks
     ? props
     : {
         ...props,
@@ -30,11 +50,11 @@ export function EditorSurface(props: EditorSurfaceProps) {
 
   return (
     <Suspense fallback={null}>
-      <ActiveSurface {...surfaceProps} />
+      <SelectedSurface {...surfaceProps} />
     </Suspense>
   )
 }
 
-/** Capabilities of the currently selected surface implementation. */
+/** Capabilities of the default surface retained for compatibility and diagnostics. */
 export const editorSurfaceCapabilities: EditorSurfaceCapabilities =
   activeEditorSurface.capabilities
