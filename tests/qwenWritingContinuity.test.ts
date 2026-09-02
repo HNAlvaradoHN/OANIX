@@ -11,7 +11,7 @@ test('new rich blocks focus their primary editing field without persistence or t
   assert.match(source, /data-oanix-primary-input="true"/)
   assert.match(source, /target\.focus\(\{ preventScroll: true \}\)/)
   assert.match(source, /target\.scrollIntoView\(\{ block: 'nearest' \}\)/)
-  assert.match(source, /pendingFocusIdRef\.current = next\.id/)
+  assert.match(source, /pendingFocusIdRef\.current = nextBlock\.id/)
   assert.match(source, /data-oanix-block-id=\{block\.id\}/)
 
   assert.doesNotMatch(source, /setTimeout\s*\(/)
