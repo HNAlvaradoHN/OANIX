@@ -137,7 +137,7 @@ test('the replica preserves the same safe save/close contract without importing 
 })
 
 test('the superseded plain-text adapter remains isolated and reusable during transition', () => {
-  assert.match(plainTextAdapter, /import \{ NoteEditor \} from '\.\.\/editor\/NoteEditor'/)
+  assert.match(plainTextAdapter, /import \{ NoteEditor \} from '\.\.\/NoteEditor'/)
   assert.match(plainTextAdapter, /export function PlainTextEditorSurface\(\{/)
   assert.match(plainTextAdapter, /\}: EditorSurfaceProps\)/)
   assert.match(plainTextAdapter, /<NoteEditor/)
