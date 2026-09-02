@@ -49,7 +49,7 @@ export const editorSurfaceDefinitions = {
     capabilities: {
       plainText: true,
       richBlocks: true,
-      attachments: false,
+      attachments: true,
     },
   },
 } satisfies Record<string, EditorSurfaceDefinition>
