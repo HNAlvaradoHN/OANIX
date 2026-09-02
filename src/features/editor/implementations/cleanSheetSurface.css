@@ -94,16 +94,22 @@
 }
 
 .clean-sheet__title {
-  margin-bottom: 24px;
-  font-size: clamp(28px, 5vw, 44px);
-  font-weight: 760;
-  line-height: 1.12;
-  letter-spacing: -0.025em;
+  margin-bottom: 20px;
+  font-size: clamp(34px, 6vw, 48px);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
 }
 
-.clean-sheet__title::placeholder,
+.clean-sheet__title::placeholder {
+  color: var(--text-tertiary, #a3a3a3);
+  opacity: 1;
+  font-weight: 720;
+}
+
 .clean-sheet__body::placeholder {
   color: var(--text-tertiary, #a3a3a3);
+  opacity: 1;
 }
 
 .clean-sheet__body {
@@ -131,6 +137,12 @@
     border-radius: 0;
     padding: 22px 20px 48px;
     box-shadow: none;
+  }
+
+  .clean-sheet__title {
+    margin-bottom: 18px;
+    font-size: 34px;
+    font-weight: 800;
   }
 
   .clean-sheet__body {
