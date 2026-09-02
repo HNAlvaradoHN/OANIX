@@ -12,6 +12,11 @@ import {
   type QwenExternalInsertRequest,
   type QwenInsertBlockKind,
 } from './QwenRichBlocks'
+import {
+  ReplicaV16Attachments,
+  type ReplicaAttachmentInsertKind,
+  type ReplicaAttachmentInsertRequest,
+} from './ReplicaV16Attachments'
 import './replicaV16SheetSurface.css'
 
 const AUTOSAVE_IDLE_MS = 3_000
@@ -45,6 +50,10 @@ export function ReplicaV16SheetSurface({
   onRequestClose,
   loadBlocks,
   onRequestBlockSave,
+  loadAttachments,
+  onRequestAttachmentStore,
+  loadAttachmentFile,
+  onRequestAttachmentRemove,
   onActivity,
 }: EditorSurfaceProps) {
   const titleRef = useRef<HTMLTextAreaElement | null>(null)
@@ -73,7 +82,9 @@ export function ReplicaV16SheetSurface({
   const [toolsMenuOpen, setToolsMenuOpen] = useState(false)
   const [design, setDesign] = useState<SheetDesign>('plain')
   const [insertRequest, setInsertRequest] = useState<QwenExternalInsertRequest | null>(null)
+  const [attachmentInsertRequest, setAttachmentInsertRequest] = useState<ReplicaAttachmentInsertRequest | null>(null)
   const insertTokenRef = useRef(0)
+  const attachmentTokenRef = useRef(0)
 
   function readSnapshot(): EditorSurfaceSnapshot {
     return {
@@ -235,6 +246,12 @@ export function ReplicaV16SheetSurface({
     setInsertMenuOpen(false)
   }
 
+  function requestAttachmentInsert(kind: ReplicaAttachmentInsertKind) {
+    attachmentTokenRef.current += 1
+    setAttachmentInsertRequest({ token: attachmentTokenRef.current, kind })
+    setInsertMenuOpen(false)
+  }
+
   useEffect(() => () => {
     mountedRef.current = false
     clearIdleTimer()
@@ -270,6 +287,7 @@ export function ReplicaV16SheetSurface({
 
   const editingDisabled = saving || closing
   const blockSession = blockSessionRef.current
+  const attachmentsEnabled = Boolean(loadAttachments && onRequestAttachmentStore && loadAttachmentFile && onRequestAttachmentRemove)
   const sheetClass = `oanix-replica-v16 oanix-replica-v16--${design}`
 
   return (
@@ -346,6 +364,18 @@ export function ReplicaV16SheetSurface({
                 externalInsertRequest={insertRequest}
               />
             )}
+
+            {attachmentsEnabled && (
+              <ReplicaV16Attachments
+                disabled={editingDisabled}
+                loadAttachments={loadAttachments}
+                onRequestAttachmentStore={onRequestAttachmentStore}
+                loadAttachmentFile={loadAttachmentFile}
+                onRequestAttachmentRemove={onRequestAttachmentRemove}
+                onActivity={markActivity}
+                insertRequest={attachmentInsertRequest}
+              />
+            )}
             <div className="oanix-replica-v16__tail" aria-hidden="true" />
           </section>
         </div>
@@ -357,7 +387,7 @@ export function ReplicaV16SheetSurface({
           className="oanix-replica-v16__float-button oanix-replica-v16__float-button--primary"
           aria-label="Insertar bloque"
           aria-expanded={insertMenuOpen}
-          disabled={!blockSession || editingDisabled}
+          disabled={(!blockSession && !attachmentsEnabled) || editingDisabled}
           onClick={() => {
             setToolsMenuOpen(false)
             setInsertMenuOpen((open) => !open)
@@ -376,13 +406,14 @@ export function ReplicaV16SheetSurface({
 
         {insertMenuOpen && (
           <div className="oanix-replica-v16__floating-menu" role="menu" aria-label="Insertar bloque">
-            <button type="button" role="menuitem" onClick={() => requestInsert('text')}><strong>Texto</strong><small>Continuar la nota</small></button>
-            <button type="button" role="menuitem" onClick={() => requestInsert('entry')}><strong>Entrada</strong><small>Registro con fecha</small></button>
-            <button type="button" role="menuitem" onClick={() => requestInsert('checklist')}><strong>Checklist</strong><small>Lista de tareas</small></button>
-            <button type="button" role="menuitem" onClick={() => requestInsert('contact')}><strong>Contacto</strong><small>Nombre y referencia</small></button>
-            <button type="button" role="menuitem" onClick={() => requestInsert('separator')}><strong>Separador</strong><small>Línea de división</small></button>
-            <button type="button" role="menuitem" onClick={() => requestInsert('code')}><strong>Código</strong><small>Fragmento técnico</small></button>
-            <p>Imagen y archivo se habilitarán cuando estén conectados al sistema real de assets cifrados de OANIX.</p>
+            {blockSession && <button type="button" role="menuitem" onClick={() => requestInsert('text')}><strong>Texto</strong><small>Continuar la nota</small></button>}
+            {blockSession && <button type="button" role="menuitem" onClick={() => requestInsert('entry')}><strong>Entrada</strong><small>Registro con fecha</small></button>}
+            {attachmentsEnabled && <button type="button" role="menuitem" onClick={() => requestAttachmentInsert('image')}><strong>Imagen</strong><small>Asset cifrado de OANIX</small></button>}
+            {attachmentsEnabled && <button type="button" role="menuitem" onClick={() => requestAttachmentInsert('file')}><strong>Archivo</strong><small>Adjunto cifrado</small></button>}
+            {blockSession && <button type="button" role="menuitem" onClick={() => requestInsert('checklist')}><strong>Checklist</strong><small>Lista de tareas</small></button>}
+            {blockSession && <button type="button" role="menuitem" onClick={() => requestInsert('contact')}><strong>Contacto</strong><small>Nombre y referencia</small></button>}
+            {blockSession && <button type="button" role="menuitem" onClick={() => requestInsert('separator')}><strong>Separador</strong><small>Línea de división</small></button>}
+            {blockSession && <button type="button" role="menuitem" onClick={() => requestInsert('code')}><strong>Código</strong><small>Fragmento técnico</small></button>}
           </div>
         )}
 
