@@ -56,23 +56,25 @@ En esta ejecución ya estuvieron disponibles los archivos exactos del prototipo 
 
 ## Validación registrada
 
-- Último head previamente validado antes del ajuste de retiro seguro: `4a223282de5328315096df0090a37fc50ea009e9`.
-- En ese head pasaron **OANIX CI #2167**, incluyendo `Test OANIX`, `Build OANIX` y auditoría offline; **OANIX Android #1707**; y **Qwen Independent PR Review #681**.
-- Para el ajuste actual se añadieron `replicaAttachmentRetirementCodec.test.ts`, cobertura de metadata oculta en `replicaAttachmentFlowOrder.test.ts` y guards en `replicaV16Attachments.test.ts` para retiro del asset anterior y bloqueo durante carga inicial.
-- Los gates del nuevo head deben terminar antes de considerar este lote validado; no se equipara un workflow en cola/en ejecución con una validación aprobada.
+- El head `752ae0df0908898eaad2972d78ec958c48ba635c` dejó **OANIX Android #1719** y **Qwen Independent PR Review #693** en verde, pero **OANIX CI #2179** falló por una prueba estructural demasiado amplia: el regex que pretendía prohibir cálculos de viewport también coincidía con el tipo estándar `KeyboardEvent`.
+- El ajuste `b32ece0679f5a4b63042911efa487a79a8ae2d5f` acotó ese guard a las APIs que realmente se quieren evitar (`visualViewport` e `innerHeight`) sin modificar el runtime del editor. **OANIX CI #2180** y **Qwen Independent PR Review #694** pasaron en ese head; OANIX Android debe terminar antes de considerar el lote totalmente validado.
+- `replicaAttachmentRetirementCodec.test.ts`, `replicaAttachmentFlowOrder.test.ts` y `replicaV16Attachments.test.ts` cubren retiro del asset anterior, metadata oculta y bloqueo durante carga inicial.
+- `replicaV16MobileScroll.test.ts` cubre controles flotantes fijos, crecimiento de textareas mediante `field-sizing: content` en motores compatibles y fallback con scroll interno en motores que no lo soportan.
 - La validación física en un dispositivo Android sigue pendiente; un build automatizado no equivale a prueba física.
 
 ## VALIDATION_DEBT / pendiente técnico
 
-- El riesgo de que una imagen anterior reaparezca después de un reemplazo con limpieza fallida queda mitigado mediante la marca de retiro durable y oculta. Falta todavía validarlo con los gates completos del nuevo head y, más adelante, con prueba física de reapertura en Android.
+- El riesgo de que una imagen anterior reaparezca después de un reemplazo con limpieza fallida queda mitigado mediante la marca de retiro durable y oculta. Falta todavía validarlo con prueba física de reapertura en Android.
+- Se detectó una brecha IME concreta: el cuerpo de la nota y los rich blocks usan `handleCompositionStart/End`, pero el textarea de título todavía solo usa `onInput`. Debe conectarse al mismo guard de composición antes de dar por cerrada la compatibilidad de teclado, evitando que el autosave pueda armarse durante una composición del título.
 - La recuperación de adjuntos grandes remotos sigue sin frontera genérica por streaming desde esta superficie; no se debe resolver materializando archivos completos en RAM.
 
 ## Pendiente inmediato
 
-1. Completar la pasada de notas largas, scroll y composición IME/teclado móvil; evitar scroll anidado incómodo sin convertir el cuerpo completo en estado React ni forzar DOM creciente sin límite.
-2. Revisar comportamiento de controles flotantes y menús con teclado móvil abierto/cerrado y scroll al final de notas largas en Día/Noche.
-3. Diseñar una callback genérica de recuperación/exportación por streaming para adjuntos grandes remotos, reutilizando `recoverLargeAttachmentFromDrive` sin materializar el archivo completo en memoria.
-4. Reproducir popup de código y formato de texto sin convertir el camino crítico de escritura en estado React por tecla.
-5. Después de estabilizar la revisión branch-local, decidir si el selector visible vive en Ajustes/Home o si la réplica reemplaza la superficie vigente; no acoplar esa decisión a los datos de las notas.
+1. Conectar el título al mismo guard IME ya usado por cuerpo/rich blocks y cubrirlo con una prueba enfocada sin introducir estado React por tecla.
+2. Completar la pasada de notas largas, scroll y composición IME/teclado móvil; evitar scroll anidado incómodo sin convertir el cuerpo completo en estado React ni forzar DOM creciente sin límite.
+3. Revisar comportamiento de controles flotantes y menús con teclado móvil abierto/cerrado y scroll al final de notas largas en Día/Noche.
+4. Diseñar una callback genérica de recuperación/exportación por streaming para adjuntos grandes remotos, reutilizando `recoverLargeAttachmentFromDrive` sin materializar el archivo completo en memoria.
+5. Reproducir popup de código y formato de texto sin convertir el camino crítico de escritura en estado React por tecla.
+6. Después de estabilizar la revisión branch-local, decidir si el selector visible vive en Ajustes/Home o si la réplica reemplaza la superficie vigente; no acoplar esa decisión a los datos de las notas.
 
 No promover esta rama a `main` antes de la revisión visual del usuario y de tener los gates reales verdes.
