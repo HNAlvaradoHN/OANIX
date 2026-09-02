@@ -29,6 +29,11 @@ import {
   encodeReplicaAttachmentPresentation,
   type ReplicaAttachmentPresentation,
 } from '../replicaAttachmentPresentationCodec.ts'
+import {
+  createReplicaAttachmentRetirement,
+  decodeReplicaAttachmentRetirement,
+  encodeReplicaAttachmentRetirement,
+} from '../replicaAttachmentRetirementCodec.ts'
 import './replicaV16Attachments.css'
 
 export type ReplicaAttachmentInsertKind = ReplicaAttachmentFlowType
@@ -317,14 +322,17 @@ export function ReplicaV16Attachments({
 
         const nextPresentations: Record<string, ReplicaAttachmentPresentation> = {}
         const anchoredIds = new Set<string>()
+        const retiredIds = new Set<string>()
         for (const block of initialBlocks) {
           const presentation = decodeReplicaAttachmentPresentation(block)
           if (presentation) nextPresentations[presentation.attachmentId] = presentation
           const flowRef = decodeReplicaAttachmentFlowRef(block)
           if (flowRef) anchoredIds.add(flowRef.attachmentId)
+          const retirement = decodeReplicaAttachmentRetirement(block)
+          if (retirement) retiredIds.add(retirement.attachmentId)
         }
 
-        setItems(loaded)
+        setItems(loaded.filter((item) => !retiredIds.has(item.id)))
         setPresentations(nextPresentations)
         setError('')
 
@@ -332,7 +340,7 @@ export function ReplicaV16Attachments({
         let workingBlocks = [...initialBlocks]
         let migrated = false
         for (const item of loaded) {
-          if (anchoredIds.has(item.id)) continue
+          if (anchoredIds.has(item.id) || retiredIds.has(item.id)) continue
           const flowRef = createReplicaAttachmentFlowRef(item.id, isImage(item) ? 'image' : 'file')
           const encoded = encodeReplicaAttachmentFlowRef(flowRef)
           const flowIndex = splitReplicaEditorBlocks(workingBlocks).flowBlocks.length
@@ -362,18 +370,18 @@ export function ReplicaV16Attachments({
   }, [blockSession, loadAttachments, onActivity])
 
   function requestInsert(kind: ReplicaAttachmentInsertKind, flowIndex: number | null) {
-    if (disabled || busy || !enabled) return
+    if (disabled || loading || busy || !enabled) return
     pendingInsertRef.current = { kind, flowIndex }
     if (kind === 'image') imageInputRef.current?.click()
     else fileInputRef.current?.click()
   }
 
   useEffect(() => {
-    if (!insertRequest || disabled || !enabled) return
+    if (!insertRequest || disabled || loading || !enabled) return
     if (consumedInsertRef.current === insertRequest.token) return
     consumedInsertRef.current = insertRequest.token
     requestInsert(insertRequest.kind, null)
-  }, [disabled, enabled, insertRequest])
+  }, [disabled, enabled, insertRequest, loading])
 
   useEffect(() => {
     function closeMenu(event: PointerEvent) {
@@ -406,7 +414,7 @@ export function ReplicaV16Attachments({
   }
 
   async function store(file: File, pending: PendingAttachmentInsert) {
-    if (!onRequestAttachmentStore || busy) return
+    if (!onRequestAttachmentStore || loading || busy) return
     setBusy(true)
     setError('')
     try {
@@ -444,16 +452,24 @@ export function ReplicaV16Attachments({
   }
 
   async function replace(oldItem: EditorSurfaceAttachment, file: File) {
-    if (!onRequestAttachmentStore || !onRequestAttachmentRemove || busy) return
+    if (!onRequestAttachmentStore || !onRequestAttachmentRemove || loading || busy) return
     setBusy(true)
     setError('')
     try {
       const stored = await onRequestAttachmentStore(file)
       const oldPresentation = presentations[oldItem.id]
+      let retirementId: string | null = null
 
       if (blockSession) {
         const blocks = await blockSession.load()
         const refs = flowRefsForAttachment(blocks, oldItem.id)
+        const existingRetirement = blocks
+          .map((block) => decodeReplicaAttachmentRetirement(block))
+          .find((retirement) => retirement?.attachmentId === oldItem.id)
+        const retirement = existingRetirement ?? createReplicaAttachmentRetirement(oldItem.id)
+        retirementId = retirement.id
+        await blockSession.upsert(encodeReplicaAttachmentRetirement(retirement))
+
         for (const flowRef of refs) {
           await blockSession.upsert(encodeReplicaAttachmentFlowRef({
             ...flowRef,
@@ -478,11 +494,15 @@ export function ReplicaV16Attachments({
       }
 
       const removed = await onRequestAttachmentRemove(oldItem.id)
+      setItems((current) => current.map((item) => item.id === oldItem.id ? stored : item))
       if (removed) {
-        setItems((current) => current.map((item) => item.id === oldItem.id ? stored : item))
+        if (blockSession && retirementId) {
+          void blockSession.remove(retirementId).catch(() => {
+            // A stale hidden retirement marker for an already deleted asset is harmless.
+          })
+        }
       } else {
-        setItems((current) => [...current, stored])
-        setError('La imagen nueva se guardó y quedó referenciada, pero la anterior no pudo eliminarse.')
+        setError('La imagen nueva quedó activa; la anterior no pudo eliminarse y quedó retirada del flujo para reintentar su limpieza después.')
       }
       setActiveMenuId(null)
       setRevision((current) => current + 1)
@@ -495,7 +515,7 @@ export function ReplicaV16Attachments({
   }
 
   async function remove(item: EditorSurfaceAttachment) {
-    if (!onRequestAttachmentRemove || busy) return
+    if (!onRequestAttachmentRemove || loading || busy) return
     if (!window.confirm(`¿Eliminar “${item.name}”?`)) return
     setBusy(true)
     setError('')
@@ -509,6 +529,8 @@ export function ReplicaV16Attachments({
         for (const block of blocks) {
           const presentation = decodeReplicaAttachmentPresentation(block)
           if (presentation?.attachmentId === item.id) await blockSession.remove(presentation.id)
+          const retirement = decodeReplicaAttachmentRetirement(block)
+          if (retirement?.attachmentId === item.id) await blockSession.remove(retirement.id)
         }
       }
 
@@ -529,7 +551,7 @@ export function ReplicaV16Attachments({
   }
 
   async function openFile(item: EditorSurfaceAttachment) {
-    if (!loadAttachmentFile || busy || item.remote) return
+    if (!loadAttachmentFile || loading || busy || item.remote) return
     setBusy(true)
     setError('')
     try {
@@ -553,11 +575,12 @@ export function ReplicaV16Attachments({
 
   if (!enabled && !loading) return <>{children}</>
 
+  const contextBusy = loading || busy
   const context: ReplicaV16AttachmentFlowContextValue | null = enabled && loadAttachmentFile
     ? {
       enabled,
       revision,
-      busy,
+      busy: contextBusy,
       items,
       presentations,
       activeMenuId,
@@ -577,14 +600,14 @@ export function ReplicaV16Attachments({
 
   return <ReplicaV16AttachmentFlowContext.Provider value={context}>
     {children}
-    {(loading || error || legacyImages.length > 0 || legacyFiles.length > 0) && <section className="oanix-replica-assets" aria-label="Imágenes y archivos de la nota" aria-busy={loading || busy}>
+    {(loading || error || legacyImages.length > 0 || legacyFiles.length > 0) && <section className="oanix-replica-assets" aria-label="Imágenes y archivos de la nota" aria-busy={contextBusy}>
       {loading && <p className="oanix-replica-assets__status" role="status">Abriendo referencias de adjuntos…</p>}
       {error && <p className="oanix-replica-assets__error" role="alert">{error}</p>}
       {legacyImages.map((item) => <ImageCard
         key={item.id}
         item={item}
         presentation={presentationFor(item)}
-        disabled={disabled || busy}
+        disabled={disabled || contextBusy}
         active={activeMenuId === item.id}
         loadAttachmentFile={loadAttachmentFile!}
         onToggleMenu={() => setActiveMenuId((current) => current === item.id ? null : item.id)}
@@ -596,8 +619,8 @@ export function ReplicaV16Attachments({
       {legacyFiles.map((item) => <article key={item.id} className="oanix-replica-asset oanix-replica-asset--file" data-oanix-attachment-id={item.id}>
         <span className="oanix-replica-asset__file-icon" aria-hidden="true"><FileIcon /></span>
         <span className="oanix-replica-asset__file-copy"><strong>{item.name}</strong><small>{item.mimeType || 'Archivo'} · {humanBytes(item.byteLength)}{item.remote ? ' · remoto' : ''}</small></span>
-        <button type="button" disabled={disabled || busy || item.remote} title={item.remote ? 'La recuperación por streaming se conectará en el siguiente bloque.' : undefined} onClick={() => void openFile(item)}>Abrir</button>
-        <button type="button" className="is-danger" disabled={disabled || busy} onClick={() => void remove(item)}>Eliminar</button>
+        <button type="button" disabled={disabled || contextBusy || item.remote} title={item.remote ? 'La recuperación por streaming se conectará en el siguiente bloque.' : undefined} onClick={() => void openFile(item)}>Abrir</button>
+        <button type="button" className="is-danger" disabled={disabled || contextBusy} onClick={() => void remove(item)}>Eliminar</button>
       </article>)}
     </section>}
 
