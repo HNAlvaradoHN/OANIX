@@ -83,7 +83,7 @@ test('the host gates rich and attachment callbacks through selected capabilities
   assert.match(host, /loadAttachmentFile: undefined/)
   assert.match(host, /onRequestAttachmentRemove: undefined/)
   assert.match(registry, /'qwen-sanitized-v1'[\s\S]*attachments: false/)
-  assert.match(registry, /'continuous-sheet-v1'[\s\S]*attachments: true/)
+  assert.match(registry, /'replica-v16'[\s\S]*attachments: true/)
 })
 
 test('attachment adapter keeps storage/provider metadata outside visual implementations', () => {
@@ -100,7 +100,7 @@ test('attachment adapter keeps storage/provider metadata outside visual implemen
 test('the registry keeps the stable editor and isolated continuous experiment in one composition catalog', () => {
   assert.match(registry, /export const editorSurfaceDefinitions/)
   assert.match(registry, /'qwen-sanitized-v1'/)
-  assert.match(registry, /'continuous-sheet-v1'/)
+  assert.match(registry, /'replica-v16'/)
   assert.match(registry, /experimental: true/)
   assert.match(registry, /await import\([\s\S]*\.\/implementations\/QwenSheetSurface/)
   assert.match(registry, /await import\([\s\S]*\.\/implementations\/ContinuousSheetSurface/)
@@ -137,7 +137,7 @@ test('the replica preserves the same safe save/close contract without importing 
 })
 
 test('the superseded plain-text adapter remains isolated and reusable during transition', () => {
-  assert.match(plainTextAdapter, /import \{ NoteEditor \} from '\.\.\/NoteEditor'/)
+  assert.match(plainTextAdapter, /import \{ NoteEditor \} from '\.\.\/editor\/NoteEditor'/)
   assert.match(plainTextAdapter, /export function PlainTextEditorSurface\(\{/)
   assert.match(plainTextAdapter, /\}: EditorSurfaceProps\)/)
   assert.match(plainTextAdapter, /<NoteEditor/)
