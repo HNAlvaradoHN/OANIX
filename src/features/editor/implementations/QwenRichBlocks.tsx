@@ -60,6 +60,7 @@ export type QwenInsertBlockKind = 'text' | 'checklist' | 'code' | 'entry' | 'con
 export interface QwenExternalInsertRequest {
   token: number
   kind: QwenInsertBlockKind
+  index?: number
 }
 
 interface QwenRichBlocksProps {
@@ -69,6 +70,8 @@ interface QwenRichBlocksProps {
   onCompositionStart: () => void
   onCompositionEnd: () => void
   externalInsertRequest?: QwenExternalInsertRequest | null
+  continuousWriting?: boolean
+  onInsertionIndexChange?: (index: number) => void
 }
 
 function newTextBlockId(): string { return `text-${crypto.randomUUID()}` }
@@ -105,6 +108,8 @@ export function QwenRichBlocks({
   onCompositionStart,
   onCompositionEnd,
   externalInsertRequest = null,
+  continuousWriting = false,
+  onInsertionIndexChange,
 }: QwenRichBlocksProps) {
   const [blocks, setBlocks] = useState<EditorSurfaceBlock[]>([])
   const [loading, setLoading] = useState(true)
@@ -229,20 +234,21 @@ export function QwenRichBlocks({
     return encodeSeparatorBlock({ id: newSeparatorId(), kind: SEPARATOR_BLOCK_KIND })
   }
 
-  function insertBlock(kind: QwenInsertBlockKind, index: number) {
+  function insertPreparedBlock(nextBlock: EditorSurfaceBlock, index: number, kind: QwenInsertBlockKind) {
     setActiveInsertIndex(null)
-    const nextBlock = createBlock(kind)
-    const rawIndex = replicaFlowIndexToOrderIndex(blocks, index)
+    const boundedIndex = Math.min(Math.max(0, index), visibleBlocks.length)
+    const rawIndex = replicaFlowIndexToOrderIndex(blocks, boundedIndex)
     const next = [
-      ...visibleBlocks.slice(0, index),
+      ...visibleBlocks.slice(0, boundedIndex),
       nextBlock,
-      ...visibleBlocks.slice(index),
+      ...visibleBlocks.slice(boundedIndex),
       ...presentationBlocks,
     ]
 
     if (kind !== 'separator') pendingFocusIdRef.current = nextBlock.id
     setBlocks(next)
     onActivity()
+    onInsertionIndexChange?.(boundedIndex + 1)
     void session.insert(nextBlock, rawIndex).catch(() => {
       if (pendingFocusIdRef.current === nextBlock.id) pendingFocusIdRef.current = null
       setBlocks((current) => current.filter((block) => block.id !== nextBlock.id))
@@ -250,8 +256,23 @@ export function QwenRichBlocks({
     })
   }
 
+  function insertBlock(kind: QwenInsertBlockKind, index: number) {
+    insertPreparedBlock(createBlock(kind), index, kind)
+  }
+
+  function insertWritingText(index: number, text: string) {
+    const value = text.slice(0, MAX_TEXT_BLOCK_TEXT_LENGTH)
+    if (!value) return
+    insertPreparedBlock(
+      encodeTextBlock({ id: newTextBlockId(), kind: TEXT_BLOCK_KIND, text: value }),
+      index,
+      'text',
+    )
+  }
+
   function insertAttachment(kind: 'image' | 'file', index: number) {
     setActiveInsertIndex(null)
+    onInsertionIndexChange?.(index + 1)
     attachmentFlow?.requestInsert(kind, index)
   }
 
@@ -259,7 +280,8 @@ export function QwenRichBlocks({
     if (!ready || disabled || !externalInsertRequest) return
     if (consumedExternalInsertRef.current === externalInsertRequest.token) return
     consumedExternalInsertRef.current = externalInsertRequest.token
-    insertBlock(externalInsertRequest.kind, visibleBlocks.length)
+    const requestedIndex = externalInsertRequest.index ?? visibleBlocks.length
+    insertBlock(externalInsertRequest.kind, Math.min(Math.max(0, requestedIndex), visibleBlocks.length))
   }, [externalInsertRequest, ready, disabled, visibleBlocks.length])
 
   function renderText(block: EditorTextBlock) {
@@ -362,7 +384,11 @@ export function QwenRichBlocks({
   }
 
   function renderOrderedBlock(rawBlock: EditorSurfaceBlock, index: number) {
-    return <div className="oanix-qwen-sheet__block-shell" data-oanix-order-index={index}>
+    return <div
+      className="oanix-qwen-sheet__block-shell"
+      data-oanix-order-index={index}
+      onFocusCapture={() => onInsertionIndexChange?.(index + 1)}
+    >
       <div className="oanix-qwen-sheet__block-order" role="group" aria-label={`Mover bloque ${index + 1}`}>
         <button type="button" disabled={disabled || index === 0} onClick={() => moveBlock(index, -1)} aria-label="Mover bloque arriba">↑</button>
         <button type="button" disabled={disabled || index === visibleBlocks.length - 1} onClick={() => moveBlock(index, 1)} aria-label="Mover bloque abajo">↓</button>
@@ -389,12 +415,26 @@ export function QwenRichBlocks({
     </div>
   }
 
+  function renderWritingSeam(index: number) {
+    return <div className="oanix-continuous-seam" data-oanix-insert-index={index}>
+      <input
+        type="text"
+        value=""
+        disabled={disabled}
+        aria-label={`Escribir en la posición ${index + 1}`}
+        placeholder="Escribe aquí…"
+        onFocus={() => onInsertionIndexChange?.(index)}
+        onChange={(event) => insertWritingText(index, event.currentTarget.value)}
+      />
+    </div>
+  }
+
   return <section className="oanix-qwen-sheet__rich-content" aria-label="Bloques de la nota" data-oanix-flow-anchor="after-legacy-text">
     {loading && <p className="oanix-qwen-sheet__blocks-hint" role="status">Abriendo bloques cifrados…</p>}
     {error && <p className="oanix-qwen-sheet__blocks-error" role="alert">{error}</p>}
     {ready && <div ref={flowRef} className="oanix-qwen-sheet__rich-flow" data-oanix-rich-block-flow="ordered">
-      {renderInsertPoint(0)}
-      {visibleBlocks.map((rawBlock, index) => <Fragment key={rawBlock.id}>{renderOrderedBlock(rawBlock, index)}{renderInsertPoint(index + 1)}</Fragment>)}
+      {continuousWriting ? renderWritingSeam(0) : renderInsertPoint(0)}
+      {visibleBlocks.map((rawBlock, index) => <Fragment key={rawBlock.id}>{renderOrderedBlock(rawBlock, index)}{continuousWriting ? renderWritingSeam(index + 1) : renderInsertPoint(index + 1)}</Fragment>)}
     </div>}
   </section>
 }
