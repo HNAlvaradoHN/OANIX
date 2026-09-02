@@ -1,6 +1,25 @@
-import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from 'react'
 import type { EditorBlockSession } from '../editorBlockSession.ts'
-import type { EditorSurfaceAttachment } from '../editorSurfaceContract'
+import type { EditorSurfaceAttachment, EditorSurfaceBlock } from '../editorSurfaceContract.ts'
+import {
+  createReplicaAttachmentFlowRef,
+  decodeReplicaAttachmentFlowRef,
+  encodeReplicaAttachmentFlowRef,
+  type ReplicaAttachmentFlowRef,
+  type ReplicaAttachmentFlowType,
+} from '../replicaAttachmentFlowCodec.ts'
+import {
+  replicaFlowIndexToOrderIndex,
+  splitReplicaEditorBlocks,
+} from '../replicaAttachmentFlowOrder.ts'
 import {
   MAX_REPLICA_IMAGE_DESCRIPTION,
   MAX_REPLICA_IMAGE_WIDTH,
@@ -12,7 +31,7 @@ import {
 } from '../replicaAttachmentPresentationCodec.ts'
 import './replicaV16Attachments.css'
 
-export type ReplicaAttachmentInsertKind = 'image' | 'file'
+export type ReplicaAttachmentInsertKind = ReplicaAttachmentFlowType
 
 export interface ReplicaAttachmentInsertRequest {
   token: number
@@ -28,6 +47,35 @@ interface ReplicaV16AttachmentsProps {
   onRequestAttachmentRemove?: (attachmentId: string) => Promise<boolean>
   onActivity: () => void
   insertRequest?: ReplicaAttachmentInsertRequest | null
+  children?: ReactNode
+}
+
+interface PendingAttachmentInsert {
+  kind: ReplicaAttachmentInsertKind
+  flowIndex: number | null
+}
+
+interface ReplicaV16AttachmentFlowContextValue {
+  enabled: boolean
+  revision: number
+  busy: boolean
+  items: EditorSurfaceAttachment[]
+  presentations: Record<string, ReplicaAttachmentPresentation>
+  activeMenuId: string | null
+  requestInsert: (kind: ReplicaAttachmentInsertKind, flowIndex: number) => void
+  loadAttachmentFile: (attachmentId: string) => Promise<File | null>
+  queuePresentation: (next: ReplicaAttachmentPresentation) => void
+  replace: (oldItem: EditorSurfaceAttachment, file: File) => Promise<void>
+  remove: (item: EditorSurfaceAttachment) => Promise<void>
+  openFile: (item: EditorSurfaceAttachment) => Promise<void>
+  setActiveMenuId: (attachmentId: string | null) => void
+  setError: (message: string) => void
+}
+
+const ReplicaV16AttachmentFlowContext = createContext<ReplicaV16AttachmentFlowContextValue | null>(null)
+
+export function useReplicaV16AttachmentFlow(): ReplicaV16AttachmentFlowContextValue | null {
+  return useContext(ReplicaV16AttachmentFlowContext)
 }
 
 function humanBytes(bytes: number): string {
@@ -60,6 +108,7 @@ function MoreIcon() {
 }
 
 interface ImageCardProps {
+  blockId?: string
   item: EditorSurfaceAttachment
   presentation: ReplicaAttachmentPresentation
   disabled: boolean
@@ -73,6 +122,7 @@ interface ImageCardProps {
 }
 
 function ImageCard({
+  blockId,
   item,
   presentation,
   disabled,
@@ -144,7 +194,7 @@ function ImageCard({
     })
   }
 
-  return <article ref={hostRef} className={figureClass} style={figureStyle} data-oanix-attachment-id={item.id}>
+  return <article ref={hostRef} className={figureClass} style={figureStyle} data-oanix-block-id={blockId} data-oanix-attachment-id={item.id}>
     <button type="button" className="oanix-replica-asset__more" aria-label={`Opciones de ${item.name}`} aria-expanded={active} disabled={disabled} onClick={onToggleMenu}><MoreIcon /></button>
     <div className="oanix-replica-asset__image-stage">
       {url ? <img src={url} alt={presentation.description || item.name} loading="lazy" /> : <div className="oanix-replica-asset__placeholder"><ImageIcon /><span>{item.remote ? 'Imagen remota cifrada' : loading ? 'Descifrando imagen…' : 'Imagen cifrada'}</span></div>}
@@ -160,24 +210,10 @@ function ImageCard({
       <button type="button" role="menuitemcheckbox" aria-checked={presentation.locked} disabled={disabled} onClick={() => onPresentationChange({ ...presentation, locked: !presentation.locked })}>{presentation.locked ? 'Desbloquear tamaño' : 'Bloquear tamaño'}</button>
       {!presentation.locked && <label className="oanix-replica-asset__size-control">
         <span>Tamaño {presentation.widthPercent}%</span>
-        <input
-          type="range"
-          min={MIN_REPLICA_IMAGE_WIDTH}
-          max={MAX_REPLICA_IMAGE_WIDTH}
-          value={presentation.widthPercent}
-          disabled={disabled}
-          onChange={(event) => onPresentationChange({ ...presentation, widthPercent: Number(event.target.value) })}
-        />
+        <input type="range" min={MIN_REPLICA_IMAGE_WIDTH} max={MAX_REPLICA_IMAGE_WIDTH} value={presentation.widthPercent} disabled={disabled} onChange={(event) => onPresentationChange({ ...presentation, widthPercent: Number(event.target.value) })} />
       </label>}
       <div className="oanix-replica-asset__align" role="group" aria-label="Alineación de imagen">
-        {(['left', 'center', 'right'] as const).map((alignment) => <button
-          key={alignment}
-          type="button"
-          className={presentation.alignment === alignment ? 'is-active' : ''}
-          aria-pressed={presentation.alignment === alignment}
-          disabled={disabled}
-          onClick={() => onPresentationChange({ ...presentation, alignment })}
-        >{alignment === 'left' ? 'Izq.' : alignment === 'center' ? 'Centro' : 'Der.'}</button>)}
+        {(['left', 'center', 'right'] as const).map((alignment) => <button key={alignment} type="button" className={presentation.alignment === alignment ? 'is-active' : ''} aria-pressed={presentation.alignment === alignment} disabled={disabled} onClick={() => onPresentationChange({ ...presentation, alignment })}>{alignment === 'left' ? 'Izq.' : alignment === 'center' ? 'Centro' : 'Der.'}</button>)}
       </div>
       <button type="button" role="menuitemcheckbox" aria-checked={presentation.showName} disabled={disabled} onClick={() => onPresentationChange({ ...presentation, showName: !presentation.showName })}>{presentation.showName ? 'Ocultar nombre' : 'Mostrar nombre'}</button>
       <button type="button" role="menuitem" disabled={disabled} onClick={editDescription}>{presentation.description ? 'Editar descripción' : 'Añadir descripción'}</button>
@@ -192,6 +228,55 @@ function ImageCard({
   </article>
 }
 
+function flowRefsForAttachment(blocks: readonly EditorSurfaceBlock[], attachmentId: string): ReplicaAttachmentFlowRef[] {
+  return blocks.flatMap((block) => {
+    const ref = decodeReplicaAttachmentFlowRef(block)
+    return ref?.attachmentId === attachmentId ? [ref] : []
+  })
+}
+
+export function ReplicaV16AttachmentBlock({
+  flowRef,
+  disabled,
+}: {
+  flowRef: ReplicaAttachmentFlowRef
+  disabled: boolean
+}) {
+  const context = useReplicaV16AttachmentFlow()
+  const item = context?.items.find((candidate) => candidate.id === flowRef.attachmentId)
+
+  if (!context || !item) {
+    return <article className="oanix-replica-asset oanix-replica-asset--file" data-oanix-block-id={flowRef.id} data-oanix-missing-attachment={flowRef.attachmentId}>
+      <span className="oanix-replica-asset__file-icon" aria-hidden="true"><FileIcon /></span>
+      <span className="oanix-replica-asset__file-copy"><strong>Adjunto no disponible</strong><small>La referencia cifrada se conserva en la nota.</small></span>
+    </article>
+  }
+
+  if (flowRef.attachmentType === 'image') {
+    const presentation = context.presentations[item.id] ?? createReplicaAttachmentPresentation(item.id)
+    return <ImageCard
+      blockId={flowRef.id}
+      item={item}
+      presentation={presentation}
+      disabled={disabled || context.busy}
+      active={context.activeMenuId === item.id}
+      loadAttachmentFile={context.loadAttachmentFile}
+      onToggleMenu={() => context.setActiveMenuId(context.activeMenuId === item.id ? null : item.id)}
+      onPresentationChange={context.queuePresentation}
+      onReplace={context.replace}
+      onRemove={context.remove}
+      onError={context.setError}
+    />
+  }
+
+  return <article className="oanix-replica-asset oanix-replica-asset--file" data-oanix-block-id={flowRef.id} data-oanix-attachment-id={item.id}>
+    <span className="oanix-replica-asset__file-icon" aria-hidden="true"><FileIcon /></span>
+    <span className="oanix-replica-asset__file-copy"><strong>{item.name}</strong><small>{item.mimeType || 'Archivo'} · {humanBytes(item.byteLength)}{item.remote ? ' · remoto' : ''}</small></span>
+    <button type="button" disabled={disabled || context.busy || item.remote} title={item.remote ? 'La recuperación por streaming se conectará en el siguiente bloque.' : undefined} onClick={() => void context.openFile(item)}>Abrir</button>
+    <button type="button" className="is-danger" disabled={disabled || context.busy} onClick={() => void context.remove(item)}>Eliminar</button>
+  </article>
+}
+
 export function ReplicaV16Attachments({
   disabled,
   blockSession = null,
@@ -201,48 +286,93 @@ export function ReplicaV16Attachments({
   onRequestAttachmentRemove,
   onActivity,
   insertRequest = null,
+  children,
 }: ReplicaV16AttachmentsProps) {
   const imageInputRef = useRef<HTMLInputElement | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const consumedInsertRef = useRef<number | null>(null)
+  const pendingInsertRef = useRef<PendingAttachmentInsert | null>(null)
   const [items, setItems] = useState<EditorSurfaceAttachment[]>([])
   const [presentations, setPresentations] = useState<Record<string, ReplicaAttachmentPresentation>>({})
   const [loading, setLoading] = useState(Boolean(loadAttachments))
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null)
+  const [revision, setRevision] = useState(0)
 
   const enabled = Boolean(loadAttachments && onRequestAttachmentStore && loadAttachmentFile && onRequestAttachmentRemove)
 
   useEffect(() => {
     if (!loadAttachments) return
     let active = true
-    setLoading(true)
-    const blocksPromise = blockSession?.load() ?? Promise.resolve([])
-    void Promise.all([loadAttachments(), blocksPromise]).then(([loaded, blocks]) => {
-      if (!active) return
-      const nextPresentations: Record<string, ReplicaAttachmentPresentation> = {}
-      for (const block of blocks) {
-        const presentation = decodeReplicaAttachmentPresentation(block)
-        if (presentation) nextPresentations[presentation.attachmentId] = presentation
+
+    void (async () => {
+      setLoading(true)
+      try {
+        const [loaded, initialBlocks] = await Promise.all([
+          loadAttachments(),
+          blockSession?.load() ?? Promise.resolve([]),
+        ])
+        if (!active) return
+
+        const nextPresentations: Record<string, ReplicaAttachmentPresentation> = {}
+        const anchoredIds = new Set<string>()
+        for (const block of initialBlocks) {
+          const presentation = decodeReplicaAttachmentPresentation(block)
+          if (presentation) nextPresentations[presentation.attachmentId] = presentation
+          const flowRef = decodeReplicaAttachmentFlowRef(block)
+          if (flowRef) anchoredIds.add(flowRef.attachmentId)
+        }
+
+        setItems(loaded)
+        setPresentations(nextPresentations)
+        setError('')
+
+        if (!blockSession) return
+        let workingBlocks = [...initialBlocks]
+        let migrated = false
+        for (const item of loaded) {
+          if (anchoredIds.has(item.id)) continue
+          const flowRef = createReplicaAttachmentFlowRef(item.id, isImage(item) ? 'image' : 'file')
+          const encoded = encodeReplicaAttachmentFlowRef(flowRef)
+          const flowIndex = splitReplicaEditorBlocks(workingBlocks).flowBlocks.length
+          const rawIndex = replicaFlowIndexToOrderIndex(workingBlocks, flowIndex)
+          await blockSession.insert(encoded, rawIndex)
+          workingBlocks = [
+            ...workingBlocks.slice(0, rawIndex),
+            encoded,
+            ...workingBlocks.slice(rawIndex),
+          ]
+          anchoredIds.add(item.id)
+          migrated = true
+        }
+
+        if (migrated && active) {
+          setRevision((current) => current + 1)
+          onActivity()
+        }
+      } catch {
+        if (active) setError('No se pudieron abrir los adjuntos de esta nota.')
+      } finally {
+        if (active) setLoading(false)
       }
-      setItems(loaded)
-      setPresentations(nextPresentations)
-      setError('')
-    }).catch(() => {
-      if (active) setError('No se pudieron abrir los adjuntos de esta nota.')
-    }).finally(() => {
-      if (active) setLoading(false)
-    })
+    })()
+
     return () => { active = false }
-  }, [blockSession, loadAttachments])
+  }, [blockSession, loadAttachments, onActivity])
+
+  function requestInsert(kind: ReplicaAttachmentInsertKind, flowIndex: number | null) {
+    if (disabled || busy || !enabled) return
+    pendingInsertRef.current = { kind, flowIndex }
+    if (kind === 'image') imageInputRef.current?.click()
+    else fileInputRef.current?.click()
+  }
 
   useEffect(() => {
     if (!insertRequest || disabled || !enabled) return
     if (consumedInsertRef.current === insertRequest.token) return
     consumedInsertRef.current = insertRequest.token
-    if (insertRequest.kind === 'image') imageInputRef.current?.click()
-    else fileInputRef.current?.click()
+    requestInsert(insertRequest.kind, null)
   }, [disabled, enabled, insertRequest])
 
   useEffect(() => {
@@ -275,18 +405,36 @@ export function ReplicaV16Attachments({
     })
   }
 
-  async function store(file: File) {
+  async function store(file: File, pending: PendingAttachmentInsert) {
     if (!onRequestAttachmentStore || busy) return
     setBusy(true)
     setError('')
     try {
       const stored = await onRequestAttachmentStore(file)
-      setItems((current) => [...current, stored])
-      if (isImage(stored) && blockSession) {
-        const presentation = createReplicaAttachmentPresentation(stored.id)
-        setPresentations((current) => ({ ...current, [stored.id]: presentation }))
-        await blockSession.upsert(encodeReplicaAttachmentPresentation(presentation))
+      let presentation: ReplicaAttachmentPresentation | null = null
+
+      if (blockSession) {
+        const blocks = await blockSession.load()
+        const visibleCount = splitReplicaEditorBlocks(blocks).flowBlocks.length
+        const requestedIndex = pending.flowIndex === null
+          ? visibleCount
+          : Math.min(Math.max(0, pending.flowIndex), visibleCount)
+        const flowRef = createReplicaAttachmentFlowRef(stored.id, pending.kind)
+        const encoded = encodeReplicaAttachmentFlowRef(flowRef)
+        const rawIndex = replicaFlowIndexToOrderIndex(blocks, requestedIndex)
+        await blockSession.insert(encoded, rawIndex)
+
+        if (pending.kind === 'image') {
+          presentation = createReplicaAttachmentPresentation(stored.id)
+          await blockSession.upsert(encodeReplicaAttachmentPresentation(presentation))
+        }
       }
+
+      setItems((current) => [...current, stored])
+      if (presentation) {
+        setPresentations((current) => ({ ...current, [stored.id]: presentation! }))
+      }
+      setRevision((current) => current + 1)
       onActivity()
     } catch {
       setError('No se pudo guardar el adjunto de forma cifrada.')
@@ -301,19 +449,19 @@ export function ReplicaV16Attachments({
     setError('')
     try {
       const stored = await onRequestAttachmentStore(file)
-      const removed = await onRequestAttachmentRemove(oldItem.id)
       const oldPresentation = presentations[oldItem.id]
-      if (!removed) {
-        setItems((current) => [...current, stored])
-        if (isImage(stored) && blockSession) {
-          const newPresentation = createReplicaAttachmentPresentation(stored.id)
-          setPresentations((current) => ({ ...current, [stored.id]: newPresentation }))
-          await blockSession.upsert(encodeReplicaAttachmentPresentation(newPresentation))
+
+      if (blockSession) {
+        const blocks = await blockSession.load()
+        const refs = flowRefsForAttachment(blocks, oldItem.id)
+        for (const flowRef of refs) {
+          await blockSession.upsert(encodeReplicaAttachmentFlowRef({
+            ...flowRef,
+            attachmentId: stored.id,
+          }))
         }
-        setError('La imagen nueva se guardó, pero la anterior no pudo eliminarse.')
-      } else {
-        setItems((current) => current.map((item) => item.id === oldItem.id ? stored : item))
-        if (oldPresentation && blockSession) {
+
+        if (oldPresentation) {
           const transferred = { ...oldPresentation, attachmentId: stored.id }
           await blockSession.upsert(encodeReplicaAttachmentPresentation(transferred))
           setPresentations((current) => {
@@ -322,13 +470,22 @@ export function ReplicaV16Attachments({
             next[stored.id] = transferred
             return next
           })
-        } else if (isImage(stored) && blockSession) {
+        } else {
           const newPresentation = createReplicaAttachmentPresentation(stored.id)
-          setPresentations((current) => ({ ...current, [stored.id]: newPresentation }))
           await blockSession.upsert(encodeReplicaAttachmentPresentation(newPresentation))
+          setPresentations((current) => ({ ...current, [stored.id]: newPresentation }))
         }
       }
+
+      const removed = await onRequestAttachmentRemove(oldItem.id)
+      if (removed) {
+        setItems((current) => current.map((item) => item.id === oldItem.id ? stored : item))
+      } else {
+        setItems((current) => [...current, stored])
+        setError('La imagen nueva se guardó y quedó referenciada, pero la anterior no pudo eliminarse.')
+      }
       setActiveMenuId(null)
+      setRevision((current) => current + 1)
       onActivity()
     } catch {
       setError('No se pudo reemplazar la imagen.')
@@ -344,8 +501,17 @@ export function ReplicaV16Attachments({
     setError('')
     try {
       if (!(await onRequestAttachmentRemove(item.id))) throw new Error('remove-failed')
-      const presentation = presentations[item.id]
-      if (presentation && blockSession) await blockSession.remove(presentation.id)
+
+      if (blockSession) {
+        const blocks = await blockSession.load()
+        const refs = flowRefsForAttachment(blocks, item.id)
+        for (const flowRef of refs) await blockSession.remove(flowRef.id)
+        for (const block of blocks) {
+          const presentation = decodeReplicaAttachmentPresentation(block)
+          if (presentation?.attachmentId === item.id) await blockSession.remove(presentation.id)
+        }
+      }
+
       setItems((current) => current.filter((currentItem) => currentItem.id !== item.id))
       setPresentations((current) => {
         const next = { ...current }
@@ -353,6 +519,7 @@ export function ReplicaV16Attachments({
         return next
       })
       setActiveMenuId(null)
+      setRevision((current) => current + 1)
       onActivity()
     } catch {
       setError('No se pudo eliminar el adjunto.')
@@ -384,43 +551,69 @@ export function ReplicaV16Attachments({
     }
   }
 
-  if (!enabled && !loading) return null
+  if (!enabled && !loading) return <>{children}</>
 
-  const images = items.filter(isImage)
-  const files = items.filter((item) => !isImage(item))
+  const context: ReplicaV16AttachmentFlowContextValue | null = enabled && loadAttachmentFile
+    ? {
+      enabled,
+      revision,
+      busy,
+      items,
+      presentations,
+      activeMenuId,
+      requestInsert: (kind, flowIndex) => requestInsert(kind, flowIndex),
+      loadAttachmentFile,
+      queuePresentation,
+      replace,
+      remove,
+      openFile,
+      setActiveMenuId,
+      setError,
+    }
+    : null
 
-  return <section className="oanix-replica-assets" aria-label="Imágenes y archivos de la nota" aria-busy={loading || busy}>
-    {loading && <p className="oanix-replica-assets__status" role="status">Abriendo referencias de adjuntos…</p>}
-    {error && <p className="oanix-replica-assets__error" role="alert">{error}</p>}
-    {images.map((item) => <ImageCard
-      key={item.id}
-      item={item}
-      presentation={presentationFor(item)}
-      disabled={disabled || busy}
-      active={activeMenuId === item.id}
-      loadAttachmentFile={loadAttachmentFile!}
-      onToggleMenu={() => setActiveMenuId((current) => current === item.id ? null : item.id)}
-      onPresentationChange={queuePresentation}
-      onReplace={replace}
-      onRemove={remove}
-      onError={setError}
-    />)}
-    {files.map((item) => <article key={item.id} className="oanix-replica-asset oanix-replica-asset--file" data-oanix-attachment-id={item.id}>
-      <span className="oanix-replica-asset__file-icon" aria-hidden="true"><FileIcon /></span>
-      <span className="oanix-replica-asset__file-copy"><strong>{item.name}</strong><small>{item.mimeType || 'Archivo'} · {humanBytes(item.byteLength)}{item.remote ? ' · remoto' : ''}</small></span>
-      <button type="button" disabled={disabled || busy || item.remote} title={item.remote ? 'La recuperación por streaming se conectará en el siguiente bloque.' : undefined} onClick={() => void openFile(item)}>Abrir</button>
-      <button type="button" className="is-danger" disabled={disabled || busy} onClick={() => void remove(item)}>Eliminar</button>
-    </article>)}
+  const legacyImages = blockSession ? [] : items.filter(isImage)
+  const legacyFiles = blockSession ? [] : items.filter((item) => !isImage(item))
+
+  return <ReplicaV16AttachmentFlowContext.Provider value={context}>
+    {children}
+    {(loading || error || legacyImages.length > 0 || legacyFiles.length > 0) && <section className="oanix-replica-assets" aria-label="Imágenes y archivos de la nota" aria-busy={loading || busy}>
+      {loading && <p className="oanix-replica-assets__status" role="status">Abriendo referencias de adjuntos…</p>}
+      {error && <p className="oanix-replica-assets__error" role="alert">{error}</p>}
+      {legacyImages.map((item) => <ImageCard
+        key={item.id}
+        item={item}
+        presentation={presentationFor(item)}
+        disabled={disabled || busy}
+        active={activeMenuId === item.id}
+        loadAttachmentFile={loadAttachmentFile!}
+        onToggleMenu={() => setActiveMenuId((current) => current === item.id ? null : item.id)}
+        onPresentationChange={queuePresentation}
+        onReplace={replace}
+        onRemove={remove}
+        onError={setError}
+      />)}
+      {legacyFiles.map((item) => <article key={item.id} className="oanix-replica-asset oanix-replica-asset--file" data-oanix-attachment-id={item.id}>
+        <span className="oanix-replica-asset__file-icon" aria-hidden="true"><FileIcon /></span>
+        <span className="oanix-replica-asset__file-copy"><strong>{item.name}</strong><small>{item.mimeType || 'Archivo'} · {humanBytes(item.byteLength)}{item.remote ? ' · remoto' : ''}</small></span>
+        <button type="button" disabled={disabled || busy || item.remote} title={item.remote ? 'La recuperación por streaming se conectará en el siguiente bloque.' : undefined} onClick={() => void openFile(item)}>Abrir</button>
+        <button type="button" className="is-danger" disabled={disabled || busy} onClick={() => void remove(item)}>Eliminar</button>
+      </article>)}
+    </section>}
 
     <input ref={imageInputRef} className="oanix-replica-asset__hidden-input" type="file" accept="image/*" tabIndex={-1} onChange={(event) => {
       const file = event.currentTarget.files?.[0]
       event.currentTarget.value = ''
-      if (file) void store(file)
+      const pending = pendingInsertRef.current ?? { kind: 'image' as const, flowIndex: null }
+      pendingInsertRef.current = null
+      if (file) void store(file, { ...pending, kind: 'image' })
     }} />
     <input ref={fileInputRef} className="oanix-replica-asset__hidden-input" type="file" tabIndex={-1} onChange={(event) => {
       const file = event.currentTarget.files?.[0]
       event.currentTarget.value = ''
-      if (file) void store(file)
+      const pending = pendingInsertRef.current ?? { kind: 'file' as const, flowIndex: null }
+      pendingInsertRef.current = null
+      if (file) void store(file, { ...pending, kind: 'file' })
     }} />
-  </section>
+  </ReplicaV16AttachmentFlowContext.Provider>
 }
