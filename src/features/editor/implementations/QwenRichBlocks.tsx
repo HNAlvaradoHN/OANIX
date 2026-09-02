@@ -56,10 +56,11 @@ import './qwenSimpleRichBlocks.css'
 import './qwenBlockOrderControls.css'
 
 export type QwenInsertBlockKind = 'text' | 'checklist' | 'code' | 'entry' | 'contact' | 'separator'
+export type QwenExternalInsertKind = QwenInsertBlockKind | 'image' | 'file'
 
 export interface QwenExternalInsertRequest {
   token: number
-  kind: QwenInsertBlockKind
+  kind: QwenExternalInsertKind
   index?: number
 }
 
@@ -280,8 +281,12 @@ export function QwenRichBlocks({
     if (!ready || disabled || !externalInsertRequest) return
     if (consumedExternalInsertRef.current === externalInsertRequest.token) return
     consumedExternalInsertRef.current = externalInsertRequest.token
-    const requestedIndex = externalInsertRequest.index ?? visibleBlocks.length
-    insertBlock(externalInsertRequest.kind, Math.min(Math.max(0, requestedIndex), visibleBlocks.length))
+    const requestedIndex = Math.min(Math.max(0, externalInsertRequest.index ?? visibleBlocks.length), visibleBlocks.length)
+    if (externalInsertRequest.kind === 'image' || externalInsertRequest.kind === 'file') {
+      insertAttachment(externalInsertRequest.kind, requestedIndex)
+      return
+    }
+    insertBlock(externalInsertRequest.kind, requestedIndex)
   }, [externalInsertRequest, ready, disabled, visibleBlocks.length])
 
   function renderText(block: EditorTextBlock) {
