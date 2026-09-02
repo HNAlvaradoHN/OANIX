@@ -33,3 +33,157 @@
   cursor: default;
   opacity: 0.22;
 }
+
+/*
+ * Replica V16 keeps the block model for persistence, but the structure must
+ * disappear from the reading/editing surface. The user sees one continuous
+ * sheet; insertion stays in the fixed + menu and element actions are contextual.
+ */
+.oanix-replica-v16 {
+  --q-paper: var(--rv-paper);
+  --q-paper-2: var(--rv-paper-2);
+  --q-card: var(--rv-card);
+  --q-ink: var(--rv-ink);
+  --q-ink-soft: var(--rv-ink-soft);
+  --q-ink-faint: var(--rv-ink-faint);
+  --q-line: var(--rv-line);
+  --q-line-2: var(--rv-line-2);
+  --q-accent: var(--rv-accent);
+  --q-accent-deep: var(--rv-accent-deep);
+  --replica-paper: var(--rv-paper);
+  --replica-card: var(--rv-card);
+  --replica-ink: var(--rv-ink);
+  --replica-muted: var(--rv-ink-soft);
+  --replica-border: var(--rv-line);
+  --replica-accent: var(--rv-accent);
+}
+
+.oanix-replica-v16 .oanix-qwen-sheet__block-order,
+.oanix-replica-v16 .oanix-qwen-sheet__insert-point {
+  display: none;
+}
+
+.oanix-replica-v16 .oanix-qwen-sheet__rich-content {
+  margin-top: 0;
+}
+
+.oanix-replica-v16 .oanix-qwen-sheet__rich-flow {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.oanix-replica-v16 .oanix-qwen-sheet__block-shell {
+  min-width: 0;
+}
+
+.oanix-replica-v16 .oanix-qwen-sheet__entry,
+.oanix-replica-v16 .oanix-qwen-sheet__contact,
+.oanix-replica-v16 .oanix-qwen-sheet__checklist {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+}
+
+.oanix-replica-v16 .oanix-qwen-sheet__entry {
+  gap: 7px;
+}
+
+.oanix-replica-v16 .oanix-qwen-sheet__simple-topline,
+.oanix-replica-v16 .oanix-qwen-sheet__checklist-topline {
+  margin: 0 0 3px;
+  color: var(--rv-ink-faint);
+  font-size: 11px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.oanix-replica-v16 .oanix-qwen-sheet__simple-topline button,
+.oanix-replica-v16 .oanix-qwen-sheet__checklist-remove,
+.oanix-replica-v16 .oanix-qwen-sheet__separator button,
+.oanix-replica-v16 .oanix-qwen-sheet__text-remove {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .14s ease;
+}
+
+.oanix-replica-v16 .oanix-qwen-sheet__entry:focus-within .oanix-qwen-sheet__simple-topline button,
+.oanix-replica-v16 .oanix-qwen-sheet__contact:focus-within .oanix-qwen-sheet__simple-topline button,
+.oanix-replica-v16 .oanix-qwen-sheet__checklist:focus-within .oanix-qwen-sheet__checklist-remove,
+.oanix-replica-v16 .oanix-qwen-sheet__separator:focus-within button,
+.oanix-replica-v16 .oanix-qwen-sheet__separator:hover button,
+.oanix-replica-v16 .oanix-qwen-sheet__text-block:focus-within .oanix-qwen-sheet__text-remove {
+  opacity: .72;
+  pointer-events: auto;
+}
+
+.oanix-replica-v16 .oanix-qwen-sheet__entry > input {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 18px;
+  line-height: 1.35;
+}
+
+.oanix-replica-v16 .oanix-qwen-sheet__entry textarea,
+.oanix-replica-v16 .oanix-qwen-sheet__text-block > textarea {
+  min-height: 0;
+  height: auto;
+  resize: none;
+  overflow: hidden;
+  field-sizing: content;
+  overscroll-behavior: auto;
+}
+
+.oanix-replica-v16 .oanix-qwen-sheet__entry textarea {
+  padding: 0;
+  line-height: 1.62;
+}
+
+.oanix-replica-v16 .oanix-qwen-sheet__text-block {
+  padding: 0;
+}
+
+.oanix-replica-v16 .oanix-qwen-sheet__text-block > textarea {
+  padding: 0 30px 0 0;
+  font-size: 17px;
+  line-height: 1.68;
+}
+
+.oanix-replica-v16 .oanix-qwen-sheet__checklist-items {
+  gap: 5px;
+}
+
+.oanix-replica-v16 .oanix-qwen-sheet__checklist-item > input[type="text"] {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 16px;
+}
+
+.oanix-replica-v16 .oanix-qwen-sheet__checklist-add-item {
+  border: 0;
+  padding-left: 0;
+  color: var(--rv-ink-faint);
+}
+
+.oanix-replica-v16 .oanix-qwen-sheet__separator {
+  min-height: 22px;
+}
+
+.oanix-replica-v16 .oanix-qwen-sheet__separator hr {
+  border-top-color: var(--rv-line-2);
+}
+
+@media (max-width: 560px) {
+  .oanix-replica-v16 .oanix-qwen-sheet__rich-flow {
+    gap: 20px;
+  }
+
+  .oanix-replica-v16 .oanix-qwen-sheet__entry > input {
+    font-size: 17px;
+  }
+
+  .oanix-replica-v16 .oanix-qwen-sheet__text-block > textarea {
+    min-height: 0;
+    font-size: 16.5px;
+  }
+}
