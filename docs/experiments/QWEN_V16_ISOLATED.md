@@ -41,6 +41,7 @@ En esta ejecución ya estuvieron disponibles los archivos exactos del prototipo 
 - Reemplazar conserva primero la imagen nueva y solo después intenta quitar la anterior; ante un fallo de borrado se prioriza conservar datos y se informa el estado en lugar de perder ambas referencias.
 - Los archivos locales muestran metadata sin leer bytes y solo se materializan al pulsar Abrir/descargar.
 - Los adjuntos grandes remotos se muestran como metadata, pero su acción Abrir permanece deshabilitada hasta exponer una frontera genérica de recuperación por streaming. `loadAttachmentFile` no se fuerza a construir un `File` gigante en RAM.
+- Se añadió `replicaAttachmentPresentationCodec.ts`: cada imagen podrá tener un bloque pequeño e independiente con `attachmentId`, ancho, alineación, bloqueo, visibilidad del nombre y descripción. El blob no cambia al redimensionar/alinear/editar caption y el codec limita/sanea valores persistidos. Esta capa ya tiene tests propios; la conexión visual al menú queda para el siguiente paso para no introducir un bloque desconocido visible en el flujo actual.
 - El editor estable no fue eliminado. No se modificó seguridad, vault, crypto, storage ni sync; solo se reutilizaron contratos/servicios existentes desde un adapter de aplicación.
 
 ## Validación registrada
@@ -48,11 +49,12 @@ En esta ejecución ya estuvieron disponibles los archivos exactos del prototipo 
 - El lote previo a la UI de adjuntos pasó **OANIX CI**, **OANIX Android** y **Qwen Independent PR Review**.
 - Para la UI Imagen/Archivo se añadieron guards específicos que comprueban la frontera genérica, carga lazy, ciclo de vida de `objectURL`, ausencia de data URLs/base64 y que el menú se active desde el control `⋯`, no desde la imagen.
 - El head de código de esta fase pasó **OANIX CI** completo (tests, build y auditoría offline) y **Qwen Independent PR Review**. La validación Android del mismo head estaba todavía ejecutándose al actualizar este checkpoint; no debe marcarse verde hasta que termine.
+- El nuevo codec de presentación durable tiene cobertura de defaults, clamp de ancho, alineación segura, límites de descripción y rechazo de bloques malformados. Los gates del head que contiene este cambio deben verificarse antes de marcarlo validado.
 - La validación física en un dispositivo Android sigue pendiente; un build automatizado no equivale a prueba física.
 
 ## Pendiente inmediato
 
-1. Completar el menú de imagen aprobado con estado de presentación durable: bloqueo, tamaño, alineación, mostrar/ocultar nombre y descripción. Esa metadata visual debe vivir en richBlocks o un contrato equivalente pequeño; nunca en el blob.
+1. Conectar el bloque `replica-attachment-presentation-v1` al render de Imagen sin mostrarlo como bloque desconocido: bloqueo, tamaño, alineación, mostrar/ocultar nombre y descripción deberán actualizar solo esa metadata pequeña y pasar por `EditorBlockSession`.
 2. Integrar Imagen/Archivo dentro del orden contextual de bloques. La primera conexión segura actual los presenta después del flujo rich; todavía no tienen posición intercalada entre Entrada/Texto/Checklist/etc.
 3. Diseñar una callback genérica de recuperación/exportación por streaming para adjuntos grandes remotos, reutilizando `recoverLargeAttachmentFromDrive` sin materializar el archivo completo en memoria.
 4. Después de estabilizar la revisión branch-local, decidir si el selector visible vive en Ajustes/Home o si la réplica reemplaza la superficie vigente; no acoplar esa decisión a los datos de las notas.
