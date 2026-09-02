@@ -30,9 +30,9 @@ test('continuous sheet exposes every preserved insertion capability', () => {
   for (const kind of ['text', 'entry', 'image', 'file', 'checklist', 'contact', 'code', 'separator']) {
     assert.equal(surface.includes(`requestInsert('${kind}')`), true, `missing ${kind} insertion action`)
   }
-  assert.match(surface, /index: activeInsertionIndex/)
+  assert.match(surface, /index: legacySplit \? 0 : activeInsertionIndex/)
   assert.match(surface, /continuousWriting/)
-  assert.match(surface, /onInsertionIndexChange=\{setActiveInsertionIndex\}/)
+  assert.match(surface, /onInsertionIndexChange=\{handleFlowInsertionIndex\}/)
 })
 
 test('continuous rich flow keeps a writing seam before and after every inserted element', () => {
@@ -49,6 +49,29 @@ test('external image and file insertion use the active flow index', () => {
   assert.match(richBlocks, /externalInsertRequest\.kind === 'image' \|\| externalInsertRequest\.kind === 'file'/)
   assert.match(richBlocks, /insertAttachment\(externalInsertRequest\.kind, requestedIndex\)/)
   assert.match(richBlocks, /attachmentFlow\?\.requestInsert\(kind, index\)/)
+})
+
+test('insertion from the legacy body preserves text on both sides of the cursor', () => {
+  assert.match(surface, /position: body\.selectionStart \?\? body\.value\.length/)
+  assert.match(surface, /before: body\.value\.slice\(0, cursor\.position\)/)
+  assert.match(surface, /after: body\.value\.slice\(cursor\.position\)/)
+  assert.match(surface, /legacySplit,/)
+  assert.match(surface, /onExternalInsertPrepared=\{handleExternalInsertPrepared\}/)
+  assert.match(surface, /if \(body\) body\.value = ''/)
+
+  assert.match(richBlocks, /const beforeBlock = split\.before \? createTextBlock\(split\.before\) : null/)
+  assert.match(richBlocks, /const afterBlock = split\.after \? createTextBlock\(split\.after\) : null/)
+  assert.match(richBlocks, /if \(beforeBlock\) inserted\.push\(beforeBlock\)/)
+  assert.match(richBlocks, /if \(targetBlock\) inserted\.push\(targetBlock\)/)
+  assert.match(richBlocks, /if \(afterBlock\) inserted\.push\(afterBlock\)/)
+  assert.match(richBlocks, /onExternalInsertPrepared\?\.\(request\.token\)/)
+})
+
+test('cursor insertion migrates surrounding text before launching an attachment picker', () => {
+  assert.match(richBlocks, /const attachmentKind = request\.kind === 'image' \|\| request\.kind === 'file'/)
+  assert.match(richBlocks, /const targetIndex = requestedIndex \+ \(beforeBlock \? 1 : 0\)/)
+  assert.match(richBlocks, /attachmentFlow\?\.requestInsert\(request\.kind, targetIndex\)/)
+  assert.match(richBlocks, /setError\('No se pudo preservar el texto alrededor de la inserción\.'\)/)
 })
 
 test('continuous surface keeps structural block controls visually hidden and mobile menus bounded', () => {
