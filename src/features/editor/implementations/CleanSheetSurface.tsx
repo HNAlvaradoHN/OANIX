@@ -11,6 +11,12 @@ function makeSnapshot(title: string, text: string): EditorSurfaceSnapshot {
   return { title, text }
 }
 
+function resizeBodyToContent(element: HTMLTextAreaElement | null): void {
+  if (!element) return
+  element.style.height = 'auto'
+  element.style.height = `${element.scrollHeight}px`
+}
+
 export function CleanSheetSurface({
   noteId,
   initialTitle,
@@ -25,6 +31,7 @@ export function CleanSheetSurface({
   const [text, setText] = useState(initialText)
   const [dirty, setDirty] = useState(false)
   const [closing, setClosing] = useState(false)
+  const bodyRef = useRef<HTMLTextAreaElement | null>(null)
   const saveTimerRef = useRef<number | null>(null)
   const saveInFlightRef = useRef(false)
   const queuedSaveRef = useRef(false)
@@ -37,6 +44,16 @@ export function CleanSheetSurface({
     setClosing(false)
     latestRef.current = makeSnapshot(initialTitle, initialText)
   }, [noteId, initialTitle, initialText])
+
+  useEffect(() => {
+    resizeBodyToContent(bodyRef.current)
+  }, [text, noteId])
+
+  useEffect(() => {
+    const handleResize = () => resizeBodyToContent(bodyRef.current)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   const clearSaveTimer = useCallback(() => {
     if (saveTimerRef.current !== null) {
@@ -171,9 +188,11 @@ export function CleanSheetSurface({
           />
 
           <textarea
+            ref={bodyRef}
             className="clean-sheet__body"
             value={text}
             onChange={(event) => {
+              resizeBodyToContent(event.currentTarget)
               const nextText = event.target.value
               setText(nextText)
               markChanged(title, nextText)
