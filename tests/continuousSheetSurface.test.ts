@@ -59,17 +59,25 @@ test('insertion from the legacy body preserves text on both sides of the cursor'
   assert.match(surface, /onExternalInsertPrepared=\{handleExternalInsertPrepared\}/)
   assert.match(surface, /if \(body\) body\.value = ''/)
 
-  assert.match(richBlocks, /const beforeBlock = split\.before \? createTextBlock\(split\.before\) : null/)
-  assert.match(richBlocks, /const afterBlock = split\.after \? createTextBlock\(split\.after\) : null/)
-  assert.match(richBlocks, /if \(beforeBlock\) inserted\.push\(beforeBlock\)/)
-  assert.match(richBlocks, /if \(targetBlock\) inserted\.push\(targetBlock\)/)
-  assert.match(richBlocks, /if \(afterBlock\) inserted\.push\(afterBlock\)/)
+  assert.match(richBlocks, /const beforeBlocks = createTextBlocks\(split\.before\)/)
+  assert.match(richBlocks, /const afterBlocks = createTextBlocks\(split\.after\)/)
+  assert.match(richBlocks, /\.\.\.beforeBlocks/)
+  assert.match(richBlocks, /\.\.\.\(targetBlock \? \[targetBlock\] : \[\]\)/)
+  assert.match(richBlocks, /\.\.\.afterBlocks/)
   assert.match(richBlocks, /onExternalInsertPrepared\?\.\(request\.token\)/)
+})
+
+test('long cursor insertion chunks text instead of truncating it', () => {
+  assert.match(richBlocks, /function createTextBlocks\(text: string\): EditorSurfaceBlock\[\]/)
+  assert.match(richBlocks, /offset < text\.length; offset \+= MAX_TEXT_BLOCK_TEXT_LENGTH/)
+  assert.match(richBlocks, /text\.slice\(offset, offset \+ MAX_TEXT_BLOCK_TEXT_LENGTH\)/)
+  assert.doesNotMatch(richBlocks, /legacySplit\.before\.slice\(0, MAX_TEXT_BLOCK_TEXT_LENGTH\)/)
+  assert.doesNotMatch(richBlocks, /legacySplit\.after\.slice\(0, MAX_TEXT_BLOCK_TEXT_LENGTH\)/)
 })
 
 test('cursor insertion migrates surrounding text before launching an attachment picker', () => {
   assert.match(richBlocks, /const attachmentKind = request\.kind === 'image' \|\| request\.kind === 'file'/)
-  assert.match(richBlocks, /const targetIndex = requestedIndex \+ \(beforeBlock \? 1 : 0\)/)
+  assert.match(richBlocks, /const targetIndex = requestedIndex \+ beforeBlocks\.length/)
   assert.match(richBlocks, /attachmentFlow\?\.requestInsert\(request\.kind, targetIndex\)/)
   assert.match(richBlocks, /setError\('No se pudo preservar el texto alrededor de la inserción\.'\)/)
 })
