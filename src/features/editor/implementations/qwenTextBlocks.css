@@ -22,6 +22,16 @@
   white-space: pre-wrap;
 }
 
+/* Prefer the document scroll on engines that can size textareas from content. */
+@supports (field-sizing: content) {
+  .oanix-qwen-sheet__text-block > textarea {
+    field-sizing: content;
+    resize: none;
+    overflow-y: hidden;
+    overscroll-behavior-y: auto;
+  }
+}
+
 .oanix-qwen-sheet__text-block > textarea::placeholder {
   color: var(--q-ink-faint);
 }

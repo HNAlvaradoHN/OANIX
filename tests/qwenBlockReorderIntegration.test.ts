@@ -27,7 +27,8 @@ test('Qwen exposes lightweight up/down controls through the existing session', a
   assert.match(source, /aria-label="Mover bloque arriba"/)
   assert.match(source, /aria-label="Mover bloque abajo"/)
   assert.match(source, /index === 0/)
-  assert.match(source, /index === blocks\.length - 1/)
+  assert.match(source, /index === visibleBlocks\.length - 1/)
+  assert.match(source, /const next = \[\.\.\.nextVisible, \.\.\.presentationBlocks\]/)
 
   assert.doesNotMatch(source, /dragstart|draggable|pointermove|touchmove/)
   assert.doesNotMatch(source, /setTimeout\s*\(|setInterval\s*\(/)
