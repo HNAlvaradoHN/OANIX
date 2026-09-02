@@ -377,9 +377,12 @@ export function ReplicaV16SheetSurface({
         {insertMenuOpen && (
           <div className="oanix-replica-v16__floating-menu" role="menu" aria-label="Insertar bloque">
             <button type="button" role="menuitem" onClick={() => requestInsert('text')}><strong>Texto</strong><small>Continuar la nota</small></button>
+            <button type="button" role="menuitem" onClick={() => requestInsert('entry')}><strong>Entrada</strong><small>Registro con fecha</small></button>
             <button type="button" role="menuitem" onClick={() => requestInsert('checklist')}><strong>Checklist</strong><small>Lista de tareas</small></button>
+            <button type="button" role="menuitem" onClick={() => requestInsert('contact')}><strong>Contacto</strong><small>Nombre y referencia</small></button>
+            <button type="button" role="menuitem" onClick={() => requestInsert('separator')}><strong>Separador</strong><small>Línea de división</small></button>
             <button type="button" role="menuitem" onClick={() => requestInsert('code')}><strong>Código</strong><small>Fragmento técnico</small></button>
-            <p>Entrada, imagen, archivo, contacto y separador se habilitarán al conectar sus codecs/assets.</p>
+            <p>Imagen y archivo se habilitarán cuando estén conectados al sistema real de assets cifrados de OANIX.</p>
           </div>
         )}
 
