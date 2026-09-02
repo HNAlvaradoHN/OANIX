@@ -61,7 +61,7 @@ test('image presentation controls persist through the shared block session witho
   assert.doesNotMatch(attachments, /storeEncryptedAttachment|loadEncryptedAttachmentFile|encrypted_records_v2/)
 })
 
-test('attachment flow anchors render inline and hidden presentation metadata stays outside visual order', () => {
+test('attachment flow anchors render inline and hidden replica metadata stays outside visual order', () => {
   assert.match(attachments, /createReplicaAttachmentFlowRef/)
   assert.match(attachments, /encodeReplicaAttachmentFlowRef/)
   assert.match(attachments, /decodeReplicaAttachmentFlowRef/)
@@ -77,10 +77,27 @@ test('attachment flow anchors render inline and hidden presentation metadata sta
 
 test('existing attachments without anchors migrate by adding only lightweight flow references', () => {
   assert.match(attachments, /anchoredIds/)
-  assert.match(attachments, /if \(anchoredIds\.has\(item\.id\)\) continue/)
+  assert.match(attachments, /retiredIds/)
+  assert.match(attachments, /decodeReplicaRetiredAttachment/)
+  assert.match(attachments, /if \(anchoredIds\.has\(item\.id\) \|\| retiredIds\.has\(item\.id\)\) continue/)
   assert.match(attachments, /blockSession\.insert\(encoded, rawIndex\)/)
   assert.match(attachments, /createReplicaAttachmentFlowRef\(item\.id, isImage\(item\) \? 'image' : 'file'\)/)
   assert.doesNotMatch(attachments, /blob:|data:image|readAsArrayBuffer|arrayBuffer\(\)/)
+})
+
+test('failed physical replacement deletion leaves a durable retired marker so the old image cannot remigrate', () => {
+  assert.match(attachments, /createReplicaRetiredAttachment\(oldItem\.id\)/)
+  assert.match(attachments, /blockSession\.upsert\(encodeReplicaRetiredAttachment\(retired\)\)/)
+  assert.match(attachments, /if \(blockSession && retiredMarkerId\) await blockSession\.remove\(retiredMarkerId\)/)
+  assert.match(attachments, /quedó retirada del flujo para que no reaparezca/)
+})
+
+test('attachment insertion and mutation stay locked until initial loading and migration finish', () => {
+  assert.match(attachments, /if \(disabled \|\| loading \|\| busy \|\| !enabled\) return/)
+  assert.match(attachments, /if \(!insertRequest \|\| disabled \|\| loading \|\| !enabled\) return/)
+  assert.match(attachments, /if \(!onRequestAttachmentStore \|\| loading \|\| busy\) return/)
+  assert.match(attachments, /busy: busy \|\| loading/)
+  assert.match(attachments, /disabled=\{loading \|\| busy\}/)
 })
 
 test('host memoizes attachment callbacks by note so typing does not reload metadata', () => {
