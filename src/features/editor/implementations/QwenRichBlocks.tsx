@@ -28,15 +28,21 @@ import './qwenCodeBlocks.css'
 import './qwenTextBlocks.css'
 import './qwenBlockOrderControls.css'
 
+export type QwenInsertBlockKind = 'text' | 'checklist' | 'code'
+
+export interface QwenExternalInsertRequest {
+  token: number
+  kind: QwenInsertBlockKind
+}
+
 interface QwenRichBlocksProps {
   session: EditorBlockSession
   disabled: boolean
   onActivity: () => void
   onCompositionStart: () => void
   onCompositionEnd: () => void
+  externalInsertRequest?: QwenExternalInsertRequest | null
 }
-
-type InsertBlockKind = 'text' | 'checklist' | 'code'
 
 function newTextBlockId(): string { return `text-${crypto.randomUUID()}` }
 function newChecklistId(): string { return `checklist-${crypto.randomUUID()}` }
@@ -46,13 +52,14 @@ function withChecklistItem(block: EditorChecklistBlock, itemIndex: number, updat
   return { ...block, items: block.items.map((item, index) => index === itemIndex ? updater(item) : item) }
 }
 
-export function QwenRichBlocks({ session, disabled, onActivity, onCompositionStart, onCompositionEnd }: QwenRichBlocksProps) {
+export function QwenRichBlocks({ session, disabled, onActivity, onCompositionStart, onCompositionEnd, externalInsertRequest = null }: QwenRichBlocksProps) {
   const [blocks, setBlocks] = useState<EditorSurfaceBlock[]>([])
   const [loading, setLoading] = useState(true)
   const [ready, setReady] = useState(false)
   const [error, setError] = useState('')
   const [activeInsertIndex, setActiveInsertIndex] = useState<number | null>(null)
   const pendingFocusIdRef = useRef<string | null>(null)
+  const consumedExternalInsertRef = useRef<number | null>(null)
   const flowRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
@@ -113,7 +120,7 @@ export function QwenRichBlocks({ session, disabled, onActivity, onCompositionSta
     }).catch(() => setError('No se pudo preparar el nuevo orden de los bloques.'))
   }
 
-  function insertBlock(kind: InsertBlockKind, index: number) {
+  function insertBlock(kind: QwenInsertBlockKind, index: number) {
     setActiveInsertIndex(null)
     let next: EditorSurfaceBlock
     if (kind === 'text') next = encodeTextBlock({ id: newTextBlockId(), kind: TEXT_BLOCK_KIND, text: '' })
@@ -129,6 +136,13 @@ export function QwenRichBlocks({ session, disabled, onActivity, onCompositionSta
       setError(kind === 'text' ? 'No se pudo preparar el tramo de texto nuevo.' : kind === 'checklist' ? 'No se pudo preparar el checklist nuevo.' : 'No se pudo preparar el bloque de código nuevo.')
     })
   }
+
+  useEffect(() => {
+    if (!ready || disabled || !externalInsertRequest) return
+    if (consumedExternalInsertRef.current === externalInsertRequest.token) return
+    consumedExternalInsertRef.current = externalInsertRequest.token
+    insertBlock(externalInsertRequest.kind, blocks.length)
+  }, [externalInsertRequest, ready, disabled, blocks.length])
 
   function renderText(block: EditorTextBlock) {
     return <article className="oanix-qwen-sheet__text-block" data-oanix-text-segment={block.id} data-oanix-block-id={block.id}>
