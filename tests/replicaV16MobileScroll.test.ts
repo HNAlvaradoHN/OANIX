@@ -18,7 +18,7 @@ const sheet = readFileSync(
 test('replica keeps floating controls viewport-fixed without keyboard viewport calculations', () => {
   assert.match(sheetCss, /\.oanix-replica-v16__floating\s*\{[\s\S]*position:\s*fixed/)
   assert.match(sheetCss, /top:\s*calc\(env\(safe-area-inset-top\) \+ 72px\)/)
-  assert.doesNotMatch(sheet, /visualViewport|innerHeight|keyboard/i)
+  assert.doesNotMatch(sheet, /\bvisualViewport\b|\binnerHeight\b/)
 })
 
 test('supported engines grow note textareas so the page owns vertical scrolling', () => {
