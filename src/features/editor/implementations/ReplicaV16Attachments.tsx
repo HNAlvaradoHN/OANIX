@@ -1,5 +1,15 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import type { EditorBlockSession } from '../editorBlockSession.ts'
 import type { EditorSurfaceAttachment } from '../editorSurfaceContract'
+import {
+  MAX_REPLICA_IMAGE_DESCRIPTION,
+  MAX_REPLICA_IMAGE_WIDTH,
+  MIN_REPLICA_IMAGE_WIDTH,
+  createReplicaAttachmentPresentation,
+  decodeReplicaAttachmentPresentation,
+  encodeReplicaAttachmentPresentation,
+  type ReplicaAttachmentPresentation,
+} from '../replicaAttachmentPresentationCodec.ts'
 import './replicaV16Attachments.css'
 
 export type ReplicaAttachmentInsertKind = 'image' | 'file'
@@ -11,6 +21,7 @@ export interface ReplicaAttachmentInsertRequest {
 
 interface ReplicaV16AttachmentsProps {
   disabled: boolean
+  blockSession?: EditorBlockSession | null
   loadAttachments?: () => Promise<EditorSurfaceAttachment[]>
   onRequestAttachmentStore?: (file: File) => Promise<EditorSurfaceAttachment>
   loadAttachmentFile?: (attachmentId: string) => Promise<File | null>
@@ -50,16 +61,29 @@ function MoreIcon() {
 
 interface ImageCardProps {
   item: EditorSurfaceAttachment
+  presentation: ReplicaAttachmentPresentation
   disabled: boolean
   active: boolean
   loadAttachmentFile: (attachmentId: string) => Promise<File | null>
   onToggleMenu: () => void
+  onPresentationChange: (next: ReplicaAttachmentPresentation) => void
   onReplace: (oldItem: EditorSurfaceAttachment, file: File) => Promise<void>
   onRemove: (item: EditorSurfaceAttachment) => Promise<void>
   onError: (message: string) => void
 }
 
-function ImageCard({ item, disabled, active, loadAttachmentFile, onToggleMenu, onReplace, onRemove, onError }: ImageCardProps) {
+function ImageCard({
+  item,
+  presentation,
+  disabled,
+  active,
+  loadAttachmentFile,
+  onToggleMenu,
+  onPresentationChange,
+  onReplace,
+  onRemove,
+  onError,
+}: ImageCardProps) {
   const hostRef = useRef<HTMLElement | null>(null)
   const replaceRef = useRef<HTMLInputElement | null>(null)
   const loadStartedRef = useRef(false)
@@ -108,16 +132,56 @@ function ImageCard({ item, disabled, active, loadAttachmentFile, onToggleMenu, o
     if (url) URL.revokeObjectURL(url)
   }, [url])
 
-  return <article ref={hostRef} className="oanix-replica-asset oanix-replica-asset--image" data-oanix-attachment-id={item.id}>
+  const figureStyle = { '--replica-image-width': `${presentation.widthPercent}%` } as CSSProperties
+  const figureClass = `oanix-replica-asset oanix-replica-asset--image align-${presentation.alignment}${presentation.locked ? '' : ' is-unlocked'}`
+
+  function editDescription() {
+    const next = window.prompt('Descripción de la imagen', presentation.description)
+    if (next === null) return
+    onPresentationChange({
+      ...presentation,
+      description: next.slice(0, MAX_REPLICA_IMAGE_DESCRIPTION),
+    })
+  }
+
+  return <article ref={hostRef} className={figureClass} style={figureStyle} data-oanix-attachment-id={item.id}>
     <button type="button" className="oanix-replica-asset__more" aria-label={`Opciones de ${item.name}`} aria-expanded={active} disabled={disabled} onClick={onToggleMenu}><MoreIcon /></button>
     <div className="oanix-replica-asset__image-stage">
-      {url ? <img src={url} alt={item.name} loading="lazy" /> : <div className="oanix-replica-asset__placeholder"><ImageIcon /><span>{item.remote ? 'Imagen remota cifrada' : loading ? 'Descifrando imagen…' : 'Imagen cifrada'}</span></div>}
+      {url ? <img src={url} alt={presentation.description || item.name} loading="lazy" /> : <div className="oanix-replica-asset__placeholder"><ImageIcon /><span>{item.remote ? 'Imagen remota cifrada' : loading ? 'Descifrando imagen…' : 'Imagen cifrada'}</span></div>}
     </div>
-    <div className="oanix-replica-asset__caption"><strong>{item.name}</strong><span>{humanBytes(item.byteLength)}{item.remote ? ' · remoto' : ''}</span></div>
+    {(presentation.showName || presentation.description) && <div className="oanix-replica-asset__caption">
+      {presentation.showName && <strong>{item.name}</strong>}
+      {presentation.description && <em>{presentation.description}</em>}
+      <span>{humanBytes(item.byteLength)}{item.remote ? ' · remoto' : ''}</span>
+    </div>}
     {active && <div className="oanix-replica-asset__menu" role="menu" aria-label={`Opciones de imagen ${item.name}`}>
       <button type="button" role="menuitem" disabled={!url} onClick={() => { if (url) window.open(url, '_blank', 'noopener,noreferrer') }}>Abrir</button>
       <button type="button" role="menuitem" disabled={disabled} onClick={() => replaceRef.current?.click()}>Reemplazar</button>
-      <button type="button" role="menuitem" onClick={() => window.alert(`${item.name}\n${item.mimeType || 'tipo desconocido'}\n${humanBytes(item.byteLength)}${item.remote ? '\nAdjunto remoto cifrado' : '\nAdjunto local cifrado'}`)}>Información</button>
+      <button type="button" role="menuitemcheckbox" aria-checked={presentation.locked} disabled={disabled} onClick={() => onPresentationChange({ ...presentation, locked: !presentation.locked })}>{presentation.locked ? 'Desbloquear tamaño' : 'Bloquear tamaño'}</button>
+      {!presentation.locked && <label className="oanix-replica-asset__size-control">
+        <span>Tamaño {presentation.widthPercent}%</span>
+        <input
+          type="range"
+          min={MIN_REPLICA_IMAGE_WIDTH}
+          max={MAX_REPLICA_IMAGE_WIDTH}
+          value={presentation.widthPercent}
+          disabled={disabled}
+          onChange={(event) => onPresentationChange({ ...presentation, widthPercent: Number(event.target.value) })}
+        />
+      </label>}
+      <div className="oanix-replica-asset__align" role="group" aria-label="Alineación de imagen">
+        {(['left', 'center', 'right'] as const).map((alignment) => <button
+          key={alignment}
+          type="button"
+          className={presentation.alignment === alignment ? 'is-active' : ''}
+          aria-pressed={presentation.alignment === alignment}
+          disabled={disabled}
+          onClick={() => onPresentationChange({ ...presentation, alignment })}
+        >{alignment === 'left' ? 'Izq.' : alignment === 'center' ? 'Centro' : 'Der.'}</button>)}
+      </div>
+      <button type="button" role="menuitemcheckbox" aria-checked={presentation.showName} disabled={disabled} onClick={() => onPresentationChange({ ...presentation, showName: !presentation.showName })}>{presentation.showName ? 'Ocultar nombre' : 'Mostrar nombre'}</button>
+      <button type="button" role="menuitem" disabled={disabled} onClick={editDescription}>{presentation.description ? 'Editar descripción' : 'Añadir descripción'}</button>
+      <button type="button" role="menuitem" onClick={() => window.alert(`${item.name}\n${item.mimeType || 'tipo desconocido'}\n${humanBytes(item.byteLength)}\nAncho ${presentation.widthPercent}% · ${presentation.alignment}${item.remote ? '\nAdjunto remoto cifrado' : '\nAdjunto local cifrado'}`)}>Información</button>
       <button type="button" role="menuitem" className="is-danger" disabled={disabled} onClick={() => void onRemove(item)}>Eliminar</button>
     </div>}
     <input ref={replaceRef} className="oanix-replica-asset__hidden-input" type="file" accept="image/*" tabIndex={-1} onChange={(event) => {
@@ -130,6 +194,7 @@ function ImageCard({ item, disabled, active, loadAttachmentFile, onToggleMenu, o
 
 export function ReplicaV16Attachments({
   disabled,
+  blockSession = null,
   loadAttachments,
   onRequestAttachmentStore,
   loadAttachmentFile,
@@ -141,6 +206,7 @@ export function ReplicaV16Attachments({
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const consumedInsertRef = useRef<number | null>(null)
   const [items, setItems] = useState<EditorSurfaceAttachment[]>([])
+  const [presentations, setPresentations] = useState<Record<string, ReplicaAttachmentPresentation>>({})
   const [loading, setLoading] = useState(Boolean(loadAttachments))
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -152,9 +218,16 @@ export function ReplicaV16Attachments({
     if (!loadAttachments) return
     let active = true
     setLoading(true)
-    void loadAttachments().then((loaded) => {
+    const blocksPromise = blockSession?.load() ?? Promise.resolve([])
+    void Promise.all([loadAttachments(), blocksPromise]).then(([loaded, blocks]) => {
       if (!active) return
+      const nextPresentations: Record<string, ReplicaAttachmentPresentation> = {}
+      for (const block of blocks) {
+        const presentation = decodeReplicaAttachmentPresentation(block)
+        if (presentation) nextPresentations[presentation.attachmentId] = presentation
+      }
       setItems(loaded)
+      setPresentations(nextPresentations)
       setError('')
     }).catch(() => {
       if (active) setError('No se pudieron abrir los adjuntos de esta nota.')
@@ -162,7 +235,7 @@ export function ReplicaV16Attachments({
       if (active) setLoading(false)
     })
     return () => { active = false }
-  }, [loadAttachments])
+  }, [blockSession, loadAttachments])
 
   useEffect(() => {
     if (!insertRequest || disabled || !enabled) return
@@ -189,6 +262,19 @@ export function ReplicaV16Attachments({
     }
   }, [])
 
+  function presentationFor(item: EditorSurfaceAttachment): ReplicaAttachmentPresentation {
+    return presentations[item.id] ?? createReplicaAttachmentPresentation(item.id)
+  }
+
+  function queuePresentation(next: ReplicaAttachmentPresentation) {
+    setPresentations((current) => ({ ...current, [next.attachmentId]: next }))
+    onActivity()
+    if (!blockSession) return
+    void blockSession.upsert(encodeReplicaAttachmentPresentation(next)).catch(() => {
+      setError('No se pudo guardar la presentación de la imagen.')
+    })
+  }
+
   async function store(file: File) {
     if (!onRequestAttachmentStore || busy) return
     setBusy(true)
@@ -196,6 +282,11 @@ export function ReplicaV16Attachments({
     try {
       const stored = await onRequestAttachmentStore(file)
       setItems((current) => [...current, stored])
+      if (isImage(stored) && blockSession) {
+        const presentation = createReplicaAttachmentPresentation(stored.id)
+        setPresentations((current) => ({ ...current, [stored.id]: presentation }))
+        await blockSession.upsert(encodeReplicaAttachmentPresentation(presentation))
+      }
       onActivity()
     } catch {
       setError('No se pudo guardar el adjunto de forma cifrada.')
@@ -211,11 +302,31 @@ export function ReplicaV16Attachments({
     try {
       const stored = await onRequestAttachmentStore(file)
       const removed = await onRequestAttachmentRemove(oldItem.id)
+      const oldPresentation = presentations[oldItem.id]
       if (!removed) {
         setItems((current) => [...current, stored])
+        if (isImage(stored) && blockSession) {
+          const newPresentation = createReplicaAttachmentPresentation(stored.id)
+          setPresentations((current) => ({ ...current, [stored.id]: newPresentation }))
+          await blockSession.upsert(encodeReplicaAttachmentPresentation(newPresentation))
+        }
         setError('La imagen nueva se guardó, pero la anterior no pudo eliminarse.')
       } else {
         setItems((current) => current.map((item) => item.id === oldItem.id ? stored : item))
+        if (oldPresentation && blockSession) {
+          const transferred = { ...oldPresentation, attachmentId: stored.id }
+          await blockSession.upsert(encodeReplicaAttachmentPresentation(transferred))
+          setPresentations((current) => {
+            const next = { ...current }
+            delete next[oldItem.id]
+            next[stored.id] = transferred
+            return next
+          })
+        } else if (isImage(stored) && blockSession) {
+          const newPresentation = createReplicaAttachmentPresentation(stored.id)
+          setPresentations((current) => ({ ...current, [stored.id]: newPresentation }))
+          await blockSession.upsert(encodeReplicaAttachmentPresentation(newPresentation))
+        }
       }
       setActiveMenuId(null)
       onActivity()
@@ -233,7 +344,14 @@ export function ReplicaV16Attachments({
     setError('')
     try {
       if (!(await onRequestAttachmentRemove(item.id))) throw new Error('remove-failed')
+      const presentation = presentations[item.id]
+      if (presentation && blockSession) await blockSession.remove(presentation.id)
       setItems((current) => current.filter((currentItem) => currentItem.id !== item.id))
+      setPresentations((current) => {
+        const next = { ...current }
+        delete next[item.id]
+        return next
+      })
       setActiveMenuId(null)
       onActivity()
     } catch {
@@ -277,10 +395,12 @@ export function ReplicaV16Attachments({
     {images.map((item) => <ImageCard
       key={item.id}
       item={item}
+      presentation={presentationFor(item)}
       disabled={disabled || busy}
       active={activeMenuId === item.id}
       loadAttachmentFile={loadAttachmentFile!}
       onToggleMenu={() => setActiveMenuId((current) => current === item.id ? null : item.id)}
+      onPresentationChange={queuePresentation}
       onReplace={replace}
       onRemove={remove}
       onError={setError}
