@@ -6,6 +6,10 @@ const home = readFileSync('src/features/rebuild/RebuildApp.tsx', 'utf8')
 const host = readFileSync('src/features/editor/EditorSurface.tsx', 'utf8')
 const contract = readFileSync('src/features/editor/editorSurfaceContract.ts', 'utf8')
 const registry = readFileSync('src/features/editor/editorSurfaceRegistry.ts', 'utf8')
+const attachmentAdapter = readFileSync(
+  'src/features/editor/editorAttachmentAdapter.ts',
+  'utf8',
+)
 const selectedSurface = readFileSync(
   'src/features/editor/implementations/QwenSheetSurface.tsx',
   'utf8',
@@ -60,10 +64,36 @@ test('rich block boundary stays generic and does not import persistence or a con
   assert.doesNotMatch(contract, /QwenSheetSurface|ReplicaV16SheetSurface|PlainTextEditorSurface|NoteEditor/)
 })
 
-test('the host gates rich callbacks through the actually selected surface capability', () => {
-  assert.match(host, /selectedSurface\.capabilities\.richBlocks[\s\S]*\? props[\s\S]*loadBlocks: undefined[\s\S]*onRequestBlockSave: undefined/)
-  assert.match(registry, /'qwen-sanitized-v1'[\s\S]*richBlocks: true/)
-  assert.match(registry, /'replica-v16'[\s\S]*richBlocks: true/)
+test('attachment boundary exposes opaque metadata and lazy binary callbacks only', () => {
+  assert.match(contract, /export interface EditorSurfaceAttachment/)
+  assert.match(contract, /loadAttachments\?: \(\) => Promise<EditorSurfaceAttachment\[\]>/)
+  assert.match(contract, /onRequestAttachmentStore\?: \(file: File\) => Promise<EditorSurfaceAttachment>/)
+  assert.match(contract, /loadAttachmentFile\?: \(attachmentId: string\) => Promise<File \| null>/)
+  assert.match(contract, /onRequestAttachmentRemove\?: \(attachmentId: string\) => Promise<boolean>/)
+  assert.doesNotMatch(contract, /AttachmentMetadata|EncryptedBlob|DriveStorage|provider/)
+})
+
+test('the host gates rich and attachment callbacks through selected capabilities', () => {
+  assert.match(host, /selectedSurface\.capabilities\.richBlocks[\s\S]*loadBlocks: undefined[\s\S]*onRequestBlockSave: undefined/)
+  assert.match(host, /selectedSurface\.capabilities\.attachments/)
+  assert.match(host, /import\('\.\/editorAttachmentAdapter'\)/)
+  assert.match(host, /loadAttachments: undefined/)
+  assert.match(host, /onRequestAttachmentStore: undefined/)
+  assert.match(host, /loadAttachmentFile: undefined/)
+  assert.match(host, /onRequestAttachmentRemove: undefined/)
+  assert.match(registry, /'qwen-sanitized-v1'[\s\S]*attachments: false/)
+  assert.match(registry, /'replica-v16'[\s\S]*attachments: true/)
+})
+
+test('attachment adapter keeps storage/provider metadata outside visual implementations', () => {
+  assert.match(attachmentAdapter, /from '\.\.\/attachments\/attachmentService'/)
+  assert.match(attachmentAdapter, /from '\.\.\/attachments\/attachmentTypes'/)
+  assert.match(attachmentAdapter, /createEditorAttachmentAdapter/)
+  assert.match(attachmentAdapter, /loadEncryptedAttachments\(noteId\)/)
+  assert.match(attachmentAdapter, /storeEncryptedAttachment\(noteId, file\)/)
+  assert.match(attachmentAdapter, /loadEncryptedAttachmentFile\(metadata\)/)
+  assert.match(attachmentAdapter, /removeEncryptedAttachment\(noteId, attachmentId\)/)
+  assert.doesNotMatch(replicaSurface, /attachmentService|attachmentTypes|encryptedBlob|encryptedRecord|Drive/)
 })
 
 test('the registry keeps stable and experimental implementations in one composition catalog', () => {
