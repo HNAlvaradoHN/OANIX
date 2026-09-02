@@ -102,16 +102,13 @@
 }
 
 .clean-sheet__body {
-  min-height: max(520px, calc(100dvh - 250px));
+  min-height: calc(100dvh - 250px);
+  height: auto;
   resize: none;
   overflow: hidden;
   font-size: 17px;
   line-height: 1.72;
   white-space: pre-wrap;
-}
-
-.clean-sheet__body:focus {
-  overflow: auto;
 }
 
 @media (max-width: 640px) {
@@ -127,12 +124,12 @@
   .clean-sheet__paper {
     min-height: calc(100dvh - 54px);
     border-radius: 0;
-    padding: 28px 20px 48px;
+    padding: 22px 20px 48px;
     box-shadow: none;
   }
 
   .clean-sheet__body {
-    min-height: calc(100dvh - 220px);
+    min-height: calc(100dvh - 190px);
     font-size: 16px;
   }
 }
