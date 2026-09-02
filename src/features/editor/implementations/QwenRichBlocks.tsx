@@ -296,7 +296,9 @@ export function QwenRichBlocks({
     const split = request.legacySplit
     if (!split) return false
 
-    const attachmentKind = request.kind === 'image' || request.kind === 'file'
+    const attachmentKind: 'image' | 'file' | null = request.kind === 'image' || request.kind === 'file'
+      ? request.kind
+      : null
     if (attachmentKind && !attachmentFlow?.enabled) {
       setError('Los adjuntos todavía no están disponibles en esta nota.')
       return true
@@ -331,7 +333,7 @@ export function QwenRichBlocks({
 
       const targetIndex = requestedIndex + beforeBlocks.length
       if (attachmentKind) {
-        attachmentFlow?.requestInsert(request.kind, targetIndex)
+        attachmentFlow?.requestInsert(attachmentKind, targetIndex)
         onInsertionIndexChange?.(targetIndex + 1)
         return true
       }
