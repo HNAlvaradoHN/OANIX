@@ -1,0 +1,103 @@
+.oanix-qwen-sheet__entry,
+.oanix-qwen-sheet__contact {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+  border-radius: 16px;
+  background: color-mix(in srgb, currentColor 4%, transparent);
+}
+
+.oanix-qwen-sheet__simple-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  opacity: .72;
+}
+
+.oanix-qwen-sheet__simple-topline button,
+.oanix-qwen-sheet__separator button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  opacity: .72;
+  cursor: pointer;
+}
+
+.oanix-qwen-sheet__entry input,
+.oanix-qwen-sheet__entry textarea,
+.oanix-qwen-sheet__contact input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+.oanix-qwen-sheet__entry > input {
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.oanix-qwen-sheet__entry textarea {
+  min-height: 120px;
+  resize: vertical;
+  line-height: 1.55;
+}
+
+.oanix-qwen-sheet__contact-grid {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+}
+
+.oanix-qwen-sheet__contact-grid > div {
+  display: grid;
+  gap: 6px;
+}
+
+.oanix-qwen-sheet__contact-avatar {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: color-mix(in srgb, currentColor 8%, transparent);
+}
+
+.oanix-qwen-sheet__contact input:first-child {
+  font-weight: 700;
+}
+
+.oanix-qwen-sheet__separator {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 34px;
+}
+
+.oanix-qwen-sheet__separator hr {
+  flex: 1;
+  width: 100%;
+  border: 0;
+  border-top: 1px solid color-mix(in srgb, currentColor 20%, transparent);
+}
+
+.oanix-qwen-sheet__separator button {
+  flex: 0 0 auto;
+  font-size: 11px;
+}
+
+@media (max-width: 720px) {
+  .oanix-qwen-sheet__entry,
+  .oanix-qwen-sheet__contact {
+    border-radius: 14px;
+    padding: 12px 13px;
+  }
+}

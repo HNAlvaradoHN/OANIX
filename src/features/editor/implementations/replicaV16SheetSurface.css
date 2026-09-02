@@ -1,0 +1,216 @@
+.oanix-replica-v16 {
+  --rv-paper: #f6f3ec;
+  --rv-paper-2: #efeae0;
+  --rv-card: #fffdf7;
+  --rv-ink: #221e19;
+  --rv-ink-soft: #6b6357;
+  --rv-ink-faint: #a79c8b;
+  --rv-line: #e3dccc;
+  --rv-line-2: #d6cdb8;
+  --rv-accent: #d9542b;
+  --rv-accent-deep: #9e3d1f;
+  --rv-accent-soft: rgba(217, 84, 43, .16);
+  --rv-green: #3e7c4f;
+  --rv-shadow: 0 4px 10px rgba(34, 30, 25, .1), 0 16px 40px rgba(34, 30, 25, .16);
+  position: fixed;
+  inset: 0;
+  z-index: 121;
+  overflow: auto;
+  overscroll-behavior: contain;
+  background: var(--rv-paper);
+  color: var(--rv-ink);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+[data-oanix-theme-mode="dark"] .oanix-replica-v16 {
+  --rv-paper: #181a20;
+  --rv-paper-2: #20232b;
+  --rv-card: #232630;
+  --rv-ink: #edeae2;
+  --rv-ink-soft: #aaa598;
+  --rv-ink-faint: #8b877c;
+  --rv-line: #30343f;
+  --rv-line-2: #4a5060;
+  --rv-accent-deep: #ff8a5c;
+  --rv-green: #63a874;
+  --rv-shadow: 0 8px 30px rgba(0, 0, 0, .34);
+}
+
+.oanix-replica-v16 *,
+.oanix-replica-v16 *::before,
+.oanix-replica-v16 *::after { box-sizing: border-box; }
+
+.oanix-replica-v16 button,
+.oanix-replica-v16 textarea { font: inherit; color: inherit; }
+
+.oanix-replica-v16 button { border: 0; cursor: pointer; }
+
+.oanix-replica-v16__grain {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: .04;
+  background-image:
+    radial-gradient(circle at 20% 20%, currentColor .5px, transparent .75px),
+    radial-gradient(circle at 75% 65%, currentColor .45px, transparent .7px);
+  background-size: 17px 19px, 23px 21px;
+}
+
+.oanix-replica-v16__topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  min-height: 61px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: calc(12px + env(safe-area-inset-top)) 20px 12px;
+  background: color-mix(in srgb, var(--rv-paper) 96%, transparent);
+  border-bottom: 1px solid var(--rv-line);
+  backdrop-filter: blur(10px);
+}
+
+.oanix-replica-v16__icon,
+.oanix-replica-v16__float-button {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--rv-ink-soft);
+}
+
+.oanix-replica-v16__icon:hover,
+.oanix-replica-v16__icon:focus-visible { background: var(--rv-paper-2); color: var(--rv-ink); }
+.oanix-replica-v16__icon:disabled { opacity: .5; }
+.oanix-replica-v16__icon svg,
+.oanix-replica-v16__float-button svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+.oanix-replica-v16__separator { width: 1px; height: 22px; background: var(--rv-line-2); }
+.oanix-replica-v16__brand { display: flex; align-items: center; gap: 8px; color: var(--rv-ink-soft); font: 600 12px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: .14em; text-transform: uppercase; }
+.oanix-replica-v16__brand b { color: var(--rv-accent); font-size: 15px; }
+.oanix-replica-v16__status { margin-left: auto; display: inline-flex; align-items: center; gap: 7px; color: var(--rv-ink-faint); font: 500 10.5px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.oanix-replica-v16__status i,
+.oanix-replica-v16__saved i { width: 7px; height: 7px; border-radius: 50%; background: var(--rv-green); }
+
+.oanix-replica-v16__error { position: relative; z-index: 5; width: min(760px, calc(100% - 32px)); margin: 12px auto 0; padding: 10px 13px; border: 1px solid color-mix(in srgb, #c0392b 38%, var(--rv-line)); border-radius: 10px; background: color-mix(in srgb, #c0392b 9%, var(--rv-card)); color: #a22d22; font-size: 13px; }
+[data-oanix-theme-mode="dark"] .oanix-replica-v16__error { color: #ffaaa1; }
+
+.oanix-replica-v16__page { position: relative; z-index: 1; min-height: calc(100dvh - 61px); }
+.oanix-replica-v16__canvas { width: min(760px, 100%); min-height: calc(100dvh - 61px); margin: 0 auto; padding: 44px 26px calc(82px + env(safe-area-inset-bottom)); }
+.oanix-replica-v16__meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; color: var(--rv-ink-soft); font: 500 11.5px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.oanix-replica-v16__chip { display: inline-flex; align-items: center; padding: 4px 11px; border: 1px solid var(--rv-line-2); border-radius: 999px; background: var(--rv-card); }
+.oanix-replica-v16__saved { display: inline-flex; align-items: center; gap: 7px; }
+
+.oanix-replica-v16__title {
+  display: block;
+  width: 100%;
+  min-height: 1.1em;
+  margin: 0 0 16px;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  resize: none;
+  overflow: hidden;
+  field-sizing: content;
+  background: transparent;
+  color: var(--rv-ink);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(2.3rem, 6vw, 3.5rem);
+  font-weight: 600;
+  line-height: 1.08;
+  letter-spacing: -.02em;
+}
+
+.oanix-replica-v16__tagline { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; margin-bottom: 40px; }
+.oanix-replica-v16__tag { display: inline-flex; align-items: center; padding: 3px 11px; border: 1px solid var(--rv-line); border-radius: 999px; background: var(--rv-paper-2); color: var(--rv-accent-deep); font: 500 12px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.oanix-replica-v16__tag-hint { color: var(--rv-ink-faint); font: 10px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+
+.oanix-replica-v16__editing-sheet { position: relative; margin-top: 34px; padding-top: 30px; border-top: 1px solid var(--rv-line-2); }
+.oanix-replica-v16__sheet-label { position: absolute; top: -8px; left: 0; padding-right: 12px; background: var(--rv-paper); color: var(--rv-ink-faint); font: 500 10px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: .16em; }
+
+.oanix-replica-v16__body {
+  display: block;
+  width: 100%;
+  min-height: 220px;
+  margin: 0 0 20px;
+  padding: 0 6px 0 0;
+  border: 0;
+  outline: 0;
+  resize: none;
+  overflow: hidden;
+  field-sizing: content;
+  background: transparent;
+  color: var(--rv-ink);
+  caret-color: var(--rv-accent);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 17px;
+  line-height: 27px;
+  white-space: pre-wrap;
+}
+
+.oanix-replica-v16--ruled .oanix-replica-v16__body,
+.oanix-replica-v16--ruled .oanix-qwen-sheet__text-block textarea { background-image: repeating-linear-gradient(to bottom, transparent 0, transparent 26px, var(--rv-line) 26px, var(--rv-line) 27px); }
+.oanix-replica-v16--dots .oanix-replica-v16__body,
+.oanix-replica-v16--dots .oanix-qwen-sheet__text-block textarea { background-image: radial-gradient(var(--rv-line-2) 1.2px, transparent 1.6px); background-size: 34px 27px; }
+.oanix-replica-v16--grid .oanix-replica-v16__body,
+.oanix-replica-v16--grid .oanix-qwen-sheet__text-block textarea { background-image: linear-gradient(var(--rv-line) 1px, transparent 1px), linear-gradient(90deg, var(--rv-line) 1px, transparent 1px); background-size: 34px 27px; }
+
+.oanix-replica-v16__tail { min-height: 150px; border-radius: 13px; }
+
+.oanix-replica-v16__floating {
+  position: fixed;
+  z-index: 60;
+  top: calc(env(safe-area-inset-top) + 72px);
+  right: max(16px, env(safe-area-inset-right));
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.oanix-replica-v16__float-button,
+.oanix-replica-v16__floating-menu { pointer-events: auto; }
+.oanix-replica-v16__float-button { width: 44px; height: 44px; border: 1px solid var(--rv-line); background: var(--rv-card); box-shadow: var(--rv-shadow); }
+.oanix-replica-v16__float-button:hover,
+.oanix-replica-v16__float-button:focus-visible { background: var(--rv-paper-2); color: var(--rv-ink); }
+.oanix-replica-v16__float-button:disabled { opacity: .45; cursor: default; }
+.oanix-replica-v16__float-button--primary { border-color: transparent; background: var(--rv-accent); color: #fff; }
+.oanix-replica-v16__float-button--primary:hover,
+.oanix-replica-v16__float-button--primary:focus-visible { background: var(--rv-accent-deep); color: #fff; }
+
+.oanix-replica-v16__floating-menu { position: absolute; top: 54px; right: 0; width: min(286px, calc(100vw - 32px)); padding: 8px; border: 1px solid var(--rv-line); border-radius: 13px; background: var(--rv-card); box-shadow: var(--rv-shadow); }
+.oanix-replica-v16__floating-menu button { display: flex; width: 100%; flex-direction: column; align-items: flex-start; gap: 2px; padding: 10px 12px; border-radius: 9px; background: transparent; text-align: left; }
+.oanix-replica-v16__floating-menu button:hover,
+.oanix-replica-v16__floating-menu button:focus-visible,
+.oanix-replica-v16__floating-menu button.is-active { background: var(--rv-paper-2); }
+.oanix-replica-v16__floating-menu button.is-active { color: var(--rv-accent-deep); }
+.oanix-replica-v16__floating-menu strong { font-size: 13px; }
+.oanix-replica-v16__floating-menu small,
+.oanix-replica-v16__floating-menu p,
+.oanix-replica-v16__floating-menu > span { color: var(--rv-ink-faint); font-size: 11px; }
+.oanix-replica-v16__floating-menu p { margin: 7px 8px 3px; line-height: 1.45; }
+.oanix-replica-v16__floating-menu--tools > span { display: block; padding: 5px 10px 7px; font: 600 10px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: .12em; text-transform: uppercase; }
+
+/* Existing incremental rich-block widgets inherit the replica palette instead of owning a second theme. */
+.oanix-replica-v16 .oanix-qwen-sheet__rich-content { margin-top: 16px; }
+.oanix-replica-v16 .oanix-qwen-sheet__insert-point { position: relative; }
+.oanix-replica-v16 .oanix-qwen-sheet__insert-menu { z-index: 12; }
+
+@media (max-width: 760px) {
+  .oanix-replica-v16__topbar { padding-left: 12px; padding-right: 12px; }
+  .oanix-replica-v16__canvas { padding: 34px 20px calc(74px + env(safe-area-inset-bottom)); }
+  .oanix-replica-v16__title { font-size: clamp(2rem, 11vw, 2.85rem); }
+  .oanix-replica-v16__body { min-height: 200px; font-size: 16.5px; }
+  .oanix-replica-v16__floating { top: calc(env(safe-area-inset-top) + 68px); right: max(12px, env(safe-area-inset-right)); }
+  .oanix-replica-v16__float-button { width: 42px; height: 42px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .oanix-replica-v16 *,
+  .oanix-replica-v16 *::before,
+  .oanix-replica-v16 *::after { scroll-behavior: auto !important; animation: none !important; transition: none !important; }
+}

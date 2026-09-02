@@ -9,7 +9,8 @@ const codec = readFileSync('src/features/editor/codeBlockCodec.ts', 'utf8')
 test('Qwen mounts one ordered rich block controller on the shared session', () => {
   assert.match(surface, /<QwenRichBlocks[\s\S]*session=\{blockSession\}/)
   assert.equal((surface.match(/createEditorBlockSession\(/g) ?? []).length, 1)
-  assert.equal((richBlocks.match(/session\.load\(\)/g) ?? []).length, 1)
+  assert.equal((richBlocks.match(/session\.load\(\)/g) ?? []).length, 2)
+  assert.match(richBlocks, /attachmentRevision/)
 })
 
 test('code block UI buffers mutations through the editor session only', () => {
