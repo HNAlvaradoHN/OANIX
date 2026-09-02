@@ -1,13 +1,19 @@
 import type { EditorSurfaceBlock } from './editorSurfaceContract.ts'
 import { REPLICA_ATTACHMENT_PRESENTATION_KIND } from './replicaAttachmentPresentationCodec.ts'
+import { REPLICA_ATTACHMENT_RETIREMENT_KIND } from './replicaAttachmentRetirementCodec.ts'
 
 export interface ReplicaEditorBlockSplit {
   flowBlocks: EditorSurfaceBlock[]
   metadataBlocks: EditorSurfaceBlock[]
 }
 
+function isReplicaMetadataBlock(block: EditorSurfaceBlock): boolean {
+  return block.kind === REPLICA_ATTACHMENT_PRESENTATION_KIND
+    || block.kind === REPLICA_ATTACHMENT_RETIREMENT_KIND
+}
+
 /**
- * Presentation metadata is durable but not part of the visual/editor order.
+ * Replica attachment metadata is durable but not part of the visual/editor order.
  * Keep one shared definition so attachment anchors and normal rich blocks count
  * the same positions even if an older note has metadata interleaved in storage.
  */
@@ -18,7 +24,7 @@ export function splitReplicaEditorBlocks(
   const metadataBlocks: EditorSurfaceBlock[] = []
 
   for (const block of blocks) {
-    if (block.kind === REPLICA_ATTACHMENT_PRESENTATION_KIND) metadataBlocks.push(block)
+    if (isReplicaMetadataBlock(block)) metadataBlocks.push(block)
     else flowBlocks.push(block)
   }
 
@@ -28,9 +34,9 @@ export function splitReplicaEditorBlocks(
 /**
  * Translate a visual flow position to the raw EditorBlockSession order.
  *
- * Hidden presentation records never consume a visual position. Insertion at the
- * end is placed immediately after the last visible block, before trailing hidden
- * metadata, so newly inserted blocks do not drift behind presentation records.
+ * Hidden metadata records never consume a visual position. Insertion at the end
+ * is placed immediately after the last visible block, before trailing hidden
+ * metadata, so newly inserted blocks do not drift behind metadata records.
  */
 export function replicaFlowIndexToOrderIndex(
   blocks: readonly EditorSurfaceBlock[],
@@ -48,7 +54,7 @@ export function replicaFlowIndexToOrderIndex(
   }
 
   for (let rawIndex = blocks.length - 1; rawIndex >= 0; rawIndex -= 1) {
-    if (blocks[rawIndex].kind !== REPLICA_ATTACHMENT_PRESENTATION_KIND) return rawIndex + 1
+    if (!isReplicaMetadataBlock(blocks[rawIndex])) return rawIndex + 1
   }
 
   return 0
