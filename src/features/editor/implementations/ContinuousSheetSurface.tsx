@@ -8,6 +8,7 @@ import {
 } from './QwenRichBlocks'
 import { ReplicaV16Attachments } from './ReplicaV16Attachments'
 import './continuousSheetSurface.css'
+import './continuousSheetInteraction.css'
 
 const AUTOSAVE_IDLE_MS = 2_200
 
@@ -21,12 +22,12 @@ function BackIcon() {
   return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 4.5 8 12l7.5 7.5" /></svg>
 }
 
-function PlusIcon() {
-  return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+function RailIcon({ open }: { open: boolean }) {
+  return <svg viewBox="0 0 24 24" aria-hidden="true"><path d={open ? 'M15 5 8 12l7 7' : 'm9 5 7 7-7 7'} /></svg>
 }
 
-function ThemeIcon() {
-  return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10M14 4v6M8 14v6" /></svg>
+function MoreIcon() {
+  return <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.35"/><circle cx="12" cy="12" r="1.35"/><circle cx="19" cy="12" r="1.35"/></svg>
 }
 
 export function ContinuousSheetSurface({
@@ -62,8 +63,8 @@ export function ContinuousSheetSurface({
 
   const [dirty, setDirty] = useState(false)
   const [closing, setClosing] = useState(false)
-  const [insertOpen, setInsertOpen] = useState(false)
-  const [themeOpen, setThemeOpen] = useState(false)
+  const [railOpen, setRailOpen] = useState(false)
+  const [moreOpen, setMoreOpen] = useState(false)
   const [design, setDesign] = useState<SheetDesign>('plain')
   const [activeInsertionIndex, setActiveInsertionIndex] = useState(0)
   const [insertRequest, setInsertRequest] = useState<QwenExternalInsertRequest | null>(null)
@@ -163,8 +164,8 @@ export function ContinuousSheetSurface({
     closingRef.current = true
     setClosing(true)
     clearSaveTimer()
-    setInsertOpen(false)
-    setThemeOpen(false)
+    setRailOpen(false)
+    setMoreOpen(false)
 
     let closed = false
     try {
@@ -206,7 +207,12 @@ export function ContinuousSheetSurface({
       index: legacySplit ? 0 : activeInsertionIndex,
       legacySplit,
     })
-    setInsertOpen(false)
+    setRailOpen(false)
+  }
+
+  function selectDesign(nextDesign: SheetDesign) {
+    setDesign(nextDesign)
+    setRailOpen(false)
   }
 
   function handleExternalInsertPrepared(token: number) {
@@ -253,13 +259,20 @@ export function ContinuousSheetSurface({
     data-oanix-unsaved={dirty ? 'true' : 'false'}
     data-oanix-sheet="continuous-v1"
   >
-    <header className="oanix-continuous-sheet__header">
+    <header className="oanix-continuous-sheet__header" data-ui-block="header">
       <button type="button" className="oanix-continuous-sheet__back" aria-label="Guardar y volver" disabled={disabled} onClick={() => void closeEditor()}><BackIcon /></button>
       <div className="oanix-continuous-sheet__identity">
         <span className="oanix-continuous-sheet__mark" aria-hidden="true">✦</span>
         <span>OANIX</span>
       </div>
-      <div className="oanix-continuous-sheet__save" role="status"><i />{saving ? 'Guardando…' : dirty ? 'Editando' : 'Guardado'}</div>
+      <div className="oanix-continuous-sheet__header-actions">
+        <div className="oanix-continuous-sheet__save" role="status"><i />{saving ? 'Guardando…' : dirty ? 'Editando' : 'Guardado'}</div>
+        <button type="button" className="oanix-continuous-sheet__more" aria-label="Más opciones" aria-expanded={moreOpen} onClick={() => setMoreOpen((open) => !open)}><MoreIcon /></button>
+        {moreOpen && <div className="oanix-continuous-sheet__more-menu" role="menu">
+          <button type="button" onClick={() => { setMoreOpen(false); void saveNow() }}>Guardar ahora</button>
+          <button type="button" onClick={() => { setMoreOpen(false); setRailOpen(true) }}>Personalizar hoja</button>
+        </div>}
+      </div>
     </header>
 
     {error && <div className="oanix-continuous-sheet__error" role="alert">{error}</div>}
@@ -267,40 +280,51 @@ export function ContinuousSheetSurface({
     <main className="oanix-continuous-sheet__viewport">
       <article className="oanix-continuous-sheet__paper">
         <div className="oanix-continuous-sheet__paper-glow" aria-hidden="true" />
-        <textarea
-          ref={titleRef}
-          className="oanix-continuous-sheet__title"
-          defaultValue={initialTitle}
-          rows={1}
-          maxLength={160}
-          aria-label="Título de la nota"
-          placeholder="Sin título"
-          readOnly={disabled}
-          onFocus={() => { bodyCursorRef.current.active = false }}
-          onInput={markActivity}
-          onCompositionStart={handleCompositionStart}
-          onCompositionEnd={handleCompositionEnd}
-        />
-        <div className="oanix-continuous-sheet__rule" />
-        <textarea
-          ref={bodyRef}
-          className="oanix-continuous-sheet__body"
-          defaultValue={initialText}
-          aria-label="Inicio de la nota"
-          placeholder="Empieza a escribir…"
-          spellCheck
-          wrap="soft"
-          readOnly={disabled}
-          onFocus={rememberBodyCursor}
-          onClick={rememberBodyCursor}
-          onKeyUp={rememberBodyCursor}
-          onSelect={rememberBodyCursor}
-          onInput={() => { rememberBodyCursor(); markActivity() }}
-          onCompositionStart={handleCompositionStart}
-          onCompositionEnd={handleBodyCompositionEnd}
-        />
 
-        <div className="oanix-continuous-sheet__flow">
+        <section className="oanix-continuous-sheet__editor-block oanix-continuous-sheet__editor-block--title" data-editor-block="title">
+          <textarea
+            ref={titleRef}
+            className="oanix-continuous-sheet__title"
+            defaultValue={initialTitle}
+            rows={1}
+            maxLength={160}
+            aria-label="Título de la nota"
+            placeholder="Sin título"
+            readOnly={disabled}
+            onFocus={() => { bodyCursorRef.current.active = false }}
+            onInput={markActivity}
+            onCompositionStart={handleCompositionStart}
+            onCompositionEnd={handleCompositionEnd}
+          />
+        </section>
+
+        <div className="oanix-continuous-sheet__meta-row" data-ui-block="metadata" aria-label="Metadatos de la nota">
+          <span className="oanix-continuous-sheet__meta-placeholder">Etiquetas se conectarán al almacenamiento real de OANIX</span>
+        </div>
+
+        <div className="oanix-continuous-sheet__rule" />
+
+        <section className="oanix-continuous-sheet__editor-block oanix-continuous-sheet__editor-block--body" data-editor-block="body">
+          <textarea
+            ref={bodyRef}
+            className="oanix-continuous-sheet__body"
+            defaultValue={initialText}
+            aria-label="Inicio de la nota"
+            placeholder="Empieza a escribir…"
+            spellCheck
+            wrap="soft"
+            readOnly={disabled}
+            onFocus={rememberBodyCursor}
+            onClick={rememberBodyCursor}
+            onKeyUp={rememberBodyCursor}
+            onSelect={rememberBodyCursor}
+            onInput={() => { rememberBodyCursor(); markActivity() }}
+            onCompositionStart={handleCompositionStart}
+            onCompositionEnd={handleBodyCompositionEnd}
+          />
+        </section>
+
+        <section className="oanix-continuous-sheet__editor-block oanix-continuous-sheet__flow" data-editor-block="flow">
           {attachmentsEnabled ? <ReplicaV16Attachments
             disabled={disabled}
             blockSession={blockSession}
@@ -310,34 +334,35 @@ export function ContinuousSheetSurface({
             onRequestAttachmentRemove={onRequestAttachmentRemove}
             onActivity={markActivity}
           >{richFlow}</ReplicaV16Attachments> : richFlow}
-        </div>
+        </section>
       </article>
     </main>
 
-    <div className="oanix-continuous-sheet__tools">
-      <button type="button" className="oanix-continuous-sheet__tool oanix-continuous-sheet__tool--primary" aria-label="Insertar" aria-expanded={insertOpen} disabled={disabled || (!blockSession && !attachmentsEnabled)} onClick={() => { setThemeOpen(false); setInsertOpen((open) => !open) }}><PlusIcon /></button>
-      <button type="button" className="oanix-continuous-sheet__tool" aria-label="Personalizar hoja" aria-expanded={themeOpen} onClick={() => { setInsertOpen(false); setThemeOpen((open) => !open) }}><ThemeIcon /></button>
+    <aside className={`oanix-continuous-sheet__rail ${railOpen ? 'is-open' : ''}`} data-ui-block="rail" aria-label="Herramientas de la hoja">
+      <button type="button" className="oanix-continuous-sheet__rail-toggle" aria-label={railOpen ? 'Cerrar herramientas' : 'Abrir herramientas'} aria-expanded={railOpen} onClick={() => setRailOpen((open) => !open)}><RailIcon open={railOpen} /></button>
 
-      {insertOpen && <div className="oanix-continuous-sheet__menu oanix-continuous-sheet__menu--insert" role="menu" aria-label="Insertar contenido">
-        <div className="oanix-continuous-sheet__menu-title"><strong>Insertar</strong><span>En la posición activa</span></div>
-        <div className="oanix-continuous-sheet__insert-grid">
-          {blockSession && <button type="button" onClick={() => requestInsert('text')}><b>¶</b><span>Texto</span></button>}
-          {blockSession && <button type="button" onClick={() => requestInsert('entry')}><b>◫</b><span>Entrada</span></button>}
-          {attachmentsEnabled && <button type="button" onClick={() => requestInsert('image')}><b>▧</b><span>Imagen</span></button>}
-          {attachmentsEnabled && <button type="button" onClick={() => requestInsert('file')}><b>⌑</b><span>Archivo</span></button>}
-          {blockSession && <button type="button" onClick={() => requestInsert('checklist')}><b>☑</b><span>Checklist</span></button>}
-          {blockSession && <button type="button" onClick={() => requestInsert('contact')}><b>◎</b><span>Contacto</span></button>}
-          {blockSession && <button type="button" onClick={() => requestInsert('code')}><b>&lt;/&gt;</b><span>Código</span></button>}
-          {blockSession && <button type="button" onClick={() => requestInsert('separator')}><b>—</b><span>Separador</span></button>}
+      <div className="oanix-continuous-sheet__rail-panel" aria-hidden={!railOpen}>
+        <div className="oanix-continuous-sheet__rail-section">
+          <span className="oanix-continuous-sheet__rail-label">Añadir</span>
+          <div className="oanix-continuous-sheet__rail-grid">
+            {blockSession && <button type="button" onClick={() => requestInsert('text')}><b>¶</b><span>Texto</span></button>}
+            {blockSession && <button type="button" onClick={() => requestInsert('entry')}><b>◫</b><span>Entrada</span></button>}
+            {attachmentsEnabled && <button type="button" onClick={() => requestInsert('image')}><b>▧</b><span>Imagen</span></button>}
+            {attachmentsEnabled && <button type="button" onClick={() => requestInsert('file')}><b>⌑</b><span>Archivo</span></button>}
+            {blockSession && <button type="button" onClick={() => requestInsert('checklist')}><b>☑</b><span>Checklist</span></button>}
+            {blockSession && <button type="button" onClick={() => requestInsert('contact')}><b>◎</b><span>Contacto</span></button>}
+            {blockSession && <button type="button" onClick={() => requestInsert('code')}><b>&lt;/&gt;</b><span>Código</span></button>}
+            {blockSession && <button type="button" onClick={() => requestInsert('separator')}><b>—</b><span>Separador</span></button>}
+          </div>
         </div>
-      </div>}
 
-      {themeOpen && <div className="oanix-continuous-sheet__menu oanix-continuous-sheet__menu--theme" role="menu" aria-label="Diseño de hoja">
-        <div className="oanix-continuous-sheet__menu-title"><strong>Superficie</strong><span>El contenido no cambia</span></div>
-        {(['plain', 'ruled', 'dots', 'grid'] as const).map((option) => <button key={option} type="button" className={design === option ? 'is-active' : ''} onClick={() => { setDesign(option); setThemeOpen(false) }}>
-          <span>{option === 'plain' ? 'Limpia' : option === 'ruled' ? 'Rayada' : option === 'dots' ? 'Puntos' : 'Cuadrícula'}</span><i aria-hidden="true" />
-        </button>)}
-      </div>}
-    </div>
+        <div className="oanix-continuous-sheet__rail-section">
+          <span className="oanix-continuous-sheet__rail-label">Superficie</span>
+          <div className="oanix-continuous-sheet__rail-designs">
+            {(['plain', 'ruled', 'dots', 'grid'] as const).map((option) => <button key={option} type="button" className={design === option ? 'is-active' : ''} onClick={() => selectDesign(option)}>{option === 'plain' ? 'Limpia' : option === 'ruled' ? 'Rayada' : option === 'dots' ? 'Puntos' : 'Cuadrícula'}</button>)}
+          </div>
+        </div>
+      </div>
+    </aside>
   </section>
 }
