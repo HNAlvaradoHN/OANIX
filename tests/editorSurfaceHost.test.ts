@@ -83,7 +83,7 @@ test('the host gates rich and attachment callbacks through selected capabilities
   assert.match(host, /loadAttachmentFile: undefined/)
   assert.match(host, /onRequestAttachmentRemove: undefined/)
   assert.match(registry, /'qwen-sanitized-v1'[\s\S]*attachments: false/)
-  assert.match(registry, /'replica-v16'[\s\S]*attachments: true/)
+  assert.match(registry, /'continuous-sheet-v1'[\s\S]*attachments: true/)
 })
 
 test('attachment adapter keeps storage/provider metadata outside visual implementations', () => {
@@ -97,17 +97,17 @@ test('attachment adapter keeps storage/provider metadata outside visual implemen
   assert.doesNotMatch(replicaSurface, /attachmentService|attachmentTypes|encryptedBlob|encryptedRecord|Drive/)
 })
 
-test('the registry keeps stable and experimental implementations in one composition catalog', () => {
+test('the registry keeps the stable editor and isolated continuous experiment in one composition catalog', () => {
   assert.match(registry, /export const editorSurfaceDefinitions/)
   assert.match(registry, /'qwen-sanitized-v1'/)
-  assert.match(registry, /'replica-v16'/)
+  assert.match(registry, /'continuous-sheet-v1'/)
   assert.match(registry, /experimental: true/)
   assert.match(registry, /await import\([\s\S]*\.\/implementations\/QwenSheetSurface/)
-  assert.match(registry, /await import\([\s\S]*\.\/implementations\/ReplicaV16SheetSurface/)
+  assert.match(registry, /await import\([\s\S]*\.\/implementations\/ContinuousSheetSurface/)
   assert.match(registry, /DEFAULT_EDITOR_SURFACE_ID/)
   assert.match(registry, /resolveEditorSurface/)
   assert.doesNotMatch(registry, /^\s*import .*QwenSheetSurface/m)
-  assert.doesNotMatch(registry, /^\s*import .*ReplicaV16SheetSurface/m)
+  assert.doesNotMatch(registry, /^\s*import .*ContinuousSheetSurface/m)
   assert.doesNotMatch(registry, /from '\.\/NoteEditor'/)
 })
 
