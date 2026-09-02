@@ -151,6 +151,19 @@
   white-space: pre-wrap;
 }
 
+/* Chromium/Android can let the page own vertical scrolling without per-key JS resizing. */
+@supports (field-sizing: content) {
+  .oanix-replica-v16__title,
+  .oanix-replica-v16__body {
+    field-sizing: content;
+  }
+
+  .oanix-replica-v16__body {
+    overflow-y: hidden;
+    overscroll-behavior-y: auto;
+  }
+}
+
 .oanix-replica-v16--ruled .oanix-replica-v16__body,
 .oanix-replica-v16--ruled .oanix-qwen-sheet__text-block textarea { background-image: repeating-linear-gradient(to bottom, transparent 0, transparent 26px, var(--rv-line) 26px, var(--rv-line) 27px); }
 .oanix-replica-v16--dots .oanix-replica-v16__body,
