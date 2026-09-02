@@ -31,5 +31,14 @@ jobs:
       - name: Build OANIX
         run: npm run build
 
+      - name: Upload agent web preview
+        if: startsWith(github.ref, 'refs/heads/agent/')
+        uses: actions/upload-artifact@v4
+        with:
+          name: oanix-web-preview
+          path: dist
+          if-no-files-found: error
+          retention-days: 3
+
       - name: Audit offline production bundle
         run: npm run audit:offline-bundle

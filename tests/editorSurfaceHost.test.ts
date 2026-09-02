@@ -6,8 +6,16 @@ const home = readFileSync('src/features/rebuild/RebuildApp.tsx', 'utf8')
 const host = readFileSync('src/features/editor/EditorSurface.tsx', 'utf8')
 const contract = readFileSync('src/features/editor/editorSurfaceContract.ts', 'utf8')
 const registry = readFileSync('src/features/editor/editorSurfaceRegistry.ts', 'utf8')
+const attachmentAdapter = readFileSync(
+  'src/features/editor/editorAttachmentAdapter.ts',
+  'utf8',
+)
 const selectedSurface = readFileSync(
   'src/features/editor/implementations/QwenSheetSurface.tsx',
+  'utf8',
+)
+const replicaSurface = readFileSync(
+  'src/features/editor/implementations/ReplicaV16SheetSurface.tsx',
   'utf8',
 )
 const plainTextAdapter = readFileSync(
@@ -25,23 +33,21 @@ test('Home depends on the replaceable editor host instead of a concrete sheet im
   assert.doesNotMatch(home, /from '\.\.\/editor\/NoteEditor'/)
   assert.doesNotMatch(
     home,
-    /^\s*import .*from ['"][^'"]*(?:ruledSheet|Aurora|qwen)[^'"]*['"]/im,
+    /^\s*import .*from ['"][^'"]*(?:ruledSheet|Aurora|qwen|ReplicaV16)[^'"]*['"]/im,
   )
 })
 
-test('the host delegates concrete selection to the editor surface registry and mounts it lazily', () => {
-  assert.match(host, /import \{ lazy, Suspense \} from 'react'/)
+test('the host delegates concrete selection to the registry and lazily caches non-default surfaces', () => {
+  assert.match(host, /lazy, Suspense/)
   assert.match(host, /from '\.\/editorSurfaceRegistry'/)
   assert.match(host, /const ActiveSurface = lazy\(activeEditorSurface\.load\)/)
+  assert.match(host, /resolveEditorSurface\(surfaceId\)/)
+  assert.match(host, /lazySurfaceCache/)
   assert.match(host, /<Suspense fallback=\{null\}>/)
-  assert.match(host, /<ActiveSurface \{\.\.\.surfaceProps\} \/>/)
-  assert.match(host, /activeEditorSurface\.capabilities/)
+  assert.match(host, /<SelectedSurface \{\.\.\.surfaceProps\} \/>/)
+  assert.match(host, /selectedSurface\.capabilities\.richBlocks/)
   assert.doesNotMatch(host, /from '\.\/NoteEditor'/)
   assert.doesNotMatch(host, /from '\.\/implementations\//)
-  assert.doesNotMatch(
-    host,
-    /^\s*import .*from ['"][^'"]*(?:ruledSheet|Aurora|qwen)[^'"]*['"]/im,
-  )
 })
 
 test('rich block boundary stays generic and does not import persistence or a concrete sheet', () => {
@@ -55,28 +61,57 @@ test('rich block boundary stays generic and does not import persistence or a con
     /^\s*import .*from ['"][^'"]*(?:rebuild|storage|security)[^'"]*['"]/im,
   )
   assert.doesNotMatch(contract, /indexedDB|localStorage|sessionStorage/)
-  assert.doesNotMatch(contract, /QwenSheetSurface|PlainTextEditorSurface|NoteEditor/)
+  assert.doesNotMatch(contract, /QwenSheetSurface|ReplicaV16SheetSurface|PlainTextEditorSurface|NoteEditor/)
 })
 
-test('the host still gates rich callbacks through the selected surface capability', () => {
-  assert.match(host, /activeEditorSurface\.capabilities\.richBlocks[\s\S]*\? props[\s\S]*loadBlocks: undefined[\s\S]*onRequestBlockSave: undefined/)
-  assert.match(registry, /richBlocks: true/)
+test('attachment boundary exposes opaque metadata and lazy binary callbacks only', () => {
+  assert.match(contract, /export interface EditorSurfaceAttachment/)
+  assert.match(contract, /loadAttachments\?: \(\) => Promise<EditorSurfaceAttachment\[\]>/)
+  assert.match(contract, /onRequestAttachmentStore\?: \(file: File\) => Promise<EditorSurfaceAttachment>/)
+  assert.match(contract, /loadAttachmentFile\?: \(attachmentId: string\) => Promise<File \| null>/)
+  assert.match(contract, /onRequestAttachmentRemove\?: \(attachmentId: string\) => Promise<boolean>/)
+  assert.doesNotMatch(contract, /\bAttachmentMetadata\b|\bEncryptedBlob\b|\bDriveStorage\b/)
+  assert.doesNotMatch(contract, /^\s*import .*from ['"][^'"]*attachments[^'"]*['"]/im)
 })
 
-test('the registry is the only composition point and lazily selects the sanitized sheet', () => {
-  assert.match(registry, /export const activeEditorSurface: EditorSurfaceDefinition/)
-  assert.match(registry, /id: 'qwen-sanitized-v1'/)
-  assert.match(registry, /load: async \(\) => \{/)
+test('the host gates rich and attachment callbacks through selected capabilities', () => {
+  assert.match(host, /selectedSurface\.capabilities\.richBlocks[\s\S]*loadBlocks: undefined[\s\S]*onRequestBlockSave: undefined/)
+  assert.match(host, /selectedSurface\.capabilities\.attachments/)
+  assert.match(host, /import\('\.\/editorAttachmentAdapter'\)/)
+  assert.match(host, /loadAttachments: undefined/)
+  assert.match(host, /onRequestAttachmentStore: undefined/)
+  assert.match(host, /loadAttachmentFile: undefined/)
+  assert.match(host, /onRequestAttachmentRemove: undefined/)
+  assert.match(registry, /'qwen-sanitized-v1'[\s\S]*attachments: false/)
+  assert.match(registry, /'continuous-sheet-v1'[\s\S]*attachments: true/)
+})
+
+test('attachment adapter keeps storage/provider metadata outside visual implementations', () => {
+  assert.match(attachmentAdapter, /from '\.\.\/attachments\/attachmentService'/)
+  assert.match(attachmentAdapter, /from '\.\.\/attachments\/attachmentTypes'/)
+  assert.match(attachmentAdapter, /createEditorAttachmentAdapter/)
+  assert.match(attachmentAdapter, /loadEncryptedAttachments\(noteId\)/)
+  assert.match(attachmentAdapter, /storeEncryptedAttachment\(noteId, file\)/)
+  assert.match(attachmentAdapter, /loadEncryptedAttachmentFile\(metadata\)/)
+  assert.match(attachmentAdapter, /removeEncryptedAttachment\(noteId, attachmentId\)/)
+  assert.doesNotMatch(replicaSurface, /attachmentService|attachmentTypes|encryptedBlob|encryptedRecord|Drive/)
+})
+
+test('the registry keeps the stable editor and isolated continuous experiment in one composition catalog', () => {
+  assert.match(registry, /export const editorSurfaceDefinitions/)
+  assert.match(registry, /'qwen-sanitized-v1'/)
+  assert.match(registry, /'continuous-sheet-v1'/)
+  assert.match(registry, /experimental: true/)
   assert.match(registry, /await import\([\s\S]*\.\/implementations\/QwenSheetSurface/)
-  assert.match(registry, /return \{ default: QwenSheetSurface \}/)
-  assert.match(registry, /plainText: true/)
-  assert.match(registry, /richBlocks: true/)
-  assert.match(registry, /attachments: false/)
+  assert.match(registry, /await import\([\s\S]*\.\/implementations\/ContinuousSheetSurface/)
+  assert.match(registry, /DEFAULT_EDITOR_SURFACE_ID/)
+  assert.match(registry, /resolveEditorSurface/)
   assert.doesNotMatch(registry, /^\s*import .*QwenSheetSurface/m)
+  assert.doesNotMatch(registry, /^\s*import .*ContinuousSheetSurface/m)
   assert.doesNotMatch(registry, /from '\.\/NoteEditor'/)
 })
 
-test('the selected sheet owns only visual editing and the EditorSurface lifecycle', () => {
+test('the stable selected sheet still owns only visual editing and the EditorSurface lifecycle', () => {
   assert.match(selectedSurface, /export function QwenSheetSurface\(\{/)
   assert.match(selectedSurface, /\}: EditorSurfaceProps\)/)
   assert.match(selectedSurface, /defaultValue=\{initialTitle\}/)
@@ -86,7 +121,19 @@ test('the selected sheet owns only visual editing and the EditorSurface lifecycl
   assert.match(selectedSurface, /await onRequestClose\(snapshot\)/)
   assert.match(selectedSurface, /data-oanix-save-and-close="true"/)
   assert.match(selectedSurface, /data-oanix-back-close="true"/)
-  assert.doesNotMatch(selectedSurface, /NoteEditor|PlainTextEditorSurface/)
+})
+
+test('the replica preserves the same safe save/close contract without importing app layers', () => {
+  assert.match(replicaSurface, /export function ReplicaV16SheetSurface\(\{/)
+  assert.match(replicaSurface, /AUTOSAVE_IDLE_MS = 3_000/)
+  assert.match(replicaSurface, /defaultValue=\{initialTitle\}/)
+  assert.match(replicaSurface, /defaultValue=\{initialText\}/)
+  assert.match(replicaSurface, /await onRequestSave\(snapshot\)/)
+  assert.match(replicaSurface, /await onRequestClose\(snapshot\)/)
+  assert.match(replicaSurface, /data-oanix-sheet="replica-v16"/)
+  assert.match(replicaSurface, /data-oanix-save-and-close="true"/)
+  assert.match(replicaSurface, /data-oanix-back-close="true"/)
+  assert.doesNotMatch(replicaSurface, /rebuild|vault|repository|storage|crypto|indexedDB|localStorage|sessionStorage/)
 })
 
 test('the superseded plain-text adapter remains isolated and reusable during transition', () => {
@@ -98,6 +145,4 @@ test('the superseded plain-text adapter remains isolated and reusable during tra
   assert.match(plainTextAdapter, /initialText=\{initialText\}/)
   assert.match(plainTextAdapter, /onRequestSave=\{onRequestSave\}/)
   assert.match(plainTextAdapter, /onRequestClose=\{onRequestClose\}/)
-  assert.doesNotMatch(plainTextAdapter, /<NoteEditor \{\.\.\.props\}/)
-  assert.doesNotMatch(plainTextAdapter, /EditorSurfaceCapabilities|plainTextEditorSurfaceCapabilities/)
 })

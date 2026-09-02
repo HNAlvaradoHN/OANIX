@@ -1,0 +1,377 @@
+.oanix-replica-assets {
+  display: grid;
+  gap: 18px;
+  margin: 20px 0 4px;
+}
+
+.oanix-replica-assets__status,
+.oanix-replica-assets__error {
+  margin: 0;
+  padding: 9px 11px;
+  border-radius: 10px;
+  font-size: 12px;
+}
+
+.oanix-replica-assets__status {
+  background: color-mix(in srgb, var(--replica-accent) 8%, transparent);
+  color: var(--replica-muted);
+}
+
+.oanix-replica-assets__error {
+  background: color-mix(in srgb, #b42318 10%, transparent);
+  color: #b42318;
+}
+
+.oanix-replica-asset {
+  position: relative;
+  min-width: 0;
+}
+
+.oanix-replica-asset--image {
+  width: var(--replica-image-width, 100%);
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 20px;
+  background: transparent;
+  box-shadow: none;
+  transition: width .18s ease;
+}
+
+.oanix-replica-asset--image.align-left { justify-self: start; }
+.oanix-replica-asset--image.align-center { justify-self: center; }
+.oanix-replica-asset--image.align-right { justify-self: end; }
+
+.oanix-replica-asset__image-stage {
+  display: grid;
+  place-items: center;
+  min-height: 180px;
+  max-height: 620px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--replica-border) 74%, transparent);
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--replica-ink) 4%, transparent);
+}
+
+.oanix-replica-asset--image.is-unlocked .oanix-replica-asset__image-stage {
+  outline: 1px solid color-mix(in srgb, var(--replica-accent) 70%, transparent);
+  outline-offset: 3px;
+}
+
+.oanix-replica-asset__image-stage img {
+  display: block;
+  width: 100%;
+  max-height: 620px;
+  object-fit: contain;
+}
+
+.oanix-replica-asset__placeholder {
+  display: grid;
+  place-items: center;
+  gap: 10px;
+  min-height: 180px;
+  color: var(--replica-muted);
+  font-size: 13px;
+}
+
+.oanix-replica-asset__placeholder svg,
+.oanix-replica-asset__file-icon svg {
+  width: 28px;
+  height: 28px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.oanix-replica-asset__caption {
+  display: flex;
+  align-items: baseline;
+  gap: 4px 10px;
+  flex-wrap: wrap;
+  padding: 8px 3px 0;
+  color: var(--replica-muted);
+}
+
+.oanix-replica-asset__caption strong {
+  max-width: 72%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--replica-ink);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.oanix-replica-asset__caption em {
+  flex-basis: 100%;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  font-style: normal;
+  line-height: 1.45;
+}
+
+.oanix-replica-asset__caption span {
+  margin-left: auto;
+  flex: none;
+  font-size: 11px;
+}
+
+.oanix-replica-asset--image.align-left .oanix-replica-asset__caption { text-align: left; }
+.oanix-replica-asset--image.align-center .oanix-replica-asset__caption { text-align: center; }
+.oanix-replica-asset--image.align-right .oanix-replica-asset__caption { text-align: right; }
+
+.oanix-replica-asset__more {
+  position: absolute;
+  z-index: 8;
+  top: 12px;
+  right: 12px;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(255,255,255,.22);
+  border-radius: 13px;
+  background: rgba(20, 23, 29, .72);
+  color: #fff;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 26px rgba(0,0,0,.2);
+}
+
+.oanix-replica-asset__more:hover,
+.oanix-replica-asset__more:focus-visible,
+.oanix-replica-asset__more[aria-expanded="true"] {
+  background: rgba(20, 23, 29, .9);
+}
+
+.oanix-replica-asset__more svg {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+}
+
+.oanix-replica-asset__menu {
+  position: absolute;
+  z-index: 40;
+  top: 58px;
+  right: 8px;
+  display: grid;
+  width: min(276px, calc(100vw - 40px));
+  max-height: min(520px, calc(100dvh - 150px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 7px;
+  border: 1px solid var(--replica-border);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--replica-card) 96%, transparent);
+  color: var(--replica-ink);
+  box-shadow: 0 20px 52px rgba(0,0,0,.28);
+  backdrop-filter: blur(18px);
+}
+
+.oanix-replica-asset__menu button {
+  width: 100%;
+  min-height: 40px;
+  padding: 9px 11px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--replica-ink);
+  text-align: left;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.25;
+}
+
+.oanix-replica-asset__menu button:hover,
+.oanix-replica-asset__menu button:focus-visible,
+.oanix-replica-asset__menu button[aria-checked="true"],
+.oanix-replica-asset__menu button[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--replica-accent) 10%, transparent);
+}
+
+.oanix-replica-asset__menu button:disabled {
+  opacity: .42;
+  cursor: default;
+}
+
+.oanix-replica-asset__menu button.is-danger {
+  margin-top: 4px;
+  border-top: 1px solid var(--replica-border);
+  border-radius: 0 0 10px 10px;
+  color: #d13d34;
+}
+
+.oanix-replica-asset__size-control {
+  display: grid;
+  gap: 7px;
+  margin: 3px 4px;
+  padding: 10px 7px;
+  border-top: 1px solid var(--replica-border);
+  border-bottom: 1px solid var(--replica-border);
+  color: var(--replica-muted);
+  font-size: 11px;
+}
+
+.oanix-replica-asset__size-control input {
+  width: 100%;
+  accent-color: var(--replica-accent);
+}
+
+.oanix-replica-asset__align {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+  padding: 4px;
+}
+
+.oanix-replica-asset__align button {
+  min-height: 34px;
+  padding: 7px 5px;
+  text-align: center;
+  font-size: 11px;
+}
+
+.oanix-replica-asset__align button.is-active {
+  background: color-mix(in srgb, var(--replica-accent) 14%, transparent);
+  color: var(--replica-accent);
+}
+
+.oanix-replica-asset--file {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--replica-border) 76%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--replica-card) 44%, transparent);
+}
+
+.oanix-replica-asset__file-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--replica-accent) 10%, transparent);
+  color: var(--replica-accent);
+}
+
+.oanix-replica-asset__file-copy {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.oanix-replica-asset__file-copy strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.oanix-replica-asset__file-copy small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--replica-muted);
+  font-size: 11px;
+}
+
+.oanix-replica-asset--file > button {
+  padding: 7px 9px;
+  border: 1px solid var(--replica-border);
+  border-radius: 9px;
+  background: var(--replica-card);
+  color: var(--replica-ink);
+  font: inherit;
+  font-size: 11px;
+}
+
+.oanix-replica-asset--file > button.is-danger { color: #b42318; }
+
+.oanix-replica-asset__hidden-input {
+  position: fixed !important;
+  left: -10000px !important;
+  width: 1px !important;
+  height: 1px !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+@media (max-width: 700px) {
+  .oanix-replica-assets {
+    gap: 14px;
+    margin-top: 14px;
+  }
+
+  .oanix-replica-asset--image {
+    width: min(100%, var(--replica-image-width, 100%));
+  }
+
+  .oanix-replica-asset__image-stage,
+  .oanix-replica-asset__image-stage img {
+    max-height: 500px;
+  }
+
+  .oanix-replica-asset__image-stage {
+    min-height: 140px;
+    border-radius: 17px;
+  }
+
+  .oanix-replica-asset__more {
+    top: 10px;
+    right: 10px;
+    width: 38px;
+    height: 38px;
+  }
+
+  .oanix-replica-asset__menu {
+    position: fixed;
+    top: auto;
+    right: 12px;
+    bottom: calc(12px + env(safe-area-inset-bottom));
+    left: 12px;
+    width: auto;
+    max-height: min(66dvh, 560px);
+    border-radius: 18px;
+    padding: 8px;
+  }
+
+  .oanix-replica-asset__menu button {
+    min-height: 44px;
+    font-size: 14px;
+  }
+
+  .oanix-replica-asset__align button {
+    min-height: 38px;
+    font-size: 12px;
+  }
+
+  .oanix-replica-asset__caption {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 2px;
+    padding-top: 7px;
+  }
+
+  .oanix-replica-asset__caption strong {
+    max-width: 100%;
+  }
+
+  .oanix-replica-asset__caption span {
+    margin-left: 0;
+  }
+
+  .oanix-replica-asset--file {
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 9px 11px;
+  }
+
+  .oanix-replica-asset--file > button { grid-row: 2; }
+  .oanix-replica-asset--file > button:first-of-type { grid-column: 1; }
+  .oanix-replica-asset--file > button:last-of-type { grid-column: 2; }
+}

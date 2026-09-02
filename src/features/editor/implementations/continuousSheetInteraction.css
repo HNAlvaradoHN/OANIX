@@ -1,0 +1,251 @@
+.oanix-continuous-sheet [data-ui-block],
+.oanix-continuous-sheet__rail,
+.oanix-continuous-sheet__rail * {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.oanix-continuous-sheet__editor-block {
+  position: relative;
+  border: 0;
+  outline: 0;
+  background: transparent;
+}
+
+.oanix-continuous-sheet__editor-block::before {
+  content: "";
+  position: absolute;
+  inset: -6px -8px;
+  z-index: -1;
+  border-radius: 16px;
+  background: linear-gradient(90deg, rgba(123,140,255,.035), transparent 58%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .16s ease;
+}
+
+.oanix-continuous-sheet__editor-block:focus-within::before { opacity: .65; }
+
+.oanix-continuous-sheet__header-actions {
+  position: relative;
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.oanix-continuous-sheet__more {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid rgba(179,199,235,.12);
+  border-radius: 12px;
+  color: #dbe4f6;
+  background: rgba(255,255,255,.035);
+}
+
+.oanix-continuous-sheet__more svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+}
+
+.oanix-continuous-sheet__more-menu {
+  position: absolute;
+  top: 46px;
+  right: 0;
+  z-index: 70;
+  min-width: 180px;
+  padding: 7px;
+  border: 1px solid rgba(179,199,235,.13);
+  border-radius: 16px;
+  background: rgba(12,16,24,.96);
+  box-shadow: 0 22px 60px rgba(0,0,0,.36);
+  backdrop-filter: blur(24px) saturate(145%);
+}
+
+.oanix-continuous-sheet__more-menu button {
+  width: 100%;
+  min-height: 38px;
+  padding: 0 11px;
+  border: 0;
+  border-radius: 10px;
+  color: #cfd8eb;
+  background: transparent;
+  text-align: left;
+}
+
+.oanix-continuous-sheet__more-menu button:hover { background: rgba(123,140,255,.09); }
+
+.oanix-continuous-sheet__meta-row {
+  display: flex;
+  min-height: 28px;
+  align-items: center;
+  margin-top: 12px;
+}
+
+.oanix-continuous-sheet__meta-placeholder {
+  color: rgba(139,151,171,.48);
+  font-size: 11px;
+  letter-spacing: .015em;
+}
+
+.oanix-continuous-sheet__rail {
+  position: fixed;
+  top: 50%;
+  right: 0;
+  z-index: 65;
+  display: flex;
+  align-items: center;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.oanix-continuous-sheet__rail-toggle {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 58px;
+  margin-right: 0;
+  padding: 0;
+  border: 1px solid rgba(156,177,218,.18);
+  border-right: 0;
+  border-radius: 16px 0 0 16px;
+  color: #b9c6e5;
+  background: rgba(12,17,26,.82);
+  box-shadow: -10px 16px 42px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.05);
+  backdrop-filter: blur(22px) saturate(145%);
+  pointer-events: auto;
+  touch-action: manipulation;
+}
+
+.oanix-continuous-sheet__rail-toggle svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.oanix-continuous-sheet__rail-panel {
+  width: min(284px, calc(100vw - 54px));
+  max-height: min(620px, calc(100dvh - 120px));
+  margin-right: -284px;
+  overflow: auto;
+  padding: 12px;
+  border: 1px solid rgba(167,188,229,.15);
+  border-right: 0;
+  border-radius: 22px 0 0 22px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.035), transparent 90px),
+    rgba(11,15,23,.96);
+  box-shadow: -22px 26px 80px rgba(0,0,0,.38);
+  backdrop-filter: blur(28px) saturate(150%);
+  opacity: 0;
+  transform: translateX(16px) scale(.985);
+  transform-origin: right center;
+  transition: margin-right .22s cubic-bezier(.2,.8,.2,1), opacity .16s ease, transform .22s cubic-bezier(.2,.8,.2,1);
+  pointer-events: none;
+}
+
+.oanix-continuous-sheet__rail.is-open .oanix-continuous-sheet__rail-panel {
+  margin-right: 0;
+  opacity: 1;
+  transform: translateX(0) scale(1);
+  pointer-events: auto;
+}
+
+.oanix-continuous-sheet__rail-section + .oanix-continuous-sheet__rail-section {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(166,188,230,.08);
+}
+
+.oanix-continuous-sheet__rail-label {
+  display: block;
+  margin: 0 4px 8px;
+  color: #717d92;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.oanix-continuous-sheet__rail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.oanix-continuous-sheet__rail-grid button,
+.oanix-continuous-sheet__rail-designs button {
+  border: 1px solid rgba(158,179,218,.10);
+  color: #cbd5e8;
+  background: rgba(255,255,255,.025);
+  transition: background .15s ease, border-color .15s ease, transform .15s ease;
+  touch-action: manipulation;
+}
+
+.oanix-continuous-sheet__rail-grid button {
+  min-height: 58px;
+  padding: 8px 9px;
+  border-radius: 14px;
+  text-align: left;
+}
+
+.oanix-continuous-sheet__rail-grid button b {
+  display: block;
+  margin-bottom: 5px;
+  color: #9eacff;
+  font-size: 16px;
+  font-weight: 650;
+}
+
+.oanix-continuous-sheet__rail-grid button span { font-size: 11px; }
+
+.oanix-continuous-sheet__rail-grid button:hover,
+.oanix-continuous-sheet__rail-designs button:hover {
+  border-color: rgba(130,150,255,.26);
+  background: rgba(123,140,255,.075);
+}
+
+.oanix-continuous-sheet__rail-grid button:active,
+.oanix-continuous-sheet__rail-designs button:active { transform: scale(.97); }
+
+.oanix-continuous-sheet__rail-designs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.oanix-continuous-sheet__rail-designs button {
+  min-height: 36px;
+  border-radius: 11px;
+  font-size: 11px;
+}
+
+.oanix-continuous-sheet__rail-designs button.is-active {
+  border-color: rgba(136,155,255,.32);
+  color: #edf1ff;
+  background: rgba(123,140,255,.12);
+}
+
+@media (max-width: 640px) {
+  .oanix-continuous-sheet__header { grid-template-columns: 42px 1fr auto; gap: 8px; }
+  .oanix-continuous-sheet__identity span:last-child { display: none; }
+  .oanix-continuous-sheet__save { display: none; }
+  .oanix-continuous-sheet__meta-placeholder { font-size: 10px; }
+  .oanix-continuous-sheet__rail-toggle { width: 31px; height: 54px; border-radius: 14px 0 0 14px; }
+  .oanix-continuous-sheet__rail-panel { width: min(268px, calc(100vw - 46px)); margin-right: -268px; padding: 10px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .oanix-continuous-sheet__rail-panel,
+  .oanix-continuous-sheet__editor-block::before { transition: none; }
+}
