@@ -194,7 +194,21 @@
 .oanix-replica-v16__float-button--primary:hover,
 .oanix-replica-v16__float-button--primary:focus-visible { background: var(--rv-accent-deep); color: #fff; }
 
-.oanix-replica-v16__floating-menu { position: absolute; top: 54px; right: 0; width: min(286px, calc(100vw - 32px)); padding: 8px; border: 1px solid var(--rv-line); border-radius: 13px; background: var(--rv-card); box-shadow: var(--rv-shadow); }
+.oanix-replica-v16__floating-menu {
+  position: absolute;
+  top: 54px;
+  right: 0;
+  width: min(286px, calc(100vw - 32px));
+  max-height: calc(100vh - 150px);
+  max-height: calc(100dvh - 150px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 8px;
+  border: 1px solid var(--rv-line);
+  border-radius: 13px;
+  background: var(--rv-card);
+  box-shadow: var(--rv-shadow);
+}
 .oanix-replica-v16__floating-menu button { display: flex; width: 100%; flex-direction: column; align-items: flex-start; gap: 2px; padding: 10px 12px; border-radius: 9px; background: transparent; text-align: left; }
 .oanix-replica-v16__floating-menu button:hover,
 .oanix-replica-v16__floating-menu button:focus-visible,
