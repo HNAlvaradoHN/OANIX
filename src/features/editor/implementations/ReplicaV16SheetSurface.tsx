@@ -341,6 +341,8 @@ export function ReplicaV16SheetSurface({
             aria-label="Título de la nota"
             readOnly={editingDisabled}
             onInput={markActivity}
+            onCompositionStart={handleCompositionStart}
+            onCompositionEnd={handleCompositionEnd}
           />
 
           <div className="oanix-replica-v16__tagline" aria-label="Etiquetas de la nota">
