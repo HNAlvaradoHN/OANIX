@@ -39,10 +39,9 @@ En esta ejecución ya estuvieron disponibles los archivos exactos del prototipo 
 
 ## Validación registrada
 
-- El lote anterior del PR draft #589 pasó **OANIX CI** completo, incluidas pruebas, build y auditoría del bundle offline.
-- **OANIX Android** también pasó en el lote anterior: build web, Capacitor sync y generación automatizada de APK/AAB completaron correctamente.
-- **Qwen Independent PR Review** terminó en success en el lote anterior.
-- El lote que introduce el adapter genérico de adjuntos y el default branch-local de revisión está ejecutando nuevamente CI/Android; no se considera validado hasta que esos checks terminen en verde.
+- El lote actual del PR draft #589 pasó **OANIX CI** completo después de corregir un guard de prueba demasiado amplio; pruebas, build y auditoría del bundle offline quedaron verdes.
+- **OANIX Android** pasó para el mismo head: build web, Capacitor sync, generación de debug APK + release AAB y carga de ambos artifacts completaron correctamente.
+- **Qwen Independent PR Review** terminó en success para el mismo head.
 - La validación física en un dispositivo Android sigue pendiente; un build automatizado no equivale a prueba física.
 
 ## Pendiente inmediato
