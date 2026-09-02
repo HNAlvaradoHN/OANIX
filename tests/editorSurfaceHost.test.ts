@@ -70,7 +70,8 @@ test('attachment boundary exposes opaque metadata and lazy binary callbacks only
   assert.match(contract, /onRequestAttachmentStore\?: \(file: File\) => Promise<EditorSurfaceAttachment>/)
   assert.match(contract, /loadAttachmentFile\?: \(attachmentId: string\) => Promise<File \| null>/)
   assert.match(contract, /onRequestAttachmentRemove\?: \(attachmentId: string\) => Promise<boolean>/)
-  assert.doesNotMatch(contract, /AttachmentMetadata|EncryptedBlob|DriveStorage|provider/)
+  assert.doesNotMatch(contract, /\bAttachmentMetadata\b|\bEncryptedBlob\b|\bDriveStorage\b/)
+  assert.doesNotMatch(contract, /^\s*import .*from ['"][^'"]*attachments[^'"]*['"]/im)
 })
 
 test('the host gates rich and attachment callbacks through selected capabilities', () => {
