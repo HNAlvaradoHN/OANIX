@@ -135,7 +135,6 @@ export function ContinuousSheetSurface({
 
   function handleCompositionEnd() {
     composingRef.current = false
-    rememberBodyCursor()
     markActivity()
   }
 
@@ -147,6 +146,11 @@ export function ContinuousSheetSurface({
       position: body.selectionStart ?? body.value.length,
     }
     setActiveInsertionIndex(0)
+  }
+
+  function handleBodyCompositionEnd() {
+    handleCompositionEnd()
+    rememberBodyCursor()
   }
 
   function handleFlowInsertionIndex(index: number) {
@@ -293,7 +297,7 @@ export function ContinuousSheetSurface({
           onSelect={rememberBodyCursor}
           onInput={() => { rememberBodyCursor(); markActivity() }}
           onCompositionStart={handleCompositionStart}
-          onCompositionEnd={handleCompositionEnd}
+          onCompositionEnd={handleBodyCompositionEnd}
         />
 
         <div className="oanix-continuous-sheet__flow">
