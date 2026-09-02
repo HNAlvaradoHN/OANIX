@@ -241,12 +241,16 @@ export function QwenRichBlocks({
     return encodeSeparatorBlock({ id: newSeparatorId(), kind: SEPARATOR_BLOCK_KIND })
   }
 
-  function createTextBlock(text: string): EditorSurfaceBlock {
-    return encodeTextBlock({
-      id: newTextBlockId(),
-      kind: TEXT_BLOCK_KIND,
-      text: text.slice(0, MAX_TEXT_BLOCK_TEXT_LENGTH),
-    })
+  function createTextBlocks(text: string): EditorSurfaceBlock[] {
+    const chunks: EditorSurfaceBlock[] = []
+    for (let offset = 0; offset < text.length; offset += MAX_TEXT_BLOCK_TEXT_LENGTH) {
+      chunks.push(encodeTextBlock({
+        id: newTextBlockId(),
+        kind: TEXT_BLOCK_KIND,
+        text: text.slice(offset, offset + MAX_TEXT_BLOCK_TEXT_LENGTH),
+      }))
+    }
+    return chunks
   }
 
   function insertPreparedBlock(nextBlock: EditorSurfaceBlock, index: number, kind: QwenInsertBlockKind) {
@@ -278,7 +282,8 @@ export function QwenRichBlocks({
   function insertWritingText(index: number, text: string) {
     const value = text.slice(0, MAX_TEXT_BLOCK_TEXT_LENGTH)
     if (!value) return
-    insertPreparedBlock(createTextBlock(value), index, 'text')
+    const [nextBlock] = createTextBlocks(value)
+    if (nextBlock) insertPreparedBlock(nextBlock, index, 'text')
   }
 
   function insertAttachment(kind: 'image' | 'file', index: number) {
@@ -297,13 +302,14 @@ export function QwenRichBlocks({
       return true
     }
 
-    const beforeBlock = split.before ? createTextBlock(split.before) : null
-    const afterBlock = split.after ? createTextBlock(split.after) : null
+    const beforeBlocks = createTextBlocks(split.before)
+    const afterBlocks = createTextBlocks(split.after)
     const targetBlock = attachmentKind ? null : createBlock(request.kind as QwenInsertBlockKind)
-    const inserted: EditorSurfaceBlock[] = []
-    if (beforeBlock) inserted.push(beforeBlock)
-    if (targetBlock) inserted.push(targetBlock)
-    if (afterBlock) inserted.push(afterBlock)
+    const inserted: EditorSurfaceBlock[] = [
+      ...beforeBlocks,
+      ...(targetBlock ? [targetBlock] : []),
+      ...afterBlocks,
+    ]
 
     const rawIndex = replicaFlowIndexToOrderIndex(blocks, requestedIndex)
     try {
@@ -323,7 +329,7 @@ export function QwenRichBlocks({
 
       onExternalInsertPrepared?.(request.token)
 
-      const targetIndex = requestedIndex + (beforeBlock ? 1 : 0)
+      const targetIndex = requestedIndex + beforeBlocks.length
       if (attachmentKind) {
         attachmentFlow?.requestInsert(request.kind, targetIndex)
         onInsertionIndexChange?.(targetIndex + 1)
