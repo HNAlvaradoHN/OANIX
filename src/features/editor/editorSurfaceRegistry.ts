@@ -55,7 +55,13 @@ export const editorSurfaceDefinitions = {
 } satisfies Record<string, EditorSurfaceDefinition>
 
 export type EditorSurfaceId = keyof typeof editorSurfaceDefinitions
-export const DEFAULT_EDITOR_SURFACE_ID: EditorSurfaceId = 'qwen-sanitized-v1'
+
+/**
+ * Branch-local review switch. This experimental branch opens the replica directly
+ * so its APK/preview can be evaluated without modifying Home. `main` retains its own
+ * stable default; this branch is never merged while the replica is under review.
+ */
+export const DEFAULT_EDITOR_SURFACE_ID: EditorSurfaceId = 'replica-v16'
 
 export function resolveEditorSurface(id?: string): EditorSurfaceDefinition {
   if (id && id in editorSurfaceDefinitions) {
@@ -64,6 +70,6 @@ export function resolveEditorSurface(id?: string): EditorSurfaceDefinition {
   return editorSurfaceDefinitions[DEFAULT_EDITOR_SURFACE_ID]
 }
 
-/** Default composition remains unchanged unless Home explicitly selects another surface. */
+/** Default composition for the current branch only. */
 export const activeEditorSurface: EditorSurfaceDefinition =
   editorSurfaceDefinitions[DEFAULT_EDITOR_SURFACE_ID]
