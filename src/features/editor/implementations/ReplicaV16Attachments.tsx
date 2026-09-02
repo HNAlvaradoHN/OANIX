@@ -68,6 +68,7 @@ function ImageCard({ item, disabled, active, loadAttachmentFile, onToggleMenu, o
   const [loadRequested, setLoadRequested] = useState(false)
 
   useEffect(() => {
+    if (item.remote) return
     const host = hostRef.current
     if (!host || loadRequested) return
     if (!('IntersectionObserver' in window)) {
@@ -81,10 +82,10 @@ function ImageCard({ item, disabled, active, loadAttachmentFile, onToggleMenu, o
     }, { rootMargin: '320px 0px' })
     observer.observe(host)
     return () => observer.disconnect()
-  }, [loadRequested])
+  }, [item.remote, loadRequested])
 
   useEffect(() => {
-    if (!loadRequested || url || loadStartedRef.current) return
+    if (item.remote || !loadRequested || url || loadStartedRef.current) return
     let activeEffect = true
     loadStartedRef.current = true
     setLoading(true)
@@ -101,7 +102,7 @@ function ImageCard({ item, disabled, active, loadAttachmentFile, onToggleMenu, o
       if (activeEffect) setLoading(false)
     })
     return () => { activeEffect = false }
-  }, [item.id, loadAttachmentFile, loadRequested, onError, url])
+  }, [item.id, item.remote, loadAttachmentFile, loadRequested, onError, url])
 
   useEffect(() => () => {
     if (url) URL.revokeObjectURL(url)
@@ -110,13 +111,13 @@ function ImageCard({ item, disabled, active, loadAttachmentFile, onToggleMenu, o
   return <article ref={hostRef} className="oanix-replica-asset oanix-replica-asset--image" data-oanix-attachment-id={item.id}>
     <button type="button" className="oanix-replica-asset__more" aria-label={`Opciones de ${item.name}`} aria-expanded={active} disabled={disabled} onClick={onToggleMenu}><MoreIcon /></button>
     <div className="oanix-replica-asset__image-stage">
-      {url ? <img src={url} alt={item.name} loading="lazy" /> : <div className="oanix-replica-asset__placeholder"><ImageIcon /><span>{loading ? 'Descifrando imagen…' : 'Imagen cifrada'}</span></div>}
+      {url ? <img src={url} alt={item.name} loading="lazy" /> : <div className="oanix-replica-asset__placeholder"><ImageIcon /><span>{item.remote ? 'Imagen remota cifrada' : loading ? 'Descifrando imagen…' : 'Imagen cifrada'}</span></div>}
     </div>
     <div className="oanix-replica-asset__caption"><strong>{item.name}</strong><span>{humanBytes(item.byteLength)}{item.remote ? ' · remoto' : ''}</span></div>
     {active && <div className="oanix-replica-asset__menu" role="menu" aria-label={`Opciones de imagen ${item.name}`}>
       <button type="button" role="menuitem" disabled={!url} onClick={() => { if (url) window.open(url, '_blank', 'noopener,noreferrer') }}>Abrir</button>
       <button type="button" role="menuitem" disabled={disabled} onClick={() => replaceRef.current?.click()}>Reemplazar</button>
-      <button type="button" role="menuitem" onClick={() => window.alert(`${item.name}\n${item.mimeType || 'tipo desconocido'}\n${humanBytes(item.byteLength)}${item.remote ? '\nAdjunto remoto' : '\nAdjunto local cifrado'}`)}>Información</button>
+      <button type="button" role="menuitem" onClick={() => window.alert(`${item.name}\n${item.mimeType || 'tipo desconocido'}\n${humanBytes(item.byteLength)}${item.remote ? '\nAdjunto remoto cifrado' : '\nAdjunto local cifrado'}`)}>Información</button>
       <button type="button" role="menuitem" className="is-danger" disabled={disabled} onClick={() => void onRemove(item)}>Eliminar</button>
     </div>}
     <input ref={replaceRef} className="oanix-replica-asset__hidden-input" type="file" accept="image/*" tabIndex={-1} onChange={(event) => {
@@ -243,7 +244,7 @@ export function ReplicaV16Attachments({
   }
 
   async function openFile(item: EditorSurfaceAttachment) {
-    if (!loadAttachmentFile || busy) return
+    if (!loadAttachmentFile || busy || item.remote) return
     setBusy(true)
     setError('')
     try {
@@ -287,7 +288,7 @@ export function ReplicaV16Attachments({
     {files.map((item) => <article key={item.id} className="oanix-replica-asset oanix-replica-asset--file" data-oanix-attachment-id={item.id}>
       <span className="oanix-replica-asset__file-icon" aria-hidden="true"><FileIcon /></span>
       <span className="oanix-replica-asset__file-copy"><strong>{item.name}</strong><small>{item.mimeType || 'Archivo'} · {humanBytes(item.byteLength)}{item.remote ? ' · remoto' : ''}</small></span>
-      <button type="button" disabled={disabled || busy} onClick={() => void openFile(item)}>Abrir</button>
+      <button type="button" disabled={disabled || busy || item.remote} title={item.remote ? 'La recuperación por streaming se conectará en el siguiente bloque.' : undefined} onClick={() => void openFile(item)}>Abrir</button>
       <button type="button" className="is-danger" disabled={disabled || busy} onClick={() => void remove(item)}>Eliminar</button>
     </article>)}
 
