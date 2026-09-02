@@ -29,6 +29,27 @@ export interface EditorSurfaceHostProps extends EditorSurfaceProps {
   surfaceId?: EditorSurfaceId
 }
 
+function attachmentCallbacks(noteId: string) {
+  return {
+    loadAttachments: async () => {
+      const { createEditorAttachmentAdapter } = await import('./editorAttachmentAdapter')
+      return createEditorAttachmentAdapter(noteId).load()
+    },
+    onRequestAttachmentStore: async (file: File) => {
+      const { createEditorAttachmentAdapter } = await import('./editorAttachmentAdapter')
+      return createEditorAttachmentAdapter(noteId).store(file)
+    },
+    loadAttachmentFile: async (attachmentId: string) => {
+      const { createEditorAttachmentAdapter } = await import('./editorAttachmentAdapter')
+      return createEditorAttachmentAdapter(noteId).loadFile(attachmentId)
+    },
+    onRequestAttachmentRemove: async (attachmentId: string) => {
+      const { createEditorAttachmentAdapter } = await import('./editorAttachmentAdapter')
+      return createEditorAttachmentAdapter(noteId).remove(attachmentId)
+    },
+  }
+}
+
 /**
  * Stable host for a note editor surface.
  *
@@ -36,16 +57,31 @@ export interface EditorSurfaceHostProps extends EditorSurfaceProps {
  * registered in editorSurfaceRegistry and loaded only when mounted. Selecting the
  * experimental replica changes presentation only; storage, crypto, navigation and
  * note identity continue through the same EditorSurfaceProps contract.
+ *
+ * Attachment access is capability-gated and dynamically imported. A surface without
+ * attachment support never loads the attachment adapter or binary-storage path.
  */
 export function EditorSurface({ surfaceId, ...props }: EditorSurfaceHostProps) {
   const selectedSurface = resolveEditorSurface(surfaceId)
   const SelectedSurface = lazySurfaceFor(surfaceId)
-  const surfaceProps = selectedSurface.capabilities.richBlocks
+  const richProps = selectedSurface.capabilities.richBlocks
     ? props
     : {
         ...props,
         loadBlocks: undefined,
         onRequestBlockSave: undefined,
+      }
+  const surfaceProps: EditorSurfaceProps = selectedSurface.capabilities.attachments
+    ? {
+        ...richProps,
+        ...attachmentCallbacks(props.noteId),
+      }
+    : {
+        ...richProps,
+        loadAttachments: undefined,
+        onRequestAttachmentStore: undefined,
+        loadAttachmentFile: undefined,
+        onRequestAttachmentRemove: undefined,
       }
 
   return (
