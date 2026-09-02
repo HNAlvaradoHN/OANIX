@@ -36,18 +36,17 @@ En esta ejecución ya estuvieron disponibles los archivos exactos del prototipo 
 
 ## Validación registrada
 
-- El primer lote del PR draft #589 pasó OANIX CI.
-- El build web + Capacitor sync del primer lote finalizó correctamente.
-- La validación física Android sigue pendiente; un build automatizado no equivale a prueba física.
-- Los cambios nuevos de Entrada/Contacto/Separador requieren volver a pasar CI antes de considerarse validados.
+- El lote actual del PR draft #589 pasó **OANIX CI** completo, incluidas pruebas, build y auditoría del bundle offline.
+- **OANIX Android** también pasó: build web, Capacitor sync y generación automatizada de APK/AAB completaron correctamente.
+- **Qwen Independent PR Review** terminó en success.
+- La validación física en un dispositivo Android sigue pendiente; un build automatizado no equivale a prueba física.
 
 ## Pendiente inmediato
 
 1. Conectar una entrada visible y removible en Ajustes/Home para seleccionar `replica-v16`; el registro/host ya soportan la selección, pero Home todavía no la expone.
-2. Confirmar CI/build del lote nuevo de Entrada/Contacto/Separador y corregir cualquier gate real que falle.
-3. Añadir Entrada/Contacto/Separador también al menú global `+` de la réplica; hoy ya están disponibles en los puntos de inserción contextuales.
-4. Diseñar Imagen/Archivo contra referencias de assets OANIX antes de exponer picker; no persistir blobs/URLs efímeras.
-5. Reproducir menús de imagen aprobados, popup de código y formato de texto sin convertir el camino crítico de escritura en estado React por tecla.
-6. Someter la superficie a pruebas de notas largas, scroll, composición IME/teclado móvil, PC/móvil y Día/Noche.
+2. Añadir Entrada/Contacto/Separador también al menú global `+` de la réplica; hoy ya están disponibles en los puntos de inserción contextuales.
+3. Diseñar Imagen/Archivo contra referencias de assets OANIX antes de exponer picker; no persistir blobs/URLs efímeras.
+4. Reproducir menús de imagen aprobados, popup de código y formato de texto sin convertir el camino crítico de escritura en estado React por tecla.
+5. Someter la superficie a pruebas de notas largas, scroll, composición IME/teclado móvil, PC/móvil y Día/Noche.
 
 No promover esta rama a `main` antes de la revisión visual del usuario y de tener los gates reales verdes.
