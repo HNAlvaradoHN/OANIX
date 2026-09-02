@@ -298,10 +298,6 @@ export function ContinuousSheetSurface({
           />
         </section>
 
-        <div className="oanix-continuous-sheet__meta-row" data-ui-block="metadata" aria-label="Metadatos de la nota">
-          <span className="oanix-continuous-sheet__meta-placeholder">Etiquetas se conectarán al almacenamiento real de OANIX</span>
-        </div>
-
         <div className="oanix-continuous-sheet__rule" />
 
         <section className="oanix-continuous-sheet__editor-block oanix-continuous-sheet__editor-block--body" data-editor-block="body">
