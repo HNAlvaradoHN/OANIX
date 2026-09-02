@@ -1,4 +1,4 @@
-import { lazy, Suspense, type ComponentType, type LazyExoticComponent } from 'react'
+import { lazy, Suspense, useMemo, type ComponentType, type LazyExoticComponent } from 'react'
 import type {
   EditorSurfaceCapabilities,
   EditorSurfaceProps,
@@ -64,6 +64,10 @@ function attachmentCallbacks(noteId: string) {
 export function EditorSurface({ surfaceId, ...props }: EditorSurfaceHostProps) {
   const selectedSurface = resolveEditorSurface(surfaceId)
   const SelectedSurface = lazySurfaceFor(surfaceId)
+  const memoizedAttachmentCallbacks = useMemo(
+    () => attachmentCallbacks(props.noteId),
+    [props.noteId],
+  )
   const richProps = selectedSurface.capabilities.richBlocks
     ? props
     : {
@@ -74,7 +78,7 @@ export function EditorSurface({ surfaceId, ...props }: EditorSurfaceHostProps) {
   const surfaceProps: EditorSurfaceProps = selectedSurface.capabilities.attachments
     ? {
         ...richProps,
-        ...attachmentCallbacks(props.noteId),
+        ...memoizedAttachmentCallbacks,
       }
     : {
         ...richProps,
