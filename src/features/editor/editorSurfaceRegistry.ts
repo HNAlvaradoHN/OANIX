@@ -15,10 +15,8 @@ export interface EditorSurfaceDefinition {
 /**
  * Stable surface catalog.
  *
- * Keeping every concrete implementation here lets Home select an editor without
- * importing a sheet. The experimental replica can therefore be removed by deleting
- * one catalog entry and its implementation files; persistence, encryption, Home and
- * navigation remain unchanged.
+ * Experimental surfaces remain isolated here so they can be removed without
+ * changing persistence, encryption, Home or navigation.
  */
 export const editorSurfaceDefinitions = {
   'qwen-sanitized-v1': {
@@ -36,15 +34,15 @@ export const editorSurfaceDefinitions = {
       attachments: false,
     },
   },
-  'replica-v16': {
-    id: 'replica-v16',
-    label: 'Hoja réplica V16',
+  'continuous-sheet-v1': {
+    id: 'continuous-sheet-v1',
+    label: 'Hoja continua',
     experimental: true,
     load: async () => {
-      const { ReplicaV16SheetSurface } = await import(
-        './implementations/ReplicaV16SheetSurface'
+      const { ContinuousSheetSurface } = await import(
+        './implementations/ContinuousSheetSurface'
       )
-      return { default: ReplicaV16SheetSurface }
+      return { default: ContinuousSheetSurface }
     },
     capabilities: {
       plainText: true,
@@ -56,12 +54,8 @@ export const editorSurfaceDefinitions = {
 
 export type EditorSurfaceId = keyof typeof editorSurfaceDefinitions
 
-/**
- * Branch-local review switch. This experimental branch opens the replica directly
- * so its APK/preview can be evaluated without modifying Home. `main` retains its own
- * stable default; this branch is never merged while the replica is under review.
- */
-export const DEFAULT_EDITOR_SURFACE_ID: EditorSurfaceId = 'replica-v16'
+/** Branch-local review switch. `main` remains untouched. */
+export const DEFAULT_EDITOR_SURFACE_ID: EditorSurfaceId = 'continuous-sheet-v1'
 
 export function resolveEditorSurface(id?: string): EditorSurfaceDefinition {
   if (id && id in editorSurfaceDefinitions) {
@@ -70,6 +64,5 @@ export function resolveEditorSurface(id?: string): EditorSurfaceDefinition {
   return editorSurfaceDefinitions[DEFAULT_EDITOR_SURFACE_ID]
 }
 
-/** Default composition for the current branch only. */
 export const activeEditorSurface: EditorSurfaceDefinition =
   editorSurfaceDefinitions[DEFAULT_EDITOR_SURFACE_ID]
