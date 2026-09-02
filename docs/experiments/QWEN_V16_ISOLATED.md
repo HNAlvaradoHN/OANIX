@@ -44,6 +44,8 @@ En esta ejecución ya estuvieron disponibles los archivos exactos del prototipo 
 - Eliminar una imagen elimina también su bloque de presentación asociado. Los cambios de presentación participan en el mismo `EditorBlockSession`, autosave y cierre seguro del resto de bloques.
 - Los archivos locales muestran metadata sin leer bytes y solo se materializan al pulsar Abrir/descargar.
 - Los adjuntos grandes remotos se muestran como metadata, pero su acción Abrir permanece deshabilitada hasta exponer una frontera genérica de recuperación por streaming. `loadAttachmentFile` no se fuerza a construir un `File` gigante en RAM.
+- Se añadió `replicaAttachmentFlowCodec.ts`: un ancla durable y mínima (`attachmentId` + `image|file`) que permitirá intercalar un asset cifrado en el mismo orden de `EditorBlockSession` que Texto/Entrada/Checklist/etc. El bloque no contiene bytes, URL, base64, proveedor ni metadata de storage; el binario sigue perteneciendo exclusivamente al subsistema de adjuntos.
+- El ancla de flujo está separada de `replicaAttachmentPresentationCodec.ts`: orden/identidad y presentación visual no se mezclan, por lo que mover un adjunto no obliga a reescribir ni el blob ni su configuración de imagen.
 - El editor estable no fue eliminado. No se modificó seguridad, vault, crypto, storage ni sync; solo se reutilizaron contratos/servicios existentes desde un adapter de aplicación.
 
 ## Validación registrada
@@ -51,12 +53,13 @@ En esta ejecución ya estuvieron disponibles los archivos exactos del prototipo 
 - El lote previo a la UI de adjuntos pasó **OANIX CI**, **OANIX Android** y **Qwen Independent PR Review**.
 - Para la UI Imagen/Archivo se añadieron guards específicos que comprueban la frontera genérica, carga lazy, ciclo de vida de `objectURL`, ausencia de data URLs/base64 y que el menú se active desde el control `⋯`, no desde la imagen.
 - El nuevo codec de presentación durable tiene cobertura de defaults, clamp de ancho, alineación segura, límites de descripción y rechazo de bloques malformados.
+- `replicaAttachmentFlowCodec.test.ts` exige que las anclas de flujo solo persistan identidad opaca + tipo, cubre imagen/archivo, limita IDs y rechaza datos malformados. Este fundamento no crea todavía anclas desde la UI para evitar mostrar estados parciales antes de conectar el renderer contextual.
 - La integración de controles durables añade guards para exigir que el `EditorBlockSession` se comparta con adjuntos, que la metadata se oculte del flujo normal y que los controles no llamen directamente a storage/cifrado. Los gates del head que contiene esta integración deben verificarse antes de marcarla validada.
 - La validación física en un dispositivo Android sigue pendiente; un build automatizado no equivale a prueba física.
 
 ## Pendiente inmediato
 
-1. Integrar Imagen/Archivo dentro del orden contextual de bloques. La conexión actual conserva ya su metadata durable, pero todavía presenta los adjuntos después del flujo rich en vez de intercalarlos entre Entrada/Texto/Checklist/etc.
+1. Conectar `replica-attachment-flow-v1` al renderer de `QwenRichBlocks` y a los selectores Imagen/Archivo, de modo que la selección del archivo se complete primero y solo entonces se inserte su ancla exactamente en el índice contextual solicitado. Para adjuntos existentes sin ancla, migrar de forma no destructiva al final del flujo sin reescribir el asset.
 2. Diseñar una callback genérica de recuperación/exportación por streaming para adjuntos grandes remotos, reutilizando `recoverLargeAttachmentFromDrive` sin materializar el archivo completo en memoria.
 3. Después de estabilizar la revisión branch-local, decidir si el selector visible vive en Ajustes/Home o si la réplica reemplaza la superficie vigente; no acoplar esa decisión a los datos de las notas.
 4. Reproducir popup de código y formato de texto sin convertir el camino crítico de escritura en estado React por tecla.
