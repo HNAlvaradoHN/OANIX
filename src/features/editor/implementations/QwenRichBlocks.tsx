@@ -15,6 +15,9 @@ import {
   type EditorCodeBlock,
 } from '../codeBlockCodec.ts'
 import {
+  REPLICA_ATTACHMENT_PRESENTATION_KIND,
+} from '../replicaAttachmentPresentationCodec.ts'
+import {
   CONTACT_BLOCK_KIND,
   ENTRY_BLOCK_KIND,
   MAX_CONTACT_DETAIL_LENGTH,
@@ -91,6 +94,8 @@ export function QwenRichBlocks({ session, disabled, onActivity, onCompositionSta
   const pendingFocusIdRef = useRef<string | null>(null)
   const consumedExternalInsertRef = useRef<number | null>(null)
   const flowRef = useRef<HTMLDivElement | null>(null)
+  const visibleBlocks = blocks.filter((block) => block.kind !== REPLICA_ATTACHMENT_PRESENTATION_KIND)
+  const presentationBlocks = blocks.filter((block) => block.kind === REPLICA_ATTACHMENT_PRESENTATION_KIND)
 
   useEffect(() => {
     let active = true
@@ -134,11 +139,12 @@ export function QwenRichBlocks({ session, disabled, onActivity, onCompositionSta
 
   function moveBlock(blockIndex: number, offset: -1 | 1) {
     const targetIndex = blockIndex + offset
-    if (targetIndex < 0 || targetIndex >= blocks.length) return
+    if (targetIndex < 0 || targetIndex >= visibleBlocks.length) return
 
-    const next = [...blocks]
-    const [moved] = next.splice(blockIndex, 1)
-    next.splice(targetIndex, 0, moved)
+    const nextVisible = [...visibleBlocks]
+    const [moved] = nextVisible.splice(blockIndex, 1)
+    nextVisible.splice(targetIndex, 0, moved)
+    const next = [...nextVisible, ...presentationBlocks]
     const nextOrder = next.map((block) => block.id)
 
     void session.reorder(nextOrder).then((changed) => {
@@ -161,14 +167,20 @@ export function QwenRichBlocks({ session, disabled, onActivity, onCompositionSta
 
   function insertBlock(kind: QwenInsertBlockKind, index: number) {
     setActiveInsertIndex(null)
-    const next = createBlock(kind)
+    const nextBlock = createBlock(kind)
+    const next = [
+      ...visibleBlocks.slice(0, index),
+      nextBlock,
+      ...visibleBlocks.slice(index),
+      ...presentationBlocks,
+    ]
 
-    if (kind !== 'separator') pendingFocusIdRef.current = next.id
-    setBlocks((current) => [...current.slice(0, index), next, ...current.slice(index)])
+    if (kind !== 'separator') pendingFocusIdRef.current = nextBlock.id
+    setBlocks(next)
     onActivity()
-    void session.insert(next, index).catch(() => {
-      if (pendingFocusIdRef.current === next.id) pendingFocusIdRef.current = null
-      setBlocks((current) => current.filter((block) => block.id !== next.id))
+    void session.insert(nextBlock, index).catch(() => {
+      if (pendingFocusIdRef.current === nextBlock.id) pendingFocusIdRef.current = null
+      setBlocks((current) => current.filter((block) => block.id !== nextBlock.id))
       setError(insertionFailureMessage(kind))
     })
   }
@@ -177,8 +189,8 @@ export function QwenRichBlocks({ session, disabled, onActivity, onCompositionSta
     if (!ready || disabled || !externalInsertRequest) return
     if (consumedExternalInsertRef.current === externalInsertRequest.token) return
     consumedExternalInsertRef.current = externalInsertRequest.token
-    insertBlock(externalInsertRequest.kind, blocks.length)
-  }, [externalInsertRequest, ready, disabled, blocks.length])
+    insertBlock(externalInsertRequest.kind, visibleBlocks.length)
+  }, [externalInsertRequest, ready, disabled, visibleBlocks.length])
 
   function renderText(block: EditorTextBlock) {
     return <article className="oanix-qwen-sheet__text-block" data-oanix-text-segment={block.id} data-oanix-block-id={block.id}>
@@ -249,7 +261,7 @@ export function QwenRichBlocks({ session, disabled, onActivity, onCompositionSta
     return <div className="oanix-qwen-sheet__block-shell" data-oanix-order-index={index}>
       <div className="oanix-qwen-sheet__block-order" role="group" aria-label={`Mover bloque ${index + 1}`}>
         <button type="button" disabled={disabled || index === 0} onClick={() => moveBlock(index, -1)} aria-label="Mover bloque arriba">↑</button>
-        <button type="button" disabled={disabled || index === blocks.length - 1} onClick={() => moveBlock(index, 1)} aria-label="Mover bloque abajo">↓</button>
+        <button type="button" disabled={disabled || index === visibleBlocks.length - 1} onClick={() => moveBlock(index, 1)} aria-label="Mover bloque abajo">↓</button>
       </div>
       {renderBlock(rawBlock)}
     </div>
@@ -276,7 +288,7 @@ export function QwenRichBlocks({ session, disabled, onActivity, onCompositionSta
     {error && <p className="oanix-qwen-sheet__blocks-error" role="alert">{error}</p>}
     {ready && <div ref={flowRef} className="oanix-qwen-sheet__rich-flow" data-oanix-rich-block-flow="ordered">
       {renderInsertPoint(0)}
-      {blocks.map((rawBlock, index) => <Fragment key={rawBlock.id}>{renderOrderedBlock(rawBlock, index)}{renderInsertPoint(index + 1)}</Fragment>)}
+      {visibleBlocks.map((rawBlock, index) => <Fragment key={rawBlock.id}>{renderOrderedBlock(rawBlock, index)}{renderInsertPoint(index + 1)}</Fragment>)}
     </div>}
   </section>
 }
