@@ -61,7 +61,7 @@ test('image presentation controls persist through the shared block session witho
   assert.doesNotMatch(attachments, /storeEncryptedAttachment|loadEncryptedAttachmentFile|encrypted_records_v2/)
 })
 
-test('attachment flow anchors render inline and hidden presentation metadata stays outside visual order', () => {
+test('attachment flow anchors render inline and hidden metadata stays outside visual order', () => {
   assert.match(attachments, /createReplicaAttachmentFlowRef/)
   assert.match(attachments, /encodeReplicaAttachmentFlowRef/)
   assert.match(attachments, /decodeReplicaAttachmentFlowRef/)
@@ -77,10 +77,26 @@ test('attachment flow anchors render inline and hidden presentation metadata sta
 
 test('existing attachments without anchors migrate by adding only lightweight flow references', () => {
   assert.match(attachments, /anchoredIds/)
-  assert.match(attachments, /if \(anchoredIds\.has\(item\.id\)\) continue/)
+  assert.match(attachments, /retiredIds/)
+  assert.match(attachments, /if \(anchoredIds\.has\(item\.id\) \|\| retiredIds\.has\(item\.id\)\) continue/)
   assert.match(attachments, /blockSession\.insert\(encoded, rawIndex\)/)
   assert.match(attachments, /createReplicaAttachmentFlowRef\(item\.id, isImage\(item\) \? 'image' : 'file'\)/)
   assert.doesNotMatch(attachments, /blob:|data:image|readAsArrayBuffer|arrayBuffer\(\)/)
+})
+
+test('failed cleanup after image replacement retires the old asset instead of resurrecting it', () => {
+  assert.match(attachments, /createReplicaAttachmentRetirement/)
+  assert.match(attachments, /encodeReplicaAttachmentRetirement/)
+  assert.match(attachments, /decodeReplicaAttachmentRetirement/)
+  assert.match(attachments, /await blockSession\.upsert\(encodeReplicaAttachmentRetirement\(retirement\)\)/)
+  assert.match(attachments, /setItems\(\(current\) => current\.map\(\(item\) => item\.id === oldItem\.id \? stored : item\)\)/)
+  assert.doesNotMatch(attachments, /setItems\(\(current\) => \[\.\.\.current, stored\]\)\n\s*setError\('La imagen nueva se guardó y quedó referenciada/)
+})
+
+test('attachment insertion and file actions stay disabled during initial migration', () => {
+  assert.match(attachments, /if \(disabled \|\| loading \|\| busy \|\| !enabled\) return/)
+  assert.match(attachments, /if \(!insertRequest \|\| disabled \|\| loading \|\| !enabled\) return/)
+  assert.match(attachments, /const contextBusy = loading \|\| busy/)
 })
 
 test('host memoizes attachment callbacks by note so typing does not reload metadata', () => {
