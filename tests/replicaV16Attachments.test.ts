@@ -11,6 +11,10 @@ const attachments = readFileSync(
   'src/features/editor/implementations/ReplicaV16Attachments.tsx',
   'utf8',
 )
+const richBlocks = readFileSync(
+  'src/features/editor/implementations/QwenRichBlocks.tsx',
+  'utf8',
+)
 
 test('replica exposes image and file insertion only through the generic attachment callbacks', () => {
   assert.match(replica, /ReplicaV16Attachments/)
@@ -20,6 +24,7 @@ test('replica exposes image and file insertion only through the generic attachme
   assert.match(replica, /onRequestAttachmentStore=\{onRequestAttachmentStore\}/)
   assert.match(replica, /loadAttachmentFile=\{loadAttachmentFile\}/)
   assert.match(replica, /onRequestAttachmentRemove=\{onRequestAttachmentRemove\}/)
+  assert.match(replica, /blockSession=\{blockSession\}/)
   assert.doesNotMatch(replica, /attachmentService|attachmentTypes|encryptedBlob|indexedDB|localStorage|sessionStorage/)
 })
 
@@ -41,6 +46,27 @@ test('image menu stays on the discreet corner control rather than the image itse
   assert.match(attachments, /Información/)
   assert.match(attachments, /Eliminar/)
   assert.doesNotMatch(attachments, /<img[^>]+onClick=/)
+})
+
+test('image presentation controls persist through the shared block session without touching binary storage', () => {
+  assert.match(attachments, /decodeReplicaAttachmentPresentation/)
+  assert.match(attachments, /encodeReplicaAttachmentPresentation/)
+  assert.match(attachments, /blockSession\.upsert/)
+  assert.match(attachments, /blockSession\.remove/)
+  assert.match(attachments, /Desbloquear tamaño/)
+  assert.match(attachments, /type="range"/)
+  assert.match(attachments, /alignment/)
+  assert.match(attachments, /Ocultar nombre/)
+  assert.match(attachments, /Editar descripción/)
+  assert.doesNotMatch(attachments, /storeEncryptedAttachment|loadEncryptedAttachmentFile|encrypted_records_v2/)
+})
+
+test('replica presentation records stay invisible to the normal rich block flow and survive content reorder', () => {
+  assert.match(richBlocks, /REPLICA_ATTACHMENT_PRESENTATION_KIND/)
+  assert.match(richBlocks, /visibleBlocks = blocks\.filter/)
+  assert.match(richBlocks, /presentationBlocks = blocks\.filter/)
+  assert.match(richBlocks, /const next = \[\.\.\.nextVisible, \.\.\.presentationBlocks\]/)
+  assert.match(richBlocks, /visibleBlocks\.map/)
 })
 
 test('host memoizes attachment callbacks by note so typing does not reload metadata', () => {
