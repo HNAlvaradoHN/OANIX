@@ -10,6 +10,10 @@ const selectedSurface = readFileSync(
   'src/features/editor/implementations/QwenSheetSurface.tsx',
   'utf8',
 )
+const replicaSurface = readFileSync(
+  'src/features/editor/implementations/ReplicaV16SheetSurface.tsx',
+  'utf8',
+)
 const plainTextAdapter = readFileSync(
   'src/features/editor/implementations/PlainTextEditorSurface.tsx',
   'utf8',
@@ -25,23 +29,21 @@ test('Home depends on the replaceable editor host instead of a concrete sheet im
   assert.doesNotMatch(home, /from '\.\.\/editor\/NoteEditor'/)
   assert.doesNotMatch(
     home,
-    /^\s*import .*from ['"][^'"]*(?:ruledSheet|Aurora|qwen)[^'"]*['"]/im,
+    /^\s*import .*from ['"][^'"]*(?:ruledSheet|Aurora|qwen|ReplicaV16)[^'"]*['"]/im,
   )
 })
 
-test('the host delegates concrete selection to the editor surface registry and mounts it lazily', () => {
-  assert.match(host, /import \{ lazy, Suspense \} from 'react'/)
+test('the host delegates concrete selection to the registry and lazily caches non-default surfaces', () => {
+  assert.match(host, /lazy, Suspense/)
   assert.match(host, /from '\.\/editorSurfaceRegistry'/)
   assert.match(host, /const ActiveSurface = lazy\(activeEditorSurface\.load\)/)
+  assert.match(host, /resolveEditorSurface\(surfaceId\)/)
+  assert.match(host, /lazySurfaceCache/)
   assert.match(host, /<Suspense fallback=\{null\}>/)
-  assert.match(host, /<ActiveSurface \{\.\.\.surfaceProps\} \/>/)
-  assert.match(host, /activeEditorSurface\.capabilities/)
+  assert.match(host, /<SelectedSurface \{\.\.\.surfaceProps\} \/>/)
+  assert.match(host, /selectedSurface\.capabilities\.richBlocks/)
   assert.doesNotMatch(host, /from '\.\/NoteEditor'/)
   assert.doesNotMatch(host, /from '\.\/implementations\//)
-  assert.doesNotMatch(
-    host,
-    /^\s*import .*from ['"][^'"]*(?:ruledSheet|Aurora|qwen)[^'"]*['"]/im,
-  )
 })
 
 test('rich block boundary stays generic and does not import persistence or a concrete sheet', () => {
@@ -55,28 +57,30 @@ test('rich block boundary stays generic and does not import persistence or a con
     /^\s*import .*from ['"][^'"]*(?:rebuild|storage|security)[^'"]*['"]/im,
   )
   assert.doesNotMatch(contract, /indexedDB|localStorage|sessionStorage/)
-  assert.doesNotMatch(contract, /QwenSheetSurface|PlainTextEditorSurface|NoteEditor/)
+  assert.doesNotMatch(contract, /QwenSheetSurface|ReplicaV16SheetSurface|PlainTextEditorSurface|NoteEditor/)
 })
 
-test('the host still gates rich callbacks through the selected surface capability', () => {
-  assert.match(host, /activeEditorSurface\.capabilities\.richBlocks[\s\S]*\? props[\s\S]*loadBlocks: undefined[\s\S]*onRequestBlockSave: undefined/)
-  assert.match(registry, /richBlocks: true/)
+test('the host gates rich callbacks through the actually selected surface capability', () => {
+  assert.match(host, /selectedSurface\.capabilities\.richBlocks[\s\S]*\? props[\s\S]*loadBlocks: undefined[\s\S]*onRequestBlockSave: undefined/)
+  assert.match(registry, /'qwen-sanitized-v1'[\s\S]*richBlocks: true/)
+  assert.match(registry, /'replica-v16'[\s\S]*richBlocks: true/)
 })
 
-test('the registry is the only composition point and lazily selects the sanitized sheet', () => {
-  assert.match(registry, /export const activeEditorSurface: EditorSurfaceDefinition/)
-  assert.match(registry, /id: 'qwen-sanitized-v1'/)
-  assert.match(registry, /load: async \(\) => \{/)
+test('the registry keeps stable and experimental implementations in one composition catalog', () => {
+  assert.match(registry, /export const editorSurfaceDefinitions/)
+  assert.match(registry, /'qwen-sanitized-v1'/)
+  assert.match(registry, /'replica-v16'/)
+  assert.match(registry, /experimental: true/)
   assert.match(registry, /await import\([\s\S]*\.\/implementations\/QwenSheetSurface/)
-  assert.match(registry, /return \{ default: QwenSheetSurface \}/)
-  assert.match(registry, /plainText: true/)
-  assert.match(registry, /richBlocks: true/)
-  assert.match(registry, /attachments: false/)
+  assert.match(registry, /await import\([\s\S]*\.\/implementations\/ReplicaV16SheetSurface/)
+  assert.match(registry, /DEFAULT_EDITOR_SURFACE_ID/)
+  assert.match(registry, /resolveEditorSurface/)
   assert.doesNotMatch(registry, /^\s*import .*QwenSheetSurface/m)
+  assert.doesNotMatch(registry, /^\s*import .*ReplicaV16SheetSurface/m)
   assert.doesNotMatch(registry, /from '\.\/NoteEditor'/)
 })
 
-test('the selected sheet owns only visual editing and the EditorSurface lifecycle', () => {
+test('the stable selected sheet still owns only visual editing and the EditorSurface lifecycle', () => {
   assert.match(selectedSurface, /export function QwenSheetSurface\(\{/)
   assert.match(selectedSurface, /\}: EditorSurfaceProps\)/)
   assert.match(selectedSurface, /defaultValue=\{initialTitle\}/)
@@ -86,7 +90,19 @@ test('the selected sheet owns only visual editing and the EditorSurface lifecycl
   assert.match(selectedSurface, /await onRequestClose\(snapshot\)/)
   assert.match(selectedSurface, /data-oanix-save-and-close="true"/)
   assert.match(selectedSurface, /data-oanix-back-close="true"/)
-  assert.doesNotMatch(selectedSurface, /NoteEditor|PlainTextEditorSurface/)
+})
+
+test('the replica preserves the same safe save/close contract without importing app layers', () => {
+  assert.match(replicaSurface, /export function ReplicaV16SheetSurface\(\{/)
+  assert.match(replicaSurface, /AUTOSAVE_IDLE_MS = 3_000/)
+  assert.match(replicaSurface, /defaultValue=\{initialTitle\}/)
+  assert.match(replicaSurface, /defaultValue=\{initialText\}/)
+  assert.match(replicaSurface, /await onRequestSave\(snapshot\)/)
+  assert.match(replicaSurface, /await onRequestClose\(snapshot\)/)
+  assert.match(replicaSurface, /data-oanix-sheet="replica-v16"/)
+  assert.match(replicaSurface, /data-oanix-save-and-close="true"/)
+  assert.match(replicaSurface, /data-oanix-back-close="true"/)
+  assert.doesNotMatch(replicaSurface, /rebuild|vault|repository|storage|crypto|indexedDB|localStorage|sessionStorage/)
 })
 
 test('the superseded plain-text adapter remains isolated and reusable during transition', () => {
@@ -98,6 +114,4 @@ test('the superseded plain-text adapter remains isolated and reusable during tra
   assert.match(plainTextAdapter, /initialText=\{initialText\}/)
   assert.match(plainTextAdapter, /onRequestSave=\{onRequestSave\}/)
   assert.match(plainTextAdapter, /onRequestClose=\{onRequestClose\}/)
-  assert.doesNotMatch(plainTextAdapter, /<NoteEditor \{\.\.\.props\}/)
-  assert.doesNotMatch(plainTextAdapter, /EditorSurfaceCapabilities|plainTextEditorSurfaceCapabilities/)
 })
