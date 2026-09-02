@@ -44,8 +44,12 @@ export function createEditorAttachmentAdapter(noteId: string) {
     },
 
     async remove(attachmentId: string): Promise<boolean> {
-      await removeEncryptedAttachment(noteId, attachmentId)
-      return true
+      try {
+        await removeEncryptedAttachment(noteId, attachmentId)
+        return true
+      } catch {
+        return false
+      }
     },
   }
 }
