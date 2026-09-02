@@ -46,30 +46,31 @@ En esta ejecución ya estuvieron disponibles los archivos exactos del prototipo 
 - `QwenRichBlocks` decodifica las anclas de adjuntos y renderiza Imagen/Archivo en el mismo orden real que Texto/Entrada/Checklist/Contacto/Separador/Código.
 - Los adjuntos existentes sin ancla se migran añadiendo solo referencias livianas al final del flujo; el asset cifrado no se reescribe.
 - Reemplazar una imagen transfiere la presentación existente al nuevo `attachmentId` solo después de guardar la imagen nueva y actualiza las anclas de flujo sin reescribir el blob.
-- Eliminar una imagen elimina también sus anclas de flujo y su bloque de presentación asociado. Los cambios de presentación participan en el mismo `EditorBlockSession`, autosave y cierre seguro del resto de bloques.
+- `replicaAttachmentRetirementCodec.ts` añade una marca oculta mínima para el caso en que la imagen nueva quede activa pero el asset anterior no pueda borrarse. Esa marca contiene solo el ID opaco anterior y evita que la migración de adjuntos sin ancla lo vuelva a mostrar al reabrir la nota.
+- Las marcas de retiro se clasifican como metadata oculta por `replicaAttachmentFlowOrder.ts`; no consumen posiciones visuales ni aparecen como bloques desconocidos. Si la limpieza del asset anterior sí termina correctamente, la marca se elimina y, si quedara una marca obsoleta para un asset ya inexistente, es inocua.
+- Durante la carga/migración inicial de adjuntos, inserción, reemplazo, apertura y eliminación quedan bloqueados mediante el mismo estado busy del contexto para impedir carreras con el `EditorBlockSession`.
+- Eliminar una imagen elimina también sus anclas de flujo, presentación y cualquier marca de retiro asociada. Los cambios de presentación participan en el mismo `EditorBlockSession`, autosave y cierre seguro del resto de bloques.
 - Los archivos locales muestran metadata sin leer bytes y solo se materializan al pulsar Abrir/descargar.
 - Los adjuntos grandes remotos se muestran como metadata, pero su acción Abrir permanece deshabilitada hasta exponer una frontera genérica de recuperación por streaming. `loadAttachmentFile` no se fuerza a construir un `File` gigante en RAM.
 - El editor estable no fue eliminado. No se modificó seguridad, vault, crypto, storage ni sync; solo se reutilizaron contratos/servicios existentes desde un adapter de aplicación.
 
 ## Validación registrada
 
-- Head validado después de integrar el flujo contextual y corregir dos guards estructurales desfasados: `4a223282de5328315096df0090a37fc50ea009e9`.
+- Último head previamente validado antes del ajuste de retiro seguro: `4a223282de5328315096df0090a37fc50ea009e9`.
 - En ese head pasaron **OANIX CI #2167**, incluyendo `Test OANIX`, `Build OANIX` y auditoría offline; **OANIX Android #1707**; y **Qwen Independent PR Review #681**.
-- Los guards corregidos conservan la intención: sigue existiendo una sola `EditorBlockSession`; la segunda llamada textual a `session.load()` corresponde a recargar el snapshot cuando cambia la revisión de adjuntos, y las inserciones usan el índice real traducido para saltar metadata oculta.
-- `replicaAttachmentFlowOrder.test.ts` cubre separación de metadata y traducción de índices al inicio, entre bloques y antes de metadata final.
-- `replicaAttachmentFlowCodec.test.ts` exige que las anclas de flujo solo persistan identidad opaca + tipo, cubre imagen/archivo, limita IDs y rechaza datos malformados.
-- Los guards de adjuntos comprueban carga lazy, ciclo de vida de `objectURL`, ausencia de data URLs/base64, renderer inline y migración mediante referencias livianas.
+- Para el ajuste actual se añadieron `replicaAttachmentRetirementCodec.test.ts`, cobertura de metadata oculta en `replicaAttachmentFlowOrder.test.ts` y guards en `replicaV16Attachments.test.ts` para retiro del asset anterior y bloqueo durante carga inicial.
+- Los gates del nuevo head deben terminar antes de considerar este lote validado; no se equipara un workflow en cola/en ejecución con una validación aprobada.
 - La validación física en un dispositivo Android sigue pendiente; un build automatizado no equivale a prueba física.
 
-## VALIDATION_DEBT / riesgo detectado
+## VALIDATION_DEBT / pendiente técnico
 
-- Si **Reemplazar imagen** consigue guardar la imagen nueva y cambiar sus anclas, pero falla el borrado del asset anterior, el asset viejo queda sin ancla. La migración actual de adjuntos sin ancla podría volver a añadirlo al reabrir la nota. No se considera resuelto: debe definirse una marca/semántica de migración o rollback que evite resucitar assets huérfanos sin introducir persistencia paralela.
-- Durante la carga/migración inicial, la UI de adjuntos todavía debe endurecerse para impedir que una selección nueva compita con esa fase. Es un ajuste local del componente, no del almacenamiento.
+- El riesgo de que una imagen anterior reaparezca después de un reemplazo con limpieza fallida queda mitigado mediante la marca de retiro durable y oculta. Falta todavía validarlo con los gates completos del nuevo head y, más adelante, con prueba física de reapertura en Android.
+- La recuperación de adjuntos grandes remotos sigue sin frontera genérica por streaming desde esta superficie; no se debe resolver materializando archivos completos en RAM.
 
 ## Pendiente inmediato
 
-1. Resolver de forma conservadora la semántica de assets huérfanos/reemplazo y bloquear inserciones mientras la carga/migración inicial está activa, usando solo `EditorBlockSession` + contratos de adjuntos existentes.
-2. Continuar la pasada de notas largas, scroll y composición IME/teclado móvil; evitar scroll anidado incómodo sin convertir el cuerpo completo en estado React ni forzar DOM creciente sin límite.
+1. Completar la pasada de notas largas, scroll y composición IME/teclado móvil; evitar scroll anidado incómodo sin convertir el cuerpo completo en estado React ni forzar DOM creciente sin límite.
+2. Revisar comportamiento de controles flotantes y menús con teclado móvil abierto/cerrado y scroll al final de notas largas en Día/Noche.
 3. Diseñar una callback genérica de recuperación/exportación por streaming para adjuntos grandes remotos, reutilizando `recoverLargeAttachmentFromDrive` sin materializar el archivo completo en memoria.
 4. Reproducir popup de código y formato de texto sin convertir el camino crítico de escritura en estado React por tecla.
 5. Después de estabilizar la revisión branch-local, decidir si el selector visible vive en Ajustes/Home o si la réplica reemplaza la superficie vigente; no acoplar esa decisión a los datos de las notas.
