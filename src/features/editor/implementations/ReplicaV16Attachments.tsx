@@ -62,6 +62,7 @@ interface ImageCardProps {
 function ImageCard({ item, disabled, active, loadAttachmentFile, onToggleMenu, onReplace, onRemove, onError }: ImageCardProps) {
   const hostRef = useRef<HTMLElement | null>(null)
   const replaceRef = useRef<HTMLInputElement | null>(null)
+  const loadStartedRef = useRef(false)
   const [url, setUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [loadRequested, setLoadRequested] = useState(false)
@@ -83,8 +84,9 @@ function ImageCard({ item, disabled, active, loadAttachmentFile, onToggleMenu, o
   }, [loadRequested])
 
   useEffect(() => {
-    if (!loadRequested || url || loading) return
+    if (!loadRequested || url || loadStartedRef.current) return
     let activeEffect = true
+    loadStartedRef.current = true
     setLoading(true)
     void loadAttachmentFile(item.id).then((file) => {
       if (!activeEffect) return
@@ -93,11 +95,13 @@ function ImageCard({ item, disabled, active, loadAttachmentFile, onToggleMenu, o
         return
       }
       setUrl(URL.createObjectURL(file))
-    }).catch(() => onError('No se pudo abrir la imagen cifrada.')).finally(() => {
+    }).catch(() => {
+      if (activeEffect) onError('No se pudo abrir la imagen cifrada.')
+    }).finally(() => {
       if (activeEffect) setLoading(false)
     })
     return () => { activeEffect = false }
-  }, [item.id, loadAttachmentFile, loadRequested, loading, onError, url])
+  }, [item.id, loadAttachmentFile, loadRequested, onError, url])
 
   useEffect(() => () => {
     if (url) URL.revokeObjectURL(url)
