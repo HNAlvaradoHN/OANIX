@@ -21,6 +21,12 @@ test('replica keeps floating controls viewport-fixed without keyboard viewport c
   assert.doesNotMatch(sheet, /\bvisualViewport\b|\binnerHeight\b/)
 })
 
+test('floating menus stay scrollable inside the dynamic mobile viewport', () => {
+  assert.match(sheetCss, /\.oanix-replica-v16__floating-menu\s*\{[\s\S]*max-height:\s*calc\(100dvh - 150px\)/)
+  assert.match(sheetCss, /\.oanix-replica-v16__floating-menu\s*\{[\s\S]*overflow-y:\s*auto/)
+  assert.match(sheetCss, /\.oanix-replica-v16__floating-menu\s*\{[\s\S]*overscroll-behavior:\s*contain/)
+})
+
 test('supported engines grow note textareas so the page owns vertical scrolling', () => {
   assert.match(sheetCss, /@supports \(field-sizing: content\)/)
   assert.match(sheetCss, /\.oanix-replica-v16__body[\s\S]*field-sizing:\s*content/)
