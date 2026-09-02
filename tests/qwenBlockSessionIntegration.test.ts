@@ -38,10 +38,10 @@ test('block session owns buffering only and receives persistence as callbacks', 
   assert.doesNotMatch(session, /indexedDB|localStorage|sessionStorage|fetch\(|XMLHttpRequest|setTimeout|setInterval/)
 })
 
-test('active rich capability passes the existing generic callbacks through the host', () => {
+test('selected rich capability passes the existing generic callbacks through the host', () => {
   assert.match(registry, /richBlocks: true/)
   assert.match(
     host,
-    /activeEditorSurface\.capabilities\.richBlocks[\s\S]*\? props[\s\S]*loadBlocks: undefined[\s\S]*onRequestBlockSave: undefined/,
+    /selectedSurface\.capabilities\.richBlocks[\s\S]*\? props[\s\S]*loadBlocks: undefined[\s\S]*onRequestBlockSave: undefined/,
   )
 })
