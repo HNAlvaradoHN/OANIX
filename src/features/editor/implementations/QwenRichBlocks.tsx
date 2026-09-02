@@ -15,6 +15,23 @@ import {
   type EditorCodeBlock,
 } from '../codeBlockCodec.ts'
 import {
+  CONTACT_BLOCK_KIND,
+  ENTRY_BLOCK_KIND,
+  MAX_CONTACT_DETAIL_LENGTH,
+  MAX_CONTACT_NAME_LENGTH,
+  MAX_ENTRY_TEXT_LENGTH,
+  MAX_ENTRY_TITLE_LENGTH,
+  SEPARATOR_BLOCK_KIND,
+  decodeContactBlock,
+  decodeEntryBlock,
+  decodeSeparatorBlock,
+  encodeContactBlock,
+  encodeEntryBlock,
+  encodeSeparatorBlock,
+  type EditorContactBlock,
+  type EditorEntryBlock,
+} from '../simpleRichBlockCodec.ts'
+import {
   MAX_TEXT_BLOCK_TEXT_LENGTH,
   TEXT_BLOCK_KIND,
   decodeTextBlock,
@@ -26,9 +43,10 @@ import type { EditorSurfaceBlock } from '../editorSurfaceContract.ts'
 import './qwenChecklistBlocks.css'
 import './qwenCodeBlocks.css'
 import './qwenTextBlocks.css'
+import './qwenSimpleRichBlocks.css'
 import './qwenBlockOrderControls.css'
 
-export type QwenInsertBlockKind = 'text' | 'checklist' | 'code'
+export type QwenInsertBlockKind = 'text' | 'checklist' | 'code' | 'entry' | 'contact' | 'separator'
 
 export interface QwenExternalInsertRequest {
   token: number
@@ -47,9 +65,21 @@ interface QwenRichBlocksProps {
 function newTextBlockId(): string { return `text-${crypto.randomUUID()}` }
 function newChecklistId(): string { return `checklist-${crypto.randomUUID()}` }
 function newCodeBlockId(): string { return `code-${crypto.randomUUID()}` }
+function newEntryId(): string { return `entry-${crypto.randomUUID()}` }
+function newContactId(): string { return `contact-${crypto.randomUUID()}` }
+function newSeparatorId(): string { return `separator-${crypto.randomUUID()}` }
 
 function withChecklistItem(block: EditorChecklistBlock, itemIndex: number, updater: (item: EditorChecklistBlock['items'][number]) => EditorChecklistBlock['items'][number]): EditorChecklistBlock {
   return { ...block, items: block.items.map((item, index) => index === itemIndex ? updater(item) : item) }
+}
+
+function insertionFailureMessage(kind: QwenInsertBlockKind): string {
+  if (kind === 'text') return 'No se pudo preparar el tramo de texto nuevo.'
+  if (kind === 'checklist') return 'No se pudo preparar el checklist nuevo.'
+  if (kind === 'code') return 'No se pudo preparar el bloque de código nuevo.'
+  if (kind === 'entry') return 'No se pudo preparar la entrada nueva.'
+  if (kind === 'contact') return 'No se pudo preparar el contacto nuevo.'
+  return 'No se pudo preparar el separador nuevo.'
 }
 
 export function QwenRichBlocks({ session, disabled, onActivity, onCompositionStart, onCompositionEnd, externalInsertRequest = null }: QwenRichBlocksProps) {
@@ -120,20 +150,26 @@ export function QwenRichBlocks({ session, disabled, onActivity, onCompositionSta
     }).catch(() => setError('No se pudo preparar el nuevo orden de los bloques.'))
   }
 
+  function createBlock(kind: QwenInsertBlockKind): EditorSurfaceBlock {
+    if (kind === 'text') return encodeTextBlock({ id: newTextBlockId(), kind: TEXT_BLOCK_KIND, text: '' })
+    if (kind === 'checklist') return encodeChecklistBlock({ id: newChecklistId(), kind: CHECKLIST_BLOCK_KIND, items: [{ text: '', checked: false }] })
+    if (kind === 'code') return encodeCodeBlock({ id: newCodeBlockId(), kind: CODE_BLOCK_KIND, text: '', language: '' })
+    if (kind === 'entry') return encodeEntryBlock({ id: newEntryId(), kind: ENTRY_BLOCK_KIND, title: '', text: '', createdAt: new Date().toISOString() })
+    if (kind === 'contact') return encodeContactBlock({ id: newContactId(), kind: CONTACT_BLOCK_KIND, name: '', detail: '' })
+    return encodeSeparatorBlock({ id: newSeparatorId(), kind: SEPARATOR_BLOCK_KIND })
+  }
+
   function insertBlock(kind: QwenInsertBlockKind, index: number) {
     setActiveInsertIndex(null)
-    let next: EditorSurfaceBlock
-    if (kind === 'text') next = encodeTextBlock({ id: newTextBlockId(), kind: TEXT_BLOCK_KIND, text: '' })
-    else if (kind === 'checklist') next = encodeChecklistBlock({ id: newChecklistId(), kind: CHECKLIST_BLOCK_KIND, items: [{ text: '', checked: false }] })
-    else next = encodeCodeBlock({ id: newCodeBlockId(), kind: CODE_BLOCK_KIND, text: '', language: '' })
+    const next = createBlock(kind)
 
-    pendingFocusIdRef.current = next.id
+    if (kind !== 'separator') pendingFocusIdRef.current = next.id
     setBlocks((current) => [...current.slice(0, index), next, ...current.slice(index)])
     onActivity()
     void session.insert(next, index).catch(() => {
       if (pendingFocusIdRef.current === next.id) pendingFocusIdRef.current = null
       setBlocks((current) => current.filter((block) => block.id !== next.id))
-      setError(kind === 'text' ? 'No se pudo preparar el tramo de texto nuevo.' : kind === 'checklist' ? 'No se pudo preparar el checklist nuevo.' : 'No se pudo preparar el bloque de código nuevo.')
+      setError(insertionFailureMessage(kind))
     })
   }
 
@@ -170,10 +206,42 @@ export function QwenRichBlocks({ session, disabled, onActivity, onCompositionSta
     </article>
   }
 
+  function renderEntry(block: EditorEntryBlock) {
+    const dateLabel = Number.isNaN(Date.parse(block.createdAt)) ? '' : new Intl.DateTimeFormat('es', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(block.createdAt))
+    return <article className="oanix-qwen-sheet__entry" data-oanix-block-id={block.id}>
+      <div className="oanix-qwen-sheet__simple-topline"><span>Entrada{dateLabel ? ` · ${dateLabel}` : ''}</span><button type="button" disabled={disabled} onClick={() => removeBlock(block.id, 'No se pudo preparar la eliminación de la entrada.')}>Eliminar</button></div>
+      <input data-oanix-primary-input="true" type="text" value={block.title} maxLength={MAX_ENTRY_TITLE_LENGTH} disabled={disabled} placeholder="Título de la entrada" aria-label="Título de la entrada" onChange={(event) => queueBlock(encodeEntryBlock({ ...block, title: event.target.value }), 'No se pudo preparar el cambio de la entrada.')} />
+      <textarea value={block.text} maxLength={MAX_ENTRY_TEXT_LENGTH} disabled={disabled} spellCheck wrap="soft" placeholder="Escribe la entrada…" aria-label="Contenido de la entrada" onChange={(event) => queueBlock(encodeEntryBlock({ ...block, text: event.target.value }), 'No se pudo preparar el cambio de la entrada.')} onCompositionStart={onCompositionStart} onCompositionEnd={onCompositionEnd} />
+    </article>
+  }
+
+  function renderContact(block: EditorContactBlock) {
+    return <article className="oanix-qwen-sheet__contact" data-oanix-block-id={block.id}>
+      <div className="oanix-qwen-sheet__simple-topline"><span>Contacto</span><button type="button" disabled={disabled} onClick={() => removeBlock(block.id, 'No se pudo preparar la eliminación del contacto.')}>Eliminar</button></div>
+      <div className="oanix-qwen-sheet__contact-grid">
+        <span className="oanix-qwen-sheet__contact-avatar" aria-hidden="true">👤</span>
+        <div>
+          <input data-oanix-primary-input="true" type="text" value={block.name} maxLength={MAX_CONTACT_NAME_LENGTH} disabled={disabled} placeholder="Nombre" aria-label="Nombre del contacto" onChange={(event) => queueBlock(encodeContactBlock({ ...block, name: event.target.value }), 'No se pudo preparar el cambio del contacto.')} />
+          <input type="text" value={block.detail} maxLength={MAX_CONTACT_DETAIL_LENGTH} disabled={disabled} placeholder="Teléfono, correo o nota" aria-label="Detalle del contacto" onChange={(event) => queueBlock(encodeContactBlock({ ...block, detail: event.target.value }), 'No se pudo preparar el cambio del contacto.')} />
+        </div>
+      </div>
+    </article>
+  }
+
+  function renderSeparator(rawBlock: EditorSurfaceBlock) {
+    return <article className="oanix-qwen-sheet__separator" data-oanix-block-id={rawBlock.id}>
+      <hr />
+      <button type="button" disabled={disabled} onClick={() => removeBlock(rawBlock.id, 'No se pudo preparar la eliminación del separador.')} aria-label="Eliminar separador">Eliminar</button>
+    </article>
+  }
+
   function renderBlock(rawBlock: EditorSurfaceBlock) {
     const text = decodeTextBlock(rawBlock); if (text) return renderText(text)
     const checklist = decodeChecklistBlock(rawBlock); if (checklist) return renderChecklist(checklist)
     const code = decodeCodeBlock(rawBlock); if (code) return renderCode(code)
+    const entry = decodeEntryBlock(rawBlock); if (entry) return renderEntry(entry)
+    const contact = decodeContactBlock(rawBlock); if (contact) return renderContact(contact)
+    const separator = decodeSeparatorBlock(rawBlock); if (separator) return renderSeparator(rawBlock)
     return <article className="oanix-qwen-sheet__unknown-block" data-oanix-unknown-block-kind={rawBlock.kind}><span>Bloque no disponible en esta versión</span></article>
   }
 
@@ -194,7 +262,10 @@ export function QwenRichBlocks({ session, disabled, onActivity, onCompositionSta
       <button type="button" className="oanix-qwen-sheet__insert-trigger" aria-expanded={open} aria-controls={menuId} aria-label={`Insertar bloque en la posición ${index + 1}`} disabled={disabled} onClick={() => setActiveInsertIndex((current) => current === index ? null : index)}>+ Insertar</button>
       {open && <div id={menuId} className="oanix-qwen-sheet__insert-menu" role="menu" aria-label="Insertar bloque">
         <button type="button" role="menuitem" onClick={() => insertBlock('text', index)}><strong>Texto</strong><span>Continúa escribiendo dentro del flujo</span></button>
+        <button type="button" role="menuitem" onClick={() => insertBlock('entry', index)}><strong>Entrada</strong><span>Registro fechado dentro de la nota</span></button>
         <button type="button" role="menuitem" onClick={() => insertBlock('checklist', index)}><strong>Checklist</strong><span>Lista de tareas verificable</span></button>
+        <button type="button" role="menuitem" onClick={() => insertBlock('contact', index)}><strong>Contacto</strong><span>Nombre y dato de referencia</span></button>
+        <button type="button" role="menuitem" onClick={() => insertBlock('separator', index)}><strong>Separador</strong><span>Línea de división</span></button>
         <button type="button" role="menuitem" onClick={() => insertBlock('code', index)}><strong>Código</strong><span>Fragmento técnico con lenguaje opcional</span></button>
       </div>}
     </div>
