@@ -1,7 +1,7 @@
 # Qwen V16 — integración aislada
 
 Estado: IN_PROGRESS
-Fecha: 2026-09-01
+Fecha: 2026-09-02
 Rama: `exp/qwen-v16-isolated`
 PR de validación: `#589` (draft, no merge)
 
@@ -29,14 +29,23 @@ En esta ejecución ya estuvieron disponibles los archivos exactos del prototipo 
 - La réplica ya recupera la estructura principal de la página: topbar Bitácora, metadatos, título grande, zona de etiquetas, “HOJA DE EDICIÓN”, papel claro/oscuro, diseños Liso/Renglones/Puntos/Cuadrícula y cola de escritura.
 - Los controles `+` y herramientas son `position: fixed` bajo la barra superior, fuera del flujo de la hoja y sin cálculos de teclado.
 - El botón global `+` puede insertar al final Texto/Checklist/Código mediante una extensión opcional de `QwenRichBlocks`; los puntos contextuales existentes siguen insertando entre bloques.
+- `QwenRichBlocks` ya incorpora **Entrada**, **Contacto** y **Separador** con codecs propios y datos pequeños serializables; continúan pasando por `EditorBlockSession` y la persistencia incremental existente.
+- Entrada conserva fecha de creación, título y texto; Contacto conserva nombre + dato de referencia; Separador es un bloque sin payload pesado y muestra línea completa.
+- Estos tres tipos no importan storage, crypto, Home, sync ni servicios de reconstrucción. Se añadió una prueba de frontera específica para vigilar esa separación.
 - El editor estable no fue eliminado ni reemplazado. No se modificó seguridad, vault, crypto, storage ni sync.
-- Se actualizaron tests de frontera para exigir que estable + experimental sigan detrás del mismo host/registro.
+
+## Validación registrada
+
+- El primer lote del PR draft #589 pasó OANIX CI.
+- El build web + Capacitor sync del primer lote finalizó correctamente.
+- La validación física Android sigue pendiente; un build automatizado no equivale a prueba física.
+- Los cambios nuevos de Entrada/Contacto/Separador requieren volver a pasar CI antes de considerarse validados.
 
 ## Pendiente inmediato
 
-1. Conectar una entrada visible y removible en Ajustes/Home para seleccionar `replica-v16`; hoy el registro/host ya soportan la selección, pero Home todavía no la expone.
-2. Ejecutar y corregir CI/build del PR draft #589.
-3. Implementar codecs/renderers aislados para Entrada, Separador y Contacto.
+1. Conectar una entrada visible y removible en Ajustes/Home para seleccionar `replica-v16`; el registro/host ya soportan la selección, pero Home todavía no la expone.
+2. Confirmar CI/build del lote nuevo de Entrada/Contacto/Separador y corregir cualquier gate real que falle.
+3. Añadir Entrada/Contacto/Separador también al menú global `+` de la réplica; hoy ya están disponibles en los puntos de inserción contextuales.
 4. Diseñar Imagen/Archivo contra referencias de assets OANIX antes de exponer picker; no persistir blobs/URLs efímeras.
 5. Reproducir menús de imagen aprobados, popup de código y formato de texto sin convertir el camino crítico de escritura en estado React por tecla.
 6. Someter la superficie a pruebas de notas largas, scroll, composición IME/teclado móvil, PC/móvil y Día/Noche.
