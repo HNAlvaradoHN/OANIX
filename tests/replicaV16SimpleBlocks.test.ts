@@ -14,7 +14,8 @@ test('replica simple block codecs stay storage-agnostic', () => {
 
 test('rich block flow exposes entry contact and separator through the generic session', () => {
   assert.match(richBlocks, /QwenInsertBlockKind =[^\n]*'entry'[^\n]*'contact'[^\n]*'separator'/)
-  assert.match(richBlocks, /session\.insert\(nextBlock, index\)/)
+  assert.match(richBlocks, /replicaFlowIndexToOrderIndex\(blocks, index\)/)
+  assert.match(richBlocks, /session\.insert\(nextBlock, rawIndex\)/)
   assert.match(richBlocks, /decodeEntryBlock\(rawBlock\)/)
   assert.match(richBlocks, /decodeContactBlock\(rawBlock\)/)
   assert.match(richBlocks, /decodeSeparatorBlock\(rawBlock\)/)
