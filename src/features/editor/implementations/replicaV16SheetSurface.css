@@ -115,6 +115,7 @@
   outline: 0;
   resize: none;
   overflow: hidden;
+  field-sizing: content;
   background: transparent;
   color: var(--rv-ink);
   font-family: Georgia, "Times New Roman", serif;
@@ -140,8 +141,8 @@
   border: 0;
   outline: 0;
   resize: none;
-  overflow: auto;
-  overscroll-behavior: contain;
+  overflow: hidden;
+  field-sizing: content;
   background: transparent;
   color: var(--rv-ink);
   caret-color: var(--rv-accent);
