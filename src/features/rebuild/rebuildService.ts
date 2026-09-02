@@ -189,7 +189,7 @@ export async function createRebuildNote(folderId: string | null = null): Promise
     version: 2,
     revision: 1,
     id,
-    title: 'Nota nueva',
+    title: '',
     folderId,
     tagIds: [],
     createdAt: now,
@@ -224,8 +224,6 @@ export async function readRebuildNote(noteId: string): Promise<RebuildOpenedNote
     return { meta, text: await readIncrementalText(manifest) }
   }
 
-  // Transitional fallback: notes created before the incremental format remain readable.
-  // The first body edit migrates them without deleting the legacy record.
   const body = await readEncryptedV2Record<NoteV2Body>(NOTE_V2_BODY_TYPE, noteId)
   if (!body || body.noteId !== noteId || body.format !== 'plain-text-v1') {
     throw new Error('La nota no existe o está incompleta.')
@@ -240,7 +238,7 @@ export async function saveRebuildNote(
   title: string,
   text: string,
 ): Promise<NoteV2Meta> {
-  const normalizedTitle = title.trim().slice(0, 160) || 'Nota nueva'
+  const normalizedTitle = title.trim().slice(0, 160)
   const titleChanged = normalizedTitle !== existing.title
   const textChanged = text !== previousText
 
