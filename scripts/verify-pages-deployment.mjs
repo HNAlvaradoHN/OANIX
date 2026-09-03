@@ -9,10 +9,6 @@ function withSmokeQuery(url) {
   return next
 }
 
-function escapeRegExp(value) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-}
-
 async function fetchWithRetry(url) {
   let lastError
 
@@ -31,21 +27,16 @@ async function fetchWithRetry(url) {
   throw lastError
 }
 
-const base = new URL(BASE_URL)
-const basePath = base.pathname.endsWith('/') ? base.pathname : `${base.pathname}/`
-const assetPrefix = `${basePath}assets/`
-const escapedAssetPrefix = escapeRegExp(assetPrefix)
-
-const shellUrl = withSmokeQuery(base)
+const shellUrl = withSmokeQuery(BASE_URL)
 const html = await (await fetchWithRetry(shellUrl)).text()
-const cssPath = html.match(new RegExp(`href="(${escapedAssetPrefix}[^"]+\\.css)"`))?.[1]
-const jsPath = html.match(new RegExp(`src="(${escapedAssetPrefix}[^"]+\\.js)"`))?.[1]
+const cssPath = html.match(/href="(\/OANIX\/assets\/[^"]+\.css)"/)?.[1]
+const jsPath = html.match(/src="(\/OANIX\/assets\/[^"]+\.js)"/)?.[1]
 
 if (!cssPath || !jsPath) {
-  throw new Error(`Deployed shell does not reference the expected CSS and JS assets under ${assetPrefix}.`)
+  throw new Error('Deployed shell does not reference the expected OANIX CSS and JS assets.')
 }
 
-const origin = base.origin
+const origin = new URL(BASE_URL).origin
 const cssUrl = withSmokeQuery(new URL(cssPath, origin))
 const jsUrl = withSmokeQuery(new URL(jsPath, origin))
 const [css, js] = await Promise.all([
