@@ -6,6 +6,7 @@ const surface = readFileSync('src/features/editor/implementations/QwenSheetSurfa
 const session = readFileSync('src/features/editor/editorBlockSession.ts', 'utf8')
 const registry = readFileSync('src/features/editor/editorSurfaceRegistry.ts', 'utf8')
 const host = readFileSync('src/features/editor/EditorSurface.tsx', 'utf8')
+const activeSheet = readFileSync('src/features/editor/implementations/OanixNotesSheetSurface.tsx', 'utf8')
 
 test('preserved Qwen sheet creates a block session only when both rich callbacks are available', () => {
   assert.match(surface, /loadBlocks,[\s\S]*onRequestBlockSave,/)
@@ -38,10 +39,13 @@ test('block session owns buffering only and receives persistence as callbacks', 
   assert.doesNotMatch(session, /indexedDB|localStorage|sessionStorage|fetch\(|XMLHttpRequest|setTimeout|setInterval/)
 })
 
-test('active plain-text phase gates rich callbacks while preserving the generic host boundary', () => {
-  assert.match(registry, /richBlocks: false/)
+test('active mixed phase enables generic rich callbacks without coupling the OANIX sheet to Qwen', () => {
+  assert.match(registry, /richBlocks: true/)
   assert.match(
     host,
     /activeEditorSurface\.capabilities\.richBlocks[\s\S]*\? props[\s\S]*loadBlocks: undefined[\s\S]*onRequestBlockSave: undefined/,
   )
+  assert.match(activeSheet, /loadBlocks/)
+  assert.match(activeSheet, /onRequestBlockSave/)
+  assert.doesNotMatch(activeSheet, /QwenSheetSurface|QwenRichBlocks|createEditorBlockSession/)
 })
