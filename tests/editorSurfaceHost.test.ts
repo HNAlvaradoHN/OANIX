@@ -28,7 +28,7 @@ test('Home depends on the replaceable editor host instead of a concrete sheet im
 })
 
 test('the host delegates concrete selection to the editor surface registry and mounts it lazily', () => {
-  assert.match(host, /import \{ lazy, Suspense \} from 'react'/)
+  assert.match(host, /import \{[^}]*lazy[^}]*Suspense[^}]*useMemo[^}]*\} from 'react'/)
   assert.match(host, /from '\.\/editorSurfaceRegistry'/)
   assert.match(host, /const ActiveSurface = lazy\(activeEditorSurface\.load\)/)
   assert.match(host, /<Suspense fallback=\{null\}>/)
