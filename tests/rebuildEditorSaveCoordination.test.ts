@@ -57,9 +57,11 @@ test('accepted block saves survive close draining and skip state churn on storag
   assert.match(insideRun, /if \(updated === current\.meta\) return true/)
 })
 
-test('application rich callbacks stay available at the app boundary but are gated off for the active sheet', () => {
+test('application rich callbacks stay serialized and are exposed only through active surface capability', () => {
   assert.match(rebuild, /loadBlocks=\{loadEditorBlocks\}/)
   assert.match(rebuild, /onRequestBlockSave=\{saveEditorBlocks\}/)
   assert.match(host, /activeEditorSurface\.capabilities\.richBlocks[\s\S]*loadBlocks: undefined[\s\S]*onRequestBlockSave: undefined/)
-  assert.match(registry, /richBlocks: false/)
+  assert.match(registry, /richBlocks: true/)
+  assert.match(registry, /attachments: true/)
+  assert.match(rebuild, /saveEditorBlocks[\s\S]*editorSaveCoordinator\.run\(async \(\) => \{/)
 })
