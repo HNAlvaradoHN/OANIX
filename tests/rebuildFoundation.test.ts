@@ -11,7 +11,7 @@ const rebuild = readFileSync('src/features/rebuild/RebuildApp.tsx', 'utf8')
 const editorSurface = readFileSync('src/features/editor/EditorSurface.tsx', 'utf8')
 const editorSurfaceRegistry = readFileSync('src/features/editor/editorSurfaceRegistry.ts', 'utf8')
 const selectedEditorSurface = readFileSync(
-  'src/features/editor/implementations/QwenSheetSurface.tsx',
+  'src/features/editor/implementations/OanixNotesSheetSurface.tsx',
   'utf8',
 )
 const css = readFileSync('src/features/rebuild/rebuild.css', 'utf8')
@@ -67,17 +67,18 @@ test('typing stays local and persistence happens only at idle or close save boun
   assert.match(editorSurface, /<Suspense fallback=\{null\}>/)
   assert.match(editorSurface, /<ActiveSurface \{\.\.\.surfaceProps\} \/>/)
   assert.match(editorSurface, /activeEditorSurface\.capabilities\.richBlocks/)
-  assert.match(editorSurfaceRegistry, /await import\([\s\S]*QwenSheetSurface/)
+  assert.match(editorSurfaceRegistry, /await import\([\s\S]*OanixNotesSheetSurface/)
   assert.match(selectedEditorSurface, /defaultValue=\{initialText\}/)
   assert.match(selectedEditorSurface, /defaultValue=\{initialTitle\}/)
   assert.match(selectedEditorSurface, /AUTOSAVE_IDLE_MS = 3_000/)
   assert.match(selectedEditorSurface, /generationRef/)
   assert.match(selectedEditorSurface, /saveInFlightRef/)
   assert.match(selectedEditorSurface, /async function saveCurrentSnapshot/)
-  assert.match(selectedEditorSurface, /await onRequestSave\(snapshot\)/)
+  assert.match(selectedEditorSurface, /onRequestSave\(snapshot\)/)
   assert.match(selectedEditorSurface, /async function requestClose/)
   assert.match(selectedEditorSurface, /await onRequestClose\(snapshot\)/)
   assert.doesNotMatch(selectedEditorSurface, /value=\{.*initialText|setText\(|innerHTML|contentEditable|MutationObserver/)
+  assert.doesNotMatch(selectedEditorSurface, /indexedDB|localStorage|sessionStorage/)
 })
 
 test('slow operations expose delayed full-screen feedback instead of fake progress', () => {
