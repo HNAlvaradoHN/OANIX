@@ -43,9 +43,10 @@ test('PWA brand stays visually stable without continuous idle motion', () => {
   assert.match(brandCss, /oanix-brand-pwa-preview[\s\S]*will-change:\s*auto/)
 })
 
-test('PWA manifest uses the selected logo without changing Android resources', () => {
+test('PWA manifest uses the selected logo on Pages and preview bases without changing Android resources', () => {
   assert.match(viteConfig, /includeAssets: \['oanix-icon\.svg', 'oanix-logo\.webp'\]/)
-  assert.match(viteConfig, /src: '\/OANIX\/oanix-logo\.webp'/)
+  assert.match(viteConfig, /const publicBase = isCapacitor \? '\.\/' : isVercel \? '\/' : '\/OANIX\/'/)
+  assert.match(viteConfig, /src: `\$\{publicBase\}oanix-logo\.webp`/)
   assert.match(viteConfig, /sizes: '512x512'/)
   assert.match(viteConfig, /type: 'image\/webp'/)
   assert.match(viteConfig, /purpose: 'any'/)

@@ -189,7 +189,7 @@ export async function createRebuildNote(folderId: string | null = null): Promise
     version: 2,
     revision: 1,
     id,
-    title: 'Nota nueva',
+    title: '',
     folderId,
     tagIds: [],
     createdAt: now,
@@ -240,7 +240,7 @@ export async function saveRebuildNote(
   title: string,
   text: string,
 ): Promise<NoteV2Meta> {
-  const normalizedTitle = title.trim().slice(0, 160) || 'Nota nueva'
+  const normalizedTitle = title.trim().slice(0, 160)
   const titleChanged = normalizedTitle !== existing.title
   const textChanged = text !== previousText
 

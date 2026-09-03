@@ -1,0 +1,62 @@
+/*
+ * Mobile editing safety space and visual-viewport alignment.
+ *
+ * The sheet keeps its own trailing room so the final lines can rise above the
+ * keyboard. The top bar and scrollable document follow visualViewport.offsetTop
+ * without shrinking the whole editor a second time.
+ */
+.oanix-notes__top-bar {
+  top: var(--oanix-viewport-top, 0px);
+}
+
+.oanix-notes__editor-container {
+  top: calc(var(--header-height) + var(--oanix-viewport-top, 0px));
+  scroll-padding-top: 18px;
+  scroll-padding-bottom: 84px;
+}
+
+/*
+ * This file is imported by the mobile guard while the surface imports its own
+ * stylesheet too. The principal surface CSS still contains legacy mobile title
+ * sizes, so these declarations intentionally use stronger specificity and
+ * !important until that legacy rule is removed from the shared stylesheet.
+ */
+.oanix-notes .oanix-notes__title {
+  font-size: 42px !important;
+  font-weight: 900 !important;
+  line-height: 1.12 !important;
+  letter-spacing: -0.035em !important;
+}
+
+.oanix-notes .oanix-notes__title::placeholder {
+  font-weight: 800 !important;
+}
+
+.oanix-notes__body-wrap {
+  padding-bottom: 88px;
+}
+
+.oanix-notes:focus-within .oanix-notes__body-wrap {
+  padding-bottom: clamp(180px, 24dvh, 260px);
+}
+
+@media (min-width: 768px) {
+  .oanix-notes .oanix-notes__title {
+    font-size: 48px !important;
+  }
+}
+
+@media (max-width: 520px) {
+  .oanix-notes .oanix-notes__title {
+    font-size: 42px !important;
+    font-weight: 900 !important;
+  }
+
+  .oanix-notes__body-wrap {
+    padding-bottom: 96px;
+  }
+
+  .oanix-notes:focus-within .oanix-notes__body-wrap {
+    padding-bottom: clamp(200px, 28dvh, 300px);
+  }
+}

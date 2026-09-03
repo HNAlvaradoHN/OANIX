@@ -27,14 +27,11 @@ test('fresh PWA shell claims stale clients without forcing an immediate page rel
   assert.match(viteConfig, /clientsClaim:\s*true/)
   assert.match(main, /serviceWorker\.addEventListener\('controllerchange'/)
   assert.match(main, /let hasPwaController = [^\n]*Boolean\(navigator\.serviceWorker\.controller\)/)
-  assert.match(
-    main,
-    /oanixWindow\.__oanixApplyUpdate = async \(\) => \{\s*window\.location\.reload\(\)\s*\}/,
-  )
+  assert.match(main, /oanixWindow\.__oanixApplyUpdate = async \(\) => \{\s*window\.location\.reload\(\)\s*\}/)
   assert.equal((main.match(/window\.location\.reload\(\)/g) ?? []).length, 1)
 })
 
-test('PWA keeps the executable app shell available offline', () => {
+test('PWA keeps the executable app shell available offline on Pages and preview deployments', () => {
   const viteConfig = readFileSync('vite.config.ts', 'utf8')
 
   assert.match(viteConfig, /globPatterns:\s*\['\*\*\/\*\.\{js,css,html,wasm\}'\]/)
@@ -42,6 +39,7 @@ test('PWA keeps the executable app shell available offline', () => {
   assert.match(viteConfig, /cleanupOutdatedCaches:\s*true/)
   assert.match(viteConfig, /includeAssets:\s*\[[^\]]*'oanix-icon\.svg'[^\]]*\]/)
   assert.match(viteConfig, /includeAssets:\s*\[[^\]]*'oanix-logo\.webp'[^\]]*\]/)
-  assert.match(viteConfig, /start_url:\s*'\/OANIX\/'/)
-  assert.match(viteConfig, /scope:\s*'\/OANIX\/'/)
+  assert.match(viteConfig, /const publicBase = isCapacitor \? '\.\/' : isVercel \? '\/' : '\/OANIX\/'/)
+  assert.match(viteConfig, /start_url:\s*publicBase/)
+  assert.match(viteConfig, /scope:\s*publicBase/)
 })
