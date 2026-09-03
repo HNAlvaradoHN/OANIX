@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useMemo } from 'react'
 import type {
   EditorSurfaceCapabilities,
   EditorSurfaceProps,
@@ -15,17 +15,52 @@ const ActiveSurface = lazy(activeEditorSurface.load)
  * keeping persistence, encryption, navigation and the Home workspace independent
  * from visual sheets while avoiding editor work until a note is actually opened.
  *
- * Rich-block authority is capability-gated here. A plain-text implementation never
- * receives the loader/save callbacks, which prevents accidental block decryption or
- * persistence work while richBlocks is disabled.
+ * Rich-block and attachment authority are capability-gated here. A plain-text
+ * implementation receives neither block callbacks nor attachment callbacks, so the
+ * currently approved sheet cannot accidentally enumerate/decrypt binary metadata
+ * before its document anchoring model is ready.
  */
 export function EditorSurface(props: EditorSurfaceProps) {
-  const surfaceProps = activeEditorSurface.capabilities.richBlocks
+  const attachmentCallbacks = useMemo(() => {
+    if (!activeEditorSurface.capabilities.attachments) return null
+    const noteId = props.noteId
+
+    return {
+      loadAttachments: async () => {
+        const { loadEditorSurfaceAttachments } = await import('./editorAttachmentAdapter')
+        return loadEditorSurfaceAttachments(noteId)
+      },
+      onRequestAttachmentStore: async (file: File) => {
+        const { storeEditorSurfaceAttachment } = await import('./editorAttachmentAdapter')
+        return storeEditorSurfaceAttachment(noteId, file)
+      },
+      loadAttachmentFile: async (attachmentId: string) => {
+        const { loadEditorSurfaceAttachmentFile } = await import('./editorAttachmentAdapter')
+        return loadEditorSurfaceAttachmentFile(noteId, attachmentId)
+      },
+      onRequestAttachmentRemove: async (attachmentId: string) => {
+        const { removeEditorSurfaceAttachment } = await import('./editorAttachmentAdapter')
+        return removeEditorSurfaceAttachment(noteId, attachmentId)
+      },
+    }
+  }, [props.noteId])
+
+  const richProps = activeEditorSurface.capabilities.richBlocks
     ? props
     : {
         ...props,
         loadBlocks: undefined,
         onRequestBlockSave: undefined,
+      }
+
+  const surfaceProps = attachmentCallbacks
+    ? { ...richProps, ...attachmentCallbacks }
+    : {
+        ...richProps,
+        loadAttachments: undefined,
+        onRequestAttachmentStore: undefined,
+        loadAttachmentFile: undefined,
+        onRequestAttachmentRemove: undefined,
       }
 
   return (
