@@ -4,6 +4,7 @@ import test from 'node:test'
 
 const sourcePath = new URL('../src/features/editor/implementations/OanixMixedDocumentBody.tsx', import.meta.url)
 const mobileGuardPath = new URL('../src/features/editor/implementations/OanixNotesSheetMobileGuard.tsx', import.meta.url)
+const mixedCssPath = new URL('../src/features/editor/implementations/oanixMixedDocumentBody.css', import.meta.url)
 
 async function readSource(): Promise<string> {
   return readFile(sourcePath, 'utf8')
@@ -32,6 +33,17 @@ test('mixed renderer keeps images in normal document flow instead of overlays', 
   assert.doesNotMatch(source, /position:\s*['"]absolute['"]/)
   assert.doesNotMatch(source, /translateY\(/)
   assert.doesNotMatch(source, /selectionStart.*style/)
+})
+
+test('image controls stay usable after resize and distinguish tap from scroll', async () => {
+  const css = await readFile(mixedCssPath, 'utf8')
+  assert.match(css, /\.oanix-mixed-image__menu-button\{[^}]*inset:0/)
+  assert.match(css, /touch-action:pan-y pinch-zoom/)
+  assert.match(css, /\.oanix-mixed-image__menu\{[^}]*grid-auto-flow:column/)
+  assert.match(css, /\.oanix-mixed-image__menu\[data-direction="down"\]\{top:calc\(100% \+ 10px\)\}/)
+  assert.match(css, /\.oanix-mixed-image__menu\[data-direction="up"\]\{bottom:calc\(100% \+ 10px\)\}/)
+  assert.match(css, /width:min\(320px,calc\(100vw - 40px\)\)/)
+  assert.match(css, /background:rgba\(20,22,28,\.94\)/)
 })
 
 test('long text keeps only its bounded preview in the sheet and loads the encrypted asset inside the expanded viewer', async () => {
