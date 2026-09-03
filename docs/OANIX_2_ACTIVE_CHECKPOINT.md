@@ -59,16 +59,27 @@ Garantías activas:
 - Preview usa `objectURL` temporal y lo revoca al desmontar; no se introdujeron base64 ni data URLs.
 - Eliminación de Imagen guarda primero texto pendiente, retira la referencia del documento y después intenta borrar el asset.
 
-## Pegado de texto grande — política de clasificación preparada
+## Pegado de texto grande — backing por asset preparado
 
-Se añadió `oanixLargePastePolicy.ts` como primera capa segura para evitar congelar el editor al decidir si un paste debe seguir inline o convertirse en elemento de texto largo.
+`oanixLargePastePolicy.ts` mantiene la clasificación segura para evitar congelar el editor al decidir si un paste debe seguir inline o convertirse en elemento de texto largo.
 
 - Umbral inicial: 128.000 unidades UTF-16, 256.000 bytes UTF-8 estimados o 1.200 líneas.
 - Si el tamaño UTF-16 ya supera el límite, la decisión sale en O(1) sin recorrer todo el clipboard.
 - Para candidatos pequeños se hace un único recorrido con salida temprana por líneas/bytes.
 - No usa `TextEncoder` para clasificar, por lo que no crea un segundo buffer binario del texto pegado.
-- La estimación cubre ASCII, multibyte, pares surrogate/emoji y surrogate inválido.
-- Esta política todavía no intercepta el paste de texto del editor ni persiste un elemento pesado; falta el codec/flujo de inserción correspondiente antes de activarla.
+
+Nueva base implementada en esta ejecución:
+
+- `oanixLongTextElementCodec.ts` define `oanix-long-text-element-v1`.
+- El bloque **no persiste el texto grande**: guarda únicamente `attachmentId`, preview acotada, longitud UTF-16 y conteo de líneas cuando ya está disponible sin recorrido adicional.
+- Para el guard O(1) por longitud, `lines` puede quedar `null`; no se escanea un clipboard enorme solo para metadata visual.
+- `oanixMixedLongTextInsertion.ts` convierte un paste grande en un `File` `text/plain` y lo entrega exclusivamente por `onRequestAttachmentStore`, reutilizando el almacenamiento real de OANIX detrás del contrato de `EditorSurface`.
+- Tras almacenar el asset, divide únicamente el `text-segment` objetivo en `texto anterior → Texto largo → texto posterior` y confirma `upserts + delete + order` como un único change-set.
+- Si el commit falla, intenta compensar eliminando el asset recién creado; ningún bloque vecino se reescribe.
+- `oanixMixedDocumentProjection.ts` ya reconoce el nuevo nodo y `OanixInsertableElementFrame` dispone de identidad visual `Texto largo` con preview acotada.
+- Pruebas nuevas verifican que el payload grande no termine dentro del bloque, que texto normal no se convierta por error y que el fallo de commit compense el asset.
+
+**Frontera deliberada:** el paste visible todavía no se intercepta desde `OanixNotesSheetSurface` / `OanixMixedDocumentBody`. Falta conectar renderer expandible bajo demanda y el host transaccional; hasta entonces el usuario no entra accidentalmente en una ruta parcialmente implementada.
 
 ## Guardia móvil
 
@@ -80,26 +91,21 @@ Se añadió `oanixLargePastePolicy.ts` como primera capa segura para evitar cong
 
 ## Elementos insertables preservados
 
-`OanixInsertableElementFrame` mantiene identidad visual y estructura común para Entrada, Imagen, Archivo, Código, Checklist, Contacto y Separador, con menú contextual adaptativo, preview limitada y expansión/cierre universal. Imagen es el primer elemento conectado de extremo a extremo al almacenamiento real; los demás controles siguen como armazón hasta implementar sus codecs/acciones sin degradar la escritura continua.
+`OanixInsertableElementFrame` mantiene identidad visual y estructura común para Entrada, Imagen, Archivo, Código, Checklist, Contacto y Separador, con menú contextual adaptativo, preview limitada y expansión/cierre universal. `Texto largo` se añadió como representación técnica específica para paste pesado, sin reemplazar los siete elementos acordados. Imagen es el primer elemento conectado de extremo a extremo al almacenamiento real; los demás controles siguen como armazón hasta implementar sus codecs/acciones sin degradar la escritura continua.
 
 ## Validación
 
-Checkpoint previo completamente validado: `254d135be500a6684fcdee95d5f27e0f7f74a43d` — OANIX CI #2444 verde, OANIX Android #1844 verde y Qwen Review #810 verde.
+Checkpoint previo completamente validado: `4730e85f550064876598168f9195508322ccf1d6` — OANIX CI #2472 verde, OANIX Android #1858 verde y Qwen Review #824 verde.
 
-Conexión de Imagen repetida:
-
-- commit de implementación: `5523d7f264dcf3d3d514638d6a9260df2893c9cc`;
-- commit con guard de integración: `3d82826180c18927939b33bab4df5adc7ae1d7da`;
-- **OANIX CI #2470 ✅** — pruebas + build + auditoría offline;
-- **Qwen Independent PR Review #823 ✅**;
-- **OANIX Android #1857**: web bundle + sync Capacitor ✅; APK/AAB seguían compilando al actualizar este checkpoint, por lo que este head todavía no se declara completamente validado en Android.
+El trabajo de texto largo de esta ejecución debe considerarse **IN_PROGRESS** hasta que el head final de código/documentación pase los gates aplicables. No afirmar todavía que la ruta visible de paste grande está terminada.
 
 ## Próximo bloque seguro
 
-1. terminar validación Android del flujo ya conectado y mantener visible cualquier deuda física de teclado/Atrás;
-2. diseñar codec/elemento de texto largo y conectar `oanixLargePastePolicy` sin bloquear el paste normal ni materializar buffers innecesarios;
-3. completar menú/acciones de Imagen sobre el renderer activo según el prototipo aprobado;
-4. continuar Entrada, Archivo, Código, Checklist, Contacto y Separador reutilizando orden/identidad de bloques y el armazón visual existente;
-5. ejecutar estrés con notas largas y múltiples elementos antes de considerar la hoja lista para promover.
+1. validar el head actual y corregir cualquier regresión real;
+2. añadir renderer de `Texto largo` que mantenga preview pequeña y solo lea el asset al abrir la expansión;
+3. conectar paste grande en mixed mode con `flush → loadBlocks confirmado → transición → actualización UI`, igual que la inserción repetida de Imagen;
+4. resolver después el primer paste grande desde modo plain mediante una transición compensada equivalente;
+5. completar menú/acciones de Imagen y continuar Entrada, Archivo, Código, Checklist, Contacto y Separador;
+6. ejecutar estrés con notas largas y múltiples elementos antes de considerar la hoja lista para promover.
 
 No promover ni fusionar este PR a `main` antes de la revisión visual/funcional correspondiente y de mantener los gates reales aplicables en verde.
