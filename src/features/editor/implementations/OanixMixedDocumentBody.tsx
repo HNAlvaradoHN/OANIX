@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { EditorSurfaceAttachment, EditorSurfaceBlock } from '../editorSurfaceContract.ts'
 import { findOanixClipboardImage } from '../oanixClipboardImage.ts'
+import type { OanixLongTextElement } from '../oanixLongTextElementCodec.ts'
 import { encodeTextBlock, type EditorTextBlock } from '../textBlockCodec.ts'
 import { projectOanixMixedDocument } from '../oanixMixedDocumentProjection.ts'
 import { OanixInsertableElementFrame } from './OanixInsertableElementFrame.tsx'
@@ -190,13 +191,91 @@ function OanixMixedImage({
   />
 }
 
+function OanixLongTextExpanded({
+  attachmentId,
+  loadAttachmentFile,
+  onError,
+}: {
+  attachmentId: string
+  loadAttachmentFile: (attachmentId: string) => Promise<File | null>
+  onError?: (message: string) => void
+}) {
+  const [url, setUrl] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let active = true
+    let objectUrl: string | null = null
+    setLoading(true)
+    void loadAttachmentFile(attachmentId).then((file) => {
+      if (!active) return
+      if (!file) {
+        onError?.('No se pudo abrir el texto largo cifrado.')
+        return
+      }
+      objectUrl = URL.createObjectURL(file)
+      setUrl(objectUrl)
+    }).catch(() => {
+      if (active) onError?.('No se pudo abrir el texto largo cifrado.')
+    }).finally(() => {
+      if (active) setLoading(false)
+    })
+
+    return () => {
+      active = false
+      if (objectUrl) URL.revokeObjectURL(objectUrl)
+    }
+  }, [attachmentId, loadAttachmentFile, onError])
+
+  if (loading) return <div className="oanix-mixed-document__long-text-state" role="status">Abriendo texto cifrado…</div>
+  if (!url) return <div className="oanix-mixed-document__long-text-state">Texto no disponible.</div>
+
+  return <iframe
+    className="oanix-mixed-document__long-text-viewer"
+    src={url}
+    title="Texto largo completo"
+    sandbox=""
+  />
+}
+
+function OanixMixedLongText({
+  block,
+  attachment,
+  disabled,
+  loadAttachmentFile,
+  onError,
+}: {
+  block: OanixLongTextElement
+  attachment: EditorSurfaceAttachment | undefined
+  disabled: boolean
+  loadAttachmentFile: (attachmentId: string) => Promise<File | null>
+  onError?: (message: string) => void
+}) {
+  const title = attachment?.name || 'Texto largo'
+  const lengthLabel = `${block.utf16Length.toLocaleString()} caracteres`
+  const lineLabel = block.lines === null ? '' : ` · ${block.lines.toLocaleString()} líneas`
+  const sizeLabel = attachment ? ` · ${formatBytes(attachment.byteLength)}` : ''
+
+  return <OanixInsertableElementFrame
+    elementId={block.id}
+    kind="text"
+    title={title}
+    meta={`${lengthLabel}${lineLabel}${sizeLabel}`}
+    preview={<pre className="oanix-mixed-document__long-text-preview">{block.preview}</pre>}
+    expanded={<OanixLongTextExpanded attachmentId={block.attachmentId} loadAttachmentFile={loadAttachmentFile} onError={onError} />}
+    disabled={disabled}
+  />
+}
+
 /**
  * Mixed renderer for continuous text interrupted by atomic OANIX elements.
  *
  * Text remains uncontrolled per segment so a keystroke does not mirror the whole
  * document into React state. Optional cursor callbacks expose only tiny insertion
  * metadata; image paste is intercepted only when the host wires the safe storage
- * coordinator. Images remain atomic flow children and load bytes lazily near view.
+ * coordinator. Images load lazily near view. Long pasted text keeps only its bounded
+ * preview in the document; the encrypted attachment is requested only while the
+ * universal expanded viewer is mounted.
  */
 export function OanixMixedDocumentBody({
   blocks,
@@ -239,6 +318,17 @@ export function OanixMixedDocumentBody({
           disabled={disabled}
           loadAttachmentFile={loadAttachmentFile}
           onRemove={() => onRemoveImage(node.block.id, node.block.attachmentId)}
+          onError={onError}
+        />
+      }
+
+      if (node.type === 'long-text') {
+        return <OanixMixedLongText
+          key={node.block.id}
+          block={node.block}
+          attachment={attachmentMap.get(node.block.attachmentId)}
+          disabled={disabled}
+          loadAttachmentFile={loadAttachmentFile}
           onError={onError}
         />
       }
