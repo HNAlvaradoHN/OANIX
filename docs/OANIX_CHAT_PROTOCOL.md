@@ -4,6 +4,14 @@ Fecha de definición: 2026-09-03
 
 Este protocolo existe para que el desarrollo de OANIX pueda continuar entre chats sin obligar al usuario a volver a explicar el trabajo anterior. GitHub es la fuente de verdad del estado del proyecto.
 
+## Registro secuencial actual
+
+- Chat OANIX activo registrado: `OANIX #3`.
+- Tratamiento del usuario: `Inge`.
+- El próximo chat nuevo de continuidad debe identificarse como `OANIX #4`.
+- Cada chat OANIX debe actualizar este registro al asumir su número, para que el siguiente asistente pueda responder correctamente incluso si el usuario pregunta directamente `¿qué número de OANIX eres?`.
+- Nunca reutilizar un número ya registrado ni inferirlo solamente del nombre de un checkpoint antiguo.
+
 ## Frase clave universal
 
 La frase clave es exactamente:
@@ -21,10 +29,11 @@ Se acepta también con diferencias normales de mayúsculas/minúsculas o puntuac
 5. Verificar rama, PR y código actuales antes de modificar archivos. No asumir que siguen iguales únicamente por el handoff.
 6. Determinar el número del último chat OANIX registrado y asignar automáticamente al chat nuevo el siguiente número secuencial. Ejemplo: si el último chat activo registrado es `OANIX #15`, el nuevo chat pasa a ser `OANIX #16`.
 7. La primera respuesta debe comenzar con `Inge — OANIX #N`, usando el número nuevo calculado.
-8. Actualizar la memoria/checkpoint del repositorio para registrar el nuevo chat activo antes o junto con el primer cambio relevante, evitando que dos chats posteriores reclamen el mismo número.
-9. Reanudar automáticamente desde el último punto pendiente real. No responder simplemente “tengo el contexto” ni terminar preguntando qué desea revisar.
-10. Si el último chat dejó una acción que requería una decisión explícita del usuario o una operación destructiva todavía no autorizada, conservar esa frontera de seguridad; continuidad no significa inventar aprobación.
-11. Si el estado actual de GitHub contradice el handoff, GitHub manda. Explicar brevemente la diferencia y continuar desde el estado real cuando sea seguro.
+8. Actualizar inmediatamente el `Registro secuencial actual` de este documento al asumir el nuevo número y, cuando corresponda, la memoria/checkpoint del repositorio. Esto evita que dos chats posteriores reclamen el mismo número.
+9. Si el usuario pregunta qué número de OANIX es el chat actual, consultar primero este registro y responder con el número activo. No usar como respuesta el número de un handoff/checkpoint histórico salvo que coincida con el registro activo.
+10. Reanudar automáticamente desde el último punto pendiente real. No responder simplemente “tengo el contexto” ni terminar preguntando qué desea revisar.
+11. Si el último chat dejó una acción que requería una decisión explícita del usuario o una operación destructiva todavía no autorizada, conservar esa frontera de seguridad; continuidad no significa inventar aprobación.
+12. Si el estado actual de GitHub contradice el handoff, GitHub manda. Explicar brevemente la diferencia y continuar desde el estado real cuando sea seguro.
 
 ## Diferencia con `OANIX-NOCHE`
 
