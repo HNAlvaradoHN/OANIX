@@ -45,3 +45,13 @@ Se acepta también con diferencias normales de mayúsculas/minúsculas o puntuac
 Durante el trabajo, las decisiones duraderas se registran en `docs/PROJECT_MEMORY.md` y el estado ejecutable inmediato en `docs/CURRENT_STATE.md`. Antes de abandonar deliberadamente un chat largo o preparar el siguiente, dejar un handoff/checkpoint suficientemente concreto para que `SIGUE EL CHAT AQUÍ` pueda reanudar sin depender del historial interno de ChatGPT.
 
 El handoff debe indicar, cuando aplique: número del chat que termina y siguiente esperado, rama/PR, último checkpoint, estado validado, trabajo en curso, siguiente acción concreta, restricciones acordadas y cualquier validación pendiente.
+
+Además, todo cierre de OANIX debe incluir una sección explícita titulada `ÚLTIMO TRABAJO REALIZADO` con el trabajo más reciente efectivamente completado, no solo el siguiente pendiente. Debe registrar como mínimo:
+
+- último PR o commit fusionado/producido, con número y SHA cuando exista;
+- qué comportamiento quedó implementado o corregido;
+- qué validaciones quedaron verdes o qué pruebas se ejecutaron;
+- qué quedó pendiente de validación física o funcional por parte del usuario;
+- cuál es la siguiente acción exacta recomendada para el próximo OANIX.
+
+Si durante el chat no se modificó código, la sección debe decirlo explícitamente y registrar cuál fue la última acción real realizada (por ejemplo: auditoría, diagnóstico, decisión técnica o prueba física pendiente). El objetivo es que el siguiente OANIX nunca tenga que reconstruir o adivinar qué fue lo último que hizo el chat anterior.
