@@ -13,6 +13,7 @@ import type {
 import { findOanixClipboardImage } from '../oanixClipboardImage'
 import { insertOanixImageAtCursor } from '../oanixImageInsertionCoordinator'
 import { decideOanixMixedDocumentLoad } from '../oanixMixedDocumentLoadPolicy'
+import { insertOanixImageIntoMixedDocument } from '../oanixMixedImageInsertion'
 import { OanixMixedDocumentBody } from './OanixMixedDocumentBody'
 import './oanixNotesSheetSurface.css'
 
@@ -61,6 +62,7 @@ export function OanixNotesSheetSurface({
   const handleDragRef = useRef<{ pointerId: number; startX: number; startY: number; moved: boolean } | null>(null)
   const lastPlainCursorRef = useRef(initialText.length)
   const pendingImageCursorRef = useRef<number | null>(null)
+  const pendingMixedImageTargetRef = useRef<{ blockId: string; cursorOffset: number } | null>(null)
   const pendingMixedUpsertsRef = useRef<Map<string, EditorSurfaceBlock>>(new Map())
 
   const [dirty, setDirty] = useState(false)
@@ -106,6 +108,21 @@ export function OanixNotesSheetSurface({
     const textarea = bodyRef.current
     if (!textarea) return
     lastPlainCursorRef.current = Math.max(0, textarea.selectionStart ?? textarea.value.length)
+  }
+
+  function rememberMixedCursor(blockId: string, cursorOffset: number) {
+    pendingMixedImageTargetRef.current = {
+      blockId,
+      cursorOffset: Math.max(0, cursorOffset),
+    }
+  }
+
+  function rememberMixedCursorFromActiveElement() {
+    const active = document.activeElement
+    if (!(active instanceof HTMLTextAreaElement) || !active.matches('.oanix-mixed-document__text')) return
+    const blockId = active.dataset.oanixMixedTextId
+    if (!blockId) return
+    rememberMixedCursor(blockId, active.selectionStart ?? active.value.length)
   }
 
   function clearIdleTimer() {
@@ -273,7 +290,8 @@ export function OanixNotesSheetSurface({
   }
 
   function openPanel() {
-    rememberPlainCursor()
+    if (documentMode === 'plain') rememberPlainCursor()
+    else rememberMixedCursorFromActiveElement()
     closeKeyboard()
     setCustomizeOpen(false)
     setPanelOpen(true)
@@ -338,6 +356,17 @@ export function OanixNotesSheetSurface({
     if (shouldOpen) openPanel()
   }
 
+  function focusAfterInsertedImage(imageBlockId: string, afterTextBlockId: string) {
+    window.requestAnimationFrame(() => {
+      const image = editorRef.current?.querySelector<HTMLElement>(`[data-oanix-element-id="${CSS.escape(imageBlockId)}"]`)
+      image?.scrollIntoView({ block: 'center' })
+      const nextText = editorRef.current?.querySelector<HTMLTextAreaElement>(`[data-oanix-mixed-text-id="${CSS.escape(afterTextBlockId)}"]`)
+      nextText?.focus({ preventScroll: true })
+      nextText?.setSelectionRange(0, 0)
+      if (nextText) rememberMixedCursor(afterTextBlockId, 0)
+    })
+  }
+
   async function insertImageFile(file: File, cursorOffset: number) {
     if (
       documentMode !== 'plain'
@@ -394,17 +423,9 @@ export function OanixNotesSheetSurface({
       markClean()
       onActivity?.()
 
-      window.requestAnimationFrame(() => {
-        const image = editorRef.current?.querySelector<HTMLElement>(`[data-oanix-element-id="${CSS.escape(plan.imageBlockId)}"]`)
-        image?.scrollIntoView({ block: 'center' })
-        const imageIndex = plan.order.indexOf(plan.imageBlockId)
-        const nextId = imageIndex >= 0 ? plan.order[imageIndex + 1] : null
-        if (nextId) {
-          const nextText = editorRef.current?.querySelector<HTMLTextAreaElement>(`[data-oanix-mixed-text-id="${CSS.escape(nextId)}"]`)
-          nextText?.focus({ preventScroll: true })
-          nextText?.setSelectionRange(0, 0)
-        }
-      })
+      const imageIndex = plan.order.indexOf(plan.imageBlockId)
+      const nextId = imageIndex >= 0 ? plan.order[imageIndex + 1] : null
+      if (nextId) focusAfterInsertedImage(plan.imageBlockId, nextId)
     } catch {
       setIntegrationError('No se pudo insertar la imagen de forma segura.')
       if (dirtyRef.current) armAutosaveTimer()
@@ -413,13 +434,89 @@ export function OanixNotesSheetSurface({
     }
   }
 
-  function openImagePicker() {
-    if (documentMode !== 'plain' || !metadataReady || !mixedAvailable) {
+  async function insertMixedImageFile(file: File, blockId: string, cursorOffset: number) {
+    if (
+      documentMode !== 'mixed'
+      || !metadataReady
+      || !loadBlocks
+      || !onRequestBlockSave
+      || !onRequestAttachmentStore
+      || !onRequestAttachmentRemove
+    ) {
       setIntegrationError('Imagen todavía no está disponible en el estado actual de esta nota.')
       return
     }
-    rememberPlainCursor()
-    pendingImageCursorRef.current = lastPlainCursorRef.current
+
+    clearIdleTimer()
+    setImageBusy(true)
+    setPanelOpen(false)
+    setIntegrationError('')
+
+    try {
+      if (saveInFlightRef.current) await saveInFlightRef.current
+      if (dirtyRef.current && !(await saveCurrentSnapshot())) {
+        setIntegrationError('No se pudo guardar el texto pendiente antes de insertar la imagen.')
+        return
+      }
+
+      const confirmedBlocks = await loadBlocks()
+      const result = await insertOanixImageIntoMixedDocument({
+        file,
+        blocks: confirmedBlocks,
+        targetTextBlockId: blockId,
+        cursorOffset,
+        storeAttachment: onRequestAttachmentStore,
+        saveBlockChanges: onRequestBlockSave,
+        removeAttachment: onRequestAttachmentRemove,
+      })
+
+      if (result.status !== 'committed') {
+        const cleanup = result.status === 'block-save-failed' && !result.attachmentCleanupSucceeded
+          ? 'block-save-failed-cleanup-pending'
+          : result.status
+        setIntegrationError(`No se pudo insertar la imagen de forma segura (${cleanup}).`)
+        return
+      }
+
+      pendingMixedUpsertsRef.current.clear()
+      setMixedBlocks(result.plan.blocks)
+      setAttachments((current) => [...current.filter((item) => item.id !== result.attachment.id), result.attachment])
+      markClean()
+      onActivity?.()
+      focusAfterInsertedImage(result.plan.imageBlockId, result.plan.afterTextBlockId)
+    } catch {
+      setIntegrationError('No se pudo insertar la imagen de forma segura.')
+    } finally {
+      setImageBusy(false)
+      if (dirtyRef.current) armAutosaveTimer()
+    }
+  }
+
+  function openImagePicker() {
+    if (!metadataReady || !mixedAvailable) {
+      setIntegrationError('Imagen todavía no está disponible en el estado actual de esta nota.')
+      return
+    }
+
+    if (documentMode === 'plain') {
+      rememberPlainCursor()
+      pendingImageCursorRef.current = lastPlainCursorRef.current
+      pendingMixedImageTargetRef.current = null
+    } else {
+      rememberMixedCursorFromActiveElement()
+      if (!pendingMixedImageTargetRef.current) {
+        const textareas = editorRef.current?.querySelectorAll<HTMLTextAreaElement>('.oanix-mixed-document__text')
+        const fallback = textareas?.[Math.max(0, (textareas?.length ?? 1) - 1)]
+        const blockId = fallback?.dataset.oanixMixedTextId
+        if (fallback && blockId) rememberMixedCursor(blockId, fallback.value.length)
+      }
+      if (!pendingMixedImageTargetRef.current) {
+        setIntegrationError('Coloca el cursor en un tramo de texto antes de insertar la imagen.')
+        return
+      }
+      pendingImageCursorRef.current = null
+    }
+
     imageInputRef.current?.click()
   }
 
@@ -596,6 +693,8 @@ export function OanixNotesSheetSurface({
                   disabled={editingDisabled}
                   loadAttachmentFile={loadAttachmentFile}
                   onTextBlockChange={stageMixedBlock}
+                  onTextCursorChange={rememberMixedCursor}
+                  onPasteImage={(file, blockId, cursorOffset) => void insertMixedImageFile(file, blockId, cursorOffset)}
                   onRemoveImage={removeMixedImage}
                   onActivity={markActivity}
                   onCompositionStart={() => { composingRef.current = true; onActivity?.() }}
@@ -666,9 +765,13 @@ export function OanixNotesSheetSurface({
         onChange={(event) => {
           const file = event.currentTarget.files?.[0]
           event.currentTarget.value = ''
+          const mixedTarget = pendingMixedImageTargetRef.current
           const cursor = pendingImageCursorRef.current ?? lastPlainCursorRef.current
+          pendingMixedImageTargetRef.current = null
           pendingImageCursorRef.current = null
-          if (file) void insertImageFile(file, cursor)
+          if (!file) return
+          if (mixedTarget) void insertMixedImageFile(file, mixedTarget.blockId, mixedTarget.cursorOffset)
+          else void insertImageFile(file, cursor)
         }}
       />
     </section>
