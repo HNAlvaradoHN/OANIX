@@ -1,10 +1,12 @@
 import type { EditorSurfaceBlock } from './editorSurfaceContract.ts'
 import { decodeOanixImageElement, type OanixImageElement } from './oanixImageElementCodec.ts'
+import { decodeOanixLongTextElement, type OanixLongTextElement } from './oanixLongTextElementCodec.ts'
 import { decodeTextBlock, type EditorTextBlock } from './textBlockCodec.ts'
 
 export type OanixMixedDocumentNode =
   | { type: 'text'; block: EditorTextBlock }
   | { type: 'image'; block: OanixImageElement }
+  | { type: 'long-text'; block: OanixLongTextElement }
   | { type: 'unsupported'; block: EditorSurfaceBlock }
 
 /**
@@ -20,10 +22,15 @@ export function projectOanixMixedDocument(blocks: readonly EditorSurfaceBlock[])
     const image = decodeOanixImageElement(block)
     if (image) return { type: 'image', block: image }
 
+    const longText = decodeOanixLongTextElement(block)
+    if (longText) return { type: 'long-text', block: longText }
+
     return { type: 'unsupported', block }
   })
 }
 
 export function hasRenderableOanixMixedContent(blocks: readonly EditorSurfaceBlock[]): boolean {
-  return projectOanixMixedDocument(blocks).some((node) => node.type === 'text' || node.type === 'image')
+  return projectOanixMixedDocument(blocks).some((node) => (
+    node.type === 'text' || node.type === 'image' || node.type === 'long-text'
+  ))
 }
