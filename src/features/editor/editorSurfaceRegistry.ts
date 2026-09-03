@@ -3,6 +3,7 @@ import type {
   EditorSurfaceCapabilities,
   EditorSurfaceProps,
 } from './editorSurfaceContract'
+import './implementations/oanixNotesSheetMobileSafeArea.css'
 
 export interface EditorSurfaceDefinition {
   id: string
