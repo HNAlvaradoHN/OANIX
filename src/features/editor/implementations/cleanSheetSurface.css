@@ -10,40 +10,41 @@
 }
 
 .clean-sheet__topbar {
-  position: sticky;
-  top: 0;
-  z-index: 20;
+  position: fixed;
+  top: max(10px, env(safe-area-inset-top));
+  left: 12px;
+  right: 12px;
+  z-index: 40;
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
-  min-height: 54px;
-  padding: 8px 12px;
-  background: color-mix(in srgb, var(--surface, #f3f4f6) 92%, transparent);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  pointer-events: none;
 }
 
 .clean-sheet__back,
 .clean-sheet__save {
-  min-height: 38px;
-  border: 0;
-  border-radius: 12px;
-  background: var(--surface-elevated, #ffffff);
+  min-height: 40px;
+  border: 1px solid color-mix(in srgb, currentColor 10%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-elevated, #ffffff) 90%, transparent);
   color: inherit;
   font: inherit;
   font-weight: 650;
-  box-shadow: 0 1px 2px rgb(0 0 0 / 8%);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  pointer-events: auto;
 }
 
 .clean-sheet__back {
-  width: 40px;
+  width: 42px;
   padding: 0;
   font-size: 22px;
 }
 
 .clean-sheet__save {
-  padding: 0 14px;
+  padding: 0 16px;
 }
 
 .clean-sheet__back:disabled,
@@ -52,8 +53,16 @@
 }
 
 .clean-sheet__status {
+  justify-self: center;
   min-width: 0;
+  max-width: min(48vw, 260px);
   overflow: hidden;
+  padding: 7px 11px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-elevated, #ffffff) 82%, transparent);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 8%);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   text-align: center;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -72,9 +81,9 @@
 
 .clean-sheet__paper {
   width: min(100%, 860px);
-  min-height: calc(100dvh - 112px);
+  min-height: calc(100dvh - 36px);
   margin: 0 auto;
-  padding: clamp(24px, 6vw, 58px) clamp(20px, 7vw, 68px) 56px;
+  padding: clamp(76px, 10vw, 94px) clamp(20px, 7vw, 68px) 56px;
   border-radius: 20px;
   background: var(--editor-paper, #ffffff);
   box-shadow: 0 10px 35px rgb(0 0 0 / 7%);
@@ -124,8 +133,15 @@
 
 @media (max-width: 640px) {
   .clean-sheet__topbar {
-    position: sticky;
-    padding-top: max(8px, env(safe-area-inset-top));
+    top: max(8px, env(safe-area-inset-top));
+    left: 10px;
+    right: 10px;
+    gap: 8px;
+  }
+
+  .clean-sheet__status {
+    max-width: 38vw;
+    padding-inline: 9px;
   }
 
   .clean-sheet__viewport {
@@ -133,9 +149,9 @@
   }
 
   .clean-sheet__paper {
-    min-height: calc(100dvh - 54px);
+    min-height: 100dvh;
     border-radius: 0;
-    padding: 22px 20px 48px;
+    padding: max(74px, calc(env(safe-area-inset-top) + 64px)) 20px 48px;
     box-shadow: none;
   }
 
