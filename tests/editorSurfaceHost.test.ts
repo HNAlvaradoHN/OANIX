@@ -51,7 +51,7 @@ test('rich block boundary stays generic and does not import persistence or a con
 
 test('the host gates rich callbacks through the selected surface capability', () => {
   assert.match(host, /activeEditorSurface\.capabilities\.richBlocks[\s\S]*\? props[\s\S]*loadBlocks: undefined[\s\S]*onRequestBlockSave: undefined/)
-  assert.match(registry, /richBlocks: false/)
+  assert.match(registry, /richBlocks: true/)
 })
 
 test('the registry is the only composition point and lazily selects the guarded OANIX Notes surface', () => {
@@ -62,20 +62,24 @@ test('the registry is the only composition point and lazily selects the guarded 
   assert.match(registry, /return \{ default: OanixNotesSheetMobileGuard \}/)
   assert.match(mobileGuard, /OanixNotesSheetSurface/)
   assert.match(registry, /plainText: true/)
-  assert.match(registry, /richBlocks: false/)
-  assert.match(registry, /attachments: false/)
+  assert.match(registry, /richBlocks: true/)
+  assert.match(registry, /attachments: true/)
   assert.doesNotMatch(registry, /^\s*import .*OanixNotesSheetSurface/m)
   assert.doesNotMatch(registry, /from '\.\/NoteEditor'/)
 })
 
-test('the selected OANIX Notes sheet owns only visual editing and EditorSurface lifecycle', () => {
+test('the selected OANIX Notes sheet owns visual mixed editing while storage stays behind callbacks', () => {
   assert.match(selectedSurface, /export function OanixNotesSheetSurface\(\{/)
   assert.match(selectedSurface, /\}: EditorSurfaceProps\)/)
   assert.match(selectedSurface, /defaultValue=\{initialTitle\}/)
   assert.match(selectedSurface, /defaultValue=\{initialText\}/)
   assert.match(selectedSurface, /AUTOSAVE_IDLE_MS = 3_000/)
   assert.match(selectedSurface, /onRequestSave\(snapshot\)/)
-  assert.match(selectedSurface, /onRequestClose\(snapshot\)/)
+  assert.match(selectedSurface, /onRequestClose\(snapshot\)|onRequestClose\(null\)/)
+  assert.match(selectedSurface, /decideOanixMixedDocumentLoad/)
+  assert.match(selectedSurface, /insertOanixImageAtCursor/)
+  assert.match(selectedSurface, /OanixMixedDocumentBody/)
+  assert.match(selectedSurface, /pendingMixedUpsertsRef/)
   assert.match(selectedSurface, /oanix-notes__slide-handle/)
   assert.match(selectedSurface, /oanix-notes__side-panel/)
   assert.doesNotMatch(selectedSurface, /indexedDB|localStorage|sessionStorage/)
