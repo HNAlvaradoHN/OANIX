@@ -30,9 +30,12 @@ test('code blocks remain plain persisted text without runtime highlighting depen
   assert.doesNotMatch(richBlocks, highlighterImport)
 })
 
-test('attachments and rich blocks remain disabled in the active plain-text phase', () => {
+test('active OANIX mixed capabilities do not leak attachment handling into preserved Qwen rich blocks', () => {
   const registry = readFileSync('src/features/editor/editorSurfaceRegistry.ts', 'utf8')
-  assert.match(registry, /richBlocks: false/)
-  assert.match(registry, /attachments: false/)
+  const activeSheet = readFileSync('src/features/editor/implementations/OanixNotesSheetSurface.tsx', 'utf8')
+  assert.match(registry, /richBlocks: true/)
+  assert.match(registry, /attachments: true/)
   assert.doesNotMatch(richBlocks, /FileReader|Blob|URL\.createObjectURL|input[^>]+type=["']file["']/)
+  assert.match(activeSheet, /onRequestAttachmentStore/)
+  assert.match(activeSheet, /loadAttachmentFile/)
 })
