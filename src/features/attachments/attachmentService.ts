@@ -9,6 +9,14 @@ import {
   writeEncryptedRecord,
 } from '../../storage/repositories/encryptedRecordRepository'
 import {
+  cacheAttachmentFile,
+  cacheAttachmentMetadata,
+  evictCachedAttachmentFile,
+  evictCachedAttachmentNote,
+  getCachedAttachmentFile,
+  getCachedAttachmentMetadata,
+} from './attachmentSessionCache'
+import {
   isAttachmentIndex,
   isRemoteLargeAttachment,
   MAX_LOCAL_ATTACHMENT_BYTES,
@@ -56,9 +64,11 @@ async function readAttachmentIndex(noteId: string): Promise<AttachmentIndex> {
 async function writeAttachmentIndex(index: AttachmentIndex): Promise<void> {
   if (index.items.length === 0) {
     await deleteEncryptedRecord(ATTACHMENT_INDEX_RECORD_TYPE, index.noteId)
+    cacheAttachmentMetadata(index.noteId, [])
     return
   }
   await writeEncryptedRecord(ATTACHMENT_INDEX_RECORD_TYPE, index.noteId, index)
+  cacheAttachmentMetadata(index.noteId, index.items)
 }
 
 async function serializeAttachmentIndexMutation<T>(
@@ -88,7 +98,12 @@ async function appendAttachmentMetadata(noteId: string, metadata: AttachmentMeta
 }
 
 export async function loadEncryptedAttachments(noteId: string): Promise<AttachmentMetadata[]> {
-  const index = await readAttachmentIndex(noteId)
+  const normalizedNoteId = requireNoteId(noteId)
+  const cached = getCachedAttachmentMetadata(normalizedNoteId)
+  if (cached) return cached.sort((left, right) => left.createdAt.localeCompare(right.createdAt))
+
+  const index = await readAttachmentIndex(normalizedNoteId)
+  cacheAttachmentMetadata(normalizedNoteId, index.items)
   return [...index.items].sort((left, right) => left.createdAt.localeCompare(right.createdAt))
 }
 
@@ -129,6 +144,7 @@ export async function storeEncryptedAttachment(
     throw error
   }
 
+  cacheAttachmentFile(attachmentId, file)
   return metadata
 }
 
@@ -170,14 +186,20 @@ export async function loadEncryptedAttachmentFile(
   metadata: AttachmentMetadata,
 ): Promise<File | null> {
   if (isRemoteLargeAttachment(metadata)) return null
+
+  const cached = getCachedAttachmentFile(metadata.attachmentId)
+  if (cached) return cached
+
   const bytes = await readEncryptedBlob(ATTACHMENT_BLOB_RECORD_TYPE, metadata.attachmentId)
   if (!bytes) return null
 
   try {
-    return new File([Uint8Array.from(bytes)], metadata.name, {
+    const file = new File([Uint8Array.from(bytes)], metadata.name, {
       type: metadata.mimeType,
       lastModified: Date.parse(metadata.createdAt) || Date.now(),
     })
+    cacheAttachmentFile(metadata.attachmentId, file)
+    return file
   } finally {
     bytes.fill(0)
   }
@@ -189,7 +211,10 @@ export async function removeEncryptedAttachment(
 ): Promise<void> {
   const index = await readAttachmentIndex(noteId)
   const existing = index.items.find((item) => item.attachmentId === attachmentId)
-  if (!existing) return
+  if (!existing) {
+    evictCachedAttachmentFile(attachmentId)
+    return
+  }
 
   if (isRemoteLargeAttachment(existing) && existing.storage) {
     await deleteLargeAttachmentFromDrive(existing.storage)
@@ -197,6 +222,7 @@ export async function removeEncryptedAttachment(
       ...index,
       items: index.items.filter((item) => item.attachmentId !== attachmentId),
     })
+    evictCachedAttachmentFile(attachmentId)
     return
   }
 
@@ -208,6 +234,7 @@ export async function removeEncryptedAttachment(
   await writeAttachmentIndex(nextIndex)
   try {
     await deleteEncryptedBlob(ATTACHMENT_BLOB_RECORD_TYPE, attachmentId)
+    evictCachedAttachmentFile(attachmentId)
   } catch (error) {
     try {
       await writeAttachmentIndex(index)
@@ -227,7 +254,10 @@ export async function assertAttachmentsAllowNoteDeletion(noteId: string): Promis
 
 export async function deleteAllEncryptedAttachmentsForNote(noteId: string): Promise<void> {
   const index = await readAttachmentIndex(noteId)
-  if (index.items.length === 0) return
+  if (index.items.length === 0) {
+    evictCachedAttachmentNote(index.noteId)
+    return
+  }
   if (index.items.some(isRemoteLargeAttachment)) {
     throw new Error('No se eliminará una nota con archivos grandes remotos sin quitarlos primero.')
   }
@@ -240,4 +270,5 @@ export async function deleteAllEncryptedAttachmentsForNote(noteId: string): Prom
   }
 
   await deleteEncryptedRecord(ATTACHMENT_INDEX_RECORD_TYPE, index.noteId)
+  evictCachedAttachmentNote(index.noteId)
 }
