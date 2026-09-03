@@ -44,6 +44,8 @@ test('image controls stay usable after resize and distinguish tap from scroll', 
   assert.match(css, /\.oanix-mixed-image__menu\[data-direction="up"\]\{bottom:calc\(100% \+ 10px\)\}/)
   assert.match(css, /width:min\(320px,calc\(100vw - 40px\)\)/)
   assert.match(css, /background:rgba\(20,22,28,\.94\)/)
+  assert.match(css, /:has\(\.oanix-mixed-image__menu\[data-direction="up"\]\) \.oanix-mixed-image__resize-control\{top:10px;bottom:auto\}/)
+  assert.match(css, /:has\(\.oanix-mixed-image__menu\[data-direction="down"\]\) \.oanix-mixed-image__resize-control\{top:auto;bottom:10px\}/)
 })
 
 test('image lock is the only resize toggle and outside interaction relocks the current size', async () => {
