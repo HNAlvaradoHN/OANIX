@@ -30,11 +30,14 @@ jobs:
 
       - name: Build OANIX
         run: |
-          set -o pipefail
-          npm run build 2>&1 | tee /tmp/oanix-build.log || {
-            grep -E "error TS|error:" /tmp/oanix-build.log || true
+          if npm run build > /tmp/oanix-build.log 2>&1; then
+            tail -20 /tmp/oanix-build.log
+          else
+            echo 'OANIX_BUILD_ERROR_BEGIN'
+            tail -40 /tmp/oanix-build.log
+            echo 'OANIX_BUILD_ERROR_END'
             exit 1
-          }
+          fi
 
       - name: Audit offline production bundle
         run: npm run audit:offline-bundle
