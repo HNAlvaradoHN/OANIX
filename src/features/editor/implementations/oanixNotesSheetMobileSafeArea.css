@@ -24,18 +24,18 @@
 }
 
 /*
- * Some Android browsers expose a very small strip of browser background between
- * the layout viewport and the IME while focused. Cover only that transition
- * while editing; it does not participate in document layout or scrolling.
+ * Android/Brave can expose a thin strip exactly at the visual viewport boundary
+ * above the IME. Position this cover at that boundary rather than at layout
+ * viewport bottom (which is behind the keyboard while it is open).
  */
 .oanix-notes:focus-within::after {
   content: "";
   position: fixed;
   left: 0;
   right: 0;
-  bottom: 0;
+  bottom: var(--oanix-viewport-bottom-inset, 0px);
   z-index: 2;
-  height: 32px;
+  height: 16px;
   background: var(--color-surface);
   pointer-events: none;
 }
@@ -50,6 +50,6 @@
   }
 
   .oanix-notes:focus-within::after {
-    height: 40px;
+    height: 20px;
   }
 }
