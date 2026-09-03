@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
-import { toEditorSurfaceAttachment } from '../src/features/editor/editorAttachmentAdapter.ts'
+import { toEditorSurfaceAttachment } from '../src/features/editor/editorAttachmentProjection.ts'
 
 const adapterSource = readFileSync('src/features/editor/editorAttachmentAdapter.ts', 'utf8')
 const contractSource = readFileSync('src/features/editor/editorSurfaceContract.ts', 'utf8')
@@ -46,6 +46,7 @@ test('editor attachment projection exposes only presentation-safe metadata', () 
 
 test('editor attachment adapter reuses OANIX attachment services instead of storage internals', () => {
   assert.match(adapterSource, /from '..\/attachments\/attachmentService'/)
+  assert.match(adapterSource, /from '\.\/editorAttachmentProjection'/)
   assert.doesNotMatch(adapterSource, /encryptedBlobRepository|encryptedRecordRepository|contentCrypto|vault/i)
   assert.doesNotMatch(adapterSource, /localStorage|sessionStorage|indexedDB|dataURL|base64/i)
 })
