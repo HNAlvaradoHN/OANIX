@@ -15,16 +15,21 @@
   scroll-padding-bottom: 84px;
 }
 
-/* The title must be unmistakably different from normal note text. */
-.oanix-notes__title {
-  font-size: 42px;
-  font-weight: 900;
-  line-height: 1.12;
-  letter-spacing: -0.035em;
+/*
+ * This file is imported by the mobile guard while the surface imports its own
+ * stylesheet too. The principal surface CSS still contains legacy mobile title
+ * sizes, so these declarations intentionally use stronger specificity and
+ * !important until that legacy rule is removed from the shared stylesheet.
+ */
+.oanix-notes .oanix-notes__title {
+  font-size: 42px !important;
+  font-weight: 900 !important;
+  line-height: 1.12 !important;
+  letter-spacing: -0.035em !important;
 }
 
-.oanix-notes__title::placeholder {
-  font-weight: 800;
+.oanix-notes .oanix-notes__title::placeholder {
+  font-weight: 800 !important;
 }
 
 .oanix-notes__body-wrap {
@@ -36,15 +41,15 @@
 }
 
 @media (min-width: 768px) {
-  .oanix-notes__title {
-    font-size: 48px;
+  .oanix-notes .oanix-notes__title {
+    font-size: 48px !important;
   }
 }
 
 @media (max-width: 520px) {
-  .oanix-notes__title {
-    font-size: 42px;
-    font-weight: 900;
+  .oanix-notes .oanix-notes__title {
+    font-size: 42px !important;
+    font-weight: 900 !important;
   }
 
   .oanix-notes__body-wrap {
