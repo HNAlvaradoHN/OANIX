@@ -85,8 +85,13 @@ export function OanixNotesSheetMobileGuard(props: EditorSurfaceProps) {
     if (!editor || !textarea) return
 
     const syncViewport = () => {
-      editor.style.setProperty('--oanix-viewport-top', `${viewport?.offsetTop ?? 0}px`)
-      editor.style.setProperty('--oanix-visible-height', `${viewport?.height ?? window.innerHeight}px`)
+      const viewportTop = viewport?.offsetTop ?? 0
+      const viewportHeight = viewport?.height ?? window.innerHeight
+      const viewportBottomInset = Math.max(0, window.innerHeight - (viewportTop + viewportHeight))
+
+      editor.style.setProperty('--oanix-viewport-top', `${viewportTop}px`)
+      editor.style.setProperty('--oanix-visible-height', `${viewportHeight}px`)
+      editor.style.setProperty('--oanix-viewport-bottom-inset', `${viewportBottomInset}px`)
       scheduleCaretCheck()
     }
 
