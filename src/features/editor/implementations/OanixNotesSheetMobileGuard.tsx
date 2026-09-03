@@ -5,6 +5,7 @@ import './oanixNotesSheetMobileSafeArea.css'
 
 const TOP_SAFE_GAP = 18
 const BOTTOM_SAFE_GAP = 72
+const BODY_MIN_HEIGHT = 280
 
 function getCaretTop(textarea: HTMLTextAreaElement): number {
   const style = window.getComputedStyle(textarea)
@@ -97,15 +98,35 @@ export function OanixNotesSheetMobileGuard(props: EditorSurfaceProps) {
       scheduleCaretCheck(false)
     }
 
-    // Typing must never pull the document upward. That oscillation was causing
-    // previous lines to flash on every key press in Android/Brave.
-    const handleTyping = () => scheduleCaretCheck(false)
+    // The surface currently measures autosize by briefly assigning height:auto.
+    // Once the textarea grows beyond its 280px minimum, that creates a visible
+    // collapse/reflow on every key press. Freeze the already reached height before
+    // normal text insertion so that measurement can only grow, never flash smaller.
+    const handleBeforeInput = (event: InputEvent) => {
+      if (event.inputType.startsWith('delete')) {
+        textarea.style.minHeight = `${BODY_MIN_HEIGHT}px`
+        return
+      }
+
+      const currentHeight = Math.max(BODY_MIN_HEIGHT, textarea.getBoundingClientRect().height)
+      textarea.style.minHeight = `${currentHeight}px`
+    }
+
+    const handleTyping = () => {
+      const renderedHeight = Math.max(BODY_MIN_HEIGHT, textarea.getBoundingClientRect().height)
+      textarea.style.minHeight = `${renderedHeight}px`
+      scheduleCaretCheck(false)
+    }
+
     const handlePointerSelection = () => scheduleCaretCheck(true)
     const handleFocus = () => {
+      const renderedHeight = Math.max(BODY_MIN_HEIGHT, textarea.getBoundingClientRect().height)
+      textarea.style.minHeight = `${renderedHeight}px`
       window.setTimeout(() => scheduleCaretCheck(false), 60)
       window.setTimeout(() => scheduleCaretCheck(false), 220)
     }
 
+    textarea.addEventListener('beforeinput', handleBeforeInput)
     textarea.addEventListener('input', handleTyping)
     textarea.addEventListener('keyup', handleTyping)
     textarea.addEventListener('pointerup', handlePointerSelection)
@@ -115,6 +136,7 @@ export function OanixNotesSheetMobileGuard(props: EditorSurfaceProps) {
     syncViewport()
 
     return () => {
+      textarea.removeEventListener('beforeinput', handleBeforeInput)
       textarea.removeEventListener('input', handleTyping)
       textarea.removeEventListener('keyup', handleTyping)
       textarea.removeEventListener('pointerup', handlePointerSelection)
