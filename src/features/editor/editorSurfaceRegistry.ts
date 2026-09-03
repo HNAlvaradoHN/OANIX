@@ -20,16 +20,16 @@ export interface EditorSurfaceDefinition {
  * persistence, encryption, sync and navigation remain untouched.
  */
 export const activeEditorSurface: EditorSurfaceDefinition = {
-  id: 'qwen-sanitized-v1',
+  id: 'oanix-notes-sheet-v1',
   load: async () => {
-    const { QwenSheetSurface } = await import(
-      './implementations/QwenSheetSurface'
+    const { OanixNotesSheetMobileGuard } = await import(
+      './implementations/OanixNotesSheetMobileGuard'
     )
-    return { default: QwenSheetSurface }
+    return { default: OanixNotesSheetMobileGuard }
   },
   capabilities: {
     plainText: true,
     richBlocks: true,
-    attachments: false,
+    attachments: true,
   },
 }

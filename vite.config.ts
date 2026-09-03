@@ -4,9 +4,11 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig(({ mode }) => {
   const isCapacitor = mode === 'capacitor'
+  const isVercel = process.env.VERCEL === '1'
+  const publicBase = isCapacitor ? './' : isVercel ? '/' : '/OANIX/'
 
   return {
-    base: isCapacitor ? './' : '/OANIX/',
+    base: publicBase,
     plugins: [
       react(),
       VitePWA({
@@ -34,12 +36,12 @@ export default defineConfig(({ mode }) => {
           theme_color: '#111827',
           background_color: '#f7f7f5',
           display: 'standalone',
-          start_url: '/OANIX/',
-          scope: '/OANIX/',
+          start_url: publicBase,
+          scope: publicBase,
           icons: [
             {
               // User-selected OANIX PWA logo, stored as a real square raster asset.
-              src: '/OANIX/oanix-logo.webp',
+              src: `${publicBase}oanix-logo.webp`,
               sizes: '512x512',
               type: 'image/webp',
               purpose: 'any'

@@ -5,6 +5,7 @@ import test from 'node:test'
 const surface = readFileSync('src/features/editor/implementations/QwenSheetSurface.tsx', 'utf8')
 const richBlocks = readFileSync('src/features/editor/implementations/QwenRichBlocks.tsx', 'utf8')
 const registry = readFileSync('src/features/editor/editorSurfaceRegistry.ts', 'utf8')
+const activeSheet = readFileSync('src/features/editor/implementations/OanixNotesSheetSurface.tsx', 'utf8')
 
 test('checklist UI stays above persistence and uses the generic block session', () => {
   assert.match(richBlocks, /decodeChecklistBlock/)
@@ -27,7 +28,7 @@ test('checklist supports create, edit, toggle, add item and delete interactions'
   assert.match(richBlocks, />\+ Añadir tarea</)
 })
 
-test('block-only autosave skips the plain text write and flushes the shared block checkpoint', () => {
+test('block-only autosave in the preserved Qwen sheet skips the plain text write and flushes the shared checkpoint', () => {
   const saveStart = surface.indexOf('async function saveCurrentSnapshot')
   const saveEnd = surface.indexOf('async function runAutosaveIfIdle', saveStart)
   const body = surface.slice(saveStart, saveEnd)
@@ -38,9 +39,11 @@ test('block-only autosave skips the plain text write and flushes the shared bloc
   assert.ok(body.indexOf('if (snapshotChanged)') < body.indexOf('blockSession?.hasPending()'))
 })
 
-test('rich blocks are active while attachment transport remains disabled', () => {
+test('Qwen rich UI stays preserved while active OANIX Notes uses its own generic mixed renderer', () => {
   assert.match(registry, /richBlocks: true/)
-  assert.match(registry, /attachments: false/)
+  assert.match(registry, /attachments: true/)
   assert.match(surface, /<QwenRichBlocks/)
   assert.match(surface, /onActivity=\{markActivity\}/)
+  assert.match(activeSheet, /OanixMixedDocumentBody/)
+  assert.doesNotMatch(activeSheet, /QwenRichBlocks|QwenSheetSurface/)
 })

@@ -1,0 +1,233 @@
+.oanix-insertable {
+  position: relative;
+  margin: 18px 0;
+  border: 1px solid color-mix(in srgb, currentColor 13%, transparent);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--oanix-sheet-bg, #fff) 94%, currentColor 6%);
+  box-shadow: 0 8px 26px rgb(15 23 42 / 0.08);
+  overflow: visible;
+}
+
+.oanix-insertable__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 14px 8px;
+}
+
+.oanix-insertable__identity {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.oanix-insertable__identity strong,
+.oanix-insertable__identity small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.oanix-insertable__identity small {
+  opacity: .64;
+}
+
+.oanix-insertable__kind {
+  width: max-content;
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  background: color-mix(in srgb, currentColor 10%, transparent);
+}
+
+.oanix-insertable__preview {
+  padding: 6px 14px 16px;
+  max-height: 158px;
+  overflow: hidden;
+}
+
+.oanix-insertable--code .oanix-insertable__preview {
+  max-height: 132px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.oanix-insertable--text .oanix-insertable__preview {
+  max-height: 146px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  line-height: 1.45;
+}
+
+.oanix-insertable--separator {
+  border-style: dashed;
+  box-shadow: none;
+}
+
+.oanix-insertable--image { border-inline-start: 4px solid #5b8cff; }
+.oanix-insertable--file { border-inline-start: 4px solid #7a6ee6; }
+.oanix-insertable--entry { border-inline-start: 4px solid #d08b3e; }
+.oanix-insertable--code { border-inline-start: 4px solid #4aa383; }
+.oanix-insertable--checklist { border-inline-start: 4px solid #3e9e66; }
+.oanix-insertable--contact { border-inline-start: 4px solid #bf6fa8; }
+.oanix-insertable--text { border-inline-start: 4px solid #607d9d; }
+
+.oanix-insertable__menu-button,
+.oanix-insertable__menu button,
+.oanix-insertable-viewer button {
+  font: inherit;
+  color: inherit;
+}
+
+.oanix-insertable__menu-button {
+  min-width: 40px;
+  min-height: 40px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.oanix-insertable__menu-button:hover,
+.oanix-insertable__menu-button:focus-visible {
+  background: color-mix(in srgb, currentColor 9%, transparent);
+}
+
+.oanix-insertable__menu {
+  position: absolute;
+  z-index: 35;
+  right: 10px;
+  width: min(220px, calc(100vw - 32px));
+  max-height: min(320px, calc(100dvh - 32px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid color-mix(in srgb, currentColor 14%, transparent);
+  border-radius: 14px;
+  padding: 6px;
+  background: var(--oanix-sheet-bg, #fff);
+  box-shadow: 0 16px 44px rgb(15 23 42 / 0.18);
+}
+
+.oanix-insertable__menu[data-direction="down"] { top: 52px; }
+.oanix-insertable__menu[data-direction="up"] { bottom: calc(100% - 44px); }
+
+.oanix-insertable__menu button {
+  width: 100%;
+  min-height: 42px;
+  border: 0;
+  border-radius: 10px;
+  padding: 8px 10px;
+  text-align: left;
+  background: transparent;
+  cursor: pointer;
+}
+
+.oanix-insertable__menu button:hover,
+.oanix-insertable__menu button:focus-visible {
+  background: color-mix(in srgb, currentColor 8%, transparent);
+}
+
+.oanix-insertable__menu .is-danger { color: #b42318; }
+
+.oanix-insertable-viewer {
+  position: fixed;
+  z-index: 120;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: max(18px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+  background: rgb(6 10 18 / 0.62);
+}
+
+.oanix-insertable-viewer__panel {
+  width: min(760px, 100%);
+  max-height: min(82dvh, 900px);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  border-radius: 18px;
+  background: var(--oanix-sheet-bg, #fff);
+  color: inherit;
+  box-shadow: 0 24px 80px rgb(0 0 0 / 0.28);
+  overflow: hidden;
+}
+
+.oanix-insertable-viewer__panel > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border-bottom: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+}
+
+.oanix-insertable-viewer__panel > header div {
+  min-width: 0;
+  display: grid;
+}
+
+.oanix-insertable-viewer__panel > header span {
+  opacity: .62;
+  font-size: 12px;
+}
+
+.oanix-insertable-viewer__panel > header strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.oanix-insertable-viewer__panel > header button {
+  flex: 0 0 auto;
+  width: 42px;
+  height: 42px;
+  border: 0;
+  border-radius: 12px;
+  background: color-mix(in srgb, currentColor 8%, transparent);
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.oanix-insertable-viewer__content {
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 18px;
+}
+
+@media (max-width: 640px) {
+  .oanix-insertable {
+    margin: 14px 0;
+    border-radius: 14px;
+  }
+
+  .oanix-insertable__menu {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: max(12px, env(safe-area-inset-bottom));
+    top: auto !important;
+    width: auto;
+    max-height: min(42dvh, 360px);
+  }
+
+  .oanix-insertable__menu[data-direction="up"] {
+    bottom: max(12px, env(safe-area-inset-bottom));
+  }
+
+  .oanix-insertable-viewer {
+    align-items: end;
+    padding: 0;
+  }
+
+  .oanix-insertable-viewer__panel {
+    width: 100%;
+    max-height: 88dvh;
+    border-radius: 20px 20px 0 0;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
