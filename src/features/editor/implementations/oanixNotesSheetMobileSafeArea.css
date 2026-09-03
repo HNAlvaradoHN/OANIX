@@ -1,0 +1,25 @@
+/*
+ * Mobile editing safety space.
+ *
+ * Keep the final text lines inside the visual sheet instead of letting Android
+ * browser/keyboard chrome become the first thing visible at the scroll limit.
+ * This does not resize the viewport or create a second scroll container; it only
+ * gives the document itself enough trailing room to lift the caret comfortably.
+ */
+.oanix-notes__body-wrap {
+  padding-bottom: 88px;
+}
+
+.oanix-notes:focus-within .oanix-notes__body-wrap {
+  padding-bottom: clamp(180px, 24dvh, 260px);
+}
+
+@media (max-width: 520px) {
+  .oanix-notes__body-wrap {
+    padding-bottom: 96px;
+  }
+
+  .oanix-notes:focus-within .oanix-notes__body-wrap {
+    padding-bottom: clamp(200px, 28dvh, 300px);
+  }
+}
