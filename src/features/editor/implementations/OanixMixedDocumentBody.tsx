@@ -12,8 +12,8 @@ interface OanixMixedDocumentBodyProps {
   disabled: boolean
   loadAttachmentFile: (attachmentId: string) => Promise<File | null>
   onTextBlockChange: (block: EditorSurfaceBlock) => void | Promise<void>
-  onTextCursorChange: (blockId: string, cursorOffset: number) => void
-  onPasteImage: (file: File, blockId: string, cursorOffset: number) => void | Promise<void>
+  onTextCursorChange?: (blockId: string, cursorOffset: number) => void
+  onPasteImage?: (file: File, blockId: string, cursorOffset: number) => void | Promise<void>
   onRemoveImage: (blockId: string, attachmentId: string) => void | Promise<void>
   onActivity: () => void
   onCompositionStart: () => void
@@ -47,8 +47,8 @@ function OanixMixedTextSegment({
   block: EditorTextBlock
   disabled: boolean
   onChange: (block: EditorSurfaceBlock) => void | Promise<void>
-  onCursorChange: (blockId: string, cursorOffset: number) => void
-  onPasteImage: (file: File, blockId: string, cursorOffset: number) => void | Promise<void>
+  onCursorChange?: (blockId: string, cursorOffset: number) => void
+  onPasteImage?: (file: File, blockId: string, cursorOffset: number) => void | Promise<void>
   onActivity: () => void
   onCompositionStart: () => void
   onCompositionEnd: () => void
@@ -64,7 +64,7 @@ function OanixMixedTextSegment({
 
   function reportCursor() {
     const textarea = textareaRef.current
-    if (!textarea) return
+    if (!textarea || !onCursorChange) return
     onCursorChange(block.id, Math.max(0, textarea.selectionStart ?? textarea.value.length))
   }
 
@@ -90,11 +90,12 @@ function OanixMixedTextSegment({
     onKeyUp={reportCursor}
     onPointerUp={reportCursor}
     onPaste={(event) => {
+      if (!onPasteImage || disabled) return
       const file = findOanixClipboardImage(event.clipboardData)
-      if (!file || disabled) return
+      if (!file) return
       event.preventDefault()
       const cursorOffset = Math.max(0, event.currentTarget.selectionStart ?? event.currentTarget.value.length)
-      onCursorChange(block.id, cursorOffset)
+      onCursorChange?.(block.id, cursorOffset)
       void onPasteImage(file, block.id, cursorOffset)
     }}
     onCompositionStart={onCompositionStart}
@@ -193,9 +194,9 @@ function OanixMixedImage({
  * Mixed renderer for continuous text interrupted by atomic OANIX elements.
  *
  * Text remains uncontrolled per segment so a keystroke does not mirror the whole
- * document into React state. Cursor updates are tiny metadata events used only to
- * preserve contextual insertion. Images are atomic flow children, never overlays,
- * and their bytes are loaded lazily only when the card approaches the viewport.
+ * document into React state. Optional cursor callbacks expose only tiny insertion
+ * metadata; image paste is intercepted only when the host wires the safe storage
+ * coordinator. Images remain atomic flow children and load bytes lazily near view.
  */
 export function OanixMixedDocumentBody({
   blocks,
