@@ -55,6 +55,14 @@
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
+.oanix-insertable--text .oanix-insertable__preview {
+  max-height: 146px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  line-height: 1.45;
+}
+
 .oanix-insertable--separator {
   border-style: dashed;
   box-shadow: none;
@@ -66,6 +74,7 @@
 .oanix-insertable--code { border-inline-start: 4px solid #4aa383; }
 .oanix-insertable--checklist { border-inline-start: 4px solid #3e9e66; }
 .oanix-insertable--contact { border-inline-start: 4px solid #bf6fa8; }
+.oanix-insertable--text { border-inline-start: 4px solid #607d9d; }
 
 .oanix-insertable__menu-button,
 .oanix-insertable__menu button,
