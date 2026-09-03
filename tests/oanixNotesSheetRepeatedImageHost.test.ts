@@ -18,7 +18,7 @@ test('notes sheet wires repeated image insertion through the batch coordinator',
   assert.match(surfaceSource, /const confirmedBlocks = await loadBlocks\(\)/)
   assert.match(surfaceSource, /blocks: confirmedBlocks/)
   assert.match(surfaceSource, /onTextCursorChange=\{rememberMixedCursor\}/)
-  assert.match(surfaceSource, /onPasteImage=\{\(file, blockId, cursorOffset\) => void insertMixedImageFiles\(\[file\], blockId, cursorOffset\)\}/)
+  assert.match(surfaceSource, /onPasteImage=\{\(file, blockId, cursorOffset\) => \{[\s\S]*void insertMixedImageFiles\(\[file\], blockId, cursorOffset\)[\s\S]*\}\}/)
 })
 
 test('mixed image paste stays native and carries the exact textarea cursor to the host', () => {
