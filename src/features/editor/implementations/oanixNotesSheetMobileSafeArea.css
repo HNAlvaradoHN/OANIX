@@ -15,12 +15,12 @@
   scroll-padding-bottom: 84px;
 }
 
-/* Make the note title read unmistakably as a title on every surface. */
+/* The title must be unmistakably different from normal note text. */
 .oanix-notes__title {
-  font-size: 38px;
-  font-weight: 800;
-  line-height: 1.22;
-  letter-spacing: -0.03em;
+  font-size: 42px;
+  font-weight: 900;
+  line-height: 1.12;
+  letter-spacing: -0.035em;
 }
 
 .oanix-notes__title::placeholder {
@@ -37,14 +37,14 @@
 
 @media (min-width: 768px) {
   .oanix-notes__title {
-    font-size: 44px;
+    font-size: 48px;
   }
 }
 
 @media (max-width: 520px) {
   .oanix-notes__title {
-    font-size: 34px;
-    font-weight: 800;
+    font-size: 42px;
+    font-weight: 900;
   }
 
   .oanix-notes__body-wrap {
