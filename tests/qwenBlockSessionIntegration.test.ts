@@ -7,7 +7,7 @@ const session = readFileSync('src/features/editor/editorBlockSession.ts', 'utf8'
 const registry = readFileSync('src/features/editor/editorSurfaceRegistry.ts', 'utf8')
 const host = readFileSync('src/features/editor/EditorSurface.tsx', 'utf8')
 
-test('selected sheet creates a block session only when both rich callbacks are available', () => {
+test('preserved Qwen sheet creates a block session only when both rich callbacks are available', () => {
   assert.match(surface, /loadBlocks,[\s\S]*onRequestBlockSave,/)
   assert.match(
     surface,
@@ -16,7 +16,7 @@ test('selected sheet creates a block session only when both rich callbacks are a
   assert.doesNotMatch(surface, /readRebuildBlocks|saveRebuildBlocks|indexedDB|localStorage|sessionStorage/)
 })
 
-test('safe close flushes accepted rich block work before delegating note close', () => {
+test('preserved Qwen safe close flushes accepted rich block work before delegating note close', () => {
   const closeStart = surface.indexOf('async function requestClose')
   const blockFlush = surface.indexOf('await blockSession.flush()', closeStart)
   const appClose = surface.indexOf('onRequestClose(', closeStart)
@@ -38,8 +38,8 @@ test('block session owns buffering only and receives persistence as callbacks', 
   assert.doesNotMatch(session, /indexedDB|localStorage|sessionStorage|fetch\(|XMLHttpRequest|setTimeout|setInterval/)
 })
 
-test('active rich capability passes the existing generic callbacks through the host', () => {
-  assert.match(registry, /richBlocks: true/)
+test('active plain-text phase gates rich callbacks while preserving the generic host boundary', () => {
+  assert.match(registry, /richBlocks: false/)
   assert.match(
     host,
     /activeEditorSurface\.capabilities\.richBlocks[\s\S]*\? props[\s\S]*loadBlocks: undefined[\s\S]*onRequestBlockSave: undefined/,
