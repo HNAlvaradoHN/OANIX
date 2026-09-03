@@ -2,8 +2,8 @@
  * Mobile editing safety space and visual-viewport alignment.
  *
  * The sheet keeps its own trailing room so the final lines can rise above the
- * keyboard. The top bar and scrollable document follow visualViewport.offsetTop
- * without shrinking the whole editor a second time.
+ * keyboard. The scrollable document follows the visual viewport without
+ * shrinking the whole editor a second time.
  */
 .oanix-notes__top-bar {
   top: var(--oanix-viewport-top, 0px);
@@ -11,6 +11,7 @@
 
 .oanix-notes__editor-container {
   top: calc(var(--header-height) + var(--oanix-viewport-top, 0px));
+  bottom: var(--oanix-viewport-bottom-inset, 0px);
   scroll-padding-top: 18px;
   scroll-padding-bottom: 84px;
 }
@@ -24,20 +25,12 @@
 }
 
 /*
- * Android/Brave can expose a thin strip exactly at the visual viewport boundary
- * above the IME. Position this cover at that boundary rather than at layout
- * viewport bottom (which is behind the keyboard while it is open).
+ * Keep the actual rounded lower edge of the sheet inside the visible editing
+ * viewport instead of painting over the browser/IME boundary. This makes the
+ * end of the note visually explicit and keeps browser background out of sight.
  */
-.oanix-notes:focus-within::after {
-  content: "";
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: var(--oanix-viewport-bottom-inset, 0px);
-  z-index: 2;
-  height: 16px;
-  background: var(--color-surface);
-  pointer-events: none;
+.oanix-notes:focus-within .oanix-notes__sheet {
+  margin-bottom: 12px;
 }
 
 @media (max-width: 520px) {
@@ -49,7 +42,7 @@
     padding-bottom: clamp(200px, 28dvh, 300px);
   }
 
-  .oanix-notes:focus-within::after {
-    height: 20px;
+  .oanix-notes:focus-within .oanix-notes__sheet {
+    margin-bottom: 10px;
   }
 }
