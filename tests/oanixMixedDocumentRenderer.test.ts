@@ -34,6 +34,23 @@ test('mixed renderer keeps images in normal document flow instead of overlays', 
   assert.doesNotMatch(source, /selectionStart.*style/)
 })
 
+test('long text keeps only its bounded preview in the sheet and loads the encrypted asset inside the expanded viewer', async () => {
+  const source = await readSource()
+  const expandedStart = source.indexOf('function OanixLongTextExpanded')
+  const cardStart = source.indexOf('function OanixMixedLongText')
+  assert.ok(expandedStart >= 0)
+  assert.ok(cardStart > expandedStart)
+
+  const expandedSource = source.slice(expandedStart, cardStart)
+  const cardSource = source.slice(cardStart)
+  assert.match(expandedSource, /loadAttachmentFile\(attachmentId\)/)
+  assert.match(expandedSource, /URL\.createObjectURL\(file\)/)
+  assert.match(expandedSource, /URL\.revokeObjectURL\(objectUrl\)/)
+  assert.match(expandedSource, /sandbox=""/)
+  assert.match(cardSource, /block\.preview/)
+  assert.doesNotMatch(cardSource, /\.text\(\)/)
+})
+
 test('mobile caret guard follows dynamically rendered mixed text without imposing the plain body minimum', async () => {
   const guard = await readFile(mobileGuardPath, 'utf8')
   assert.match(guard, /oanix-mixed-document__text/)
