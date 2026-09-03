@@ -3,7 +3,6 @@ import type {
   EditorSurfaceCapabilities,
   EditorSurfaceProps,
 } from './editorSurfaceContract'
-import './implementations/oanixNotesSheetMobileSafeArea.css'
 
 export interface EditorSurfaceDefinition {
   id: string
@@ -23,10 +22,10 @@ export interface EditorSurfaceDefinition {
 export const activeEditorSurface: EditorSurfaceDefinition = {
   id: 'oanix-notes-sheet-v1',
   load: async () => {
-    const { OanixNotesSheetSurface } = await import(
-      './implementations/OanixNotesSheetSurface'
+    const { OanixNotesSheetMobileGuard } = await import(
+      './implementations/OanixNotesSheetMobileGuard'
     )
-    return { default: OanixNotesSheetSurface }
+    return { default: OanixNotesSheetMobileGuard }
   },
   capabilities: {
     plainText: true,
