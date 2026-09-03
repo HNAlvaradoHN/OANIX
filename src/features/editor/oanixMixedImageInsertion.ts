@@ -3,7 +3,11 @@ import type {
   EditorSurfaceBlock,
   EditorSurfaceBlockChangeSet,
 } from './editorSurfaceContract.ts'
-import { encodeOanixImageElement } from './oanixImageElementCodec.ts'
+import {
+  DEFAULT_OANIX_IMAGE_WIDTH_PERCENT,
+  OANIX_IMAGE_ELEMENT_KIND,
+  encodeOanixImageElement,
+} from './oanixImageElementCodec.ts'
 import { decodeTextBlock, encodeTextBlock } from './textBlockCodec.ts'
 
 export interface OanixMixedImageInsertionPlan {
@@ -63,8 +67,10 @@ export function planOanixMixedImageInsertion({
   })
   const imageBlock = encodeOanixImageElement({
     id: imageBlockId,
-    kind: 'oanix-image-element-v1',
+    kind: OANIX_IMAGE_ELEMENT_KIND,
     attachmentId,
+    widthPercent: DEFAULT_OANIX_IMAGE_WIDTH_PERCENT,
+    sizeLocked: false,
   })
   const afterBlock = encodeTextBlock({
     id: afterTextBlockId,
