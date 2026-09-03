@@ -10,10 +10,11 @@ Este checkpoint complementa `docs/OANIX_2_HANDOFF.md`. GitHub y el código real 
 
 - La hoja OANIX Notes aprobada sigue siendo la superficie activa detrás de `EditorSurface`.
 - La mecánica móvil validada continúa basada en un `textarea` continuo; no se sustituyó por overlays ni por un editor de bloques genérico.
-- `main` no se fusionó en esta rama. Los tres commits actuales que `main` lleva por delante de la rama son documentación/protocolo de continuidad, no cambios de runtime de la hoja.
+- `main` no se fusionó en esta rama. Los commits que `main` lleva por delante de la rama son documentación/protocolo de continuidad, no cambios de runtime de la hoja.
 - No se modificaron vault, cifrado, almacenamiento cifrado, seguridad ni sincronización.
+- No se trabajó sobre `agent/clean-sheet-v1-2026-09-02` ni se mezclaron cambios provenientes de esa rama.
 
-## Implementado en este bloque
+## Implementado antes de este bloque
 
 - `EditorSurfaceAttachment`: frontera mínima y opaca para metadata de adjuntos.
 - `editorAttachmentProjection.ts`: proyección pura que oculta proveedor, rutas, chunks y detalles de storage.
@@ -33,34 +34,38 @@ Este checkpoint complementa `docs/OANIX_2_HANDOFF.md`. GitHub y el código real 
 - Si falla el rollback de bloques, se conserva el asset porque todavía puede existir una referencia. Se prioriza duplicación recuperable sobre pérdida silenciosa.
 - La transición rechaza por ahora notas con bloques ricos preexistentes: mezclar contenido oculto anterior requiere una política explícita antes de habilitar la UI mixta.
 
-## Hallazgo arquitectónico que bloquea habilitar Imagen visible
+## Implementado en este bloque
 
-La hoja aprobada contiene el cuerpo en un único `textarea`. Un `textarea` no permite renderizar una tarjeta React entre caracteres. Simularlo con overlays, offsets en píxeles o marcadores dentro del texto pondría en riesgo la escritura móvil, el cursor y el rendimiento ya aprobados.
+- `oanixMixedDocumentProjection.ts`: proyección explícita y ordenada de bloques persistidos a nodos `text`, `image` o `unsupported`. Un tipo futuro/desconocido nunca se descarta silenciosamente.
+- `OanixMixedDocumentBody.tsx`: primer renderer mixto mínimo y aislado. Renderiza segmentos de texto y tarjetas Imagen dentro del flujo normal del documento, sin overlays ni offsets absolutos.
+- Los segmentos de texto del renderer mixto son `textarea` uncontrolled por bloque. Una tecla no replica el documento completo a estado React.
+- Cada segmento ajusta su altura localmente y conserva hooks de composición IME; la hoja aprobada todavía no se cambia automáticamente a este renderer.
+- Imagen usa `OanixInsertableElementFrame`, conserva menú/expansión común y permanece como bloque atómico entre tramos de escritura.
+- Los bytes de Imagen se piden únicamente cuando la tarjeta se acerca al viewport mediante `IntersectionObserver`; se crea un `objectURL` temporal y se revoca al desmontar.
+- No se introdujeron base64, data URLs ni materialización preventiva de imágenes al abrir la nota.
+- Si un bloque persistido aún no tiene renderer, se presenta como elemento no disponible y su referencia permanece intacta.
+- `oanixImageInsertionCoordinator.ts`: comando único de aplicación para selección de archivo y futuro `paste` nativo. Guarda primero el asset mediante la frontera real de OANIX y delega después a la transición compensada ya existente.
+- Si el almacenamiento del asset falla, no toca bloques ni texto. Si la transición falla, expone el resultado real de compensación/cleanup en vez de ocultar un estado parcial.
 
-La integración visible de Imagen debe hacerse mediante una transición explícita y segura a tramos de texto estables alrededor de bloques atómicos. La primera frontera de planificación y compensación ya existe, pero todavía falta el renderer mixto de la hoja y su activación controlada. No usar offsets absolutos persistidos: cualquier edición anterior al elemento los volvería obsoletos.
+## Estado de activación
 
-Antes de habilitar `attachments: true`, la operación completa debe garantizar:
+El renderer mixto y el coordinador de Imagen existen y compilan, pero **todavía no se activan desde `OanixNotesSheetSurface`**. La hoja aprobada continúa con `attachments: false` y su `textarea` continuo como autoridad visible.
 
-1. capturar `selectionStart` del textarea;
-2. almacenar primero el asset real mediante el adapter de OANIX;
-3. preparar texto anterior + bloque Imagen + texto posterior sin pérdida;
-4. ejecutar la transición recuperable ya cubierta por pruebas;
-5. solo después cambiar la UI al renderer mixto;
-6. mantener una ruta de recuperación si existen bloques previos o si el rollback no puede confirmarse.
+Esta pausa es deliberada: el siguiente cambio de UI debe conectar carga de bloques + metadata de adjuntos, ejecutar la transición solo en notas compatibles y cambiar a renderer mixto únicamente después de un commit confirmado. No se hará una migración automática al abrir una nota.
 
-## Validación de este bloque
+## Validación
 
-- Se detectó y corrigió un CI rojo previo causado por guards estructurales antiguos que no reconocían `OanixNotesSheetMobileGuard` ni `publicBase` dinámico para Vercel.
-- Se corrigió un test nuevo que arrastraba módulos Vite/TS innecesariamente y otro guard demasiado amplio.
-- `tests/oanixMixedDocumentPlan.test.ts` cubre cursor UTF-16/emoji, inserción en extremos, preservación exacta y chunking sobre el límite de bloque.
-- `tests/oanixMixedDocumentTransition.test.ts` cubre orden de commit, fallo del primer save, compensación cuando falla el plain-text save, conservación del asset si falla rollback y bloqueo seguro ante rich blocks existentes.
-- Head de código `de0959b11f62687a5875f09072956c93d10a82d9`: OANIX CI #2396 verde, OANIX Android #1820 verde y Qwen Independent PR Review #786 verde.
-- Los gates deben verificarse de nuevo sobre cualquier head posterior; no heredar el verde de un commit anterior.
+- `tests/oanixMixedDocumentProjection.test.ts` cubre orden text/Imagen, preservación de bloques desconocidos y segmentos vacíos editables.
+- `tests/oanixMixedDocumentRenderer.test.ts` protege los invariantes: texto uncontrolled, carga lazy, ciclo de vida de `objectURL`, ausencia de base64/data URLs y ausencia de overlays/offsets absolutos.
+- `tests/oanixImageInsertionCoordinator.test.ts` cubre orden store → bloques → plain snapshot, fallo de almacenamiento sin tocar la nota y exposición del cleanup cuando falla la transición.
+- Head de renderer `eeec137d0733f56b94901e1ed4eb2df50749ec0a`: OANIX CI #2408 verde y Qwen Independent PR Review #792 verde; Android #1826 seguía compilando al avanzar al siguiente commit.
+- Head de código actual antes de este checkpoint: `b1a3ec29abb4d18f26f1343949eae68ce86b0bfc`. OANIX CI #2412 verde y Qwen Independent PR Review #794 verde. OANIX Android #1828 estaba compilando APK/AAB al actualizar este documento.
+- No se considera validación física Android: los workflows automatizados no sustituyen una prueba en dispositivo real.
 
 ## Próximo bloque seguro
 
-1. diseñar el renderer mixto mínimo de la hoja manteniendo la sensación de escritura continua y sin overlays;
-2. activar la transición solo para notas sin rich blocks previos y mantener fallback plain-text ante cualquier fallo;
-3. conectar selección de Imagen y luego `paste` nativo usando almacenamiento real de OANIX;
-4. mantener carga de preview lazy y `objectURL` temporal/revocable;
+1. conectar carga inicial de `loadBlocks`/adjuntos a la hoja sin descifrar bytes y mantener fallback plain-text si no hay documento mixto;
+2. conectar el selector Imagen al `insertOanixImageAtCursor`, capturando `selectionStart` y cambiando a renderer mixto solo tras resultado `committed`;
+3. conectar después `paste` nativo de imágenes al mismo comando, sin crear una segunda ruta de persistencia;
+4. garantizar foco/scroll posterior a la inserción y cierre/Atrás Android en el mismo punto de documento;
 5. después abordar pegado de texto grande con umbral por bytes + líneas y representación optimizada.
