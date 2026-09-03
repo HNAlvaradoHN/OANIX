@@ -49,7 +49,7 @@ function getCaretTop(textarea: HTMLTextAreaElement): number {
   return top
 }
 
-function keepCaretInVisibleZone() {
+function keepCaretInVisibleZone(allowUpwardCorrection = false) {
   const textarea = document.querySelector<HTMLTextAreaElement>('.oanix-notes__body')
   const scroller = document.querySelector<HTMLElement>('.oanix-notes__editor-container')
   if (!textarea || !scroller || document.activeElement !== textarea) return
@@ -68,13 +68,15 @@ function keepCaretInVisibleZone() {
 
   if (caretBottom > safeBottom) {
     scroller.scrollTop += caretBottom - safeBottom
-  } else if (caretTop < safeTop) {
+  } else if (allowUpwardCorrection && caretTop < safeTop) {
     scroller.scrollTop = Math.max(0, scroller.scrollTop - (safeTop - caretTop))
   }
 }
 
-function scheduleCaretCheck() {
-  window.requestAnimationFrame(() => window.requestAnimationFrame(keepCaretInVisibleZone))
+function scheduleCaretCheck(allowUpwardCorrection = false) {
+  window.requestAnimationFrame(() =>
+    window.requestAnimationFrame(() => keepCaretInVisibleZone(allowUpwardCorrection)),
+  )
 }
 
 export function OanixNotesSheetMobileGuard(props: EditorSurfaceProps) {
@@ -92,29 +94,30 @@ export function OanixNotesSheetMobileGuard(props: EditorSurfaceProps) {
       editor.style.setProperty('--oanix-viewport-top', `${viewportTop}px`)
       editor.style.setProperty('--oanix-visible-height', `${viewportHeight}px`)
       editor.style.setProperty('--oanix-viewport-bottom-inset', `${viewportBottomInset}px`)
-      scheduleCaretCheck()
+      scheduleCaretCheck(false)
     }
 
-    const handleInputOrSelection = () => scheduleCaretCheck()
+    // Typing must never pull the document upward. That oscillation was causing
+    // previous lines to flash on every key press in Android/Brave.
+    const handleTyping = () => scheduleCaretCheck(false)
+    const handlePointerSelection = () => scheduleCaretCheck(true)
     const handleFocus = () => {
-      window.setTimeout(scheduleCaretCheck, 60)
-      window.setTimeout(scheduleCaretCheck, 220)
+      window.setTimeout(() => scheduleCaretCheck(false), 60)
+      window.setTimeout(() => scheduleCaretCheck(false), 220)
     }
 
-    textarea.addEventListener('input', handleInputOrSelection)
-    textarea.addEventListener('select', handleInputOrSelection)
-    textarea.addEventListener('keyup', handleInputOrSelection)
-    textarea.addEventListener('pointerup', handleInputOrSelection)
+    textarea.addEventListener('input', handleTyping)
+    textarea.addEventListener('keyup', handleTyping)
+    textarea.addEventListener('pointerup', handlePointerSelection)
     textarea.addEventListener('focus', handleFocus)
     viewport?.addEventListener('resize', syncViewport)
     viewport?.addEventListener('scroll', syncViewport)
     syncViewport()
 
     return () => {
-      textarea.removeEventListener('input', handleInputOrSelection)
-      textarea.removeEventListener('select', handleInputOrSelection)
-      textarea.removeEventListener('keyup', handleInputOrSelection)
-      textarea.removeEventListener('pointerup', handleInputOrSelection)
+      textarea.removeEventListener('input', handleTyping)
+      textarea.removeEventListener('keyup', handleTyping)
+      textarea.removeEventListener('pointerup', handlePointerSelection)
       textarea.removeEventListener('focus', handleFocus)
       viewport?.removeEventListener('resize', syncViewport)
       viewport?.removeEventListener('scroll', syncViewport)
