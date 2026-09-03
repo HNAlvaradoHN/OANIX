@@ -19,7 +19,7 @@ const attachment: EditorSurfaceAttachment = {
 
 const blocks = [
   encodeTextBlock({ id: 'text-a', kind: 'text-segment', text: 'primero' }),
-  encodeOanixImageElement({ id: 'image-old', kind: 'oanix-image-element-v1', attachmentId: 'asset-old' }),
+  encodeOanixImageElement({ id: 'image-old', kind: 'oanix-image-element-v1', attachmentId: 'asset-old', widthPercent: 100, sizeLocked: false }),
   encodeTextBlock({ id: 'text-b', kind: 'text-segment', text: 'hola mundo' }),
 ]
 
@@ -41,7 +41,7 @@ test('mixed image planner replaces only the targeted text segment and preserves 
   assert.equal(plan.blocks[0], blocks[0])
   assert.equal(plan.blocks[1], blocks[1])
   assert.deepEqual(plan.blocks[2].data, { text: 'hola ' })
-  assert.deepEqual(plan.blocks[3].data, { attachmentId: attachment.id })
+  assert.deepEqual(plan.blocks[3].data, { attachmentId: attachment.id, widthPercent: 100, sizeLocked: false })
   assert.deepEqual(plan.blocks[4].data, { text: 'mundo' })
   assert.deepEqual(plan.upserts.map((block) => block.id), ['text-before', 'image-new', 'text-after'])
   assert.deepEqual(plan.deletes, ['text-b'])
