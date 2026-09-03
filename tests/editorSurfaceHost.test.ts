@@ -6,6 +6,10 @@ const home = readFileSync('src/features/rebuild/RebuildApp.tsx', 'utf8')
 const host = readFileSync('src/features/editor/EditorSurface.tsx', 'utf8')
 const contract = readFileSync('src/features/editor/editorSurfaceContract.ts', 'utf8')
 const registry = readFileSync('src/features/editor/editorSurfaceRegistry.ts', 'utf8')
+const mobileGuard = readFileSync(
+  'src/features/editor/implementations/OanixNotesSheetMobileGuard.tsx',
+  'utf8',
+)
 const selectedSurface = readFileSync(
   'src/features/editor/implementations/OanixNotesSheetSurface.tsx',
   'utf8',
@@ -17,16 +21,10 @@ const plainTextAdapter = readFileSync(
 
 test('Home depends on the replaceable editor host instead of a concrete sheet implementation', () => {
   assert.match(home, /import \{ EditorSurface \} from '\.\.\/editor\/EditorSurface'/)
-  assert.match(
-    home,
-    /import type \{[^}]*EditorSurfaceSnapshot[^}]*\} from '\.\.\/editor\/editorSurfaceContract'/,
-  )
+  assert.match(home, /import type \{[^}]*EditorSurfaceSnapshot[^}]*\} from '\.\.\/editor\/editorSurfaceContract'/)
   assert.match(home, /<EditorSurface[\s\S]*onRequestSave=\{saveEditorSnapshot\}[\s\S]*onRequestClose=\{closeEditor\}/)
   assert.doesNotMatch(home, /from '\.\.\/editor\/NoteEditor'/)
-  assert.doesNotMatch(
-    home,
-    /^\s*import .*from ['"][^'"]*(?:ruledSheet|Aurora|qwen)[^'"]*['"]/im,
-  )
+  assert.doesNotMatch(home, /^\s*import .*from ['"][^'"]*(?:ruledSheet|Aurora|qwen)[^'"]*['"]/im)
 })
 
 test('the host delegates concrete selection to the editor surface registry and mounts it lazily', () => {
@@ -46,10 +44,7 @@ test('rich block boundary stays generic and does not import persistence or a con
   assert.match(contract, /export interface EditorSurfaceBlockChangeSet/)
   assert.match(contract, /loadBlocks\?: \(\) => Promise<EditorSurfaceBlock\[\]>/)
   assert.match(contract, /onRequestBlockSave\?: \(changes: EditorSurfaceBlockChangeSet\) => Promise<boolean>/)
-  assert.doesNotMatch(
-    contract,
-    /^\s*import .*from ['"][^'"]*(?:rebuild|storage|security)[^'"]*['"]/im,
-  )
+  assert.doesNotMatch(contract, /^\s*import .*from ['"][^'"]*(?:rebuild|storage|security)[^'"]*['"]/im)
   assert.doesNotMatch(contract, /indexedDB|localStorage|sessionStorage/)
   assert.doesNotMatch(contract, /QwenSheetSurface|OanixNotesSheetSurface|PlainTextEditorSurface|NoteEditor/)
 })
@@ -59,12 +54,13 @@ test('the host gates rich callbacks through the selected surface capability', ()
   assert.match(registry, /richBlocks: false/)
 })
 
-test('the registry is the only composition point and lazily selects OANIX Notes', () => {
+test('the registry is the only composition point and lazily selects the guarded OANIX Notes surface', () => {
   assert.match(registry, /export const activeEditorSurface: EditorSurfaceDefinition/)
   assert.match(registry, /id: 'oanix-notes-sheet-v1'/)
   assert.match(registry, /load: async \(\) => \{/)
-  assert.match(registry, /await import\([\s\S]*\.\/implementations\/OanixNotesSheetSurface/)
-  assert.match(registry, /return \{ default: OanixNotesSheetSurface \}/)
+  assert.match(registry, /await import\([\s\S]*\.\/implementations\/OanixNotesSheetMobileGuard/)
+  assert.match(registry, /return \{ default: OanixNotesSheetMobileGuard \}/)
+  assert.match(mobileGuard, /OanixNotesSheetSurface/)
   assert.match(registry, /plainText: true/)
   assert.match(registry, /richBlocks: false/)
   assert.match(registry, /attachments: false/)
