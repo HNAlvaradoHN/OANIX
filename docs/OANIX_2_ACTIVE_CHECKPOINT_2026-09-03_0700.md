@@ -49,18 +49,17 @@ Corrección:
 
 Head de código corregido: `3f29a2713ec669c09c37f581a2e73102a0a4e129`.
 
-Validación observada en ese head al registrar este checkpoint:
+Validación cerrada para ese head:
 
 - OANIX CI #2517: **success** (tests + build + auditoría offline).
+- OANIX Android #1881: **success**.
 - Qwen Independent PR Review #847: **success**.
-- OANIX Android #1881: **in progress**; no se declara verde hasta que termine.
 
 ## Próximo bloque seguro
 
-1. cerrar Android #1881 y corregir cualquier fallo real si aparece;
-2. conectar paste grande en `OanixNotesSheetSurface` sin tocar el comportamiento normal del textarea: normal queda nativo; pesado usa la transición plain o mixed según el documento;
-3. en mixed mode, mantener `flush → loadBlocks confirmado → insertOanixLongTextIntoMixedDocument → actualizar React solo tras committed`;
-4. en plain mode, usar `insertOanixLongTextIntoPlainDocument` y activar mixed renderer solo tras committed;
-5. añadir eliminación segura del elemento Texto largo (referencia primero, asset después) y continuar luego con Archivo/Código/Checklist/Contacto/Separador.
+1. conectar paste grande en `OanixNotesSheetSurface` sin tocar el comportamiento normal del textarea: normal queda nativo; pesado usa la transición plain o mixed según el documento;
+2. en mixed mode, mantener `flush → loadBlocks confirmado → insertOanixLongTextIntoMixedDocument → actualizar React solo tras committed`;
+3. en plain mode, usar `insertOanixLongTextIntoPlainDocument` y activar mixed renderer solo tras committed;
+4. añadir eliminación segura del elemento Texto largo (referencia primero, asset después) y continuar luego con Archivo/Código/Checklist/Contacto/Separador.
 
 No promover ni fusionar PR #592 a `main` sin la revisión visual/funcional correspondiente y los gates aplicables confirmados.
