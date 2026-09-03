@@ -23,11 +23,12 @@ const blocks = [
   encodeTextBlock({ id: 'text-b', kind: 'text-segment', text: 'hola mundo' }),
 ]
 
-function ids(kind: 'text' | 'image'): string {
-  return kind === 'image' ? 'image-new' : 'text-after'
+function ids(kind: 'text' | 'image', index: number): string {
+  if (kind === 'image') return 'image-new'
+  return index === 0 ? 'text-before' : 'text-after'
 }
 
-test('mixed image planner splits only the targeted text segment and preserves surrounding order', () => {
+test('mixed image planner replaces only the targeted text segment and preserves surrounding order', () => {
   const plan = planOanixMixedImageInsertion({
     blocks,
     targetTextBlockId: 'text-b',
@@ -36,13 +37,14 @@ test('mixed image planner splits only the targeted text segment and preserves su
     createId: ids,
   })
 
-  assert.deepEqual(plan.order, ['text-a', 'image-old', 'text-b', 'image-new', 'text-after'])
+  assert.deepEqual(plan.order, ['text-a', 'image-old', 'text-before', 'image-new', 'text-after'])
   assert.equal(plan.blocks[0], blocks[0])
   assert.equal(plan.blocks[1], blocks[1])
   assert.deepEqual(plan.blocks[2].data, { text: 'hola ' })
   assert.deepEqual(plan.blocks[3].data, { attachmentId: attachment.id })
   assert.deepEqual(plan.blocks[4].data, { text: 'mundo' })
-  assert.deepEqual(plan.upserts.map((block) => block.id), ['text-b', 'image-new', 'text-after'])
+  assert.deepEqual(plan.upserts.map((block) => block.id), ['text-before', 'image-new', 'text-after'])
+  assert.deepEqual(plan.deletes, ['text-b'])
 })
 
 test('mixed image planner clamps the cursor and leaves a writable trailing segment', () => {
@@ -83,30 +85,30 @@ test('mixed image planner can insert again without rewriting the existing image 
     createId: ids,
   })
 
-  let imageCounter = 0
-  let textCounter = 0
   const second = planOanixMixedImageInsertion({
     blocks: first.blocks,
     targetTextBlockId: first.afterTextBlockId,
     cursorOffset: 2,
     attachmentId: 'asset-third',
-    createId: (kind) => kind === 'image' ? `image-third-${imageCounter++}` : `text-third-${textCounter++}`,
+    createId: (kind, index) => kind === 'image' ? 'image-third' : index === 0 ? 'text-third-before' : 'text-third-after',
   })
 
   assert.deepEqual(second.order, [
     'text-a',
     'image-old',
-    'text-b',
+    'text-before',
     'image-new',
-    'text-after',
-    'image-third-0',
-    'text-third-0',
+    'text-third-before',
+    'image-third',
+    'text-third-after',
   ])
   assert.equal(second.blocks[0], first.blocks[0])
   assert.equal(second.blocks[1], first.blocks[1])
+  assert.equal(second.blocks[2], first.blocks[2])
   assert.equal(second.blocks[3], first.blocks[3])
   assert.deepEqual(second.blocks[4].data, { text: 'mu' })
   assert.deepEqual(second.blocks[6].data, { text: 'ndo' })
+  assert.deepEqual(second.deletes, ['text-after'])
 })
 
 test('mixed image coordinator stores once and commits one incremental change set', async () => {
@@ -126,8 +128,9 @@ test('mixed image coordinator stores once and commits one incremental change set
 
   assert.equal(result.status, 'committed')
   assert.deepEqual(events, ['store', 'blocks'])
-  assert.deepEqual(savedChanges?.order, ['text-a', 'image-old', 'text-b', 'image-new', 'text-after'])
-  assert.deepEqual(savedChanges?.upserts?.map((block) => block.id), ['text-b', 'image-new', 'text-after'])
+  assert.deepEqual(savedChanges?.order, ['text-a', 'image-old', 'text-before', 'image-new', 'text-after'])
+  assert.deepEqual(savedChanges?.upserts?.map((block) => block.id), ['text-before', 'image-new', 'text-after'])
+  assert.deepEqual(savedChanges?.deletes, ['text-b'])
 })
 
 test('mixed image coordinator compensates the stored asset when block commit fails', async () => {
