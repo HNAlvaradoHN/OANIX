@@ -11,9 +11,13 @@ import type {
   EditorSurfaceSnapshot,
 } from '../editorSurfaceContract'
 import { findOanixClipboardImage } from '../oanixClipboardImage'
-import { insertOanixImageAtCursor } from '../oanixImageInsertionCoordinator'
+import {
+  OANIX_IMAGE_BATCH_LIMIT,
+  insertOanixImageBatch,
+  type OanixImageBatchProgress,
+} from '../oanixImageBatchInsertionCoordinator'
 import { decideOanixMixedDocumentLoad } from '../oanixMixedDocumentLoadPolicy'
-import { insertOanixImageIntoMixedDocument } from '../oanixMixedImageInsertion'
+import { useDelayedOperationFeedback } from '../../../shared/useDelayedOperationFeedback'
 import { OanixMixedDocumentBody } from './OanixMixedDocumentBody'
 import './oanixNotesSheetSurface.css'
 
@@ -29,6 +33,18 @@ function snapshotsMatch(left: EditorSurfaceSnapshot, right: EditorSurfaceSnapsho
 
 function Icon({ children, width = 18, height = 18 }: { children: ReactNode; width?: number; height?: number }) {
   return <svg width={width} height={height} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{children}</svg>
+}
+
+function imageProgressLabel(progress: OanixImageBatchProgress | null, stillRunning: boolean): string {
+  if (!progress) return stillRunning ? 'Todavía procesando imágenes…' : 'Procesando imágenes…'
+  const prefix = stillRunning ? 'Todavía ' : ''
+  if (progress.stage === 'committing') {
+    return `${prefix}insertando ${progress.total === 1 ? 'imagen' : `${progress.total} imágenes`}…`
+  }
+  if (progress.completed <= 0) {
+    return `${prefix}cifrando ${progress.total === 1 ? 'imagen' : `${progress.total} imágenes`}…`
+  }
+  return `${prefix}cifrando imágenes ${progress.completed}/${progress.total}…`
 }
 
 export function OanixNotesSheetSurface({
@@ -79,7 +95,9 @@ export function OanixNotesSheetSurface({
   const [attachments, setAttachments] = useState<EditorSurfaceAttachment[]>([])
   const [metadataReady, setMetadataReady] = useState(false)
   const [imageBusy, setImageBusy] = useState(false)
+  const [imageProgress, setImageProgress] = useState<OanixImageBatchProgress | null>(null)
   const [integrationError, setIntegrationError] = useState('')
+  const imageFeedback = useDelayedOperationFeedback()
 
   const mixedAvailable = Boolean(
     loadBlocks
@@ -367,7 +385,22 @@ export function OanixNotesSheetSurface({
     })
   }
 
-  async function insertImageFile(file: File, cursorOffset: number) {
+  function beginImageBatch(total: number) {
+    setImageBusy(true)
+    setImageProgress({ stage: 'storing', completed: 0, total })
+    imageFeedback.start()
+    setPanelOpen(false)
+    setIntegrationError('')
+    clearIdleTimer()
+  }
+
+  function finishImageBatch() {
+    imageFeedback.finish()
+    setImageProgress(null)
+    setImageBusy(false)
+  }
+
+  async function insertImageFiles(files: readonly File[], cursorOffset: number) {
     if (
       documentMode !== 'plain'
       || !metadataReady
@@ -379,11 +412,13 @@ export function OanixNotesSheetSurface({
       setIntegrationError('Imagen todavía no está disponible en el estado actual de esta nota.')
       return
     }
+    if (files.length < 1) return
+    if (files.length > OANIX_IMAGE_BATCH_LIMIT) {
+      setIntegrationError(`Puedes seleccionar hasta ${OANIX_IMAGE_BATCH_LIMIT} imágenes por vez.`)
+      return
+    }
 
-    clearIdleTimer()
-    setImageBusy(true)
-    setPanelOpen(false)
-    setIntegrationError('')
+    beginImageBatch(files.length)
 
     try {
       if (saveInFlightRef.current) await saveInFlightRef.current
@@ -392,8 +427,9 @@ export function OanixNotesSheetSurface({
       const title = titleRef.current?.value ?? initialTitle
       const safeCursor = Math.min(Math.max(0, cursorOffset), text.length)
       const existingBlocks = await loadBlocks()
-      const result = await insertOanixImageAtCursor({
-        file,
+      const result = await insertOanixImageBatch({
+        mode: 'plain',
+        files,
         title,
         text,
         cursorOffset: safeCursor,
@@ -402,39 +438,38 @@ export function OanixNotesSheetSurface({
         saveBlockChanges: onRequestBlockSave,
         savePlainSnapshot: onRequestSave,
         removeAttachment: onRequestAttachmentRemove,
+        onProgress: setImageProgress,
       })
 
       if (result.status !== 'committed') {
-        const cleanup = result.status === 'transition-failed'
-          ? result.transition.status
-          : result.status
-        setIntegrationError(`No se pudo insertar la imagen de forma segura (${cleanup}).`)
+        setIntegrationError(`No se pudieron insertar las imágenes de forma segura (${result.status}).`)
         if (dirtyRef.current) armAutosaveTimer()
         return
       }
 
-      const plan = result.transition.plan
       pendingMixedUpsertsRef.current.clear()
       if (textarea) textarea.value = ''
       committedSnapshotRef.current = { title, text: '' }
-      setMixedBlocks(plan.blocks)
-      setAttachments((current) => [...current.filter((item) => item.id !== result.attachment.id), result.attachment])
+      setMixedBlocks(result.plan.blocks)
+      setAttachments((current) => {
+        const insertedIds = new Set(result.attachments.map((item) => item.id))
+        return [...current.filter((item) => !insertedIds.has(item.id)), ...result.attachments]
+      })
       setDocumentMode('mixed')
       markClean()
       onActivity?.()
 
-      const imageIndex = plan.order.indexOf(plan.imageBlockId)
-      const nextId = imageIndex >= 0 ? plan.order[imageIndex + 1] : null
-      if (nextId) focusAfterInsertedImage(plan.imageBlockId, nextId)
+      const lastImageId = result.plan.imageBlockIds.at(-1)
+      if (lastImageId) focusAfterInsertedImage(lastImageId, result.plan.afterTextBlockId)
     } catch {
-      setIntegrationError('No se pudo insertar la imagen de forma segura.')
+      setIntegrationError('No se pudieron insertar las imágenes de forma segura.')
       if (dirtyRef.current) armAutosaveTimer()
     } finally {
-      setImageBusy(false)
+      finishImageBatch()
     }
   }
 
-  async function insertMixedImageFile(file: File, blockId: string, cursorOffset: number) {
+  async function insertMixedImageFiles(files: readonly File[], blockId: string, cursorOffset: number) {
     if (
       documentMode !== 'mixed'
       || !metadataReady
@@ -446,48 +481,53 @@ export function OanixNotesSheetSurface({
       setIntegrationError('Imagen todavía no está disponible en el estado actual de esta nota.')
       return
     }
+    if (files.length < 1) return
+    if (files.length > OANIX_IMAGE_BATCH_LIMIT) {
+      setIntegrationError(`Puedes seleccionar hasta ${OANIX_IMAGE_BATCH_LIMIT} imágenes por vez.`)
+      return
+    }
 
-    clearIdleTimer()
-    setImageBusy(true)
-    setPanelOpen(false)
-    setIntegrationError('')
+    beginImageBatch(files.length)
 
     try {
       if (saveInFlightRef.current) await saveInFlightRef.current
       if (dirtyRef.current && !(await saveCurrentSnapshot())) {
-        setIntegrationError('No se pudo guardar el texto pendiente antes de insertar la imagen.')
+        setIntegrationError('No se pudo guardar el texto pendiente antes de insertar las imágenes.')
         return
       }
 
       const confirmedBlocks = await loadBlocks()
-      const result = await insertOanixImageIntoMixedDocument({
-        file,
+      const result = await insertOanixImageBatch({
+        mode: 'mixed',
+        files,
         blocks: confirmedBlocks,
         targetTextBlockId: blockId,
         cursorOffset,
         storeAttachment: onRequestAttachmentStore,
         saveBlockChanges: onRequestBlockSave,
         removeAttachment: onRequestAttachmentRemove,
+        onProgress: setImageProgress,
       })
 
       if (result.status !== 'committed') {
-        const cleanup = result.status === 'block-save-failed' && !result.attachmentCleanupSucceeded
-          ? 'block-save-failed-cleanup-pending'
-          : result.status
-        setIntegrationError(`No se pudo insertar la imagen de forma segura (${cleanup}).`)
+        setIntegrationError(`No se pudieron insertar las imágenes de forma segura (${result.status}).`)
         return
       }
 
       pendingMixedUpsertsRef.current.clear()
       setMixedBlocks(result.plan.blocks)
-      setAttachments((current) => [...current.filter((item) => item.id !== result.attachment.id), result.attachment])
+      setAttachments((current) => {
+        const insertedIds = new Set(result.attachments.map((item) => item.id))
+        return [...current.filter((item) => !insertedIds.has(item.id)), ...result.attachments]
+      })
       markClean()
       onActivity?.()
-      focusAfterInsertedImage(result.plan.imageBlockId, result.plan.afterTextBlockId)
+      const lastImageId = result.plan.imageBlockIds.at(-1)
+      if (lastImageId) focusAfterInsertedImage(lastImageId, result.plan.afterTextBlockId)
     } catch {
-      setIntegrationError('No se pudo insertar la imagen de forma segura.')
+      setIntegrationError('No se pudieron insertar las imágenes de forma segura.')
     } finally {
-      setImageBusy(false)
+      finishImageBatch()
       if (dirtyRef.current) armAutosaveTimer()
     }
   }
@@ -527,7 +567,7 @@ export function OanixNotesSheetSurface({
     event.preventDefault()
     const cursor = Math.max(0, event.currentTarget.selectionStart ?? event.currentTarget.value.length)
     lastPlainCursorRef.current = cursor
-    void insertImageFile(file, cursor)
+    void insertImageFiles([file], cursor)
   }
 
   async function removeMixedImage(blockId: string, attachmentId: string) {
@@ -648,8 +688,11 @@ export function OanixNotesSheetSurface({
   }, [mode])
 
   const editingDisabled = saving || closing || imageBusy
-  const status = saving || imageBusy || saveInFlightRef.current ? 'saving' : dirty ? 'unsaved' : 'saved'
-  const statusLabel = imageBusy ? 'Procesando…' : status === 'saving' ? 'Guardando…' : status === 'saved' ? 'Guardado' : 'Sin guardar'
+  const showImageProgress = imageBusy && imageFeedback.visible
+  const status = saving || saveInFlightRef.current || showImageProgress ? 'saving' : dirty ? 'unsaved' : 'saved'
+  const statusLabel = showImageProgress
+    ? imageProgressLabel(imageProgress, imageFeedback.stillRunning)
+    : status === 'saving' ? 'Guardando…' : status === 'saved' ? 'Guardado' : 'Sin guardar'
   const visibleError = error || integrationError
 
   return (
@@ -694,7 +737,7 @@ export function OanixNotesSheetSurface({
                   loadAttachmentFile={loadAttachmentFile}
                   onTextBlockChange={stageMixedBlock}
                   onTextCursorChange={rememberMixedCursor}
-                  onPasteImage={(file, blockId, cursorOffset) => void insertMixedImageFile(file, blockId, cursorOffset)}
+                  onPasteImage={(file, blockId, cursorOffset) => void insertMixedImageFiles([file], blockId, cursorOffset)}
                   onRemoveImage={removeMixedImage}
                   onActivity={markActivity}
                   onCompositionStart={() => { composingRef.current = true; onActivity?.() }}
@@ -759,19 +802,24 @@ export function OanixNotesSheetSurface({
         ref={imageInputRef}
         type="file"
         accept="image/*"
+        multiple
         tabIndex={-1}
         aria-hidden="true"
         style={{ display: 'none' }}
         onChange={(event) => {
-          const file = event.currentTarget.files?.[0]
+          const selectedFiles = Array.from(event.currentTarget.files ?? [])
           event.currentTarget.value = ''
           const mixedTarget = pendingMixedImageTargetRef.current
           const cursor = pendingImageCursorRef.current ?? lastPlainCursorRef.current
           pendingMixedImageTargetRef.current = null
           pendingImageCursorRef.current = null
-          if (!file) return
-          if (mixedTarget) void insertMixedImageFile(file, mixedTarget.blockId, mixedTarget.cursorOffset)
-          else void insertImageFile(file, cursor)
+          if (selectedFiles.length < 1) return
+          if (selectedFiles.length > OANIX_IMAGE_BATCH_LIMIT) {
+            setIntegrationError(`Puedes seleccionar hasta ${OANIX_IMAGE_BATCH_LIMIT} imágenes por vez.`)
+            return
+          }
+          if (mixedTarget) void insertMixedImageFiles(selectedFiles, mixedTarget.blockId, mixedTarget.cursorOffset)
+          else void insertImageFiles(selectedFiles, cursor)
         }}
       />
     </section>
