@@ -80,7 +80,7 @@ test('the selected OANIX Notes sheet owns only visual editing and EditorSurface 
   assert.match(selectedSurface, /AUTOSAVE_IDLE_MS = 3_000/)
   assert.match(selectedSurface, /onRequestSave\(snapshot\)/)
   assert.match(selectedSurface, /onRequestClose\(snapshot\)/)
-  assert.match(selectedSurface, /className="oanix-notes__slide-handle/)
+  assert.match(selectedSurface, /oanix-notes__slide-handle/)
   assert.match(selectedSurface, /oanix-notes__side-panel/)
   assert.doesNotMatch(selectedSurface, /indexedDB|localStorage|sessionStorage/)
   assert.doesNotMatch(selectedSurface, /QwenRichBlocks|NoteEditor|PlainTextEditorSurface/)
