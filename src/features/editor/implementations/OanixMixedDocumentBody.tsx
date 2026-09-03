@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { EditorSurfaceAttachment, EditorSurfaceBlock } from '../editorSurfaceContract.ts'
+import { findOanixClipboardImage } from '../oanixClipboardImage.ts'
 import { encodeTextBlock, type EditorTextBlock } from '../textBlockCodec.ts'
 import { projectOanixMixedDocument } from '../oanixMixedDocumentProjection.ts'
 import { OanixInsertableElementFrame } from './OanixInsertableElementFrame.tsx'
@@ -11,6 +12,8 @@ interface OanixMixedDocumentBodyProps {
   disabled: boolean
   loadAttachmentFile: (attachmentId: string) => Promise<File | null>
   onTextBlockChange: (block: EditorSurfaceBlock) => void | Promise<void>
+  onTextCursorChange: (blockId: string, cursorOffset: number) => void
+  onPasteImage: (file: File, blockId: string, cursorOffset: number) => void | Promise<void>
   onRemoveImage: (blockId: string, attachmentId: string) => void | Promise<void>
   onActivity: () => void
   onCompositionStart: () => void
@@ -35,6 +38,8 @@ function OanixMixedTextSegment({
   block,
   disabled,
   onChange,
+  onCursorChange,
+  onPasteImage,
   onActivity,
   onCompositionStart,
   onCompositionEnd,
@@ -42,6 +47,8 @@ function OanixMixedTextSegment({
   block: EditorTextBlock
   disabled: boolean
   onChange: (block: EditorSurfaceBlock) => void | Promise<void>
+  onCursorChange: (blockId: string, cursorOffset: number) => void
+  onPasteImage: (file: File, blockId: string, cursorOffset: number) => void | Promise<void>
   onActivity: () => void
   onCompositionStart: () => void
   onCompositionEnd: () => void
@@ -53,6 +60,12 @@ function OanixMixedTextSegment({
     if (!textarea) return
     textarea.style.height = 'auto'
     textarea.style.height = `${Math.max(56, textarea.scrollHeight)}px`
+  }
+
+  function reportCursor() {
+    const textarea = textareaRef.current
+    if (!textarea) return
+    onCursorChange(block.id, Math.max(0, textarea.selectionStart ?? textarea.value.length))
   }
 
   useEffect(() => resize(), [])
@@ -70,10 +83,25 @@ function OanixMixedTextSegment({
     onInput={(event) => {
       resize()
       onActivity()
+      reportCursor()
       void onChange(encodeTextBlock({ ...block, text: event.currentTarget.value }))
     }}
+    onSelect={reportCursor}
+    onKeyUp={reportCursor}
+    onPointerUp={reportCursor}
+    onPaste={(event) => {
+      const file = findOanixClipboardImage(event.clipboardData)
+      if (!file || disabled) return
+      event.preventDefault()
+      const cursorOffset = Math.max(0, event.currentTarget.selectionStart ?? event.currentTarget.value.length)
+      onCursorChange(block.id, cursorOffset)
+      void onPasteImage(file, block.id, cursorOffset)
+    }}
     onCompositionStart={onCompositionStart}
-    onCompositionEnd={onCompositionEnd}
+    onCompositionEnd={() => {
+      onCompositionEnd()
+      reportCursor()
+    }}
   />
 }
 
@@ -162,11 +190,12 @@ function OanixMixedImage({
 }
 
 /**
- * Minimal mixed renderer for the first safe plain-text -> rich transition.
+ * Mixed renderer for continuous text interrupted by atomic OANIX elements.
  *
  * Text remains uncontrolled per segment so a keystroke does not mirror the whole
- * document into React state. Images are atomic flow children, never overlays, and
- * their bytes are loaded lazily only when the card approaches the viewport.
+ * document into React state. Cursor updates are tiny metadata events used only to
+ * preserve contextual insertion. Images are atomic flow children, never overlays,
+ * and their bytes are loaded lazily only when the card approaches the viewport.
  */
 export function OanixMixedDocumentBody({
   blocks,
@@ -174,6 +203,8 @@ export function OanixMixedDocumentBody({
   disabled,
   loadAttachmentFile,
   onTextBlockChange,
+  onTextCursorChange,
+  onPasteImage,
   onRemoveImage,
   onActivity,
   onCompositionStart,
@@ -191,6 +222,8 @@ export function OanixMixedDocumentBody({
           block={node.block}
           disabled={disabled}
           onChange={onTextBlockChange}
+          onCursorChange={onTextCursorChange}
+          onPasteImage={onPasteImage}
           onActivity={onActivity}
           onCompositionStart={onCompositionStart}
           onCompositionEnd={onCompositionEnd}
