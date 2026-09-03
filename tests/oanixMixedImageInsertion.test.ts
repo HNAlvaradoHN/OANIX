@@ -58,6 +58,57 @@ test('mixed image planner clamps the cursor and leaves a writable trailing segme
   assert.deepEqual(plan.blocks[4].data, { text: '' })
 })
 
+test('mixed image planner respects textarea UTF-16 selection offsets', () => {
+  const unicodeBlocks = [
+    encodeTextBlock({ id: 'unicode', kind: 'text-segment', text: 'A😀BC' }),
+  ]
+  const plan = planOanixMixedImageInsertion({
+    blocks: unicodeBlocks,
+    targetTextBlockId: 'unicode',
+    cursorOffset: 3,
+    attachmentId: attachment.id,
+    createId: ids,
+  })
+
+  assert.deepEqual(plan.blocks[0].data, { text: 'A😀' })
+  assert.deepEqual(plan.blocks[2].data, { text: 'BC' })
+})
+
+test('mixed image planner can insert again without rewriting the existing image or preceding text', () => {
+  const first = planOanixMixedImageInsertion({
+    blocks,
+    targetTextBlockId: 'text-b',
+    cursorOffset: 5,
+    attachmentId: attachment.id,
+    createId: ids,
+  })
+
+  let imageCounter = 0
+  let textCounter = 0
+  const second = planOanixMixedImageInsertion({
+    blocks: first.blocks,
+    targetTextBlockId: first.afterTextBlockId,
+    cursorOffset: 2,
+    attachmentId: 'asset-third',
+    createId: (kind) => kind === 'image' ? `image-third-${imageCounter++}` : `text-third-${textCounter++}`,
+  })
+
+  assert.deepEqual(second.order, [
+    'text-a',
+    'image-old',
+    'text-b',
+    'image-new',
+    'text-after',
+    'image-third-0',
+    'text-third-0',
+  ])
+  assert.equal(second.blocks[0], first.blocks[0])
+  assert.equal(second.blocks[1], first.blocks[1])
+  assert.equal(second.blocks[3], first.blocks[3])
+  assert.deepEqual(second.blocks[4].data, { text: 'mu' })
+  assert.deepEqual(second.blocks[6].data, { text: 'ndo' })
+})
+
 test('mixed image coordinator stores once and commits one incremental change set', async () => {
   const events: string[] = []
   let savedChanges: EditorSurfaceBlockChangeSet | null = null
