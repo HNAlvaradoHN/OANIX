@@ -12,13 +12,13 @@ const mixedBodySource = readFileSync(
   'utf8',
 )
 
-test('notes sheet wires repeated image insertion through the mixed-document coordinator', () => {
-  assert.match(surfaceSource, /insertOanixImageIntoMixedDocument/)
+test('notes sheet wires repeated image insertion through the batch coordinator', () => {
+  assert.match(surfaceSource, /insertOanixImageBatch/)
   assert.match(surfaceSource, /if \(dirtyRef\.current && !\(await saveCurrentSnapshot\(\)\)\)/)
   assert.match(surfaceSource, /const confirmedBlocks = await loadBlocks\(\)/)
   assert.match(surfaceSource, /blocks: confirmedBlocks/)
   assert.match(surfaceSource, /onTextCursorChange=\{rememberMixedCursor\}/)
-  assert.match(surfaceSource, /onPasteImage=\{\(file, blockId, cursorOffset\) => void insertMixedImageFile\(file, blockId, cursorOffset\)\}/)
+  assert.match(surfaceSource, /onPasteImage=\{\(file, blockId, cursorOffset\) => void insertMixedImageFiles\(\[file\], blockId, cursorOffset\)\}/)
 })
 
 test('mixed image paste stays native and carries the exact textarea cursor to the host', () => {
@@ -27,8 +27,11 @@ test('mixed image paste stays native and carries the exact textarea cursor to th
   assert.match(mixedBodySource, /onPasteImage\(file, block\.id, cursorOffset\)/)
 })
 
-test('image picker can retain a mixed text target after the keyboard is closed', () => {
+test('image picker retains target and sends the selected ordered batch to one insertion command', () => {
   assert.match(surfaceSource, /rememberMixedCursorFromActiveElement\(\)/)
   assert.match(surfaceSource, /pendingMixedImageTargetRef\.current/)
-  assert.match(surfaceSource, /if \(mixedTarget\) void insertMixedImageFile\(file, mixedTarget\.blockId, mixedTarget\.cursorOffset\)/)
+  assert.match(surfaceSource, /multiple/)
+  assert.match(surfaceSource, /Array\.from\(event\.currentTarget\.files \?\? \[\]\)/)
+  assert.match(surfaceSource, /selectedFiles\.length > OANIX_IMAGE_BATCH_LIMIT/)
+  assert.match(surfaceSource, /if \(mixedTarget\) void insertMixedImageFiles\(selectedFiles, mixedTarget\.blockId, mixedTarget\.cursorOffset\)/)
 })
