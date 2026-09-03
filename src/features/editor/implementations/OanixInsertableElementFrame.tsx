@@ -14,6 +14,7 @@ export type OanixInsertableElementKind =
   | 'checklist'
   | 'contact'
   | 'separator'
+  | 'text'
 
 interface OanixInsertableElementFrameProps {
   elementId: string
@@ -34,6 +35,7 @@ function kindLabel(kind: OanixInsertableElementKind): string {
   if (kind === 'code') return 'Código'
   if (kind === 'checklist') return 'Checklist'
   if (kind === 'contact') return 'Contacto'
+  if (kind === 'text') return 'Texto largo'
   return 'Separador'
 }
 
