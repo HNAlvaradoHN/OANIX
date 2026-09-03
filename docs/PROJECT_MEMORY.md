@@ -4,7 +4,17 @@ Este documento conserva **decisiones duraderas y restricciones de producto/arqui
 
 Antes de trabajar: leer `AGENTS.md` y `docs/CURRENT_STATE.md`, verificar `main` y PR recientes. GitHub es la fuente de verdad del código actual.
 
-**Última actualización:** 2026-08-31
+**Última actualización:** 2026-09-02
+
+## 0. Continuidad de chats y seguimiento de página
+
+- **Página/chat activo:** `OANIX #1` — 2026-09-02.
+- Al comenzar cada respuesta de trabajo de OANIX, dirigirse al usuario como **“Inge”** e indicar la página activa, por ejemplo: **“Inge — OANIX #1”**.
+- Cada nuevo chat de trabajo que continúe OANIX debe recibir el siguiente número secuencial (`#2`, `#3`, `#4`...). El número no se reutiliza para otro chat.
+- Antes de continuar trabajo en un chat, comparar su número con la página activa registrada aquí. Si el usuario está escribiendo en un chat anterior, advertirlo claramente antes de modificar código para evitar trabajar sobre una conversación equivocada.
+- Toda decisión relevante tomada con el usuario debe registrarse en `docs/PROJECT_MEMORY.md` durante el mismo trabajo. Si también cambia el punto exacto de ejecución, pendientes inmediatos, rama o checkpoint, actualizar además `docs/CURRENT_STATE.md`.
+- No dejar la actualización de continuidad para días después ni depender únicamente del historial del chat.
+- Cuando se abra una nueva página/chat, actualizar aquí **Página/chat activo**, fecha y número antes de avanzar con decisiones nuevas.
 
 ## 1. Principios permanentes
 
