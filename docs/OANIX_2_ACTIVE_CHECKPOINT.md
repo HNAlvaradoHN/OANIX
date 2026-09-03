@@ -59,7 +59,7 @@ Garantías activas:
 - Preview usa `objectURL` temporal y lo revoca al desmontar; no se introdujeron base64 ni data URLs.
 - Eliminación de Imagen guarda primero texto pendiente, retira la referencia del documento y después intenta borrar el asset.
 
-## Pegado de texto grande — backing por asset preparado
+## Pegado de texto grande — backing por asset + renderer lazy
 
 `oanixLargePastePolicy.ts` mantiene la clasificación segura para evitar congelar el editor al decidir si un paste debe seguir inline o convertirse en elemento de texto largo.
 
@@ -68,7 +68,7 @@ Garantías activas:
 - Para candidatos pequeños se hace un único recorrido con salida temprana por líneas/bytes.
 - No usa `TextEncoder` para clasificar, por lo que no crea un segundo buffer binario del texto pegado.
 
-Nueva base implementada en esta ejecución:
+Base implementada:
 
 - `oanixLongTextElementCodec.ts` define `oanix-long-text-element-v1`.
 - El bloque **no persiste el texto grande**: guarda únicamente `attachmentId`, preview acotada, longitud UTF-16 y conteo de líneas cuando ya está disponible sin recorrido adicional.
@@ -76,10 +76,19 @@ Nueva base implementada en esta ejecución:
 - `oanixMixedLongTextInsertion.ts` convierte un paste grande en un `File` `text/plain` y lo entrega exclusivamente por `onRequestAttachmentStore`, reutilizando el almacenamiento real de OANIX detrás del contrato de `EditorSurface`.
 - Tras almacenar el asset, divide únicamente el `text-segment` objetivo en `texto anterior → Texto largo → texto posterior` y confirma `upserts + delete + order` como un único change-set.
 - Si el commit falla, intenta compensar eliminando el asset recién creado; ningún bloque vecino se reescribe.
-- `oanixMixedDocumentProjection.ts` ya reconoce el nuevo nodo y `OanixInsertableElementFrame` dispone de identidad visual `Texto largo` con preview acotada.
-- Pruebas nuevas verifican que el payload grande no termine dentro del bloque, que texto normal no se convierta por error y que el fallo de commit compense el asset.
+- `oanixMixedDocumentProjection.ts` reconoce el nodo `long-text`.
 
-**Frontera deliberada:** el paste visible todavía no se intercepta desde `OanixNotesSheetSurface` / `OanixMixedDocumentBody`. Falta conectar renderer expandible bajo demanda y el host transaccional; hasta entonces el usuario no entra accidentalmente en una ruta parcialmente implementada.
+Renderer añadido en el head actual:
+
+- `OanixMixedDocumentBody` ya presenta `Texto largo` como elemento atómico con preview limitada; no materializa el payload completo dentro del DOM de la hoja.
+- La expansión reutiliza el visor universal de `OanixInsertableElementFrame`.
+- `loadAttachmentFile(attachmentId)` vive dentro de `OanixLongTextExpanded`, componente que solo se monta al abrir `Ver completo`; abrir la nota o hacer scroll sobre la tarjeta no solicita el asset pesado.
+- El archivo descifrado se expone al visor mediante `objectURL` temporal en un `iframe` sandboxed, evitando convertir todo el archivo a un string React y duplicarlo en estado/DOM.
+- El `objectURL` se revoca al desmontar la expansión.
+- CSS limita estrictamente la preview y adapta el visor a PC/móvil.
+- `tests/oanixMixedDocumentRenderer.test.ts` protege que la carga del asset permanezca dentro del componente expandido y que no aparezca `.text()` en la tarjeta.
+
+**Frontera deliberada:** el paste visible de texto grande todavía no se intercepta desde `OanixNotesSheetSurface` / `OanixMixedDocumentBody`. El renderer ya existe; falta conectar el host transaccional en mixed mode y después la transición equivalente desde modo plain. Hasta entonces no se habilita una ruta parcialmente conectada.
 
 ## Guardia móvil
 
@@ -95,17 +104,19 @@ Nueva base implementada en esta ejecución:
 
 ## Validación
 
-Checkpoint previo completamente validado: `4730e85f550064876598168f9195508322ccf1d6` — OANIX CI #2472 verde, OANIX Android #1858 verde y Qwen Review #824 verde.
+Checkpoint anterior `e2403667d99ee13273696c3ee73ad989cc57d393` quedó completamente verde: OANIX CI #2492, OANIX Android #1868 y Qwen Review #834.
 
-El trabajo de texto largo de esta ejecución debe considerarse **IN_PROGRESS** hasta que el head final de código/documentación pase los gates aplicables. No afirmar todavía que la ruta visible de paste grande está terminada.
+Head de código del renderer lazy: `8b20ade5c902af3c06e605290db23f2f2bed31af`.
+
+Al escribir este checkpoint, OANIX CI #2498, OANIX Android #1871 y Qwen Review #837 estaban en ejecución. Por tanto el renderer de Texto largo sigue **IN_PROGRESS** hasta que esos gates terminen; no se afirma aún que el head esté completamente validado.
 
 ## Próximo bloque seguro
 
-1. validar el head actual y corregir cualquier regresión real;
-2. añadir renderer de `Texto largo` que mantenga preview pequeña y solo lea el asset al abrir la expansión;
-3. conectar paste grande en mixed mode con `flush → loadBlocks confirmado → transición → actualización UI`, igual que la inserción repetida de Imagen;
-4. resolver después el primer paste grande desde modo plain mediante una transición compensada equivalente;
-5. completar menú/acciones de Imagen y continuar Entrada, Archivo, Código, Checklist, Contacto y Separador;
+1. cerrar la validación del renderer lazy y corregir cualquier regresión real;
+2. conectar paste grande en mixed mode con `flush → loadBlocks confirmado → transición → actualización UI`, igual que la inserción repetida de Imagen;
+3. resolver después el primer paste grande desde modo plain mediante una transición compensada equivalente;
+4. completar eliminación/acciones de Texto largo y menú/acciones de Imagen;
+5. continuar Entrada, Archivo, Código, Checklist, Contacto y Separador;
 6. ejecutar estrés con notas largas y múltiples elementos antes de considerar la hoja lista para promover.
 
 No promover ni fusionar este PR a `main` antes de la revisión visual/funcional correspondiente y de mantener los gates reales aplicables en verde.
