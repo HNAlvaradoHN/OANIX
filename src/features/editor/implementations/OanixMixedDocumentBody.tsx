@@ -273,7 +273,6 @@ function OanixMixedImage({
   const [loadAttempt, setLoadAttempt] = useState(0)
   const [menuOpen, setMenuOpen] = useState(false)
   const [menuDirection, setMenuDirection] = useState<'up' | 'down'>('down')
-  const [resizeActive, setResizeActive] = useState(false)
   const [viewerOpen, setViewerOpen] = useState(false)
   const [widthPercent, setWidthPercent] = useState(block.widthPercent)
   const [sizeLocked, setSizeLocked] = useState(block.sizeLocked)
@@ -336,15 +335,14 @@ function OanixMixedImage({
   }
 
   function lockResizeAndClose() {
-    if (resizeActive && !sizeLocked) {
+    if (!sizeLocked) {
       persistPresentation(widthPercent, true)
     }
-    setResizeActive(false)
     setMenuOpen(false)
   }
 
   useEffect(() => {
-    if (!menuOpen && !resizeActive) return
+    if (!menuOpen && sizeLocked) return
     const close = (event: PointerEvent) => {
       const target = event.target as Node | null
       if (target && (hostRef.current?.contains(target) || menuRef.current?.contains(target))) return
@@ -366,7 +364,7 @@ function OanixMixedImage({
       window.visualViewport?.removeEventListener('resize', onScroll)
       window.visualViewport?.removeEventListener('scroll', onScroll)
     }
-  }, [menuOpen, resizeActive, sizeLocked, widthPercent])
+  }, [menuOpen, sizeLocked, widthPercent])
 
   function openMenu() {
     if (disabled) return
@@ -388,7 +386,7 @@ function OanixMixedImage({
     await onRemove()
   }
 
-  const showResize = resizeActive && !sizeLocked && Boolean(url)
+  const showResize = !sizeLocked && Boolean(url)
 
   return <>
     <figure
@@ -445,7 +443,6 @@ function OanixMixedImage({
         <button type="button" role="menuitem" aria-label={sizeLocked ? 'Desbloquear tamaño' : 'Bloquear tamaño'} onClick={() => {
           if (sizeLocked) {
             persistPresentation(widthPercent, false)
-            setResizeActive(true)
             return
           }
           lockResizeAndClose()
