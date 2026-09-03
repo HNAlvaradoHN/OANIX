@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import type { EditorSurfaceAttachment, EditorSurfaceBlock } from '../editorSurfaceContract.ts'
 import { findOanixClipboardImage } from '../oanixClipboardImage.ts'
+import {
+  encodeOanixImageElement,
+  type OanixImageElement,
+} from '../oanixImageElementCodec.ts'
 import type { OanixLongTextElement } from '../oanixLongTextElementCodec.ts'
 import { encodeTextBlock, type EditorTextBlock } from '../textBlockCodec.ts'
 import { projectOanixMixedDocument } from '../oanixMixedDocumentProjection.ts'
@@ -107,26 +111,179 @@ function OanixMixedTextSegment({
   />
 }
 
+function OanixImageViewer({
+  url,
+  title,
+  onClose,
+}: {
+  url: string
+  title: string
+  onClose: () => void
+}) {
+  const [scale, setScale] = useState(1)
+  const [offset, setOffset] = useState({ x: 0, y: 0 })
+  const pointersRef = useRef(new Map<number, { x: number; y: number }>())
+  const gestureRef = useRef<{
+    distance: number
+    scale: number
+    centerX: number
+    centerY: number
+    offsetX: number
+    offsetY: number
+  } | null>(null)
+
+  function clampScale(value: number) {
+    return Math.min(6, Math.max(1, value))
+  }
+
+  function resetView() {
+    setScale(1)
+    setOffset({ x: 0, y: 0 })
+  }
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose()
+      if (event.key === '0') resetView()
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [onClose])
+
+  return <div
+    className="oanix-image-viewer"
+    role="dialog"
+    aria-modal="true"
+    aria-label={`Imagen completa: ${title}`}
+    onPointerDown={(event) => {
+      if (event.target === event.currentTarget) onClose()
+    }}
+  >
+    <div
+      className="oanix-image-viewer__stage"
+      onWheel={(event) => {
+        event.preventDefault()
+        const next = clampScale(scale * (event.deltaY < 0 ? 1.16 : 0.86))
+        setScale(next)
+        if (next === 1) setOffset({ x: 0, y: 0 })
+      }}
+      onPointerDown={(event) => {
+        event.currentTarget.setPointerCapture(event.pointerId)
+        pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY })
+        const points = [...pointersRef.current.values()]
+        if (points.length === 1) {
+          gestureRef.current = {
+            distance: 0,
+            scale,
+            centerX: points[0].x,
+            centerY: points[0].y,
+            offsetX: offset.x,
+            offsetY: offset.y,
+          }
+        } else if (points.length === 2) {
+          const [a, b] = points
+          gestureRef.current = {
+            distance: Math.hypot(b.x - a.x, b.y - a.y),
+            scale,
+            centerX: (a.x + b.x) / 2,
+            centerY: (a.y + b.y) / 2,
+            offsetX: offset.x,
+            offsetY: offset.y,
+          }
+        }
+      }}
+      onPointerMove={(event) => {
+        if (!pointersRef.current.has(event.pointerId)) return
+        pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY })
+        const points = [...pointersRef.current.values()]
+        const gesture = gestureRef.current
+        if (!gesture) return
+        if (points.length >= 2) {
+          const [a, b] = points
+          const distance = Math.max(1, Math.hypot(b.x - a.x, b.y - a.y))
+          const nextScale = clampScale(gesture.scale * (distance / Math.max(1, gesture.distance)))
+          const centerX = (a.x + b.x) / 2
+          const centerY = (a.y + b.y) / 2
+          setScale(nextScale)
+          setOffset({
+            x: gesture.offsetX + centerX - gesture.centerX,
+            y: gesture.offsetY + centerY - gesture.centerY,
+          })
+        } else if (points.length === 1 && scale > 1) {
+          setOffset({
+            x: gesture.offsetX + points[0].x - gesture.centerX,
+            y: gesture.offsetY + points[0].y - gesture.centerY,
+          })
+        }
+      }}
+      onPointerUp={(event) => {
+        pointersRef.current.delete(event.pointerId)
+        gestureRef.current = null
+      }}
+      onPointerCancel={(event) => {
+        pointersRef.current.delete(event.pointerId)
+        gestureRef.current = null
+      }}
+      onDoubleClick={() => {
+        if (scale > 1) resetView()
+        else setScale(2)
+      }}
+    >
+      <img
+        src={url}
+        alt={title}
+        draggable={false}
+        style={{ transform: `translate3d(${offset.x}px, ${offset.y}px, 0) scale(${scale})` }}
+      />
+    </div>
+    <div className="oanix-image-viewer__toolbar">
+      <button type="button" onClick={() => setScale((current) => clampScale(current - 0.5))} aria-label="Alejar">−</button>
+      <span>{Math.round(scale * 100)}%</span>
+      <button type="button" onClick={() => setScale((current) => clampScale(current + 0.5))} aria-label="Acercar">+</button>
+      <button type="button" onClick={resetView}>Restablecer</button>
+    </div>
+    <button type="button" className="oanix-image-viewer__close" aria-label="Cerrar imagen" onClick={onClose}>×</button>
+  </div>
+}
+
 function OanixMixedImage({
-  blockId,
+  block,
   attachment,
   disabled,
   loadAttachmentFile,
+  onChange,
   onRemove,
+  onActivity,
   onError,
 }: {
-  blockId: string
+  block: OanixImageElement
   attachment: EditorSurfaceAttachment | undefined
   disabled: boolean
   loadAttachmentFile: (attachmentId: string) => Promise<File | null>
+  onChange: (block: EditorSurfaceBlock) => void | Promise<void>
   onRemove: () => void | Promise<void>
+  onActivity: () => void
   onError?: (message: string) => void
 }) {
-  const hostRef = useRef<HTMLDivElement | null>(null)
-  const startedRef = useRef(false)
+  const hostRef = useRef<HTMLElement | null>(null)
+  const menuRef = useRef<HTMLDivElement | null>(null)
   const [requested, setRequested] = useState(false)
   const [url, setUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [loadAttempt, setLoadAttempt] = useState(0)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [menuDirection, setMenuDirection] = useState<'up' | 'down'>('down')
+  const [resizeActive, setResizeActive] = useState(false)
+  const [viewerOpen, setViewerOpen] = useState(false)
+  const [widthPercent, setWidthPercent] = useState(block.widthPercent)
+  const [sizeLocked, setSizeLocked] = useState(block.sizeLocked)
+
+  const title = attachment?.name || 'Imagen cifrada'
+
+  useEffect(() => {
+    setWidthPercent(block.widthPercent)
+    setSizeLocked(block.sizeLocked)
+  }, [block.sizeLocked, block.widthPercent])
 
   useEffect(() => {
     const host = hostRef.current
@@ -145,9 +302,8 @@ function OanixMixedImage({
   }, [attachment, requested])
 
   useEffect(() => {
-    if (!requested || !attachment || attachment.remote || url || startedRef.current) return
+    if (!requested || !attachment || attachment.remote || url) return
     let active = true
-    startedRef.current = true
     setLoading(true)
     void loadAttachmentFile(attachment.id).then((file) => {
       if (!active) return
@@ -162,33 +318,136 @@ function OanixMixedImage({
       if (active) setLoading(false)
     })
     return () => { active = false }
-  }, [attachment, loadAttachmentFile, onError, requested, url])
+  }, [attachment, loadAttachmentFile, loadAttempt, onError, requested, url])
 
   useEffect(() => () => {
     if (url) URL.revokeObjectURL(url)
   }, [url])
 
-  const title = attachment?.name || 'Imagen cifrada'
-  const meta = attachment ? `${attachment.mimeType || 'Imagen'} · ${formatBytes(attachment.byteLength)}` : 'Referencia conservada'
-  const preview = <div ref={hostRef} className="oanix-mixed-document__image-preview">
-    {url
-      ? <img src={url} alt={title} loading="lazy" />
-      : <div className="oanix-mixed-document__image-placeholder" data-loading={loading ? 'true' : 'false'}>
-        <span aria-hidden="true">▧</span>
-        <small>{attachment?.remote ? 'Imagen remota cifrada' : loading ? 'Descifrando imagen…' : attachment ? 'Imagen cifrada' : 'Adjunto no disponible'}</small>
-      </div>}
-  </div>
+  useEffect(() => {
+    if (!menuOpen) return
+    const close = (event: PointerEvent) => {
+      const target = event.target as Node | null
+      if (target && (hostRef.current?.contains(target) || menuRef.current?.contains(target))) return
+      setMenuOpen(false)
+    }
+    const onScroll = () => setMenuOpen(false)
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMenuOpen(false)
+    }
+    window.addEventListener('pointerdown', close)
+    window.addEventListener('scroll', onScroll, true)
+    window.addEventListener('keydown', onKey)
+    window.visualViewport?.addEventListener('resize', onScroll)
+    window.visualViewport?.addEventListener('scroll', onScroll)
+    return () => {
+      window.removeEventListener('pointerdown', close)
+      window.removeEventListener('scroll', onScroll, true)
+      window.removeEventListener('keydown', onKey)
+      window.visualViewport?.removeEventListener('resize', onScroll)
+      window.visualViewport?.removeEventListener('scroll', onScroll)
+    }
+  }, [menuOpen])
 
-  return <OanixInsertableElementFrame
-    elementId={blockId}
-    kind="image"
-    title={title}
-    meta={meta}
-    preview={preview}
-    expanded={url ? <img className="oanix-mixed-document__expanded-image" src={url} alt={title} /> : preview}
-    disabled={disabled}
-    onRemove={onRemove}
-  />
+  function persistPresentation(nextWidth: number, nextLocked: boolean) {
+    setWidthPercent(nextWidth)
+    setSizeLocked(nextLocked)
+    onActivity()
+    void onChange(encodeOanixImageElement({
+      ...block,
+      widthPercent: nextWidth,
+      sizeLocked: nextLocked,
+    }))
+  }
+
+  function openMenu() {
+    if (disabled) return
+    const host = hostRef.current
+    if (host) {
+      const bounds = host.getBoundingClientRect()
+      const viewportHeight = window.visualViewport?.height ?? window.innerHeight
+      const viewportTop = window.visualViewport?.offsetTop ?? 0
+      const spaceBelow = viewportTop + viewportHeight - bounds.bottom
+      const spaceAbove = bounds.top - viewportTop
+      setMenuDirection(spaceBelow < 250 && spaceAbove > spaceBelow ? 'up' : 'down')
+    }
+    setMenuOpen(true)
+  }
+
+  async function removeImage() {
+    setMenuOpen(false)
+    if (!window.confirm('¿Eliminar esta imagen de la nota?')) return
+    await onRemove()
+  }
+
+  const showResize = resizeActive && !sizeLocked && Boolean(url)
+
+  return <>
+    <figure
+      ref={hostRef}
+      className="oanix-mixed-image"
+      data-oanix-element-id={block.id}
+      data-oanix-element-kind="image"
+      style={{ width: `${widthPercent}%` }}
+    >
+      {url ? <img className="oanix-mixed-image__img" src={url} alt={title} loading="lazy" /> : (
+        <button
+          type="button"
+          className="oanix-mixed-image__placeholder"
+          data-loading={loading ? 'true' : 'false'}
+          disabled={loading || !attachment || attachment.remote}
+          onClick={() => {
+            if (!loading && attachment && !attachment.remote) setLoadAttempt((value) => value + 1)
+          }}
+        >
+          <span aria-hidden="true">▧</span>
+          <small>{attachment?.remote ? 'Imagen remota cifrada' : loading ? 'Descifrando imagen…' : attachment ? 'Tocar para cargar imagen' : 'Adjunto no disponible'}</small>
+        </button>
+      )}
+
+      {url && !disabled && <button
+        type="button"
+        className="oanix-mixed-image__menu-button"
+        aria-label="Opciones de imagen"
+        aria-expanded={menuOpen}
+        onClick={() => menuOpen ? setMenuOpen(false) : openMenu()}
+      >•••</button>}
+
+      {showResize && <div className="oanix-mixed-image__resize-control">
+        <span aria-hidden="true">↔</span>
+        <input
+          type="range"
+          min="24"
+          max="100"
+          step="1"
+          value={widthPercent}
+          aria-label="Tamaño de imagen"
+          onInput={(event) => persistPresentation(Number(event.currentTarget.value), false)}
+        />
+        <output>{widthPercent}%</output>
+      </div>}
+
+      {menuOpen && <div
+        ref={menuRef}
+        className="oanix-mixed-image__menu"
+        data-direction={menuDirection}
+        role="menu"
+        aria-label="Opciones de imagen"
+      >
+        <button type="button" role="menuitem" onClick={() => { setMenuOpen(false); setResizeActive(true) }}>↔ <span>Redimensionar</span></button>
+        <button type="button" role="menuitem" onClick={() => {
+          const nextLocked = !sizeLocked
+          if (nextLocked) setResizeActive(false)
+          persistPresentation(widthPercent, nextLocked)
+          setMenuOpen(false)
+        }}>{sizeLocked ? '🔓' : '🔒'} <span>{sizeLocked ? 'Desbloquear tamaño' : 'Bloquear tamaño'}</span></button>
+        <button type="button" role="menuitem" onClick={() => { setMenuOpen(false); setViewerOpen(true) }}>⛶ <span>Pantalla completa</span></button>
+        <button type="button" role="menuitem" className="is-danger" onClick={() => void removeImage()}>⌫ <span>Eliminar</span></button>
+      </div>}
+    </figure>
+
+    {viewerOpen && url && <OanixImageViewer url={url} title={title} onClose={() => setViewerOpen(false)} />}
+  </>
 }
 
 function OanixLongTextExpanded({
@@ -269,13 +528,8 @@ function OanixMixedLongText({
 
 /**
  * Mixed renderer for continuous text interrupted by atomic OANIX elements.
- *
- * Text remains uncontrolled per segment so a keystroke does not mirror the whole
- * document into React state. Optional cursor callbacks expose only tiny insertion
- * metadata; image paste is intercepted only when the host wires the safe storage
- * coordinator. Images load lazily near view. Long pasted text keeps only its bounded
- * preview in the document; the encrypted attachment is requested only while the
- * universal expanded viewer is mounted.
+ * Text stays uncontrolled per segment. Images remain inline visual elements with
+ * encrypted bytes loaded lazily; only compact presentation metadata is staged.
  */
 export function OanixMixedDocumentBody({
   blocks,
@@ -313,11 +567,13 @@ export function OanixMixedDocumentBody({
       if (node.type === 'image') {
         return <OanixMixedImage
           key={node.block.id}
-          blockId={node.block.id}
+          block={node.block}
           attachment={attachmentMap.get(node.block.attachmentId)}
           disabled={disabled}
           loadAttachmentFile={loadAttachmentFile}
+          onChange={onTextBlockChange}
           onRemove={() => onRemoveImage(node.block.id, node.block.attachmentId)}
+          onActivity={onActivity}
           onError={onError}
         />
       }
