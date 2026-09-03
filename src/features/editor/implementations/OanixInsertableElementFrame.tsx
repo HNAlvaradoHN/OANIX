@@ -4,6 +4,7 @@ import {
   useState,
   type ReactNode,
 } from 'react'
+import './oanixInsertableElementFrame.css'
 
 export type OanixInsertableElementKind =
   | 'entry'
