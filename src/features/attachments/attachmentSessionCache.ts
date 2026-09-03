@@ -1,5 +1,5 @@
-import { registerVaultSessionCleanup } from '../../security/vault/vaultSession'
-import type { AttachmentMetadata } from './attachmentTypes'
+import { registerVaultSessionCleanup } from '../../security/vault/vaultSession.ts'
+import type { AttachmentMetadata } from './attachmentTypes.ts'
 
 export const DEFAULT_DECRYPTED_ATTACHMENT_CACHE_BYTES = 48 * 1024 * 1024
 
