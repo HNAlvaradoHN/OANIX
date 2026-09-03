@@ -46,6 +46,22 @@ test('image controls stay usable after resize and distinguish tap from scroll', 
   assert.match(css, /background:rgba\(20,22,28,\.94\)/)
 })
 
+test('image lock is the only resize toggle and outside interaction relocks the current size', async () => {
+  const source = await readSource()
+  const imageStart = source.indexOf('function OanixMixedImage')
+  const longTextStart = source.indexOf('function OanixLongTextExpanded')
+  assert.ok(imageStart >= 0)
+  assert.ok(longTextStart > imageStart)
+  const imageSource = source.slice(imageStart, longTextStart)
+
+  assert.doesNotMatch(imageSource, /<span>Redimensionar<\/span>/)
+  assert.match(imageSource, /function lockResizeAndClose\(\)/)
+  assert.match(imageSource, /persistPresentation\(widthPercent, true\)/)
+  assert.match(imageSource, /if \(sizeLocked\) \{[\s\S]*persistPresentation\(widthPercent, false\)[\s\S]*setResizeActive\(true\)/)
+  assert.match(imageSource, /window\.addEventListener\('pointerdown', close\)/)
+  assert.match(imageSource, /if \(event\.key === 'Escape'\) lockResizeAndClose\(\)/)
+})
+
 test('long text keeps only its bounded preview in the sheet and loads the encrypted asset inside the expanded viewer', async () => {
   const source = await readSource()
   const expandedStart = source.indexOf('function OanixLongTextExpanded')

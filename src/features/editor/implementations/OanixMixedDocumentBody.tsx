@@ -324,16 +324,35 @@ function OanixMixedImage({
     if (url) URL.revokeObjectURL(url)
   }, [url])
 
+  function persistPresentation(nextWidth: number, nextLocked: boolean) {
+    setWidthPercent(nextWidth)
+    setSizeLocked(nextLocked)
+    onActivity()
+    void onChange(encodeOanixImageElement({
+      ...block,
+      widthPercent: nextWidth,
+      sizeLocked: nextLocked,
+    }))
+  }
+
+  function lockResizeAndClose() {
+    if (resizeActive && !sizeLocked) {
+      persistPresentation(widthPercent, true)
+    }
+    setResizeActive(false)
+    setMenuOpen(false)
+  }
+
   useEffect(() => {
-    if (!menuOpen) return
+    if (!menuOpen && !resizeActive) return
     const close = (event: PointerEvent) => {
       const target = event.target as Node | null
       if (target && (hostRef.current?.contains(target) || menuRef.current?.contains(target))) return
-      setMenuOpen(false)
+      lockResizeAndClose()
     }
     const onScroll = () => setMenuOpen(false)
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setMenuOpen(false)
+      if (event.key === 'Escape') lockResizeAndClose()
     }
     window.addEventListener('pointerdown', close)
     window.addEventListener('scroll', onScroll, true)
@@ -347,18 +366,7 @@ function OanixMixedImage({
       window.visualViewport?.removeEventListener('resize', onScroll)
       window.visualViewport?.removeEventListener('scroll', onScroll)
     }
-  }, [menuOpen])
-
-  function persistPresentation(nextWidth: number, nextLocked: boolean) {
-    setWidthPercent(nextWidth)
-    setSizeLocked(nextLocked)
-    onActivity()
-    void onChange(encodeOanixImageElement({
-      ...block,
-      widthPercent: nextWidth,
-      sizeLocked: nextLocked,
-    }))
-  }
+  }, [menuOpen, resizeActive, sizeLocked, widthPercent])
 
   function openMenu() {
     if (disabled) return
@@ -434,13 +442,14 @@ function OanixMixedImage({
         role="menu"
         aria-label="Opciones de imagen"
       >
-        <button type="button" role="menuitem" onClick={() => { setMenuOpen(false); setResizeActive(true) }}>↔ <span>Redimensionar</span></button>
-        <button type="button" role="menuitem" onClick={() => {
-          const nextLocked = !sizeLocked
-          if (nextLocked) setResizeActive(false)
-          persistPresentation(widthPercent, nextLocked)
-          setMenuOpen(false)
-        }}>{sizeLocked ? '🔓' : '🔒'} <span>{sizeLocked ? 'Desbloquear tamaño' : 'Bloquear tamaño'}</span></button>
+        <button type="button" role="menuitem" aria-label={sizeLocked ? 'Desbloquear tamaño' : 'Bloquear tamaño'} onClick={() => {
+          if (sizeLocked) {
+            persistPresentation(widthPercent, false)
+            setResizeActive(true)
+            return
+          }
+          lockResizeAndClose()
+        }}>{sizeLocked ? '🔒' : '🔓'} <span>{sizeLocked ? 'Desbloquear tamaño' : 'Bloquear tamaño'}</span></button>
         <button type="button" role="menuitem" onClick={() => { setMenuOpen(false); setViewerOpen(true) }}>⛶ <span>Pantalla completa</span></button>
         <button type="button" role="menuitem" className="is-danger" onClick={() => void removeImage()}>⌫ <span>Eliminar</span></button>
       </div>}
