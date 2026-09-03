@@ -20,7 +20,7 @@ test('Android back runtime closes the active rebuild layer through its explicit 
   const editorSurface = readFileSync('src/features/editor/EditorSurface.tsx', 'utf8')
   const editorSurfaceRegistry = readFileSync('src/features/editor/editorSurfaceRegistry.ts', 'utf8')
   const selectedEditorSurface = readFileSync(
-    'src/features/editor/implementations/QwenSheetSurface.tsx',
+    'src/features/editor/implementations/OanixNotesSheetSurface.tsx',
     'utf8',
   )
 
@@ -32,7 +32,7 @@ test('Android back runtime closes the active rebuild layer through its explicit 
   assert.match(editorSurface, /const ActiveSurface = lazy\(activeEditorSurface\.load\)/)
   assert.match(editorSurface, /<Suspense fallback=\{null\}>/)
   assert.match(editorSurface, /<ActiveSurface \{\.\.\.surfaceProps\} \/>/)
-  assert.match(editorSurfaceRegistry, /await import\([\s\S]*QwenSheetSurface/)
+  assert.match(editorSurfaceRegistry, /await import\([\s\S]*OanixNotesSheetSurface/)
   assert.match(selectedEditorSurface, /data-oanix-back-close="true"/)
   assert.match(selectedEditorSurface, /data-oanix-save-and-close="true"/)
   assert.match(selectedEditorSurface, /async function requestClose/)
