@@ -411,7 +411,7 @@ function OanixMixedImage({
         </button>
       )}
 
-      {url && !disabled && <button
+      {!disabled && <button
         type="button"
         className="oanix-mixed-image__menu-button"
         aria-label="Opciones de imagen"
@@ -447,7 +447,7 @@ function OanixMixedImage({
           }
           lockResizeAndClose()
         }}>{sizeLocked ? '🔒' : '🔓'} <span>{sizeLocked ? 'Desbloquear tamaño' : 'Bloquear tamaño'}</span></button>
-        <button type="button" role="menuitem" onClick={() => { setMenuOpen(false); setViewerOpen(true) }}>⛶ <span>Pantalla completa</span></button>
+        <button type="button" role="menuitem" disabled={!url} onClick={() => { setMenuOpen(false); setViewerOpen(true) }}>⛶ <span>Pantalla completa</span></button>
         <button type="button" role="menuitem" className="is-danger" onClick={() => void removeImage()}>⌫ <span>Eliminar</span></button>
       </div>}
     </figure>

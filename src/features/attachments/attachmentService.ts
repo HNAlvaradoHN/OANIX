@@ -24,6 +24,8 @@ import {
 export const ATTACHMENT_BLOB_RECORD_TYPE = 'attachment'
 export const ATTACHMENT_INDEX_RECORD_TYPE = 'note-attachments'
 
+const attachmentIndexMutationTails = new Map<string, Promise<void>>()
+
 function createAttachmentId(): string {
   if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID()
   if (!globalThis.crypto?.getRandomValues) {
@@ -59,6 +61,32 @@ async function writeAttachmentIndex(index: AttachmentIndex): Promise<void> {
   await writeEncryptedRecord(ATTACHMENT_INDEX_RECORD_TYPE, index.noteId, index)
 }
 
+async function serializeAttachmentIndexMutation<T>(
+  noteId: string,
+  mutation: () => Promise<T>,
+): Promise<T> {
+  const normalizedNoteId = requireNoteId(noteId)
+  const previous = attachmentIndexMutationTails.get(normalizedNoteId) ?? Promise.resolve()
+  const run = previous.catch(() => undefined).then(mutation)
+  const tail = run.then(() => undefined, () => undefined)
+  attachmentIndexMutationTails.set(normalizedNoteId, tail)
+
+  try {
+    return await run
+  } finally {
+    if (attachmentIndexMutationTails.get(normalizedNoteId) === tail) {
+      attachmentIndexMutationTails.delete(normalizedNoteId)
+    }
+  }
+}
+
+async function appendAttachmentMetadata(noteId: string, metadata: AttachmentMetadata): Promise<void> {
+  await serializeAttachmentIndexMutation(noteId, async () => {
+    const index = await readAttachmentIndex(noteId)
+    await writeAttachmentIndex({ ...index, items: [...index.items, metadata] })
+  })
+}
+
 export async function loadEncryptedAttachments(noteId: string): Promise<AttachmentMetadata[]> {
   const index = await readAttachmentIndex(noteId)
   return [...index.items].sort((left, right) => left.createdAt.localeCompare(right.createdAt))
@@ -91,8 +119,7 @@ export async function storeEncryptedAttachment(
   }
 
   try {
-    const index = await readAttachmentIndex(normalizedNoteId)
-    await writeAttachmentIndex({ ...index, items: [...index.items, metadata] })
+    await appendAttachmentMetadata(normalizedNoteId, metadata)
   } catch (error) {
     try {
       await deleteEncryptedBlob(ATTACHMENT_BLOB_RECORD_TYPE, attachmentId)
@@ -126,8 +153,7 @@ export async function storeRemoteLargeAttachment(
   }
 
   try {
-    const index = await readAttachmentIndex(normalizedNoteId)
-    await writeAttachmentIndex({ ...index, items: [...index.items, metadata] })
+    await appendAttachmentMetadata(normalizedNoteId, metadata)
   } catch (error) {
     try {
       await deleteLargeAttachmentFromDrive(storage)
