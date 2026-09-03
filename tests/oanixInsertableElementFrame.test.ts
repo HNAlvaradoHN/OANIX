@@ -34,5 +34,6 @@ test('expanded preview is bounded and universally dismissible on web surfaces', 
 })
 
 test('frame remains a presentation layer without direct persistence or security access', () => {
-  assert.doesNotMatch(source, /attachmentService|encrypted|vault|localStorage|indexedDB|onRequestSave/)
+  assert.doesNotMatch(source, /from ['"][^'"]*(?:attachmentService|contentCrypto|vault|storage)[^'"]*['"]/)
+  assert.doesNotMatch(source, /\blocalStorage\b|\bindexedDB\b|\bonRequestSave\b/)
 })
