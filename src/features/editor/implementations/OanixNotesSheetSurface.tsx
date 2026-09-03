@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import type { ReactNode } from 'react'
+import type { PointerEvent as ReactPointerEvent, ReactNode } from 'react'
 import type { EditorSurfaceProps, EditorSurfaceSnapshot } from '../editorSurfaceContract'
 import './oanixNotesSheetSurface.css'
 
 const AUTOSAVE_IDLE_MS = 3_000
+const HANDLE_EDGE_PADDING = 48
+
+type HandleSide = 'left' | 'right'
 
 function snapshotsMatch(left: EditorSurfaceSnapshot, right: EditorSurfaceSnapshot): boolean {
   return left.title === right.title && left.text === right.text
@@ -34,6 +37,7 @@ export function OanixNotesSheetSurface({
   const idleTimerRef = useRef<number | null>(null)
   const saveInFlightRef = useRef<Promise<boolean> | null>(null)
   const committedSnapshotRef = useRef<EditorSurfaceSnapshot>({ title: initialTitle, text: initialText })
+  const handleDragRef = useRef<{ pointerId: number; startX: number; startY: number; moved: boolean } | null>(null)
 
   const [dirty, setDirty] = useState(false)
   const [closing, setClosing] = useState(false)
@@ -42,6 +46,8 @@ export function OanixNotesSheetSurface({
   const [pinned, setPinned] = useState(false)
   const [theme, setTheme] = useState('default')
   const [mode, setMode] = useState<'light' | 'dark' | 'auto'>('light')
+  const [handleSide, setHandleSide] = useState<HandleSide>('right')
+  const [handleY, setHandleY] = useState(0.5)
 
   function readSnapshot(): EditorSurfaceSnapshot {
     return {
@@ -200,19 +206,70 @@ export function OanixNotesSheetSurface({
     }
   }
 
+  function updateFloatingHandle(clientX: number, clientY: number) {
+    const editor = editorRef.current
+    if (!editor) return
+    const bounds = editor.getBoundingClientRect()
+    if (bounds.width <= 0 || bounds.height <= 0) return
+
+    const localY = Math.min(
+      Math.max(clientY - bounds.top, HANDLE_EDGE_PADDING),
+      Math.max(HANDLE_EDGE_PADDING, bounds.height - HANDLE_EDGE_PADDING),
+    )
+    setHandleY(localY / bounds.height)
+    setHandleSide(clientX - bounds.left < bounds.width / 2 ? 'left' : 'right')
+  }
+
+  function handleFloatingPointerDown(event: ReactPointerEvent<HTMLButtonElement>) {
+    if (panelOpen) return
+    handleDragRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      moved: false,
+    }
+    event.currentTarget.setPointerCapture(event.pointerId)
+  }
+
+  function handleFloatingPointerMove(event: ReactPointerEvent<HTMLButtonElement>) {
+    const drag = handleDragRef.current
+    if (!drag || drag.pointerId !== event.pointerId) return
+    if (!drag.moved && Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) > 6) drag.moved = true
+    if (!drag.moved) return
+    event.preventDefault()
+    updateFloatingHandle(event.clientX, event.clientY)
+  }
+
+  function finishFloatingPointer(event: ReactPointerEvent<HTMLButtonElement>) {
+    const drag = handleDragRef.current
+    if (!drag || drag.pointerId !== event.pointerId) return
+    const shouldOpen = !drag.moved
+    handleDragRef.current = null
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId)
+    if (shouldOpen) openPanel()
+  }
+
   useEffect(() => {
     resizeBody()
   }, [])
 
   useEffect(() => {
     const viewport = window.visualViewport
-    if (!viewport || !editorRef.current) return
-    const syncVisibleHeight = () => {
-      editorRef.current?.style.setProperty('--oanix-visible-height', `${viewport.height}px`)
+    const editor = editorRef.current
+    if (!viewport || !editor) return
+
+    const syncVisualViewport = () => {
+      editor.style.setProperty('--oanix-visible-height', `${viewport.height}px`)
+      editor.style.setProperty('--oanix-viewport-top', `${viewport.offsetTop}px`)
     }
-    syncVisibleHeight()
-    viewport.addEventListener('resize', syncVisibleHeight)
-    return () => viewport.removeEventListener('resize', syncVisibleHeight)
+
+    syncVisualViewport()
+    viewport.addEventListener('resize', syncVisualViewport)
+    viewport.addEventListener('scroll', syncVisualViewport)
+    return () => {
+      viewport.removeEventListener('resize', syncVisualViewport)
+      viewport.removeEventListener('scroll', syncVisualViewport)
+    }
   }, [])
 
   useEffect(() => () => clearIdleTimer(), [])
@@ -295,7 +352,18 @@ export function OanixNotesSheetSurface({
         </div>
       </main>
 
-      <button className={`oanix-notes__slide-handle${panelOpen ? ' is-hidden' : ''}`} type="button" aria-label="Abrir menú del editor" onClick={openPanel}>
+      <button
+        className={`oanix-notes__slide-handle${panelOpen ? ' is-hidden' : ''}`}
+        type="button"
+        aria-label="Abrir o mover menú del editor"
+        title="Toca para abrir; arrastra para mover"
+        data-side={handleSide}
+        style={{ top: `${handleY * 100}%` }}
+        onPointerDown={handleFloatingPointerDown}
+        onPointerMove={handleFloatingPointerMove}
+        onPointerUp={finishFloatingPointer}
+        onPointerCancel={finishFloatingPointer}
+      >
         <span className="oanix-notes__slide-indicator"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="5" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="12" cy="19" r="1.4"/></svg></span>
       </button>
 
