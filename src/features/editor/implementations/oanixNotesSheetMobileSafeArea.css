@@ -15,6 +15,18 @@
   scroll-padding-bottom: 84px;
 }
 
+/* Make the note title read unmistakably as a title on every surface. */
+.oanix-notes__title {
+  font-size: 38px;
+  font-weight: 800;
+  line-height: 1.22;
+  letter-spacing: -0.03em;
+}
+
+.oanix-notes__title::placeholder {
+  font-weight: 800;
+}
+
 .oanix-notes__body-wrap {
   padding-bottom: 88px;
 }
@@ -23,7 +35,18 @@
   padding-bottom: clamp(180px, 24dvh, 260px);
 }
 
+@media (min-width: 768px) {
+  .oanix-notes__title {
+    font-size: 44px;
+  }
+}
+
 @media (max-width: 520px) {
+  .oanix-notes__title {
+    font-size: 34px;
+    font-weight: 800;
+  }
+
   .oanix-notes__body-wrap {
     padding-bottom: 96px;
   }
