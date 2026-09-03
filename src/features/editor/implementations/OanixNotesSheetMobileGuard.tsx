@@ -7,6 +7,11 @@ const TOP_SAFE_GAP = 18
 const BOTTOM_SAFE_GAP = 72
 const BODY_MIN_HEIGHT = 280
 
+function isGuardedTextarea(target: EventTarget | null): target is HTMLTextAreaElement {
+  return target instanceof HTMLTextAreaElement
+    && (target.classList.contains('oanix-notes__body') || target.classList.contains('oanix-mixed-document__text'))
+}
+
 function getCaretTop(textarea: HTMLTextAreaElement): number {
   const style = window.getComputedStyle(textarea)
   const mirror = document.createElement('div')
@@ -50,10 +55,9 @@ function getCaretTop(textarea: HTMLTextAreaElement): number {
   return top
 }
 
-function keepCaretInVisibleZone(allowUpwardCorrection = false) {
-  const textarea = document.querySelector<HTMLTextAreaElement>('.oanix-notes__body')
-  const scroller = document.querySelector<HTMLElement>('.oanix-notes__editor-container')
-  if (!textarea || !scroller || document.activeElement !== textarea) return
+function keepCaretInVisibleZone(textarea: HTMLTextAreaElement, allowUpwardCorrection = false) {
+  const scroller = textarea.closest<HTMLElement>('.oanix-notes')?.querySelector<HTMLElement>('.oanix-notes__editor-container')
+  if (!scroller || document.activeElement !== textarea) return
 
   const viewport = window.visualViewport
   const viewportTop = viewport?.offsetTop ?? 0
@@ -74,18 +78,32 @@ function keepCaretInVisibleZone(allowUpwardCorrection = false) {
   }
 }
 
-function scheduleCaretCheck(allowUpwardCorrection = false) {
+function scheduleCaretCheck(textarea: HTMLTextAreaElement, allowUpwardCorrection = false) {
   window.requestAnimationFrame(() =>
-    window.requestAnimationFrame(() => keepCaretInVisibleZone(allowUpwardCorrection)),
+    window.requestAnimationFrame(() => keepCaretInVisibleZone(textarea, allowUpwardCorrection)),
   )
+}
+
+function freezePlainBodyHeight(textarea: HTMLTextAreaElement, deleting = false) {
+  if (!textarea.classList.contains('oanix-notes__body')) return
+  if (deleting) {
+    textarea.style.minHeight = `${BODY_MIN_HEIGHT}px`
+    return
+  }
+  const currentHeight = Math.max(BODY_MIN_HEIGHT, textarea.getBoundingClientRect().height)
+  textarea.style.minHeight = `${currentHeight}px`
 }
 
 export function OanixNotesSheetMobileGuard(props: EditorSurfaceProps) {
   useEffect(() => {
     const editor = document.querySelector<HTMLElement>('.oanix-notes')
-    const textarea = document.querySelector<HTMLTextAreaElement>('.oanix-notes__body')
     const viewport = window.visualViewport
-    if (!editor || !textarea) return
+    if (!editor) return
+
+    const activeGuardedTextarea = () => {
+      const active = document.activeElement
+      return isGuardedTextarea(active) && editor.contains(active) ? active : null
+    }
 
     const syncViewport = () => {
       const viewportTop = viewport?.offsetTop ?? 0
@@ -95,52 +113,53 @@ export function OanixNotesSheetMobileGuard(props: EditorSurfaceProps) {
       editor.style.setProperty('--oanix-viewport-top', `${viewportTop}px`)
       editor.style.setProperty('--oanix-visible-height', `${viewportHeight}px`)
       editor.style.setProperty('--oanix-viewport-bottom-inset', `${viewportBottomInset}px`)
-      scheduleCaretCheck(false)
+      const textarea = activeGuardedTextarea()
+      if (textarea) scheduleCaretCheck(textarea, false)
     }
 
-    // The surface currently measures autosize by briefly assigning height:auto.
-    // Once the textarea grows beyond its 280px minimum, that creates a visible
-    // collapse/reflow on every key press. Freeze the already reached height before
-    // normal text insertion so that measurement can only grow, never flash smaller.
+    // The approved plain body briefly assigns height:auto while measuring. Freeze only
+    // that textarea at its reached height so normal typing never flashes it smaller.
+    // Mixed text segments already own a compact local autosize contract and must not
+    // inherit the 280px minimum of the continuous body.
     const handleBeforeInput = (event: InputEvent) => {
-      if (event.inputType.startsWith('delete')) {
-        textarea.style.minHeight = `${BODY_MIN_HEIGHT}px`
-        return
-      }
-
-      const currentHeight = Math.max(BODY_MIN_HEIGHT, textarea.getBoundingClientRect().height)
-      textarea.style.minHeight = `${currentHeight}px`
+      if (!isGuardedTextarea(event.target) || !editor.contains(event.target)) return
+      freezePlainBodyHeight(event.target, event.inputType.startsWith('delete'))
     }
 
-    const handleTyping = () => {
-      const renderedHeight = Math.max(BODY_MIN_HEIGHT, textarea.getBoundingClientRect().height)
-      textarea.style.minHeight = `${renderedHeight}px`
-      scheduleCaretCheck(false)
+    const handleTyping = (event: Event) => {
+      if (!isGuardedTextarea(event.target) || !editor.contains(event.target)) return
+      freezePlainBodyHeight(event.target)
+      scheduleCaretCheck(event.target, false)
     }
 
-    const handlePointerSelection = () => scheduleCaretCheck(true)
-    const handleFocus = () => {
-      const renderedHeight = Math.max(BODY_MIN_HEIGHT, textarea.getBoundingClientRect().height)
-      textarea.style.minHeight = `${renderedHeight}px`
-      window.setTimeout(() => scheduleCaretCheck(false), 60)
-      window.setTimeout(() => scheduleCaretCheck(false), 220)
+    const handlePointerSelection = (event: Event) => {
+      if (!isGuardedTextarea(event.target) || !editor.contains(event.target)) return
+      scheduleCaretCheck(event.target, true)
     }
 
-    textarea.addEventListener('beforeinput', handleBeforeInput)
-    textarea.addEventListener('input', handleTyping)
-    textarea.addEventListener('keyup', handleTyping)
-    textarea.addEventListener('pointerup', handlePointerSelection)
-    textarea.addEventListener('focus', handleFocus)
+    const handleFocus = (event: FocusEvent) => {
+      if (!isGuardedTextarea(event.target) || !editor.contains(event.target)) return
+      freezePlainBodyHeight(event.target)
+      const textarea = event.target
+      window.setTimeout(() => scheduleCaretCheck(textarea, false), 60)
+      window.setTimeout(() => scheduleCaretCheck(textarea, false), 220)
+    }
+
+    editor.addEventListener('beforeinput', handleBeforeInput as EventListener)
+    editor.addEventListener('input', handleTyping)
+    editor.addEventListener('keyup', handleTyping)
+    editor.addEventListener('pointerup', handlePointerSelection)
+    editor.addEventListener('focusin', handleFocus)
     viewport?.addEventListener('resize', syncViewport)
     viewport?.addEventListener('scroll', syncViewport)
     syncViewport()
 
     return () => {
-      textarea.removeEventListener('beforeinput', handleBeforeInput)
-      textarea.removeEventListener('input', handleTyping)
-      textarea.removeEventListener('keyup', handleTyping)
-      textarea.removeEventListener('pointerup', handlePointerSelection)
-      textarea.removeEventListener('focus', handleFocus)
+      editor.removeEventListener('beforeinput', handleBeforeInput as EventListener)
+      editor.removeEventListener('input', handleTyping)
+      editor.removeEventListener('keyup', handleTyping)
+      editor.removeEventListener('pointerup', handlePointerSelection)
+      editor.removeEventListener('focusin', handleFocus)
       viewport?.removeEventListener('resize', syncViewport)
       viewport?.removeEventListener('scroll', syncViewport)
     }
