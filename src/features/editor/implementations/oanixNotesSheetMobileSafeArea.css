@@ -23,23 +23,6 @@
   padding-bottom: clamp(180px, 24dvh, 260px);
 }
 
-/*
- * Android/Brave can expose a thin strip exactly at the visual viewport boundary
- * above the IME. Position this cover at that boundary rather than at layout
- * viewport bottom (which is behind the keyboard while it is open).
- */
-.oanix-notes:focus-within::after {
-  content: "";
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: var(--oanix-viewport-bottom-inset, 0px);
-  z-index: 2;
-  height: 16px;
-  background: var(--color-surface);
-  pointer-events: none;
-}
-
 @media (max-width: 520px) {
   .oanix-notes__body-wrap {
     padding-bottom: 96px;
@@ -47,9 +30,5 @@
 
   .oanix-notes:focus-within .oanix-notes__body-wrap {
     padding-bottom: clamp(200px, 28dvh, 300px);
-  }
-
-  .oanix-notes:focus-within::after {
-    height: 20px;
   }
 }
