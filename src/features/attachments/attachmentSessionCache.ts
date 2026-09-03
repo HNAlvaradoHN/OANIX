@@ -12,8 +12,11 @@ export class AttachmentSessionCache {
   private readonly files = new Map<string, CachedFileEntry>()
   private readonly metadataByNote = new Map<string, AttachmentMetadata[]>()
   private cachedFileBytes = 0
+  private readonly maxFileBytes: number
 
-  constructor(private readonly maxFileBytes = DEFAULT_DECRYPTED_ATTACHMENT_CACHE_BYTES) {}
+  constructor(maxFileBytes = DEFAULT_DECRYPTED_ATTACHMENT_CACHE_BYTES) {
+    this.maxFileBytes = maxFileBytes
+  }
 
   getFile(attachmentId: string): File | null {
     const existing = this.files.get(attachmentId)
