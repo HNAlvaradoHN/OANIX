@@ -10,13 +10,15 @@ export interface OanixLongTextElement {
   attachmentId: string
   preview: string
   utf16Length: number
-  lines: number
+  lines: number | null
 }
 
 /**
  * Long pasted text is stored as an OANIX attachment, not inline in the block.
  * The block keeps only enough metadata for a cheap preview so opening a note does
  * not materialize a potentially multi-megabyte clipboard payload into the editor DOM.
+ * Line count is optional because the O(1) huge-paste guard intentionally avoids a
+ * synchronous full scan just to populate presentation metadata.
  */
 export function encodeOanixLongTextElement(element: OanixLongTextElement): EditorSurfaceBlock {
   return {
@@ -26,7 +28,7 @@ export function encodeOanixLongTextElement(element: OanixLongTextElement): Edito
       attachmentId: element.attachmentId.slice(0, MAX_OANIX_LONG_TEXT_ATTACHMENT_ID),
       preview: element.preview.slice(0, MAX_OANIX_LONG_TEXT_PREVIEW),
       utf16Length: Math.max(0, Math.trunc(element.utf16Length)),
-      lines: Math.max(1, Math.trunc(element.lines)),
+      lines: element.lines === null ? null : Math.max(1, Math.trunc(element.lines)),
     },
   }
 }
@@ -37,7 +39,7 @@ export function decodeOanixLongTextElement(block: EditorSurfaceBlock): OanixLong
   if (typeof attachmentId !== 'string' || !attachmentId) return null
   if (typeof preview !== 'string') return null
   if (typeof utf16Length !== 'number' || !Number.isFinite(utf16Length) || utf16Length < 0) return null
-  if (typeof lines !== 'number' || !Number.isFinite(lines) || lines < 1) return null
+  if (lines !== null && (typeof lines !== 'number' || !Number.isFinite(lines) || lines < 1)) return null
 
   return {
     id: block.id,
@@ -45,7 +47,7 @@ export function decodeOanixLongTextElement(block: EditorSurfaceBlock): OanixLong
     attachmentId: attachmentId.slice(0, MAX_OANIX_LONG_TEXT_ATTACHMENT_ID),
     preview: preview.slice(0, MAX_OANIX_LONG_TEXT_PREVIEW),
     utf16Length: Math.trunc(utf16Length),
-    lines: Math.trunc(lines),
+    lines: lines === null ? null : Math.trunc(lines),
   }
 }
 
