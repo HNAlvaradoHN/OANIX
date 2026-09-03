@@ -9,6 +9,7 @@ import { decodeTextBlock, encodeTextBlock } from './textBlockCodec.ts'
 export interface OanixMixedImageInsertionPlan {
   blocks: EditorSurfaceBlock[]
   upserts: EditorSurfaceBlock[]
+  deletes: string[]
   order: string[]
   imageBlockId: string
   beforeTextBlockId: string
@@ -20,7 +21,7 @@ interface OanixMixedImageInsertionPlanOptions {
   targetTextBlockId: string
   cursorOffset: number
   attachmentId: string
-  createId?: (kind: 'text' | 'image') => string
+  createId?: (kind: 'text' | 'image', index: number) => string
 }
 
 function defaultCreateId(kind: 'text' | 'image'): string {
@@ -28,10 +29,12 @@ function defaultCreateId(kind: 'text' | 'image'): string {
 }
 
 /**
- * Splits exactly one existing mixed-document text segment and places an atomic
- * image between the two halves. The original text block id is deliberately
- * retained for the text before the cursor so an incremental insertion does not
- * rewrite unrelated blocks or disturb their identity/order.
+ * Replaces exactly one existing mixed-document text segment with
+ * text-before -> image -> text-after while preserving every neighboring block.
+ *
+ * Both text halves receive fresh ids. Mixed textareas are intentionally
+ * uncontrolled; replacing the key guarantees React remounts the split segments
+ * with their committed values instead of retaining the old DOM value.
  */
 export function planOanixMixedImageInsertion({
   blocks,
@@ -49,12 +52,15 @@ export function planOanixMixedImageInsertion({
   if (!target) throw new Error('Target block is not a supported text segment.')
 
   const safeCursor = Math.min(Math.max(0, cursorOffset), target.text.length)
-  const beforeText = target.text.slice(0, safeCursor)
-  const afterText = target.text.slice(safeCursor)
-  const imageBlockId = createId('image')
-  const afterTextBlockId = createId('text')
+  const beforeTextBlockId = createId('text', 0)
+  const imageBlockId = createId('image', 0)
+  const afterTextBlockId = createId('text', 1)
 
-  const beforeBlock = encodeTextBlock({ ...target, text: beforeText })
+  const beforeBlock = encodeTextBlock({
+    id: beforeTextBlockId,
+    kind: target.kind,
+    text: target.text.slice(0, safeCursor),
+  })
   const imageBlock = encodeOanixImageElement({
     id: imageBlockId,
     kind: 'oanix-image-element-v1',
@@ -63,7 +69,7 @@ export function planOanixMixedImageInsertion({
   const afterBlock = encodeTextBlock({
     id: afterTextBlockId,
     kind: target.kind,
-    text: afterText,
+    text: target.text.slice(safeCursor),
   })
   const nextBlocks = [
     ...blocks.slice(0, targetIndex),
@@ -76,9 +82,10 @@ export function planOanixMixedImageInsertion({
   return {
     blocks: nextBlocks,
     upserts: [beforeBlock, imageBlock, afterBlock],
+    deletes: [targetTextBlockId],
     order: nextBlocks.map((block) => block.id),
     imageBlockId,
-    beforeTextBlockId: beforeBlock.id,
+    beforeTextBlockId,
     afterTextBlockId,
   }
 }
@@ -104,16 +111,16 @@ interface InsertOanixImageIntoMixedDocumentOptions {
   storeAttachment: (file: File) => Promise<EditorSurfaceAttachment>
   saveBlockChanges: (changes: EditorSurfaceBlockChangeSet) => Promise<boolean>
   removeAttachment: (attachmentId: string) => Promise<boolean>
-  createId?: (kind: 'text' | 'image') => string
+  createId?: (kind: 'text' | 'image', index: number) => string
 }
 
 /**
  * Transaction boundary for adding another image to an already mixed document.
  *
- * The asset is stored first because the document block needs its opaque id. If
- * the single incremental block/order commit fails, the newly-created asset is
- * compensated immediately. Existing blocks are never deleted or rewritten as a
- * rollback strategy, so a failed insertion cannot erase surrounding content.
+ * The asset is stored first because the document block needs its opaque id. The
+ * segment replacement (3 upserts + 1 delete + order) is submitted as one block
+ * change-set. If that commit fails, the newly-created asset is compensated; no
+ * follow-up rollback rewrites existing document content.
  */
 export async function insertOanixImageIntoMixedDocument({
   file,
@@ -155,6 +162,7 @@ export async function insertOanixImageIntoMixedDocument({
   try {
     saved = await saveBlockChanges({
       upserts: plan.upserts,
+      deletes: plan.deletes,
       order: plan.order,
     })
   } catch {
