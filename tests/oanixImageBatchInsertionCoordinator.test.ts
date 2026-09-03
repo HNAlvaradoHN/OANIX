@@ -6,7 +6,8 @@ import {
   OANIX_IMAGE_BATCH_LIMIT,
   insertOanixImageBatch,
 } from '../src/features/editor/oanixImageBatchInsertionCoordinator.ts'
-import { encodeTextBlock } from '../src/features/editor/textBlockCodec.ts'
+import { OANIX_IMAGE_ELEMENT_KIND } from '../src/features/editor/oanixImageElementCodec.ts'
+import { decodeTextBlock, encodeTextBlock, MAX_TEXT_BLOCK_TEXT_LENGTH } from '../src/features/editor/textBlockCodec.ts'
 
 function attachment(index: number): EditorSurfaceAttachment {
   return {
@@ -74,6 +75,34 @@ test('plain batch stores in controlled parallelism and commits document blocks o
   assert.equal(result.plan.imageBlockIds.every((id) => savedChanges?.order?.includes(id)), true)
   assert.equal(progress[0], 'storing:0/5')
   assert.equal(progress.at(-1), 'committing:5/5')
+})
+
+test('plain batch keeps every selected image consecutive before a chunked long suffix', async () => {
+  const suffix = 'd'.repeat(MAX_TEXT_BLOCK_TEXT_LENGTH + 19)
+  const result = await insertOanixImageBatch({
+    mode: 'plain',
+    files: files(3),
+    title: 'Nota larga',
+    text: `antes${suffix}`,
+    cursorOffset: 5,
+    existingBlocks: [],
+    storeAttachment: async (file) => attachment(Number(file.name.match(/\d+/)?.[0] ?? 0)),
+    saveBlockChanges: async () => true,
+    savePlainSnapshot: async () => true,
+    removeAttachment: async () => true,
+    createId: deterministicId,
+  })
+
+  assert.equal(result.status, 'committed')
+  if (result.status !== 'committed') throw new Error('unexpected result')
+  const imageIndexes = result.plan.blocks
+    .map((block, index) => block.kind === OANIX_IMAGE_ELEMENT_KIND ? index : -1)
+    .filter((index) => index >= 0)
+  assert.deepEqual(imageIndexes, [1, 2, 3])
+  assert.equal(
+    result.plan.blocks.slice(4).map((block) => decodeTextBlock(block)?.text ?? '').join(''),
+    suffix,
+  )
 })
 
 test('mixed batch replaces one persisted text block with all images in one change set', async () => {
