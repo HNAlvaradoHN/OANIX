@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises'
 import test from 'node:test'
 
 const sourcePath = new URL('../src/features/editor/implementations/OanixMixedDocumentBody.tsx', import.meta.url)
+const mobileGuardPath = new URL('../src/features/editor/implementations/OanixNotesSheetMobileGuard.tsx', import.meta.url)
 
 async function readSource(): Promise<string> {
   return readFile(sourcePath, 'utf8')
@@ -31,4 +32,14 @@ test('mixed renderer keeps images in normal document flow instead of overlays', 
   assert.doesNotMatch(source, /position:\s*['"]absolute['"]/)
   assert.doesNotMatch(source, /translateY\(/)
   assert.doesNotMatch(source, /selectionStart.*style/)
+})
+
+test('mobile caret guard follows dynamically rendered mixed text without imposing the plain body minimum', async () => {
+  const guard = await readFile(mobileGuardPath, 'utf8')
+  assert.match(guard, /oanix-mixed-document__text/)
+  assert.match(guard, /editor\.addEventListener\('focusin'/)
+  assert.match(guard, /editor\.addEventListener\('beforeinput'/)
+  assert.match(guard, /classList\.contains\('oanix-notes__body'\)/)
+  assert.match(guard, /if \(!textarea\.classList\.contains\('oanix-notes__body'\)\) return/)
+  assert.doesNotMatch(guard, /querySelector<HTMLTextAreaElement>\('\.oanix-notes__body'\)/)
 })
