@@ -5,7 +5,9 @@ import { VitePWA } from 'vite-plugin-pwa'
 export default defineConfig(({ mode }) => {
   const isCapacitor = mode === 'capacitor'
   const isVercel = process.env.VERCEL === '1'
-  const publicBase = isCapacitor ? './' : isVercel ? '/' : '/OANIX/'
+  const configuredBase = process.env.OANIX_PUBLIC_BASE?.trim()
+  const publicBase = configuredBase || (isCapacitor ? './' : isVercel ? '/' : '/OANIX/')
+  const isPrimaryPagesScope = publicBase === '/OANIX/'
 
   return {
     base: publicBase,
@@ -20,7 +22,9 @@ export default defineConfig(({ mode }) => {
           // if Vite emits one as a separate asset in a future build.
           globPatterns: ['**/*.{js,css,html,wasm}'],
           navigateFallback: 'index.html',
-          navigateFallbackDenylist: [/^\/OANIX\/preview(?:\/|$)/],
+          // The production worker must never capture the isolated preview PWA. The preview
+          // worker itself gets its own /OANIX/preview/ scope and therefore keeps fallback enabled.
+          navigateFallbackDenylist: isPrimaryPagesScope ? [/^\/OANIX\/preview(?:\/|$)/] : [],
           cleanupOutdatedCaches: true,
           // Activate the newly installed shell immediately so an older controller cannot
           // keep serving HTML that references asset hashes removed by a later Pages deploy.
