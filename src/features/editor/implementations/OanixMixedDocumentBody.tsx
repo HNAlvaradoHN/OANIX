@@ -122,6 +122,8 @@ function OanixImageViewer({
 }) {
   const [scale, setScale] = useState(1)
   const [offset, setOffset] = useState({ x: 0, y: 0 })
+  const stageRef = useRef<HTMLDivElement | null>(null)
+  const imageRef = useRef<HTMLImageElement | null>(null)
   const pointersRef = useRef(new Map<number, { x: number; y: number }>())
   const gestureRef = useRef<{
     distance: number
@@ -136,9 +138,31 @@ function OanixImageViewer({
     return Math.min(6, Math.max(1, value))
   }
 
+  function clampOffset(nextOffset: { x: number; y: number }, nextScale: number) {
+    if (nextScale <= 1) return { x: 0, y: 0 }
+    const stage = stageRef.current
+    const image = imageRef.current
+    if (!stage || !image) return nextOffset
+
+    const maxX = Math.max(0, (image.offsetWidth * nextScale - stage.clientWidth) / 2)
+    const maxY = Math.max(0, (image.offsetHeight * nextScale - stage.clientHeight) / 2)
+    return {
+      x: Math.min(maxX, Math.max(-maxX, nextOffset.x)),
+      y: Math.min(maxY, Math.max(-maxY, nextOffset.y)),
+    }
+  }
+
+  function applyView(nextScaleValue: number, nextOffset: { x: number; y: number } = offset) {
+    const nextScale = clampScale(nextScaleValue)
+    setScale(nextScale)
+    setOffset(clampOffset(nextOffset, nextScale))
+  }
+
   function resetView() {
     setScale(1)
     setOffset({ x: 0, y: 0 })
+    pointersRef.current.clear()
+    gestureRef.current = null
   }
 
   useEffect(() => {
@@ -150,6 +174,16 @@ function OanixImageViewer({
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [onClose])
 
+  useEffect(() => {
+    const normalizeOffset = () => setOffset((current) => clampOffset(current, scale))
+    window.addEventListener('resize', normalizeOffset)
+    window.visualViewport?.addEventListener('resize', normalizeOffset)
+    return () => {
+      window.removeEventListener('resize', normalizeOffset)
+      window.visualViewport?.removeEventListener('resize', normalizeOffset)
+    }
+  }, [scale])
+
   return <div
     className="oanix-image-viewer"
     role="dialog"
@@ -160,12 +194,11 @@ function OanixImageViewer({
     }}
   >
     <div
+      ref={stageRef}
       className="oanix-image-viewer__stage"
       onWheel={(event) => {
         event.preventDefault()
-        const next = clampScale(scale * (event.deltaY < 0 ? 1.16 : 0.86))
-        setScale(next)
-        if (next === 1) setOffset({ x: 0, y: 0 })
+        applyView(scale * (event.deltaY < 0 ? 1.16 : 0.86))
       }}
       onPointerDown={(event) => {
         event.currentTarget.setPointerCapture(event.pointerId)
@@ -204,13 +237,12 @@ function OanixImageViewer({
           const nextScale = clampScale(gesture.scale * (distance / Math.max(1, gesture.distance)))
           const centerX = (a.x + b.x) / 2
           const centerY = (a.y + b.y) / 2
-          setScale(nextScale)
-          setOffset({
+          applyView(nextScale, {
             x: gesture.offsetX + centerX - gesture.centerX,
             y: gesture.offsetY + centerY - gesture.centerY,
           })
         } else if (points.length === 1 && scale > 1) {
-          setOffset({
+          applyView(scale, {
             x: gesture.offsetX + points[0].x - gesture.centerX,
             y: gesture.offsetY + points[0].y - gesture.centerY,
           })
@@ -226,10 +258,11 @@ function OanixImageViewer({
       }}
       onDoubleClick={() => {
         if (scale > 1) resetView()
-        else setScale(2)
+        else applyView(2, { x: 0, y: 0 })
       }}
     >
       <img
+        ref={imageRef}
         src={url}
         alt={title}
         draggable={false}
@@ -237,9 +270,9 @@ function OanixImageViewer({
       />
     </div>
     <div className="oanix-image-viewer__toolbar">
-      <button type="button" onClick={() => setScale((current) => clampScale(current - 0.5))} aria-label="Alejar">−</button>
+      <button type="button" onClick={() => applyView(scale - 0.5)} aria-label="Alejar">−</button>
       <span>{Math.round(scale * 100)}%</span>
-      <button type="button" onClick={() => setScale((current) => clampScale(current + 0.5))} aria-label="Acercar">+</button>
+      <button type="button" onClick={() => applyView(scale + 0.5)} aria-label="Acercar">+</button>
       <button type="button" onClick={resetView}>Restablecer</button>
     </div>
     <button type="button" className="oanix-image-viewer__close" aria-label="Cerrar imagen" onClick={onClose}>×</button>
