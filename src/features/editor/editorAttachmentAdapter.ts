@@ -4,23 +4,10 @@ import {
   removeEncryptedAttachment,
   storeEncryptedAttachment,
 } from '../attachments/attachmentService'
-import type { AttachmentMetadata } from '../attachments/attachmentTypes'
 import type { EditorSurfaceAttachment } from './editorSurfaceContract'
+import { toEditorSurfaceAttachment } from './editorAttachmentProjection'
 
-/**
- * Converts OANIX attachment metadata into the deliberately smaller editor contract.
- * Provider/storage information never crosses the EditorSurface boundary.
- */
-export function toEditorSurfaceAttachment(metadata: AttachmentMetadata): EditorSurfaceAttachment {
-  return {
-    id: metadata.attachmentId,
-    name: metadata.name,
-    mimeType: metadata.mimeType,
-    byteLength: metadata.byteLength,
-    createdAt: metadata.createdAt,
-    remote: metadata.storage?.mode === 'remote-large-v1',
-  }
-}
+export { toEditorSurfaceAttachment } from './editorAttachmentProjection'
 
 export async function loadEditorSurfaceAttachments(noteId: string): Promise<EditorSurfaceAttachment[]> {
   const items = await loadEncryptedAttachments(noteId)
