@@ -138,7 +138,10 @@ function buildPlainPlan(
   })
 
   let blocks = first.blocks
-  let afterTextBlockId = first.order[first.order.length - 1]
+  const firstImageIndex = blocks.findIndex((block) => block.id === first.imageBlockId)
+  const firstAfterBlock = blocks[firstImageIndex + 1]
+  if (!firstAfterBlock) throw new Error('Image batch requires a trailing text block.')
+  let afterTextBlockId = firstAfterBlock.id
   const imageBlockIds = [first.imageBlockId]
 
   for (const attachmentId of attachmentIds.slice(1)) {
