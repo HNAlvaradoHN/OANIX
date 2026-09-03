@@ -29,7 +29,7 @@ jobs:
         run: npm test
 
       - name: Build OANIX
-        run: npm run build
+        run: set -o pipefail; npm run build 2>&1 | tail -100
 
       - name: Audit offline production bundle
         run: npm run audit:offline-bundle
