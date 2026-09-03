@@ -1,6 +1,11 @@
 import type { EditorSurfaceBlock } from './editorSurfaceContract.ts'
 import { planOanixCursorInsertion } from './oanixDocumentInsertion.ts'
-import { encodeOanixImageElement, type OanixImageElement } from './oanixImageElementCodec.ts'
+import {
+  DEFAULT_OANIX_IMAGE_WIDTH_PERCENT,
+  OANIX_IMAGE_ELEMENT_KIND,
+  encodeOanixImageElement,
+  type OanixImageElement,
+} from './oanixImageElementCodec.ts'
 import {
   MAX_TEXT_BLOCK_TEXT_LENGTH,
   TEXT_BLOCK_KIND,
@@ -63,8 +68,10 @@ export function planOanixMixedDocumentImageInsertion({
 
   const image: OanixImageElement = {
     id: createId('image', 0),
-    kind: 'oanix-image-element-v1',
+    kind: OANIX_IMAGE_ELEMENT_KIND,
     attachmentId,
+    widthPercent: DEFAULT_OANIX_IMAGE_WIDTH_PERCENT,
+    sizeLocked: false,
   }
 
   const afterBlocks = chunkText(split.afterText).map((chunk): EditorTextBlock => ({
