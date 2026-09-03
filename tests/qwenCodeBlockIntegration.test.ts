@@ -30,9 +30,9 @@ test('code blocks remain plain persisted text without runtime highlighting depen
   assert.doesNotMatch(richBlocks, highlighterImport)
 })
 
-test('attachments remain outside the code block cut', () => {
+test('attachments and rich blocks remain disabled in the active plain-text phase', () => {
   const registry = readFileSync('src/features/editor/editorSurfaceRegistry.ts', 'utf8')
-  assert.match(registry, /richBlocks: true/)
+  assert.match(registry, /richBlocks: false/)
   assert.match(registry, /attachments: false/)
   assert.doesNotMatch(richBlocks, /FileReader|Blob|URL\.createObjectURL|input[^>]+type=["']file["']/)
 })
