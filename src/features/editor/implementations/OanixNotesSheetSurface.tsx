@@ -1,12 +1,26 @@
 import { useEffect, useRef, useState } from 'react'
-import type { PointerEvent as ReactPointerEvent, ReactNode } from 'react'
-import type { EditorSurfaceProps, EditorSurfaceSnapshot } from '../editorSurfaceContract'
+import type {
+  ClipboardEvent as ReactClipboardEvent,
+  PointerEvent as ReactPointerEvent,
+  ReactNode,
+} from 'react'
+import type {
+  EditorSurfaceAttachment,
+  EditorSurfaceBlock,
+  EditorSurfaceProps,
+  EditorSurfaceSnapshot,
+} from '../editorSurfaceContract'
+import { findOanixClipboardImage } from '../oanixClipboardImage'
+import { insertOanixImageAtCursor } from '../oanixImageInsertionCoordinator'
+import { decideOanixMixedDocumentLoad } from '../oanixMixedDocumentLoadPolicy'
+import { OanixMixedDocumentBody } from './OanixMixedDocumentBody'
 import './oanixNotesSheetSurface.css'
 
 const AUTOSAVE_IDLE_MS = 3_000
 const HANDLE_EDGE_PADDING = 48
 
 type HandleSide = 'left' | 'right'
+type DocumentMode = 'plain' | 'mixed'
 
 function snapshotsMatch(left: EditorSurfaceSnapshot, right: EditorSurfaceSnapshot): boolean {
   return left.title === right.title && left.text === right.text
@@ -24,10 +38,17 @@ export function OanixNotesSheetSurface({
   error = '',
   onRequestSave,
   onRequestClose,
+  loadBlocks,
+  onRequestBlockSave,
+  loadAttachments,
+  onRequestAttachmentStore,
+  loadAttachmentFile,
+  onRequestAttachmentRemove,
   onActivity,
 }: EditorSurfaceProps) {
   const titleRef = useRef<HTMLInputElement | null>(null)
   const bodyRef = useRef<HTMLTextAreaElement | null>(null)
+  const imageInputRef = useRef<HTMLInputElement | null>(null)
   const editorRef = useRef<HTMLElement | null>(null)
   const dirtyRef = useRef(false)
   const generationRef = useRef(0)
@@ -38,6 +59,9 @@ export function OanixNotesSheetSurface({
   const saveInFlightRef = useRef<Promise<boolean> | null>(null)
   const committedSnapshotRef = useRef<EditorSurfaceSnapshot>({ title: initialTitle, text: initialText })
   const handleDragRef = useRef<{ pointerId: number; startX: number; startY: number; moved: boolean } | null>(null)
+  const lastPlainCursorRef = useRef(initialText.length)
+  const pendingImageCursorRef = useRef<number | null>(null)
+  const pendingMixedUpsertsRef = useRef<Map<string, EditorSurfaceBlock>>(new Map())
 
   const [dirty, setDirty] = useState(false)
   const [closing, setClosing] = useState(false)
@@ -48,11 +72,26 @@ export function OanixNotesSheetSurface({
   const [mode, setMode] = useState<'light' | 'dark' | 'auto'>('light')
   const [handleSide, setHandleSide] = useState<HandleSide>('right')
   const [handleY, setHandleY] = useState(0.5)
+  const [documentMode, setDocumentMode] = useState<DocumentMode>('plain')
+  const [mixedBlocks, setMixedBlocks] = useState<EditorSurfaceBlock[]>([])
+  const [attachments, setAttachments] = useState<EditorSurfaceAttachment[]>([])
+  const [metadataReady, setMetadataReady] = useState(false)
+  const [imageBusy, setImageBusy] = useState(false)
+  const [integrationError, setIntegrationError] = useState('')
+
+  const mixedAvailable = Boolean(
+    loadBlocks
+    && onRequestBlockSave
+    && loadAttachments
+    && onRequestAttachmentStore
+    && loadAttachmentFile
+    && onRequestAttachmentRemove,
+  )
 
   function readSnapshot(): EditorSurfaceSnapshot {
     return {
       title: titleRef.current?.value ?? initialTitle,
-      text: bodyRef.current?.value ?? initialText,
+      text: documentMode === 'mixed' ? '' : bodyRef.current?.value ?? initialText,
     }
   }
 
@@ -61,6 +100,12 @@ export function OanixNotesSheetSurface({
     if (!textarea) return
     textarea.style.height = 'auto'
     textarea.style.height = `${Math.max(280, textarea.scrollHeight)}px`
+  }
+
+  function rememberPlainCursor() {
+    const textarea = bodyRef.current
+    if (!textarea) return
+    lastPlainCursorRef.current = Math.max(0, textarea.selectionStart ?? textarea.value.length)
   }
 
   function clearIdleTimer() {
@@ -90,19 +135,52 @@ export function OanixNotesSheetSurface({
 
     const generation = generationRef.current
     const snapshot = readSnapshot()
-    if (snapshotsMatch(snapshot, committedSnapshotRef.current)) {
+    const stagedBlocks = documentMode === 'mixed'
+      ? [...pendingMixedUpsertsRef.current.values()]
+      : []
+    const snapshotChanged = !snapshotsMatch(snapshot, committedSnapshotRef.current)
+
+    if (!snapshotChanged && stagedBlocks.length === 0) {
       markClean()
       return true
     }
 
-    const operation = onRequestSave(snapshot).catch(() => false)
+    const operation = (async () => {
+      if (stagedBlocks.length > 0) {
+        if (!onRequestBlockSave) return false
+        let blocksSaved = false
+        try {
+          blocksSaved = await onRequestBlockSave({ upserts: stagedBlocks })
+        } catch {
+          blocksSaved = false
+        }
+        if (!blocksSaved) return false
+        for (const block of stagedBlocks) {
+          if (pendingMixedUpsertsRef.current.get(block.id) === block) {
+            pendingMixedUpsertsRef.current.delete(block.id)
+          }
+        }
+      }
+
+      if (snapshotChanged) {
+        let snapshotSaved = false
+        try {
+          snapshotSaved = await onRequestSave(snapshot)
+        } catch {
+          snapshotSaved = false
+        }
+        if (!snapshotSaved) return false
+        committedSnapshotRef.current = snapshot
+      }
+
+      return true
+    })()
     saveInFlightRef.current = operation
 
     try {
       const succeeded = await operation
-      if (succeeded) {
-        committedSnapshotRef.current = snapshot
-        if (generationRef.current === generation) markClean()
+      if (succeeded && generationRef.current === generation && pendingMixedUpsertsRef.current.size === 0) {
+        markClean()
       }
       return succeeded
     } finally {
@@ -138,11 +216,16 @@ export function OanixNotesSheetSurface({
 
   function handleBodyInput() {
     resizeBody()
+    rememberPlainCursor()
     markActivity()
   }
 
+  function stageMixedBlock(block: EditorSurfaceBlock) {
+    pendingMixedUpsertsRef.current.set(block.id, block)
+  }
+
   async function requestClose() {
-    if (saving || closingRef.current) return
+    if (saving || imageBusy || closingRef.current) return
     closingRef.current = true
     setClosing(true)
     clearIdleTimer()
@@ -150,14 +233,19 @@ export function OanixNotesSheetSurface({
     let closed = false
     try {
       if (saveInFlightRef.current) await saveInFlightRef.current
-      const snapshot = readSnapshot()
-      closed = snapshotsMatch(snapshot, committedSnapshotRef.current)
-        ? await onRequestClose(null)
-        : await onRequestClose(snapshot)
-      if (closed) {
-        committedSnapshotRef.current = snapshot
-        markClean()
+
+      if (documentMode === 'mixed') {
+        if (dirtyRef.current && !(await saveCurrentSnapshot())) return
+        closed = await onRequestClose(null)
+      } else {
+        const snapshot = readSnapshot()
+        closed = snapshotsMatch(snapshot, committedSnapshotRef.current)
+          ? await onRequestClose(null)
+          : await onRequestClose(snapshot)
+        if (closed) committedSnapshotRef.current = snapshot
       }
+
+      if (closed) markClean()
     } finally {
       if (!closed) {
         closingRef.current = false
@@ -169,13 +257,13 @@ export function OanixNotesSheetSurface({
 
   function runNativeHistory(command: 'undo' | 'redo') {
     const active = document.activeElement
-    if (active !== titleRef.current && active !== bodyRef.current) bodyRef.current?.focus()
-    const before = readSnapshot()
+    if (!(active instanceof HTMLTextAreaElement) && active !== titleRef.current) {
+      if (documentMode === 'plain') bodyRef.current?.focus()
+      else editorRef.current?.querySelector<HTMLTextAreaElement>('.oanix-mixed-document__text')?.focus()
+    }
     document.execCommand(command)
     window.requestAnimationFrame(() => {
-      resizeBody()
-      const after = readSnapshot()
-      if (!snapshotsMatch(before, after)) markActivity()
+      if (documentMode === 'plain') resizeBody()
     })
   }
 
@@ -185,6 +273,7 @@ export function OanixNotesSheetSurface({
   }
 
   function openPanel() {
+    rememberPlainCursor()
     closeKeyboard()
     setCustomizeOpen(false)
     setPanelOpen(true)
@@ -249,9 +338,181 @@ export function OanixNotesSheetSurface({
     if (shouldOpen) openPanel()
   }
 
+  async function insertImageFile(file: File, cursorOffset: number) {
+    if (
+      documentMode !== 'plain'
+      || !metadataReady
+      || !loadBlocks
+      || !onRequestBlockSave
+      || !onRequestAttachmentStore
+      || !onRequestAttachmentRemove
+    ) {
+      setIntegrationError('Imagen todavía no está disponible en el estado actual de esta nota.')
+      return
+    }
+
+    clearIdleTimer()
+    setImageBusy(true)
+    setPanelOpen(false)
+    setIntegrationError('')
+
+    try {
+      if (saveInFlightRef.current) await saveInFlightRef.current
+      const textarea = bodyRef.current
+      const text = textarea?.value ?? initialText
+      const title = titleRef.current?.value ?? initialTitle
+      const safeCursor = Math.min(Math.max(0, cursorOffset), text.length)
+      const existingBlocks = await loadBlocks()
+      const result = await insertOanixImageAtCursor({
+        file,
+        title,
+        text,
+        cursorOffset: safeCursor,
+        existingBlocks,
+        storeAttachment: onRequestAttachmentStore,
+        saveBlockChanges: onRequestBlockSave,
+        savePlainSnapshot: onRequestSave,
+        removeAttachment: onRequestAttachmentRemove,
+      })
+
+      if (result.status !== 'committed') {
+        const cleanup = result.status === 'transition-failed'
+          ? result.transition.status
+          : result.status
+        setIntegrationError(`No se pudo insertar la imagen de forma segura (${cleanup}).`)
+        if (dirtyRef.current) armAutosaveTimer()
+        return
+      }
+
+      const plan = result.transition.plan
+      pendingMixedUpsertsRef.current.clear()
+      if (textarea) textarea.value = ''
+      committedSnapshotRef.current = { title, text: '' }
+      setMixedBlocks(plan.blocks)
+      setAttachments((current) => [...current.filter((item) => item.id !== result.attachment.id), result.attachment])
+      setDocumentMode('mixed')
+      markClean()
+      onActivity?.()
+
+      window.requestAnimationFrame(() => {
+        const image = editorRef.current?.querySelector<HTMLElement>(`[data-oanix-element-id="${CSS.escape(plan.imageBlockId)}"]`)
+        image?.scrollIntoView({ block: 'center' })
+        const imageIndex = plan.order.indexOf(plan.imageBlockId)
+        const nextId = imageIndex >= 0 ? plan.order[imageIndex + 1] : null
+        if (nextId) {
+          const nextText = editorRef.current?.querySelector<HTMLTextAreaElement>(`[data-oanix-mixed-text-id="${CSS.escape(nextId)}"]`)
+          nextText?.focus({ preventScroll: true })
+          nextText?.setSelectionRange(0, 0)
+        }
+      })
+    } catch {
+      setIntegrationError('No se pudo insertar la imagen de forma segura.')
+      if (dirtyRef.current) armAutosaveTimer()
+    } finally {
+      setImageBusy(false)
+    }
+  }
+
+  function openImagePicker() {
+    if (documentMode !== 'plain' || !metadataReady || !mixedAvailable) {
+      setIntegrationError('Imagen todavía no está disponible en el estado actual de esta nota.')
+      return
+    }
+    rememberPlainCursor()
+    pendingImageCursorRef.current = lastPlainCursorRef.current
+    imageInputRef.current?.click()
+  }
+
+  function handlePlainPaste(event: ReactClipboardEvent<HTMLTextAreaElement>) {
+    const file = findOanixClipboardImage(event.clipboardData)
+    if (!file) return
+    if (!metadataReady || !mixedAvailable || imageBusy) return
+    event.preventDefault()
+    const cursor = Math.max(0, event.currentTarget.selectionStart ?? event.currentTarget.value.length)
+    lastPlainCursorRef.current = cursor
+    void insertImageFile(file, cursor)
+  }
+
+  async function removeMixedImage(blockId: string, attachmentId: string) {
+    if (!onRequestBlockSave || !onRequestAttachmentRemove || imageBusy) return
+    setImageBusy(true)
+    setIntegrationError('')
+    clearIdleTimer()
+    try {
+      if (dirtyRef.current && !(await saveCurrentSnapshot())) {
+        setIntegrationError('No se pudo guardar el texto pendiente antes de eliminar la imagen.')
+        return
+      }
+      const nextBlocks = mixedBlocks.filter((block) => block.id !== blockId)
+      const removedFromDocument = await onRequestBlockSave({
+        deletes: [blockId],
+        order: nextBlocks.map((block) => block.id),
+      })
+      if (!removedFromDocument) {
+        setIntegrationError('No se pudo eliminar la referencia de la imagen.')
+        return
+      }
+
+      setMixedBlocks(nextBlocks)
+      const removedAsset = await onRequestAttachmentRemove(attachmentId)
+      if (removedAsset) {
+        setAttachments((current) => current.filter((item) => item.id !== attachmentId))
+      } else {
+        setIntegrationError('La imagen se quitó de la nota, pero su asset cifrado quedó pendiente de limpieza.')
+      }
+      onActivity?.()
+    } catch {
+      setIntegrationError('No se pudo eliminar la imagen.')
+    } finally {
+      setImageBusy(false)
+      if (dirtyRef.current) armAutosaveTimer()
+    }
+  }
+
   useEffect(() => {
     resizeBody()
   }, [])
+
+  useEffect(() => {
+    if (!mixedAvailable || !loadBlocks || !loadAttachments) {
+      setMetadataReady(true)
+      return
+    }
+
+    let active = true
+    void Promise.all([loadBlocks(), loadAttachments()])
+      .then(([blocks, loadedAttachments]) => {
+        if (!active) return
+        const currentPlain = bodyRef.current?.value ?? initialText
+        const decision = decideOanixMixedDocumentLoad(currentPlain, blocks)
+        setAttachments(loadedAttachments)
+
+        if (decision.mode === 'mixed') {
+          pendingMixedUpsertsRef.current.clear()
+          committedSnapshotRef.current = {
+            title: titleRef.current?.value ?? initialTitle,
+            text: '',
+          }
+          setMixedBlocks(blocks)
+          setDocumentMode('mixed')
+          setIntegrationError('')
+        } else if (decision.mode === 'recoverable-conflict') {
+          setIntegrationError('La nota conserva texto y bloques simultáneamente. OANIX mantuvo el texto visible para no elegir una versión en silencio.')
+        } else if (decision.mode === 'unsupported-blocks') {
+          setIntegrationError(`La nota contiene elementos todavía no soportados: ${decision.unsupportedKinds.join(', ')}.`)
+        } else {
+          setIntegrationError('')
+        }
+      })
+      .catch(() => {
+        if (active) setIntegrationError('No se pudieron abrir las referencias de elementos de esta nota.')
+      })
+      .finally(() => {
+        if (active) setMetadataReady(true)
+      })
+
+    return () => { active = false }
+  }, [initialText, initialTitle, loadAttachments, loadBlocks, mixedAvailable])
 
   useEffect(() => {
     const viewport = window.visualViewport
@@ -289,9 +550,10 @@ export function OanixNotesSheetSurface({
     return () => media.removeEventListener('change', listener)
   }, [mode])
 
-  const editingDisabled = saving || closing
-  const status = saving || saveInFlightRef.current ? 'saving' : dirty ? 'unsaved' : 'saved'
-  const statusLabel = status === 'saving' ? 'Guardando…' : status === 'saved' ? 'Guardado' : 'Sin guardar'
+  const editingDisabled = saving || closing || imageBusy
+  const status = saving || imageBusy || saveInFlightRef.current ? 'saving' : dirty ? 'unsaved' : 'saved'
+  const statusLabel = imageBusy ? 'Procesando…' : status === 'saving' ? 'Guardando…' : status === 'saved' ? 'Guardado' : 'Sin guardar'
+  const visibleError = error || integrationError
 
   return (
     <section
@@ -299,90 +561,84 @@ export function OanixNotesSheetSurface({
       className="oanix-notes"
       data-theme={theme}
       data-note-id={noteId}
+      data-document-mode={documentMode}
       data-unsaved={dirty ? 'true' : 'false'}
       aria-label="Editor de nota"
       aria-busy={editingDisabled}
     >
       <header className="oanix-notes__top-bar">
-        <button
-          className="oanix-notes__icon-btn"
-          type="button"
-          aria-label="Volver"
-          data-oanix-back-close="true"
-          data-oanix-save-and-close="true"
-          disabled={editingDisabled}
-          onClick={() => void requestClose()}
-        >
+        <button className="oanix-notes__icon-btn" type="button" aria-label="Volver" data-oanix-back-close="true" data-oanix-save-and-close="true" disabled={editingDisabled} onClick={() => void requestClose()}>
           <Icon width={20} height={20}><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></Icon>
         </button>
-        <div className="oanix-notes__save-status" data-status={status} role="status" aria-live="polite">
-          <span className="oanix-notes__status-dot"/><span>{statusLabel}</span>
-        </div>
+        <div className="oanix-notes__save-status" data-status={status} role="status" aria-live="polite"><span className="oanix-notes__status-dot"/><span>{statusLabel}</span></div>
         <div className="oanix-notes__top-actions">
-          <button className="oanix-notes__icon-btn oanix-notes__icon-btn--sm" type="button" aria-label="Deshacer" title="Deshacer" onPointerDown={(event) => event.preventDefault()} onClick={() => runNativeHistory('undo')}>
-            <Icon width={17} height={17}><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></Icon>
-          </button>
-          <button className="oanix-notes__icon-btn oanix-notes__icon-btn--sm" type="button" aria-label="Rehacer" title="Rehacer" onPointerDown={(event) => event.preventDefault()} onClick={() => runNativeHistory('redo')}>
-            <Icon width={17} height={17}><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3L21 13"/></Icon>
-          </button>
-          <button className={`oanix-notes__icon-btn oanix-notes__icon-btn--sm${pinned ? ' is-active' : ''}`} type="button" aria-label="Fijar" title="Fijar nota" onClick={() => setPinned((value) => !value)}>
-            <Icon width={17} height={17}><path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/></Icon>
-          </button>
-          <button className="oanix-notes__icon-btn oanix-notes__icon-btn--sm" type="button" aria-label="Personalizar" title="Personalizar hoja" onClick={openCustomize}>
-            <Icon width={17} height={17}><circle cx="13.5" cy="6.5" r="2.5"/><path d="M17 2l-5.5 5.5"/><path d="M22 9l-5.5 5.5"/><path d="M15 13l-8 8-4 1 1-4 8-8"/></Icon>
-          </button>
-          <button className="oanix-notes__icon-btn oanix-notes__icon-btn--sm" type="button" aria-label="Más" onClick={openPanel}>
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
-          </button>
+          <button className="oanix-notes__icon-btn oanix-notes__icon-btn--sm" type="button" aria-label="Deshacer" title="Deshacer" onPointerDown={(event) => event.preventDefault()} onClick={() => runNativeHistory('undo')}><Icon width={17} height={17}><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></Icon></button>
+          <button className="oanix-notes__icon-btn oanix-notes__icon-btn--sm" type="button" aria-label="Rehacer" title="Rehacer" onPointerDown={(event) => event.preventDefault()} onClick={() => runNativeHistory('redo')}><Icon width={17} height={17}><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3L21 13"/></Icon></button>
+          <button className={`oanix-notes__icon-btn oanix-notes__icon-btn--sm${pinned ? ' is-active' : ''}`} type="button" aria-label="Fijar" title="Fijar nota" onClick={() => setPinned((value) => !value)}><Icon width={17} height={17}><path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/></Icon></button>
+          <button className="oanix-notes__icon-btn oanix-notes__icon-btn--sm" type="button" aria-label="Personalizar" title="Personalizar hoja" onClick={openCustomize}><Icon width={17} height={17}><circle cx="13.5" cy="6.5" r="2.5"/><path d="M17 2l-5.5 5.5"/><path d="M22 9l-5.5 5.5"/><path d="M15 13l-8 8-4 1 1-4 8-8"/></Icon></button>
+          <button className="oanix-notes__icon-btn oanix-notes__icon-btn--sm" type="button" aria-label="Más" onClick={openPanel}><svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button>
         </div>
       </header>
 
-      {error && <div className="oanix-notes__error" role="alert">{error}</div>}
+      {visibleError && <div className="oanix-notes__error" role="alert">{visibleError}</div>}
 
       <main className="oanix-notes__editor-container">
         <div className="oanix-notes__sheet">
           <div className="oanix-notes__content">
             <div className="oanix-notes__header">
-              <input ref={titleRef} className="oanix-notes__title" type="text" defaultValue={initialTitle} placeholder="Título" maxLength={160} autoComplete="off" autoCapitalize="sentences" spellCheck readOnly={editingDisabled} onInput={markActivity}/>
+              <input ref={titleRef} className="oanix-notes__title" type="text" defaultValue={initialTitle} placeholder="Título" maxLength={160} autoComplete="off" autoCapitalize="sentences" spellCheck readOnly={editingDisabled} onInput={markActivity} onCompositionStart={() => { composingRef.current = true; onActivity?.() }} onCompositionEnd={() => { composingRef.current = false; markActivity() }}/>
             </div>
             <div className="oanix-notes__body-wrap">
-              <textarea ref={bodyRef} className="oanix-notes__body" defaultValue={initialText} placeholder="Empieza a escribir…" autoComplete="off" autoCapitalize="sentences" spellCheck readOnly={editingDisabled} onInput={handleBodyInput} onCompositionStart={() => { composingRef.current = true; onActivity?.() }} onCompositionEnd={() => { composingRef.current = false; markActivity() }}/>
+              {documentMode === 'mixed' && loadAttachmentFile ? (
+                <OanixMixedDocumentBody
+                  blocks={mixedBlocks}
+                  attachments={attachments}
+                  disabled={editingDisabled}
+                  loadAttachmentFile={loadAttachmentFile}
+                  onTextBlockChange={stageMixedBlock}
+                  onRemoveImage={removeMixedImage}
+                  onActivity={markActivity}
+                  onCompositionStart={() => { composingRef.current = true; onActivity?.() }}
+                  onCompositionEnd={() => { composingRef.current = false; markActivity() }}
+                  onError={setIntegrationError}
+                />
+              ) : (
+                <textarea
+                  ref={bodyRef}
+                  className="oanix-notes__body"
+                  defaultValue={initialText}
+                  placeholder="Empieza a escribir…"
+                  autoComplete="off"
+                  autoCapitalize="sentences"
+                  spellCheck
+                  readOnly={editingDisabled}
+                  onInput={handleBodyInput}
+                  onSelect={rememberPlainCursor}
+                  onKeyUp={rememberPlainCursor}
+                  onPointerUp={rememberPlainCursor}
+                  onPaste={handlePlainPaste}
+                  onCompositionStart={() => { composingRef.current = true; onActivity?.() }}
+                  onCompositionEnd={() => { composingRef.current = false; markActivity() }}
+                />
+              )}
             </div>
           </div>
         </div>
       </main>
 
-      <button
-        className={`oanix-notes__slide-handle${panelOpen ? ' is-hidden' : ''}`}
-        type="button"
-        aria-label="Abrir o mover menú del editor"
-        title="Toca para abrir; arrastra para mover"
-        data-side={handleSide}
-        style={{ top: `${handleY * 100}%` }}
-        onPointerDown={handleFloatingPointerDown}
-        onPointerMove={handleFloatingPointerMove}
-        onPointerUp={finishFloatingPointer}
-        onPointerCancel={finishFloatingPointer}
-      >
+      <button className={`oanix-notes__slide-handle${panelOpen ? ' is-hidden' : ''}`} type="button" aria-label="Abrir o mover menú del editor" title="Toca para abrir; arrastra para mover" data-side={handleSide} style={{ top: `${handleY * 100}%` }} onPointerDown={handleFloatingPointerDown} onPointerMove={handleFloatingPointerMove} onPointerUp={finishFloatingPointer} onPointerCancel={finishFloatingPointer}>
         <span className="oanix-notes__slide-indicator"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="5" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="12" cy="19" r="1.4"/></svg></span>
       </button>
 
       <button className={`oanix-notes__panel-overlay${panelOpen ? ' is-active' : ''}`} type="button" aria-label="Cerrar menú" onClick={() => setPanelOpen(false)}/>
       <aside className={`oanix-notes__side-panel${panelOpen ? ' is-active' : ''}`} aria-hidden={!panelOpen}>
-        <div className="oanix-notes__panel-header">
-          <div><strong>Menú</strong><span>OANIX Editor</span></div>
-          <button className="oanix-notes__icon-btn oanix-notes__panel-close" type="button" aria-label="Cerrar" onClick={() => setPanelOpen(false)}><Icon><path d="M18 6L6 18"/><path d="M6 6l12 12"/></Icon></button>
-        </div>
+        <div className="oanix-notes__panel-header"><div><strong>Menú</strong><span>OANIX Editor</span></div><button className="oanix-notes__icon-btn oanix-notes__panel-close" type="button" aria-label="Cerrar" onClick={() => setPanelOpen(false)}><Icon><path d="M18 6L6 18"/><path d="M6 6l12 12"/></Icon></button></div>
         <div className="oanix-notes__panel-body">
           <section className="oanix-notes__panel-section"><span className="oanix-notes__section-label">Etiquetas</span><div className="oanix-notes__tags"><span>Sin etiquetas</span><button type="button" aria-label="Añadir etiqueta"><Icon width={16} height={16}><path d="M12 5v14"/><path d="M5 12h14"/></Icon></button></div></section>
           <div className="oanix-notes__divider"/>
-          <ToolSection label="Añadir contenido" tools={[
-            ['entry','Entrada'],['image','Imagen'],['file','Archivos'],['code','Código'],['checklist','Checklist'],['contact','Contacto'],['separator','Separador'],
-          ]}/>
+          <ToolSection label="Añadir contenido" tools={[[ 'entry','Entrada' ],[ 'image','Imagen' ],[ 'file','Archivos' ],[ 'code','Código' ],[ 'checklist','Checklist' ],[ 'contact','Contacto' ],[ 'separator','Separador' ]]} onTool={(tool) => { if (tool === 'image') openImagePicker() }}/>
           <div className="oanix-notes__divider"/>
-          <ToolSection label="Formato de texto" tools={[
-            ['paragraph','Párrafo'],['h2','H2'],['h3','H3'],['quote','Cita'],['list','Lista'],['numbered-list','Numérica'],
-          ]}/>
+          <ToolSection label="Formato de texto" tools={[[ 'paragraph','Párrafo' ],[ 'h2','H2' ],[ 'h3','H3' ],[ 'quote','Cita' ],[ 'list','Lista' ],[ 'numbered-list','Numérica' ]]}/>
         </div>
         <div className="oanix-notes__panel-footer">OANIX v0.1</div>
       </aside>
@@ -396,17 +652,31 @@ export function OanixNotesSheetSurface({
           <div className="oanix-notes__mode-row">{(['light','dark','auto'] as const).map((value) => <button key={value} type="button" className={mode === value ? 'is-active' : ''} onClick={() => applyMode(value)}>{value === 'light' ? 'Día' : value === 'dark' ? 'Noche' : 'Auto'}</button>)}</div>
           <div className="oanix-notes__divider"/>
           <span className="oanix-notes__section-label">Tema de la hoja</span>
-          <div className="oanix-notes__theme-grid">{[
-            ['default','Claro'],['cream','Crema'],['sepia','Sepia'],['dark','Oscuro'],['midnight','Medianoche'],['forest','Bosque'],['rose','Rosa'],['lavender','Lavanda'],
-          ].map(([value,label]) => <button key={value} type="button" className={theme === value ? 'is-active' : ''} onClick={() => setTheme(value)}><span className={`oanix-notes__theme-preview theme-${value}`}/><small>{label}</small></button>)}</div>
+          <div className="oanix-notes__theme-grid">{[[ 'default','Claro' ],[ 'cream','Crema' ],[ 'sepia','Sepia' ],[ 'dark','Oscuro' ],[ 'midnight','Medianoche' ],[ 'forest','Bosque' ],[ 'rose','Rosa' ],[ 'lavender','Lavanda' ]].map(([value,label]) => <button key={value} type="button" className={theme === value ? 'is-active' : ''} onClick={() => setTheme(value)}><span className={`oanix-notes__theme-preview theme-${value}`}/><small>{label}</small></button>)}</div>
         </div>
       </section>
+
+      <input
+        ref={imageInputRef}
+        type="file"
+        accept="image/*"
+        tabIndex={-1}
+        aria-hidden="true"
+        style={{ display: 'none' }}
+        onChange={(event) => {
+          const file = event.currentTarget.files?.[0]
+          event.currentTarget.value = ''
+          const cursor = pendingImageCursorRef.current ?? lastPlainCursorRef.current
+          pendingImageCursorRef.current = null
+          if (file) void insertImageFile(file, cursor)
+        }}
+      />
     </section>
   )
 }
 
-function ToolSection({ label, tools }: { label: string; tools: Array<[string, string]> }) {
-  return <section className="oanix-notes__panel-section"><span className="oanix-notes__section-label">{label}</span><div className="oanix-notes__tool-grid">{tools.map(([tool, label]) => <button key={tool} type="button" className="oanix-notes__tool" data-tool={tool}><span className={`oanix-notes__tool-icon tool-${tool}`}>{toolIcon(tool)}</span><span>{label}</span></button>)}</div></section>
+function ToolSection({ label, tools, onTool }: { label: string; tools: Array<[string, string]>; onTool?: (tool: string) => void }) {
+  return <section className="oanix-notes__panel-section"><span className="oanix-notes__section-label">{label}</span><div className="oanix-notes__tool-grid">{tools.map(([tool, label]) => <button key={tool} type="button" className="oanix-notes__tool" data-tool={tool} onClick={() => onTool?.(tool)}><span className={`oanix-notes__tool-icon tool-${tool}`}>{toolIcon(tool)}</span><span>{label}</span></button>)}</div></section>
 }
 
 function toolIcon(tool: string) {
