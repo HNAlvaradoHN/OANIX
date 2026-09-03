@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import type { ReactNode } from 'react'
 import type { EditorSurfaceProps, EditorSurfaceSnapshot } from '../editorSurfaceContract'
 import './oanixNotesSheetSurface.css'
 
@@ -8,7 +9,7 @@ function snapshotsMatch(left: EditorSurfaceSnapshot, right: EditorSurfaceSnapsho
   return left.title === right.title && left.text === right.text
 }
 
-function Icon({ children, width = 18, height = 18 }: { children: React.ReactNode; width?: number; height?: number }) {
+function Icon({ children, width = 18, height = 18 }: { children: ReactNode; width?: number; height?: number }) {
   return <svg width={width} height={height} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{children}</svg>
 }
 
@@ -246,7 +247,15 @@ export function OanixNotesSheetSurface({
       aria-busy={editingDisabled}
     >
       <header className="oanix-notes__top-bar">
-        <button className="oanix-notes__icon-btn" type="button" aria-label="Volver" disabled={editingDisabled} onClick={() => void requestClose()}>
+        <button
+          className="oanix-notes__icon-btn"
+          type="button"
+          aria-label="Volver"
+          data-oanix-back-close="true"
+          data-oanix-save-and-close="true"
+          disabled={editingDisabled}
+          onClick={() => void requestClose()}
+        >
           <Icon width={20} height={20}><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></Icon>
         </button>
         <div className="oanix-notes__save-status" data-status={status} role="status" aria-live="polite">
