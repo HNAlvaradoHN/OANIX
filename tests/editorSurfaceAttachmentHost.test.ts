@@ -19,14 +19,15 @@ test('editor host exposes attachment callbacks only for attachment-capable surfa
   assert.match(host, /onRequestAttachmentRemove: undefined/)
 })
 
-test('approved OANIX Notes sheet activates attachments only through the compensated mixed-document path', () => {
+test('approved OANIX Notes sheet activates attachments through the clean image layer boundary', () => {
   assert.match(registry, /id: 'oanix-notes-sheet-v1'/)
   assert.match(registry, /attachments: true/)
   assert.match(registry, /richBlocks: true/)
   assert.match(sheet, /decideOanixMixedDocumentLoad/)
-  assert.match(sheet, /insertOanixImageAtCursor/)
+  assert.match(sheet, /insertOanixImageBatch/)
   assert.match(sheet, /findOanixClipboardImage/)
   assert.match(sheet, /pendingMixedUpsertsRef/)
+  assert.doesNotMatch(sheet, /insertOanixImageAtCursor/)
 })
 
 test('host and visual sheet do not import attachment storage repositories directly', () => {
