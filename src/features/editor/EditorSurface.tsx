@@ -1,9 +1,10 @@
-import { lazy, Suspense, useMemo } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import type {
   EditorSurfaceCapabilities,
   EditorSurfaceProps,
 } from './editorSurfaceContract'
 import { activeEditorSurface } from './editorSurfaceRegistry'
+import { installOanixTextBehaviorBridge } from './oanixTextBehaviorBridge'
 
 const ActiveSurface = lazy(activeEditorSurface.load)
 
@@ -21,6 +22,7 @@ const ActiveSurface = lazy(activeEditorSurface.load)
  * before its document anchoring model is ready.
  */
 export function EditorSurface(props: EditorSurfaceProps) {
+  const [behaviorRevision, setBehaviorRevision] = useState(0)
   const attachmentCallbacks = useMemo(() => {
     if (!activeEditorSurface.capabilities.attachments) return null
     const noteId = props.noteId
@@ -63,9 +65,16 @@ export function EditorSurface(props: EditorSurfaceProps) {
         onRequestAttachmentRemove: undefined,
       }
 
+  useEffect(() => installOanixTextBehaviorBridge({
+    noteId: props.noteId,
+    loadBlocks: surfaceProps.loadBlocks,
+    onRequestBlockSave: surfaceProps.onRequestBlockSave,
+    onRefresh: () => setBehaviorRevision((revision) => revision + 1),
+  }), [props.noteId, surfaceProps.loadBlocks, surfaceProps.onRequestBlockSave])
+
   return (
     <Suspense fallback={null}>
-      <ActiveSurface {...surfaceProps} />
+      <ActiveSurface key={behaviorRevision} {...surfaceProps} />
     </Suspense>
   )
 }
