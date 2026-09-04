@@ -26,6 +26,8 @@ export function OanixContactBlockCard({ block, disabled, onChange, onRemove, onA
     organization: block.organization,
     notes: block.notes,
   }))
+  const [editing, setEditing] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
 
   const initials = useMemo(() => {
     const parts = draft.name.trim().split(/\s+/).filter(Boolean)
@@ -34,6 +36,7 @@ export function OanixContactBlockCard({ block, disabled, onChange, onRemove, onA
   }, [draft.name])
 
   function commit(field: keyof ContactDraft, value: string) {
+    if (!editing || disabled) return
     const next = { ...draft, [field]: value.slice(0, MAX_CONTACT_FIELD_LENGTH) }
     setDraft(next)
     onActivity()
@@ -42,8 +45,16 @@ export function OanixContactBlockCard({ block, disabled, onChange, onRemove, onA
     })
   }
 
+  function setEditMode(nextEditing: boolean) {
+    if (disabled) return
+    setEditing(nextEditing)
+    setMenuOpen(false)
+    onActivity()
+  }
+
   async function removeContact() {
     if (!onRemove || disabled) return
+    setMenuOpen(false)
     if (!window.confirm('¿Eliminar esta tarjeta de contacto?')) return
     try {
       await onRemove()
@@ -52,40 +63,66 @@ export function OanixContactBlockCard({ block, disabled, onChange, onRemove, onA
     }
   }
 
+  const fieldReadOnly = disabled || !editing
+
   return <article
     className="oanix-contact-block"
     data-oanix-element-id={block.id}
     data-oanix-element-kind="contact"
+    data-editing={editing ? 'true' : 'false'}
   >
     <header className="oanix-contact-block__header">
       <span className="oanix-contact-block__avatar" aria-hidden="true">{initials}</span>
       <div className="oanix-contact-block__heading">
         <strong>{draft.name.trim() || 'Contacto'}</strong>
-        <small>{draft.organization.trim() || 'Tarjeta privada'}</small>
+        <small>{editing ? 'Edición desbloqueada' : (draft.organization.trim() || 'Tarjeta privada')}</small>
       </div>
-      {onRemove && <button type="button" className="is-danger" disabled={disabled} onClick={() => void removeContact()}>Eliminar</button>}
+      <div className="oanix-contact-block__menu-wrap">
+        <button
+          type="button"
+          className="oanix-contact-block__menu-button"
+          disabled={disabled}
+          aria-label={editing ? 'Contacto desbloqueado; abrir menú' : 'Contacto bloqueado; abrir menú'}
+          aria-haspopup="menu"
+          aria-expanded={menuOpen}
+          title={editing ? 'Edición desbloqueada' : 'Edición bloqueada'}
+          onClick={() => setMenuOpen((open) => !open)}
+        >
+          <span aria-hidden="true">{editing ? '🔓' : '🔒'}</span>
+          <span aria-hidden="true">⋮</span>
+        </button>
+        {menuOpen && <div className="oanix-contact-block__menu" role="menu" aria-label="Opciones del contacto">
+          <button type="button" role="menuitem" onClick={() => setEditMode(!editing)}>
+            <span aria-hidden="true">{editing ? '🔒' : '🔓'}</span>
+            <span>{editing ? 'Bloquear edición' : 'Editar contacto'}</span>
+          </button>
+          {onRemove && <button type="button" role="menuitem" className="is-danger" onClick={() => void removeContact()}>
+            <span aria-hidden="true">⌫</span><span>Eliminar contacto</span>
+          </button>}
+        </div>}
+      </div>
     </header>
 
     <div className="oanix-contact-block__grid">
       <label className="oanix-contact-block__field oanix-contact-block__field--wide">
         <span>Nombre</span>
-        <input type="text" value={draft.name} maxLength={MAX_CONTACT_FIELD_LENGTH} disabled={disabled} placeholder="Nombre del contacto" onChange={(event) => commit('name', event.currentTarget.value)} />
+        <input type="text" value={draft.name} maxLength={MAX_CONTACT_FIELD_LENGTH} disabled={disabled} readOnly={!editing} placeholder="Nombre del contacto" onChange={(event) => commit('name', event.currentTarget.value)} />
       </label>
       <label className="oanix-contact-block__field">
         <span>Teléfono</span>
-        <input type="tel" value={draft.phone} maxLength={MAX_CONTACT_FIELD_LENGTH} disabled={disabled} placeholder="+504…" onChange={(event) => commit('phone', event.currentTarget.value)} />
+        <input type="tel" value={draft.phone} maxLength={MAX_CONTACT_FIELD_LENGTH} disabled={disabled} readOnly={!editing} placeholder="+504…" onChange={(event) => commit('phone', event.currentTarget.value)} />
       </label>
       <label className="oanix-contact-block__field">
         <span>Correo</span>
-        <input type="email" value={draft.email} maxLength={MAX_CONTACT_FIELD_LENGTH} disabled={disabled} placeholder="nombre@correo.com" onChange={(event) => commit('email', event.currentTarget.value)} />
+        <input type="email" value={draft.email} maxLength={MAX_CONTACT_FIELD_LENGTH} disabled={disabled} readOnly={!editing} placeholder="nombre@correo.com" onChange={(event) => commit('email', event.currentTarget.value)} />
       </label>
       <label className="oanix-contact-block__field oanix-contact-block__field--wide">
         <span>Organización</span>
-        <input type="text" value={draft.organization} maxLength={MAX_CONTACT_FIELD_LENGTH} disabled={disabled} placeholder="Empresa u organización" onChange={(event) => commit('organization', event.currentTarget.value)} />
+        <input type="text" value={draft.organization} maxLength={MAX_CONTACT_FIELD_LENGTH} disabled={disabled} readOnly={!editing} placeholder="Empresa u organización" onChange={(event) => commit('organization', event.currentTarget.value)} />
       </label>
       <label className="oanix-contact-block__field oanix-contact-block__field--wide">
         <span>Notas</span>
-        <textarea value={draft.notes} maxLength={MAX_CONTACT_FIELD_LENGTH} disabled={disabled} rows={3} placeholder="Notas privadas sobre este contacto…" onChange={(event) => commit('notes', event.currentTarget.value)} />
+        <textarea value={draft.notes} maxLength={MAX_CONTACT_FIELD_LENGTH} disabled={disabled} readOnly={!editing} rows={3} placeholder="Notas privadas sobre este contacto…" onChange={(event) => commit('notes', event.currentTarget.value)} />
       </label>
     </div>
 
