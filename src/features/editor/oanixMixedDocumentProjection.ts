@@ -1,4 +1,5 @@
 import type { EditorSurfaceBlock } from './editorSurfaceContract.ts'
+import { decodeChecklistBlock, type EditorChecklistBlock } from './checklistBlockCodec.ts'
 import { decodeCodeBlock, type EditorCodeBlock } from './codeBlockCodec.ts'
 import { decodeOanixFileGroupElement, type OanixFileGroupElement } from './oanixFileGroupElementCodec.ts'
 import { decodeOanixImageElement, type OanixImageElement } from './oanixImageElementCodec.ts'
@@ -10,6 +11,7 @@ export type OanixMixedDocumentNode =
   | { type: 'image'; block: OanixImageElement }
   | { type: 'file-group'; block: OanixFileGroupElement }
   | { type: 'code'; block: EditorCodeBlock }
+  | { type: 'checklist'; block: EditorChecklistBlock }
   | { type: 'long-text'; block: OanixLongTextElement }
   | { type: 'unsupported'; block: EditorSurfaceBlock }
 
@@ -32,6 +34,9 @@ export function projectOanixMixedDocument(blocks: readonly EditorSurfaceBlock[])
     const code = decodeCodeBlock(block)
     if (code) return { type: 'code', block: code }
 
+    const checklist = decodeChecklistBlock(block)
+    if (checklist) return { type: 'checklist', block: checklist }
+
     const longText = decodeOanixLongTextElement(block)
     if (longText) return { type: 'long-text', block: longText }
 
@@ -45,6 +50,7 @@ export function hasRenderableOanixMixedContent(blocks: readonly EditorSurfaceBlo
     || node.type === 'image'
     || node.type === 'file-group'
     || node.type === 'code'
+    || node.type === 'checklist'
     || node.type === 'long-text'
   ))
 }
