@@ -5,6 +5,7 @@ import test from 'node:test'
 const guard = readFileSync('src/features/editor/implementations/OanixNotesSheetMobileGuard.tsx', 'utf8')
 const card = readFileSync('src/features/editor/implementations/OanixDailyEntryBlockCard.tsx', 'utf8')
 const cardCss = readFileSync('src/features/editor/implementations/oanixDailyEntryBlockCard.css', 'utf8')
+const checklistCss = readFileSync('src/features/editor/implementations/oanixChecklistBlockCard.css', 'utf8')
 const mixed = readFileSync('src/features/editor/implementations/OanixMixedDocumentWithFiles.tsx', 'utf8')
 const projection = readFileSync('src/features/editor/oanixMixedDocumentProjection.ts', 'utf8')
 
@@ -38,6 +39,24 @@ test('daily entry is visually framed and derives surface/text from the active th
   assert.match(cardCss, /var\(--color-surface,#fff\)/)
   assert.match(cardCss, /color:var\(--color-text,#182033\)/)
   assert.doesNotMatch(cardCss, /var\(--oanix-note-text/)
+})
+
+test('checklist derives contrast from the active editor theme instead of stale fallback variables', () => {
+  assert.match(checklistCss, /var\(--color-surface,#fff\)/)
+  assert.match(checklistCss, /var\(--color-text,#182033\)/)
+  assert.match(checklistCss, /var\(--color-text-secondary,#64748b\)/)
+  assert.match(checklistCss, /var\(--color-placeholder,#94a3b8\)/)
+  assert.doesNotMatch(checklistCss, /var\(--oanix-text/)
+  assert.doesNotMatch(checklistCss, /var\(--oanix-sheet/)
+})
+
+test('Entrada remount preserves the selected mode and exact sheet theme', () => {
+  assert.match(guard, /captureEditorVisualState/)
+  assert.match(guard, /restoreEditorVisualState/)
+  assert.match(guard, /pendingVisualStateRef/)
+  assert.match(guard, /\.oanix-notes__mode-row button\.is-active/)
+  assert.match(guard, /\.oanix-notes__theme-preview\.theme-/)
+  assert.match(guard, /pendingVisualStateRef\.current = captureEditorVisualState\(editor\)/)
 })
 
 test('all add-content tools suppress automatic soft-keyboard refocus until an explicit editing gesture', () => {
