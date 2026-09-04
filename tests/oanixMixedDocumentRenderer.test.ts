@@ -18,11 +18,13 @@ test('mixed renderer keeps text segments uncontrolled and avoids per-key React s
   assert.doesNotMatch(source, /setText\(/)
 })
 
-test('mixed renderer loads image bytes lazily and revokes temporary object URLs', async () => {
+test('mixed renderer loads image bytes lazily and revokes only fallback object URLs it owns', async () => {
   const source = await readSource()
   assert.match(source, /IntersectionObserver/)
+  assert.match(source, /getCachedAttachmentObjectUrl\(attachment\.id\)/)
   assert.match(source, /URL\.createObjectURL\(file\)/)
-  assert.match(source, /URL\.revokeObjectURL\(url\)/)
+  assert.match(source, /componentOwnedUrlRef\.current = objectUrl/)
+  assert.match(source, /if \(componentOwnedUrlRef\.current\) URL\.revokeObjectURL\(componentOwnedUrlRef\.current\)/)
   assert.doesNotMatch(source, /data:image\//)
   assert.doesNotMatch(source, /base64/)
 })
