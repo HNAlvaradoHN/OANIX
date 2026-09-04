@@ -3,7 +3,7 @@ import type {
   ClipboardEvent as ReactClipboardEvent,
   KeyboardEvent as ReactKeyboardEvent,
 } from 'react'
-import type { EditorSurfaceBlock } from '../editorSurfaceContract.ts'
+import type { EditorSurfaceBlock, EditorSurfaceBlockChangeSet } from '../editorSurfaceContract.ts'
 import { findOanixClipboardImage } from '../oanixClipboardImage.ts'
 import {
   applyTextLineFormat,
@@ -76,7 +76,6 @@ export function OanixTextLineEditor({
   onError,
 }: OanixTextLineEditorProps) {
   const runtime = useOanixTextLineRuntime()
-  const rootRef = useRef<HTMLDivElement | null>(null)
   const textareaRefs = useRef(new Map<string, HTMLTextAreaElement>())
   const dirtyBlocksRef = useRef(new Map<string, EditorSurfaceBlock>())
   const saveTimerRef = useRef<number | null>(null)
@@ -86,9 +85,10 @@ export function OanixTextLineEditor({
   const decodedExternal = useMemo(() => decodeLines(blocks), [blocks])
   const externalSignature = useMemo(() => lineSignature(decodedExternal), [decodedExternal])
   const initialRef = useRef<ReturnType<typeof normalizeTextLines> | null>(null)
-  if (!initialRef.current) initialRef.current = normalizeTextLines(decodedExternal, createTextLineId)
+  const initialNormalized = initialRef.current ?? normalizeTextLines(decodedExternal, createTextLineId)
+  if (!initialRef.current) initialRef.current = initialNormalized
 
-  const [lines, setLines] = useState<EditorTextBlock[]>(initialRef.current.lines)
+  const [lines, setLines] = useState<EditorTextBlock[]>(initialNormalized.lines)
   const linesRef = useRef(lines)
   const lastExternalSignatureRef = useRef(externalSignature)
 
@@ -192,7 +192,7 @@ export function OanixTextLineEditor({
   }
 
   const enqueueStructuralSave = (
-    buildChanges: (globalBlocks: readonly EditorSurfaceBlock[]) => Parameters<NonNullable<typeof runtime>['saveBlockChanges']>[0] | null,
+    buildChanges: (globalBlocks: readonly EditorSurfaceBlock[]) => EditorSurfaceBlockChangeSet | null,
   ) => {
     if (saveTimerRef.current !== null) {
       window.clearTimeout(saveTimerRef.current)
@@ -248,11 +248,6 @@ export function OanixTextLineEditor({
     })
   }, [runtime?.noteId])
 
-  const persistLineImmediately = (line: EditorTextBlock) => {
-    dirtyBlocksRef.current.delete(line.id)
-    enqueueStructuralSave(() => ({ upserts: [encodeTextBlock(line)] }))
-  }
-
   const applyFormat = (
     blockId: string,
     selectionStart: number,
@@ -273,10 +268,6 @@ export function OanixTextLineEditor({
     onActivity()
     for (const deletedId of result.deletes) dirtyBlocksRef.current.delete(deletedId)
     for (const line of result.upserts) dirtyBlocksRef.current.delete(line.id)
-
-    const inserted = result.lines.find((line) => line.id === result.focusBlockId)
-    const wasInserted = inserted && !linesRef.current.some((line) => line.id === inserted.id)
-    void wasInserted
 
     enqueueStructuralSave((globalBlocks) => {
       const upserts = result.upserts.map((line) => encodeTextBlock(line))
@@ -394,8 +385,7 @@ export function OanixTextLineEditor({
     for (const upsert of result.upserts) dirtyBlocksRef.current.delete(upsert.id)
 
     enqueueStructuralSave((globalBlocks) => {
-      const currentIndex = globalBlocks.findIndex((block) => block.id === line.id)
-      if (currentIndex < 0) return null
+      if (!globalBlocks.some((block) => block.id === line.id)) return null
       return {
         upserts: result.upserts.map((item) => encodeTextBlock(item)),
         deletes: result.deletes,
@@ -432,7 +422,7 @@ export function OanixTextLineEditor({
     void flushPending().then(() => onPasteImage(file, line.id, cursorOffset))
   }
 
-  return <div ref={rootRef} className="oanix-text-line-editor" data-oanix-text-lines="true">
+  return <div className="oanix-text-line-editor" data-oanix-text-lines="true">
     {lines.map((line) => <textarea
       key={line.id}
       ref={(node) => {
