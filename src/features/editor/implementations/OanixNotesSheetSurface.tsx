@@ -29,6 +29,7 @@ import {
 import { insertOanixCodeBlock } from '../oanixCodeBlockLayer'
 import { insertOanixChecklistBlock } from '../oanixChecklistBlockLayer'
 import { insertOanixContactBlock } from '../oanixContactBlockLayer'
+import { insertOanixSeparatorBlock } from '../oanixSeparatorBlockLayer'
 import { decideOanixMixedDocumentLoad } from '../oanixMixedDocumentLoadPolicy'
 import { useDelayedOperationFeedback } from '../../../shared/useDelayedOperationFeedback'
 import { OanixMixedDocumentWithFiles } from './OanixMixedDocumentWithFiles'
@@ -126,6 +127,7 @@ export function OanixNotesSheetSurface({
   const [codeBusy, setCodeBusy] = useState(false)
   const [checklistBusy, setChecklistBusy] = useState(false)
   const [contactBusy, setContactBusy] = useState(false)
+  const [separatorBusy, setSeparatorBusy] = useState(false)
   const [integrationError, setIntegrationError] = useState('')
   const imageFeedback = useDelayedOperationFeedback()
 
@@ -306,7 +308,7 @@ export function OanixNotesSheetSurface({
   }
 
   async function requestClose() {
-    if (saving || imageBusy || fileBusy || codeBusy || checklistBusy || contactBusy || closingRef.current) return
+    if (saving || imageBusy || fileBusy || codeBusy || checklistBusy || contactBusy || separatorBusy || closingRef.current) return
     closingRef.current = true
     setClosing(true)
     clearIdleTimer()
@@ -1142,6 +1144,110 @@ export function OanixNotesSheetSurface({
     }
   }
 
+  async function insertSeparatorBlockFromMenu() {
+    if (!metadataReady || !loadBlocks || !onRequestBlockSave || separatorBusy || contactBusy || checklistBusy || codeBusy || imageBusy || fileBusy) {
+      setIntegrationError('Separador todavía no está disponible en el estado actual de esta nota.')
+      return
+    }
+    setPanelOpen(false)
+    setSeparatorBusy(true)
+    setIntegrationError('')
+    clearIdleTimer()
+    try {
+      if (saveInFlightRef.current) await saveInFlightRef.current
+      if (documentMode === 'plain') {
+        const textarea = bodyRef.current
+        const text = textarea?.value ?? initialText
+        const title = titleRef.current?.value ?? initialTitle
+        const existingBlocks = await loadBlocks()
+        const result = await insertOanixSeparatorBlock({
+          mode: 'plain',
+          title,
+          text,
+          cursorOffset: lastPlainCursorRef.current,
+          existingBlocks,
+          saveBlockChanges: onRequestBlockSave,
+          savePlainSnapshot: onRequestSave,
+        })
+        if (result.status !== 'committed') {
+          setIntegrationError(`No se pudo insertar el separador de forma segura (${result.status}).`)
+          return
+        }
+        pendingMixedUpsertsRef.current.clear()
+        if (textarea) textarea.value = ''
+        committedSnapshotRef.current = { title, text: '' }
+        setMixedBlocks(result.plan.blocks)
+        setDocumentMode('mixed')
+        markClean()
+        onActivity?.()
+        focusAfterInsertedElement(result.plan.separatorBlockId, result.plan.afterTextBlockId)
+        return
+      }
+
+      const target = pendingMixedImageTargetRef.current ?? fallbackMixedCursor()
+      pendingMixedImageTargetRef.current = null
+      if (!target) {
+        setIntegrationError('Coloca el cursor en un tramo de texto antes de insertar el separador.')
+        return
+      }
+      if (dirtyRef.current && !(await saveCurrentSnapshot())) {
+        setIntegrationError('No se pudo guardar el contenido pendiente antes de insertar el separador.')
+        return
+      }
+      const confirmedBlocks = await loadBlocks()
+      const result = await insertOanixSeparatorBlock({
+        mode: 'mixed',
+        blocks: confirmedBlocks,
+        targetTextBlockId: target.blockId,
+        cursorOffset: target.cursorOffset,
+        saveBlockChanges: onRequestBlockSave,
+      })
+      if (result.status !== 'committed') {
+        setIntegrationError(`No se pudo insertar el separador de forma segura (${result.status}).`)
+        return
+      }
+      pendingMixedUpsertsRef.current.clear()
+      setMixedBlocks(result.plan.blocks)
+      markClean()
+      onActivity?.()
+      focusAfterInsertedElement(result.plan.separatorBlockId, result.plan.afterTextBlockId)
+    } catch {
+      setIntegrationError('No se pudo insertar el separador de forma segura.')
+    } finally {
+      setSeparatorBusy(false)
+      if (dirtyRef.current) armAutosaveTimer()
+    }
+  }
+
+  async function removeSeparatorBlock(blockId: string) {
+    if (!onRequestBlockSave || separatorBusy || contactBusy || checklistBusy || codeBusy || imageBusy || fileBusy) return
+    setSeparatorBusy(true)
+    setIntegrationError('')
+    clearIdleTimer()
+    try {
+      if (saveInFlightRef.current) await saveInFlightRef.current
+      if (dirtyRef.current && !(await saveCurrentSnapshot())) {
+        setIntegrationError('No se pudo guardar el contenido pendiente antes de eliminar el separador.')
+        return
+      }
+      const nextBlocks = mixedBlocks.filter((block) => block.id !== blockId)
+      const removed = await onRequestBlockSave({ deletes: [blockId], order: nextBlocks.map((block) => block.id) })
+      if (!removed) {
+        setIntegrationError('No se pudo eliminar el separador.')
+        return
+      }
+      pendingMixedUpsertsRef.current.delete(blockId)
+      setMixedBlocks(nextBlocks)
+      markClean()
+      onActivity?.()
+    } catch {
+      setIntegrationError('No se pudo eliminar el separador.')
+    } finally {
+      setSeparatorBusy(false)
+      if (dirtyRef.current) armAutosaveTimer()
+    }
+  }
+
   function handlePlainPaste(event: ReactClipboardEvent<HTMLTextAreaElement>) {
     const file = findOanixClipboardImage(event.clipboardData)
     if (!file) return
@@ -1352,11 +1458,13 @@ export function OanixNotesSheetSurface({
     return () => media.removeEventListener('change', listener)
   }, [mode])
 
-  const editingDisabled = saving || closing || imageBusy || fileBusy || codeBusy || checklistBusy || contactBusy
+  const editingDisabled = saving || closing || imageBusy || fileBusy || codeBusy || checklistBusy || contactBusy || separatorBusy
   const showImageProgress = imageBusy && imageFeedback.visible
-  const status = saving || saveInFlightRef.current || showImageProgress || fileBusy || codeBusy || checklistBusy || contactBusy ? 'saving' : dirty ? 'unsaved' : 'saved'
-  const statusLabel = contactBusy
-    ? 'Guardando contacto…'
+  const status = saving || saveInFlightRef.current || showImageProgress || fileBusy || codeBusy || checklistBusy || contactBusy || separatorBusy ? 'saving' : dirty ? 'unsaved' : 'saved'
+  const statusLabel = separatorBusy
+    ? 'Guardando separador…'
+    : contactBusy
+      ? 'Guardando contacto…'
     : checklistBusy
       ? 'Guardando checklist…'
     : codeBusy
@@ -1418,6 +1526,7 @@ export function OanixNotesSheetSurface({
                   onRemoveCodeBlock={removeCodeBlock}
                   onRemoveChecklistBlock={removeChecklistBlock}
                   onRemoveContactBlock={removeContactBlock}
+                  onRemoveSeparatorBlock={removeSeparatorBlock}
                   onActivity={markActivity}
                   onCompositionStart={() => { composingRef.current = true; onActivity?.() }}
                   onCompositionEnd={() => { composingRef.current = false; markActivity() }}
@@ -1463,6 +1572,7 @@ export function OanixNotesSheetSurface({
             if (tool === 'code') void insertCodeBlockFromMenu()
             if (tool === 'checklist') void insertChecklistBlockFromMenu()
             if (tool === 'contact') void insertContactBlockFromMenu()
+            if (tool === 'separator') void insertSeparatorBlockFromMenu()
           }}/>
           <div className="oanix-notes__divider"/>
           <ToolSection label="Formato de texto" tools={[[ 'paragraph','Párrafo' ],[ 'h2','H2' ],[ 'h3','H3' ],[ 'quote','Cita' ],[ 'list','Lista' ],[ 'numbered-list','Numérica' ]]}/>
