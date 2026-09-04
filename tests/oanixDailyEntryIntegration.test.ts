@@ -6,6 +6,7 @@ const guard = readFileSync('src/features/editor/implementations/OanixNotesSheetM
 const card = readFileSync('src/features/editor/implementations/OanixDailyEntryBlockCard.tsx', 'utf8')
 const cardCss = readFileSync('src/features/editor/implementations/oanixDailyEntryBlockCard.css', 'utf8')
 const checklistCss = readFileSync('src/features/editor/implementations/oanixChecklistBlockCard.css', 'utf8')
+const mobileCss = readFileSync('src/features/editor/implementations/oanixNotesSheetMobileSafeArea.css', 'utf8')
 const mixed = readFileSync('src/features/editor/implementations/OanixMixedDocumentWithFiles.tsx', 'utf8')
 const projection = readFileSync('src/features/editor/oanixMixedDocumentProjection.ts', 'utf8')
 
@@ -38,7 +39,18 @@ test('daily entry is visually framed and derives surface/text from the active th
   assert.match(cardCss, /border-radius:18px/)
   assert.match(cardCss, /var\(--color-surface,#fff\)/)
   assert.match(cardCss, /color:var\(--color-text,#182033\)/)
+  assert.match(cardCss, /var\(--accent,#f97316\)/)
+  assert.match(cardCss, /linear-gradient\(145deg/)
+  assert.match(cardCss, /oanix-daily-entry::before/)
+  assert.match(cardCss, /box-shadow:0 16px 38px/)
   assert.doesNotMatch(cardCss, /var\(--oanix-note-text/)
+})
+
+test('side-menu locator keeps its theme accent and adds a subtle visible glow', () => {
+  assert.match(mobileCss, /oanix-notes__slide-indicator::after/)
+  assert.match(mobileCss, /var\(--accent\)/)
+  assert.match(mobileCss, /0 0 6px color-mix/)
+  assert.match(mobileCss, /0 0 12px color-mix/)
 })
 
 test('checklist derives contrast from the active editor theme instead of stale fallback variables', () => {
