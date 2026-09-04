@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import {
   MAX_CODE_BLOCK_LANGUAGE_LENGTH,
   MAX_CODE_BLOCK_TEXT_LENGTH,
@@ -48,9 +48,18 @@ export function OanixCodeBlockCard({
   onError,
 }: OanixCodeBlockCardProps) {
   const [copied, setCopied] = useState(false)
+  const textRef = useRef(block.text)
+  const languageRef = useRef(block.language)
+  const knownLanguage = CODE_LANGUAGE_OPTIONS.some(([value]) => value === block.language)
+  if (!knownLanguage && languageRef.current === block.language) languageRef.current = 'plaintext'
 
-  function queue(next: EditorCodeBlock) {
+  function queue() {
     onActivity()
+    const next: EditorCodeBlock = {
+      ...block,
+      text: textRef.current,
+      language: languageRef.current,
+    }
     void Promise.resolve(onChange(encodeCodeBlock(next))).catch(() => {
       onError?.('No se pudo preparar el cambio del bloque de código.')
     })
@@ -58,7 +67,7 @@ export function OanixCodeBlockCard({
 
   async function copyCode() {
     try {
-      await navigator.clipboard.writeText(block.text)
+      await navigator.clipboard.writeText(textRef.current)
       setCopied(true)
       window.setTimeout(() => setCopied(false), 1_200)
     } catch {
@@ -76,8 +85,6 @@ export function OanixCodeBlockCard({
     }
   }
 
-  const knownLanguage = CODE_LANGUAGE_OPTIONS.some(([value]) => value === block.language)
-
   return <article className="oanix-code-block" data-oanix-element-id={block.id} data-oanix-element-kind="code">
     <header className="oanix-code-block__header">
       <div className="oanix-code-block__identity"><span aria-hidden="true">&lt;/&gt;</span><strong>Código</strong></div>
@@ -89,10 +96,13 @@ export function OanixCodeBlockCard({
     <label className="oanix-code-block__language">
       <span>Lenguaje</span>
       <select
-        value={knownLanguage ? block.language : 'plaintext'}
+        defaultValue={knownLanguage ? block.language : 'plaintext'}
         disabled={disabled}
         aria-label="Lenguaje del bloque de código"
-        onChange={(event) => queue({ ...block, language: event.target.value.slice(0, MAX_CODE_BLOCK_LANGUAGE_LENGTH) })}
+        onChange={(event) => {
+          languageRef.current = event.target.value.slice(0, MAX_CODE_BLOCK_LANGUAGE_LENGTH)
+          queue()
+        }}
       >
         {CODE_LANGUAGE_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
       </select>
@@ -107,7 +117,10 @@ export function OanixCodeBlockCard({
       wrap="off"
       placeholder="Escribe o pega código…"
       aria-label="Contenido del bloque de código"
-      onInput={(event) => queue({ ...block, text: event.currentTarget.value })}
+      onInput={(event) => {
+        textRef.current = event.currentTarget.value
+        queue()
+      }}
       onCompositionStart={onCompositionStart}
       onCompositionEnd={onCompositionEnd}
     />
