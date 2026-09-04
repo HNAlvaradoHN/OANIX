@@ -1,7 +1,8 @@
 import type { EditorSurfaceBlock, EditorSurfaceBlockValue } from './editorSurfaceContract.ts'
 
 export const CONTACT_BLOCK_KIND = 'contact'
-export const MAX_CONTACT_EDIT_LENGTH = 10_000
+export const MAX_CONTACT_FIELD_LENGTH = 10_000
+export const MAX_CONTACT_EDIT_LENGTH = MAX_CONTACT_FIELD_LENGTH
 
 export interface EditorContactBlock {
   id: string
