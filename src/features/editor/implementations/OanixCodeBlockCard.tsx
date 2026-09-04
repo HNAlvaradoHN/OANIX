@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   MAX_CODE_BLOCK_LANGUAGE_LENGTH,
   MAX_CODE_BLOCK_TEXT_LENGTH,
@@ -48,10 +48,25 @@ export function OanixCodeBlockCard({
   onError,
 }: OanixCodeBlockCardProps) {
   const [copied, setCopied] = useState(false)
+  const [expanded, setExpanded] = useState(false)
   const textRef = useRef(block.text)
   const languageRef = useRef(block.language)
   const knownLanguage = CODE_LANGUAGE_OPTIONS.some(([value]) => value === block.language)
   if (!knownLanguage && languageRef.current === block.language) languageRef.current = 'plaintext'
+
+  useEffect(() => {
+    if (!expanded) return
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setExpanded(false)
+    }
+    window.addEventListener('keydown', closeOnEscape)
+    return () => {
+      window.removeEventListener('keydown', closeOnEscape)
+      document.body.style.overflow = previousOverflow
+    }
+  }, [expanded])
 
   function queue() {
     onActivity()
@@ -85,44 +100,73 @@ export function OanixCodeBlockCard({
     }
   }
 
-  return <article className="oanix-code-block" data-oanix-element-id={block.id} data-oanix-element-kind="code">
-    <header className="oanix-code-block__header">
-      <div className="oanix-code-block__identity"><span aria-hidden="true">&lt;/&gt;</span><strong>Código</strong></div>
-      <div className="oanix-code-block__actions">
-        <button type="button" disabled={disabled} onClick={() => void copyCode()} aria-label="Copiar código">{copied ? 'Copiado' : 'Copiar'}</button>
-        {onRemove && <button type="button" className="is-danger" disabled={disabled} onClick={() => void removeCode()} aria-label="Eliminar bloque de código">Eliminar</button>}
-      </div>
-    </header>
-    <label className="oanix-code-block__language">
-      <span>Lenguaje</span>
-      <select
-        defaultValue={knownLanguage ? block.language : 'plaintext'}
+  const languageLabel = CODE_LANGUAGE_OPTIONS.find(([value]) => value === languageRef.current)?.[1] ?? 'Texto plano'
+
+  return <>
+    <article className="oanix-code-block" data-oanix-element-id={block.id} data-oanix-element-kind="code">
+      <header className="oanix-code-block__header">
+        <div className="oanix-code-block__identity"><span aria-hidden="true">&lt;/&gt;</span><strong>Código</strong></div>
+        <div className="oanix-code-block__actions">
+          <button type="button" onClick={() => setExpanded(true)} aria-label="Abrir código en pantalla completa" title="Pantalla completa">⛶</button>
+          <button type="button" disabled={disabled} onClick={() => void copyCode()} aria-label="Copiar código">{copied ? 'Copiado' : 'Copiar'}</button>
+          {onRemove && <button type="button" className="is-danger" disabled={disabled} onClick={() => void removeCode()} aria-label="Eliminar bloque de código">Eliminar</button>}
+        </div>
+      </header>
+      <label className="oanix-code-block__language">
+        <span>Lenguaje</span>
+        <select
+          defaultValue={knownLanguage ? block.language : 'plaintext'}
+          disabled={disabled}
+          aria-label="Lenguaje del bloque de código"
+          onChange={(event) => {
+            languageRef.current = event.target.value.slice(0, MAX_CODE_BLOCK_LANGUAGE_LENGTH)
+            queue()
+          }}
+        >
+          {CODE_LANGUAGE_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+        </select>
+      </label>
+      <textarea
+        className="oanix-code-block__editor"
+        data-oanix-primary-input="true"
+        defaultValue={block.text}
+        maxLength={MAX_CODE_BLOCK_TEXT_LENGTH}
         disabled={disabled}
-        aria-label="Lenguaje del bloque de código"
-        onChange={(event) => {
-          languageRef.current = event.target.value.slice(0, MAX_CODE_BLOCK_LANGUAGE_LENGTH)
+        spellCheck={false}
+        wrap="off"
+        placeholder="Escribe o pega código…"
+        aria-label="Contenido del bloque de código"
+        onInput={(event) => {
+          textRef.current = event.currentTarget.value
           queue()
         }}
-      >
-        {CODE_LANGUAGE_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-      </select>
-    </label>
-    <textarea
-      className="oanix-code-block__editor"
-      data-oanix-primary-input="true"
-      defaultValue={block.text}
-      maxLength={MAX_CODE_BLOCK_TEXT_LENGTH}
-      disabled={disabled}
-      spellCheck={false}
-      wrap="off"
-      placeholder="Escribe o pega código…"
-      aria-label="Contenido del bloque de código"
-      onInput={(event) => {
-        textRef.current = event.currentTarget.value
-        queue()
+        onCompositionStart={onCompositionStart}
+        onCompositionEnd={onCompositionEnd}
+      />
+    </article>
+
+    {expanded && <div
+      className="oanix-code-block__fullscreen"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Código en pantalla completa"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) setExpanded(false)
       }}
-      onCompositionStart={onCompositionStart}
-      onCompositionEnd={onCompositionEnd}
-    />
-  </article>
+    >
+      <section className="oanix-code-block__fullscreen-panel">
+        <header className="oanix-code-block__fullscreen-header">
+          <div>
+            <strong>Código</strong>
+            <small>{languageLabel}</small>
+          </div>
+          <div className="oanix-code-block__fullscreen-actions">
+            <button type="button" onClick={() => void copyCode()}>{copied ? 'Copiado' : 'Copiar'}</button>
+            <button type="button" onClick={() => setExpanded(false)} aria-label="Cerrar pantalla completa">✕</button>
+          </div>
+        </header>
+        <pre className="oanix-code-block__fullscreen-content">{textRef.current || 'Sin contenido.'}</pre>
+      </section>
+    </div>}
+  </>
 }
