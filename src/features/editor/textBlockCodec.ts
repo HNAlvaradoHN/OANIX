@@ -18,7 +18,8 @@ export interface EditorTextBlock {
   id: string
   kind: typeof TEXT_BLOCK_KIND
   text: string
-  format: EditorTextBlockFormat
+  /** Omitted historical/new helper values are persisted as paragraph. */
+  format?: EditorTextBlockFormat
 }
 
 function decodeFormat(value: unknown): EditorTextBlockFormat | null {
@@ -49,11 +50,12 @@ export function decodeTextBlock(block: EditorSurfaceBlock): EditorTextBlock | nu
 }
 
 export function encodeTextBlock(block: EditorTextBlock): EditorSurfaceBlock {
+  const format = block.format ?? 'paragraph'
   return {
     id: block.id,
     kind: TEXT_BLOCK_KIND,
-    data: block.format === 'paragraph'
+    data: format === 'paragraph'
       ? { text: block.text }
-      : { text: block.text, format: block.format },
+      : { text: block.text, format },
   }
 }
