@@ -1,0 +1,36 @@
+.oanix-text-line-editor {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0;
+}
+
+.oanix-text-line-editor .oanix-text-line-editor__line {
+  display: block;
+  width: 100%;
+  margin: 0;
+  resize: none;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  outline: 0;
+  box-shadow: none;
+  background-color: transparent;
+  caret-color: var(--accent);
+}
+
+.oanix-text-line-editor .oanix-text-line-editor__line[data-oanix-text-format="paragraph"] {
+  min-height: var(--oanix-ruled-step, 30px);
+}
+
+.oanix-text-line-editor .oanix-text-line-editor__line[data-oanix-text-format="h2"] {
+  min-height: var(--oanix-h2-ruled-step, 42px);
+}
+
+.oanix-text-line-editor .oanix-text-line-editor__line[data-oanix-text-format="h3"] {
+  min-height: var(--oanix-h3-ruled-step, 36px);
+}
+
+.oanix-text-line-editor .oanix-text-line-editor__line + .oanix-text-line-editor__line {
+  margin-top: 0;
+}
