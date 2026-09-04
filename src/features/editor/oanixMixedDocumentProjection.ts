@@ -1,4 +1,5 @@
 import type { EditorSurfaceBlock } from './editorSurfaceContract.ts'
+import { decodeOanixFileGroupElement, type OanixFileGroupElement } from './oanixFileGroupElementCodec.ts'
 import { decodeOanixImageElement, type OanixImageElement } from './oanixImageElementCodec.ts'
 import { decodeOanixLongTextElement, type OanixLongTextElement } from './oanixLongTextElementCodec.ts'
 import { decodeTextBlock, type EditorTextBlock } from './textBlockCodec.ts'
@@ -6,6 +7,7 @@ import { decodeTextBlock, type EditorTextBlock } from './textBlockCodec.ts'
 export type OanixMixedDocumentNode =
   | { type: 'text'; block: EditorTextBlock }
   | { type: 'image'; block: OanixImageElement }
+  | { type: 'file-group'; block: OanixFileGroupElement }
   | { type: 'long-text'; block: OanixLongTextElement }
   | { type: 'unsupported'; block: EditorSurfaceBlock }
 
@@ -22,6 +24,9 @@ export function projectOanixMixedDocument(blocks: readonly EditorSurfaceBlock[])
     const image = decodeOanixImageElement(block)
     if (image) return { type: 'image', block: image }
 
+    const fileGroup = decodeOanixFileGroupElement(block)
+    if (fileGroup) return { type: 'file-group', block: fileGroup }
+
     const longText = decodeOanixLongTextElement(block)
     if (longText) return { type: 'long-text', block: longText }
 
@@ -31,6 +36,6 @@ export function projectOanixMixedDocument(blocks: readonly EditorSurfaceBlock[])
 
 export function hasRenderableOanixMixedContent(blocks: readonly EditorSurfaceBlock[]): boolean {
   return projectOanixMixedDocument(blocks).some((node) => (
-    node.type === 'text' || node.type === 'image' || node.type === 'long-text'
+    node.type === 'text' || node.type === 'image' || node.type === 'file-group' || node.type === 'long-text'
   ))
 }
