@@ -10,8 +10,12 @@ interface InstallOptions {
 
 interface PendingVisualState {
   scrollTop: number
+  pageScrollX: number
+  pageScrollY: number
   theme: string
   modeLabel: string
+  anchorBlockId: string | null
+  anchorViewportTop: number | null
 }
 
 interface PendingHeadingReset {
@@ -28,38 +32,83 @@ function findEditor(noteId: string) {
 function captureVisualState(editor: HTMLElement): PendingVisualState {
   const scroller = editor.querySelector<HTMLElement>('.oanix-notes__editor-container')
   const activeMode = editor.querySelector<HTMLButtonElement>('.oanix-notes__mode-row button.is-active')
+  const active = document.activeElement
+  const activeText = active instanceof HTMLTextAreaElement && editor.contains(active)
+    && active.classList.contains('oanix-mixed-document__text')
+    ? active
+    : null
+  const anchorBlockId = activeText?.dataset.oanixMixedTextId ?? null
+
   return {
     scrollTop: scroller?.scrollTop ?? 0,
+    pageScrollX: window.scrollX,
+    pageScrollY: window.scrollY,
     theme: editor.dataset.theme || 'default',
     modeLabel: activeMode?.textContent?.trim() ?? '',
+    anchorBlockId,
+    anchorViewportTop: activeText?.getBoundingClientRect().top ?? null,
   }
 }
 
 function restoreVisualState(noteId: string, state: PendingVisualState, focusBlockId?: string) {
-  window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
+  let focusApplied = false
+
+  const settle = () => {
     const editor = findEditor(noteId)
     if (!editor) return
 
-    if (state.modeLabel) {
-      const modeButton = Array.from(editor.querySelectorAll<HTMLButtonElement>('.oanix-notes__mode-row button.is-active, .oanix-notes__mode-row button'))
+    const currentMode = editor.querySelector<HTMLButtonElement>('.oanix-notes__mode-row button.is-active')?.textContent?.trim() ?? ''
+    if (state.modeLabel && currentMode !== state.modeLabel) {
+      const modeButton = Array.from(editor.querySelectorAll<HTMLButtonElement>('.oanix-notes__mode-row button'))
         .find((button) => button.textContent?.trim() === state.modeLabel)
       modeButton?.click()
     }
-    const themePreview = editor.querySelector<HTMLElement>(`.oanix-notes__theme-preview.theme-${CSS.escape(state.theme)}`)
-    themePreview?.closest<HTMLButtonElement>('button')?.click()
+    if (editor.dataset.theme !== state.theme) {
+      const themePreview = editor.querySelector<HTMLElement>(`.oanix-notes__theme-preview.theme-${CSS.escape(state.theme)}`)
+      themePreview?.closest<HTMLButtonElement>('button')?.click()
+    }
 
     const scroller = editor.querySelector<HTMLElement>('.oanix-notes__editor-container')
-    if (scroller) scroller.scrollTop = state.scrollTop
+    if (scroller) {
+      scroller.scrollTop = state.scrollTop
+      if (state.anchorBlockId && state.anchorViewportTop !== null) {
+        const anchor = editor.querySelector<HTMLTextAreaElement>(`.oanix-mixed-document__text[data-oanix-mixed-text-id="${CSS.escape(state.anchorBlockId)}"]`)
+        if (anchor) {
+          scroller.scrollTop += anchor.getBoundingClientRect().top - state.anchorViewportTop
+        }
+      }
+    }
 
-    if (focusBlockId) {
+    if (focusBlockId && !focusApplied) {
       const target = editor.querySelector<HTMLTextAreaElement>(`.oanix-mixed-document__text[data-oanix-mixed-text-id="${CSS.escape(focusBlockId)}"]`)
       if (target) {
         target.focus({ preventScroll: true })
         target.setSelectionRange(0, 0)
         normalizeRuledHeight(target)
+        focusApplied = true
       }
-      if (scroller) scroller.scrollTop = state.scrollTop
     }
+
+    if (scroller) {
+      scroller.scrollTop = state.scrollTop
+      if (state.anchorBlockId && state.anchorViewportTop !== null) {
+        const anchor = editor.querySelector<HTMLTextAreaElement>(`.oanix-mixed-document__text[data-oanix-mixed-text-id="${CSS.escape(state.anchorBlockId)}"]`)
+        if (anchor) {
+          scroller.scrollTop += anchor.getBoundingClientRect().top - state.anchorViewportTop
+        }
+      }
+    }
+    window.scrollTo(state.pageScrollX, state.pageScrollY)
+  }
+
+  window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
+    settle()
+    window.requestAnimationFrame(() => {
+      settle()
+      window.requestAnimationFrame(settle)
+    })
+    window.setTimeout(settle, 80)
+    window.setTimeout(settle, 220)
   }))
 }
 
@@ -105,9 +154,9 @@ export function installOanixTextBehaviorBridge(options: InstallOptions) {
     reset.running = true
 
     try {
-      const blocks = await loadBlocks()
       let lastSavedText: string | null = null
       while (lastSavedText !== reset.latestText) {
+        const blocks = await loadBlocks()
         const nextText: string = reset.latestText
         const paragraph = buildHeadingParagraphReset(blocks, blockId, nextText)
         if (!paragraph) {
@@ -196,7 +245,7 @@ export function installOanixTextBehaviorBridge(options: InstallOptions) {
     const liveText = target.value
 
     void loadBlocks().then(async (blocks) => {
-      const plan = buildHeadingEnterPlan(blocks, blockId, selectionStart, selectionEnd, undefined, liveText)
+      const plan = buildHeadingEnterPlan(blocks, blockId, selectionStart, selectionEnd, undefined, liveText, format)
       if (!plan) return
       const saved = await saveBlocks({
         upserts: [plan.heading, plan.paragraph],
