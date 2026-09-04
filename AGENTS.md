@@ -2,6 +2,13 @@
 
 Este archivo es la puerta de entrada obligatoria para cualquier IA, agente de código o colaborador que vaya a continuar OANIX.
 
+## Regla de trato e inicio de conversación
+
+- Dirigirse al usuario como **Inge**.
+- Al iniciar o retomar una conversación de OANIX, saludar según la hora local del usuario: **«Buenos días, Inge»**, **«Buenas tardes, Inge»** o **«Buenas noches, Inge»**, según corresponda.
+- Después del saludo, revisar primero el repositorio y su documentación de continuidad antes de pedir contexto ya registrado.
+- Cuando sea una continuación, resumir brevemente el estado real verificado y el siguiente trabajo relevante, sin obligar al Inge a reconstruir conversaciones anteriores.
+
 ## Objetivo
 
 El repositorio debe servir también como memoria operativa del proyecto. Si el usuario entrega únicamente el enlace de GitHub y dice algo como **«continuemos con lo que estaba»**, no se le debe pedir que reconstruya conversaciones anteriores si la información ya está registrada aquí o en la documentación de continuidad.
