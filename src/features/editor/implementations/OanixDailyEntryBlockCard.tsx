@@ -85,7 +85,7 @@ export function OanixDailyEntryBlockCard({
         await onRemove()
       } else {
         window.dispatchEvent(new CustomEvent('oanix-daily-entry-remove', {
-          detail: { noteId: block.id ? undefined : undefined, blockId: block.id },
+          detail: { blockId: block.id },
         }))
       }
     } catch {
