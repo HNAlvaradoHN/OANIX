@@ -13,9 +13,44 @@ Fecha: 2026-09-04
 - **Checklist**: cerrado técnicamente; validación física pendiente.
 - **Contacto**: cerrado técnicamente con los ajustes más recientes; validación física pendiente.
 - **Separador**: cerrado técnicamente; validación física pendiente.
-- **Entrada**: cerrado técnicamente; validación física pendiente.
+- **Entrada**: cerrado técnicamente con ajuste visual/tema/teclado; validación física pendiente.
 
-## AJUSTE MÁS RECIENTE — ENTRADA
+## AJUSTE MÁS RECIENTE — ENTRADA, TEMAS Y TECLADO
+
+Se cerró técnicamente la corrección solicitada durante la revisión física de **Entrada** mediante el PR #618.
+
+Quedó implementado:
+
+- Entrada ahora se presenta como tarjeta/marco independiente de la hoja, con borde, radio, fondo y sombra propios.
+- Sus colores se derivan de `--color-surface` y `--color-text`, conservando contraste en temas claros y oscuros y evitando depender de una variable específica del texto de la hoja.
+- Título, contenido, placeholders y líneas internas mantienen contraste usando el tema activo.
+- Se estableció como regla común para `Añadir contenido` que insertar **Entrada, Imagen, Archivos, Código, Checklist, Contacto o Separador** no reactive automáticamente el teclado.
+- Tras una inserción, el foco editable se suprime hasta que el usuario toca explícitamente un campo donde quiera escribir.
+- Entrada conserva el desplazamiento para mostrar el bloque recién insertado, pero ya no enfoca automáticamente el título.
+- Se amplió la prueba de integración para cubrir el marco/tema y la política común de no reabrir el teclado.
+
+### PR, head, gates y merge
+
+- PR **#618 — `fix: enmarca Entrada y evita reabrir teclado al añadir contenido`**.
+- Head final: `40df4f819c0985bdd0b29017db895d2f8c77ba5e`.
+- OANIX CI #2640: **success**.
+- OANIX Android #1992: **success**.
+- Qwen Independent PR Review #916: **success**.
+- Merge squash a `main`: `694737417ef82966dc3e5b943bb9486dd884f661`.
+
+### Validación física pendiente — ajuste #618
+
+Comprobar manualmente en Android:
+
+- Entrada se percibe como tarjeta/marco independiente de la hoja;
+- Entrada se mantiene legible y con contraste correcto en tema claro y oscuro;
+- con el teclado abierto, insertar Entrada, Imagen, Archivos, Código, Checklist, Contacto y Separador y confirmar que el teclado se cierra/no reaparece;
+- confirmar que el teclado solo vuelve cuando el usuario toca explícitamente un campo editable;
+- confirmar que Entrada sigue desplazándose a la zona insertada sin enfocar automáticamente el título.
+
+No marcar esta validación física como completada hasta confirmación del usuario.
+
+## ENTRADA — IMPLEMENTACIÓN BASE CERRADA
 
 Se cerró técnicamente la opción **Entrada** del menú de OANIX Notes mediante el PR #617.
 
@@ -76,8 +111,8 @@ No marcar Entrada como validada físicamente hasta confirmación del usuario.
 
 ## Validación física pendiente — orden recomendado
 
-Validar primero el ajuste recién cerrado de **Entrada** y los ajustes recientes de **Contacto**. Después continuar con Archivos, Código, Checklist y Separador, y finalmente una nota combinada con texto + imagen + archivos + código + checklist + contacto + separador + entrada; cerrar, reabrir, editar y volver a cerrar.
+Validar primero el ajuste recién cerrado de **Entrada + temas + teclado global de añadidos** y los ajustes recientes de **Contacto**. Después continuar con Archivos, Código, Checklist y Separador, y finalmente una nota combinada con texto + imagen + archivos + código + checklist + contacto + separador + entrada; cerrar, reabrir, editar y volver a cerrar.
 
 ## Siguiente acción exacta
 
-Validar físicamente **Entrada** en Android: posición del cursor, fecha local automática, cambio de fecha desde el calendario, título/contenido y persistencia tras reapertura. No marcarla como validada físicamente hasta confirmación del usuario. Después continuar con los ajustes físicos pendientes de Contacto y los demás bloques.
+Validar físicamente en Android el PR #618: marco independiente de Entrada, contraste correcto en tema claro/oscuro y teclado que no reaparece automáticamente al insertar cualquiera de los elementos de `Añadir contenido`. No marcar esta validación física como completada hasta confirmación del usuario. Después continuar con los ajustes físicos pendientes de Contacto y los demás bloques.
