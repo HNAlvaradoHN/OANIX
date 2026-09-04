@@ -3,8 +3,10 @@ import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
 const surface = readFileSync('src/features/editor/implementations/OanixNotesSheetSurface.tsx', 'utf8')
+const code = readFileSync('src/features/editor/implementations/OanixCodeBlockCard.tsx', 'utf8')
 const codeCss = readFileSync('src/features/editor/implementations/oanixCodeBlockCard.css', 'utf8')
 const contact = readFileSync('src/features/editor/implementations/OanixContactBlockCard.tsx', 'utf8')
+const contactCss = readFileSync('src/features/editor/implementations/oanixContactBlockCard.css', 'utf8')
 
 test('all mixed insertions resolve the cursor saved before the side menu steals focus', () => {
   assert.match(surface, /function resolveMixedInsertionTarget\(\): MixedCursorTarget \| null/)
@@ -27,4 +29,22 @@ test('contact cards reopen locked and expose editing only through their lock men
   assert.match(contact, /Editar contacto/)
   assert.match(contact, /Bloquear edición/)
   assert.match(contact, /editing \? '🔓' : '🔒'/)
+})
+
+test('code block exposes a fullscreen reading view without changing its stored text', () => {
+  assert.match(code, /const \[expanded, setExpanded\] = useState\(false\)/)
+  assert.match(code, /Abrir código en pantalla completa/)
+  assert.match(code, /aria-label="Código en pantalla completa"/)
+  assert.match(code, /<pre className="oanix-code-block__fullscreen-content">\{textRef\.current/)
+  assert.match(codeCss, /\.oanix-code-block__fullscreen\{position:fixed;inset:0/)
+  assert.match(codeCss, /height:100dvh/)
+})
+
+test('contact card exposes a theme-aware fullscreen reader while editing stays behind the lock', () => {
+  assert.match(contact, /Abrir contacto en pantalla completa/)
+  assert.match(contact, /aria-label="Contacto en pantalla completa"/)
+  assert.match(contact, /draft\.notes\.trim\(\) \|\| 'Sin notas\.'/)
+  assert.match(contactCss, /\.oanix-contact-block__fullscreen\{position:fixed;inset:0/)
+  assert.match(contactCss, /background:var\(--color-surface,#fff\);color:var\(--color-text,#182033\)/)
+  assert.match(contactCss, /height:100dvh/)
 })
