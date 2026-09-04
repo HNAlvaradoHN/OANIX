@@ -1,7 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   encodeContactBlock,
-  MAX_CONTACT_FIELD_LENGTH,
+  isValidContactEmail,
+  MAX_CONTACT_EMAIL_LENGTH,
+  MAX_CONTACT_NAME_LENGTH,
+  MAX_CONTACT_NOTES_LENGTH,
+  MAX_CONTACT_ORGANIZATION_LENGTH,
+  MAX_CONTACT_PHONE_LENGTH,
+  sanitizeContactPhone,
   type EditorContactBlock,
 } from '../contactBlockCodec.ts'
 import type { EditorSurfaceBlock } from '../editorSurfaceContract.ts'
@@ -28,7 +34,8 @@ export function OanixContactBlockCard({ block, disabled, onChange, onRemove, onA
   }))
   const [editing, setEditing] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
-  const [expanded, setExpanded] = useState(false)
+  const [notesExpanded, setNotesExpanded] = useState(false)
+  const [emailRejected, setEmailRejected] = useState(false)
 
   const initials = useMemo(() => {
     const parts = draft.name.trim().split(/\s+/).filter(Boolean)
@@ -37,27 +44,54 @@ export function OanixContactBlockCard({ block, disabled, onChange, onRemove, onA
   }, [draft.name])
 
   useEffect(() => {
-    if (!expanded) return
+    if (!notesExpanded) return
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setExpanded(false)
+      if (event.key === 'Escape') setNotesExpanded(false)
     }
     window.addEventListener('keydown', closeOnEscape)
     return () => {
       window.removeEventListener('keydown', closeOnEscape)
       document.body.style.overflow = previousOverflow
     }
-  }, [expanded])
+  }, [notesExpanded])
 
-  function commit(field: keyof ContactDraft, value: string) {
-    if (!editing || disabled) return
-    const next = { ...draft, [field]: value.slice(0, MAX_CONTACT_FIELD_LENGTH) }
+  function persist(next: ContactDraft) {
     setDraft(next)
     onActivity()
     void Promise.resolve(onChange(encodeContactBlock({ ...block, ...next }))).catch(() => {
       onError?.('No se pudo preparar el cambio del contacto.')
     })
+  }
+
+  function commit(field: keyof ContactDraft, value: string, maxLength: number) {
+    if (!editing || disabled) return
+    persist({ ...draft, [field]: value.slice(0, maxLength) })
+  }
+
+  function handlePhoneChange(value: string) {
+    if (!editing || disabled) return
+    commit('phone', sanitizeContactPhone(value), MAX_CONTACT_PHONE_LENGTH)
+  }
+
+  function handleEmailChange(value: string) {
+    if (!editing || disabled) return
+    const nextEmail = value.slice(0, MAX_CONTACT_EMAIL_LENGTH)
+    const next = { ...draft, email: nextEmail }
+    setDraft(next)
+    setEmailRejected(false)
+    onActivity()
+    if (!isValidContactEmail(nextEmail)) return
+    void Promise.resolve(onChange(encodeContactBlock({ ...block, ...next }))).catch(() => {
+      onError?.('No se pudo preparar el cambio del contacto.')
+    })
+  }
+
+  function handleEmailBlur() {
+    if (!editing || disabled || isValidContactEmail(draft.email)) return
+    setEmailRejected(true)
+    persist({ ...draft, email: '' })
   }
 
   function setEditMode(nextEditing: boolean) {
@@ -91,13 +125,6 @@ export function OanixContactBlockCard({ block, disabled, onChange, onRemove, onA
           <strong>{draft.name.trim() || 'Contacto'}</strong>
           <small>{editing ? 'Edición desbloqueada' : (draft.organization.trim() || 'Tarjeta privada')}</small>
         </div>
-        <button
-          type="button"
-          className="oanix-contact-block__expand-button"
-          onClick={() => setExpanded(true)}
-          aria-label="Abrir contacto en pantalla completa"
-          title="Pantalla completa"
-        >⛶</button>
         <div className="oanix-contact-block__menu-wrap">
           <button
             type="button"
@@ -127,58 +154,73 @@ export function OanixContactBlockCard({ block, disabled, onChange, onRemove, onA
       <div className="oanix-contact-block__grid">
         <label className="oanix-contact-block__field oanix-contact-block__field--wide">
           <span>Nombre</span>
-          <input type="text" value={draft.name} maxLength={MAX_CONTACT_FIELD_LENGTH} disabled={disabled} readOnly={!editing} placeholder="Nombre del contacto" onChange={(event) => commit('name', event.currentTarget.value)} />
+          <input type="text" value={draft.name} maxLength={MAX_CONTACT_NAME_LENGTH} disabled={disabled} readOnly={!editing} placeholder="Nombre del contacto" onChange={(event) => commit('name', event.currentTarget.value, MAX_CONTACT_NAME_LENGTH)} />
         </label>
         <label className="oanix-contact-block__field">
           <span>Teléfono</span>
-          <input type="tel" value={draft.phone} maxLength={MAX_CONTACT_FIELD_LENGTH} disabled={disabled} readOnly={!editing} placeholder="+504…" onChange={(event) => commit('phone', event.currentTarget.value)} />
+          <input type="tel" inputMode="numeric" pattern="[0-9]*" value={draft.phone} maxLength={MAX_CONTACT_PHONE_LENGTH} disabled={disabled} readOnly={!editing} placeholder="Número de teléfono" onChange={(event) => handlePhoneChange(event.currentTarget.value)} />
         </label>
         <label className="oanix-contact-block__field">
           <span>Correo</span>
-          <input type="email" value={draft.email} maxLength={MAX_CONTACT_FIELD_LENGTH} disabled={disabled} readOnly={!editing} placeholder="nombre@correo.com" onChange={(event) => commit('email', event.currentTarget.value)} />
+          <input type="email" inputMode="email" value={draft.email} maxLength={MAX_CONTACT_EMAIL_LENGTH} disabled={disabled} readOnly={!editing} aria-invalid={emailRejected || undefined} placeholder="nombre@correo.com" onChange={(event) => handleEmailChange(event.currentTarget.value)} onBlur={handleEmailBlur} />
+          {emailRejected && <small className="oanix-contact-block__validation">Correo no válido; no se guardó.</small>}
         </label>
         <label className="oanix-contact-block__field oanix-contact-block__field--wide">
           <span>Organización</span>
-          <input type="text" value={draft.organization} maxLength={MAX_CONTACT_FIELD_LENGTH} disabled={disabled} readOnly={!editing} placeholder="Empresa u organización" onChange={(event) => commit('organization', event.currentTarget.value)} />
+          <input type="text" value={draft.organization} maxLength={MAX_CONTACT_ORGANIZATION_LENGTH} disabled={disabled} readOnly={!editing} placeholder="Empresa u organización" onChange={(event) => commit('organization', event.currentTarget.value, MAX_CONTACT_ORGANIZATION_LENGTH)} />
         </label>
         <label className="oanix-contact-block__field oanix-contact-block__field--wide">
-          <span>Notas</span>
-          <textarea value={draft.notes} maxLength={MAX_CONTACT_FIELD_LENGTH} disabled={disabled} readOnly={!editing} rows={3} placeholder="Notas privadas sobre este contacto…" onChange={(event) => commit('notes', event.currentTarget.value)} />
+          <span className="oanix-contact-block__field-heading">
+            <span>Notas</span>
+            <button
+              type="button"
+              className="oanix-contact-block__notes-expand-button"
+              onClick={() => setNotesExpanded(true)}
+              aria-label="Abrir notas en pantalla completa"
+              title="Abrir notas"
+            >⛶</button>
+          </span>
+          <textarea value={draft.notes} maxLength={MAX_CONTACT_NOTES_LENGTH} disabled={disabled} readOnly={!editing} rows={3} placeholder="Notas privadas sobre este contacto…" onChange={(event) => commit('notes', event.currentTarget.value, MAX_CONTACT_NOTES_LENGTH)} />
         </label>
       </div>
 
-      {(draft.phone.trim() || draft.email.trim()) && <footer className="oanix-contact-block__actions">
+      {(draft.phone.trim() || (draft.email.trim() && isValidContactEmail(draft.email))) && <footer className="oanix-contact-block__actions">
         {draft.phone.trim() && <a href={`tel:${draft.phone.trim()}`} onClick={onActivity}>Llamar</a>}
-        {draft.email.trim() && <a href={`mailto:${draft.email.trim()}`} onClick={onActivity}>Correo</a>}
+        {draft.email.trim() && isValidContactEmail(draft.email) && <a href={`mailto:${draft.email.trim()}`} onClick={onActivity}>Correo</a>}
       </footer>}
     </article>
 
-    {expanded && <div
+    {notesExpanded && <div
       className="oanix-contact-block__fullscreen"
       role="dialog"
       aria-modal="true"
-      aria-label="Contacto en pantalla completa"
+      aria-label="Notas del contacto en pantalla completa"
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget) setExpanded(false)
+        if (event.target === event.currentTarget) setNotesExpanded(false)
       }}
     >
-      <section className="oanix-contact-block__fullscreen-panel">
+      <section className="oanix-contact-block__fullscreen-panel oanix-contact-block__fullscreen-panel--notes">
         <header className="oanix-contact-block__fullscreen-header">
           <div className="oanix-contact-block__fullscreen-title">
             <span className="oanix-contact-block__avatar" aria-hidden="true">{initials}</span>
             <div>
-              <strong>{draft.name.trim() || 'Contacto'}</strong>
-              <small>{draft.organization.trim() || 'Tarjeta privada'}</small>
+              <strong>Notas</strong>
+              <small>{draft.name.trim() || 'Contacto'}</small>
             </div>
           </div>
-          <button type="button" onClick={() => setExpanded(false)} aria-label="Cerrar pantalla completa">✕</button>
+          <button type="button" onClick={() => setNotesExpanded(false)} aria-label="Cerrar notas en pantalla completa">✕</button>
         </header>
-        <div className="oanix-contact-block__fullscreen-content">
-          <div><span>Nombre</span><p>{draft.name.trim() || 'Sin nombre'}</p></div>
-          <div><span>Teléfono</span><p>{draft.phone.trim() || 'Sin teléfono'}</p></div>
-          <div><span>Correo</span><p>{draft.email.trim() || 'Sin correo'}</p></div>
-          <div><span>Organización</span><p>{draft.organization.trim() || 'Sin organización'}</p></div>
-          <div className="is-notes"><span>Notas</span><p>{draft.notes.trim() || 'Sin notas.'}</p></div>
+        <div className="oanix-contact-block__fullscreen-notes">
+          <textarea
+            value={draft.notes}
+            maxLength={MAX_CONTACT_NOTES_LENGTH}
+            disabled={disabled}
+            readOnly={!editing}
+            aria-label="Notas del contacto"
+            placeholder="Notas privadas sobre este contacto…"
+            onChange={(event) => commit('notes', event.currentTarget.value, MAX_CONTACT_NOTES_LENGTH)}
+          />
+          {!editing && <small>Desbloquee la edición del contacto para modificar las notas.</small>}
         </div>
       </section>
     </div>}

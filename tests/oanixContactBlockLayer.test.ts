@@ -7,7 +7,7 @@ import { encodeTextBlock } from '../src/features/editor/textBlockCodec.ts'
 
 function ids(kind: 'text' | 'contact', index: number): string { return `${kind}-${index}` }
 
-test('plain contact insertion splits text and creates an editable private card', async () => {
+test('plain contact insertion splits text and creates an empty editable private card', async () => {
   let saved: EditorSurfaceBlockChangeSet | null = null
   let plainText = 'not-saved'
   const result = await insertOanixContactBlock({
@@ -19,7 +19,7 @@ test('plain contact insertion splits text and creates an editable private card',
   assert.equal(result.status, 'committed')
   if (result.status !== 'committed') throw new Error('unexpected result')
   const contact = result.plan.blocks.map(decodeContactBlock).find(Boolean)
-  assert.equal(contact?.name, 'Nuevo contacto')
+  assert.equal(contact?.name, '')
   assert.deepEqual(saved?.order, ['text-0', 'contact-0', 'text-1'])
   assert.equal(plainText, '')
 })
