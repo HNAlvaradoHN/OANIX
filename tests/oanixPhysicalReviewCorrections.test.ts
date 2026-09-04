@@ -40,13 +40,21 @@ test('code block exposes a fullscreen reading view without changing its stored t
   assert.match(codeCss, /height:100dvh/)
 })
 
-test('contact fields enforce their intended input semantics', () => {
+test('contact fields enforce their intended input semantics without intrusive email feedback', () => {
   assert.match(contact, /inputMode="numeric" pattern="\[0-9\]\*"/)
   assert.match(contact, /placeholder="Número de teléfono"/)
   assert.doesNotMatch(contact, /\+504/)
   assert.match(contact, /handlePhoneChange/)
   assert.match(contact, /isValidContactEmail/)
-  assert.match(contact, /Correo no válido; no se guardó\./)
+  assert.doesNotMatch(contact, /Correo no válido; no se guardó\./)
+  assert.doesNotMatch(contact, /oanix-contact-block__validation/)
+  assert.doesNotMatch(contact, /aria-invalid=/)
+})
+
+test('legacy Nuevo contacto is presented as an empty editable name', () => {
+  assert.match(contact, /const LEGACY_NEW_CONTACT_NAME = 'Nuevo contacto'/)
+  assert.match(contact, /name\.trim\(\) === LEGACY_NEW_CONTACT_NAME \? '' : name/)
+  assert.match(contact, /name: editableContactName\(block\.name\)/)
 })
 
 test('contact fullscreen control belongs only to notes and keeps lock semantics', () => {
