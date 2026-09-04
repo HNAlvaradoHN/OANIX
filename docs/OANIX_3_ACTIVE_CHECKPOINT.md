@@ -176,3 +176,27 @@ Validar primero el ajuste recién cerrado del PR #621: separación visual de Ent
 ## Siguiente acción exacta
 
 Validar físicamente en Android el PR #621. No marcarlo como validado físicamente hasta confirmación del usuario. Después continuar con los demás bloques pendientes.
+
+---
+
+## PR #625 — FLUJO DE FORMATOS Y LIMPIEZA DEL EDITOR
+
+En curso sobre `fix/text-format-flow-clean-2026-09-04` hasta que el último SHA pase todos los gates y sea fusionado a `main`.
+
+Quedó implementado:
+
+- se conserva la posición vertical de la nota al aplicar formatos que refrescan la superficie;
+- Párrafo mantiene renglón de 30 px sin recuadro de foco;
+- H2 usa renglón propio de 42 px y H3 de 36 px, con `line-height` y patrón en la misma cadencia para evitar deriva;
+- Enter normal en H2/H3 termina el encabezado y crea inmediatamente un Párrafo; si el cursor está en medio, el texto restante pasa al nuevo Párrafo;
+- la persistencia continúa detrás de los contratos existentes, sin almacenamiento paralelo.
+
+### Limpieza realizada en #625
+
+Se retiró la implementación visual sustituida que ya no formaba parte del registro activo: `NoteEditor`, su CSS/renglón antiguo, el adaptador plain-text transitorio, la superficie Qwen duplicada, sus rich blocks/CSS y las pruebas acopladas exclusivamente a esas implementaciones. Las pruebas de persistencia y host ahora validan el editor OANIX activo y sus contratos vigentes en lugar de archivos o JSX obsoletos.
+
+Se conserva deliberadamente la compatibilidad necesaria para datos históricos: codecs, políticas de carga/transición, persistencia cifrada, bloques y fallbacks para abrir notas existentes. También se conserva Qwen como revisor independiente de PR porque esa integración no pertenece al editor visual sustituido.
+
+### Validación pendiente de #625
+
+El último SHA del PR debe terminar con OANIX CI, OANIX Android y Qwen en verde antes del merge. Después del merge sigue pendiente validación física en Android para confirmar: nota larga sin salto al inicio, alineación visual de H2/H3 y Enter → Párrafo.

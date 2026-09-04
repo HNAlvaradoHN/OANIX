@@ -14,10 +14,6 @@ const selectedSurface = readFileSync(
   'src/features/editor/implementations/OanixNotesSheetSurface.tsx',
   'utf8',
 )
-const plainTextAdapter = readFileSync(
-  'src/features/editor/implementations/PlainTextEditorSurface.tsx',
-  'utf8',
-)
 
 test('Home depends on the replaceable editor host instead of a concrete sheet implementation', () => {
   assert.match(home, /import \{ EditorSurface \} from '\.\.\/editor\/EditorSurface'/)
@@ -32,7 +28,9 @@ test('the host delegates concrete selection to the editor surface registry and m
   assert.match(host, /from '\.\/editorSurfaceRegistry'/)
   assert.match(host, /const ActiveSurface = lazy\(activeEditorSurface\.load\)/)
   assert.match(host, /<Suspense fallback=\{null\}>/)
-  assert.match(host, /<ActiveSurface \{\.\.\.surfaceProps\} \/>/)
+  assert.match(host, /<ActiveSurface[\s\S]*\{\.\.\.surfaceProps\}[\s\S]*\/>/)
+  assert.match(host, /installOanixTextBehaviorBridge/)
+  assert.match(host, /key=\{behaviorRevision\}/)
   assert.match(host, /activeEditorSurface\.capabilities/)
   assert.doesNotMatch(host, /from '\.\/NoteEditor'/)
   assert.doesNotMatch(host, /from '\.\/implementations\//)
@@ -84,17 +82,5 @@ test('the selected OANIX Notes sheet owns visual mixed editing while storage sta
   assert.match(selectedSurface, /oanix-notes__side-panel/)
   assert.doesNotMatch(selectedSurface, /insertOanixImageAtCursor/)
   assert.doesNotMatch(selectedSurface, /indexedDB|localStorage|sessionStorage/)
-  assert.doesNotMatch(selectedSurface, /QwenRichBlocks|NoteEditor|PlainTextEditorSurface/)
-})
-
-test('the superseded plain-text adapter remains isolated and reusable during transition', () => {
-  assert.match(plainTextAdapter, /import \{ NoteEditor \} from '\.\.\/NoteEditor'/)
-  assert.match(plainTextAdapter, /export function PlainTextEditorSurface\(\{/)
-  assert.match(plainTextAdapter, /\}: EditorSurfaceProps\)/)
-  assert.match(plainTextAdapter, /<NoteEditor/)
-  assert.match(plainTextAdapter, /initialTitle=\{initialTitle\}/)
-  assert.match(plainTextAdapter, /initialText=\{initialText\}/)
-  assert.match(plainTextAdapter, /onRequestSave=\{onRequestSave\}/)
-  assert.match(plainTextAdapter, /onRequestClose=\{onRequestClose\}/)
-  assert.doesNotMatch(plainTextAdapter, /<NoteEditor \{\.\.\.props\}/)
+  assert.doesNotMatch(selectedSurface, /QwenRichBlocks|PlainTextEditorSurface/)
 })
