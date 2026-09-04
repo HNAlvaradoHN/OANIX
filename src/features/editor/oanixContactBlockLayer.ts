@@ -63,7 +63,7 @@ function contactBlock(id: string): EditorSurfaceBlock {
   return encodeContactBlock({
     id,
     kind: CONTACT_BLOCK_KIND,
-    name: 'Nuevo contacto',
+    name: '',
     phone: '',
     email: '',
     organization: '',
