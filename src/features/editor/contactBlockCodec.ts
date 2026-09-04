@@ -1,7 +1,7 @@
 import type { EditorSurfaceBlock, EditorSurfaceBlockValue } from './editorSurfaceContract.ts'
 
 export const CONTACT_BLOCK_KIND = 'contact'
-export const MAX_CONTACT_FIELD_LENGTH = 2_000
+export const MAX_CONTACT_EDIT_LENGTH = 10_000
 
 export interface EditorContactBlock {
   id: string
@@ -14,9 +14,14 @@ export interface EditorContactBlock {
 }
 
 function stringField(value: EditorSurfaceBlockValue | undefined): string | null {
-  return typeof value === 'string' && value.length <= MAX_CONTACT_FIELD_LENGTH ? value : null
+  return typeof value === 'string' ? value : null
 }
 
+/**
+ * Decode follows the persisted contact model exactly: every field must be a string,
+ * but existing values are not rejected merely for being longer than the editor's
+ * input guard. This keeps older/private contact data reopenable without truncation.
+ */
 export function decodeContactBlock(block: EditorSurfaceBlock): EditorContactBlock | null {
   if (block.kind !== CONTACT_BLOCK_KIND) return null
   const name = stringField(block.data.name)
@@ -33,11 +38,11 @@ export function encodeContactBlock(block: EditorContactBlock): EditorSurfaceBloc
     id: block.id,
     kind: CONTACT_BLOCK_KIND,
     data: {
-      name: block.name.slice(0, MAX_CONTACT_FIELD_LENGTH),
-      phone: block.phone.slice(0, MAX_CONTACT_FIELD_LENGTH),
-      email: block.email.slice(0, MAX_CONTACT_FIELD_LENGTH),
-      organization: block.organization.slice(0, MAX_CONTACT_FIELD_LENGTH),
-      notes: block.notes.slice(0, MAX_CONTACT_FIELD_LENGTH),
+      name: block.name,
+      phone: block.phone,
+      email: block.email,
+      organization: block.organization,
+      notes: block.notes,
     },
   }
 }
