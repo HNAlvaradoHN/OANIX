@@ -1,14 +1,16 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
+import { encodeCodeBlock } from '../src/features/editor/codeBlockCodec.ts'
 import { encodeOanixImageElement } from '../src/features/editor/oanixImageElementCodec.ts'
 import { encodeOanixLongTextElement, OANIX_LONG_TEXT_ELEMENT_KIND } from '../src/features/editor/oanixLongTextElementCodec.ts'
 import { hasRenderableOanixMixedContent, projectOanixMixedDocument } from '../src/features/editor/oanixMixedDocumentProjection.ts'
 import { encodeTextBlock } from '../src/features/editor/textBlockCodec.ts'
 
-test('mixed projection preserves persisted order across text, image and long-text nodes', () => {
+test('mixed projection preserves persisted order across text, image, code and long-text nodes', () => {
   const blocks = [
     encodeTextBlock({ id: 'text-a', kind: 'text-segment', text: 'antes' }),
     encodeOanixImageElement({ id: 'image-a', kind: 'oanix-image-element-v1', attachmentId: 'asset-a' }),
+    encodeCodeBlock({ id: 'code-a', kind: 'code', text: 'const n = 1', language: 'javascript' }),
     encodeOanixLongTextElement({
       id: 'long-a',
       kind: OANIX_LONG_TEXT_ELEMENT_KIND,
@@ -21,7 +23,7 @@ test('mixed projection preserves persisted order across text, image and long-tex
   ]
 
   const projected = projectOanixMixedDocument(blocks)
-  assert.deepEqual(projected.map((node) => node.type), ['text', 'image', 'long-text', 'text'])
+  assert.deepEqual(projected.map((node) => node.type), ['text', 'image', 'code', 'long-text', 'text'])
   assert.deepEqual(projected.map((node) => node.block.id), blocks.map((block) => block.id))
   assert.equal(hasRenderableOanixMixedContent([blocks[2]]), true)
 })

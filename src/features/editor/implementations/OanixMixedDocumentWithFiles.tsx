@@ -1,5 +1,7 @@
 import type { EditorSurfaceAttachment, EditorSurfaceBlock } from '../editorSurfaceContract.ts'
+import { decodeCodeBlock, type EditorCodeBlock } from '../codeBlockCodec.ts'
 import { decodeOanixFileGroupElement, type OanixFileGroupElement } from '../oanixFileGroupElementCodec.ts'
+import { OanixCodeBlockCard } from './OanixCodeBlockCard.tsx'
 import { OanixFileGroupCard } from './OanixFileGroupCard.tsx'
 import { OanixMixedDocumentBody } from './OanixMixedDocumentBody.tsx'
 
@@ -15,6 +17,7 @@ interface OanixMixedDocumentWithFilesProps {
   onAddFileGroupFiles: (blockId: string) => void
   onRemoveFileGroupFile: (blockId: string, attachmentId: string) => void | Promise<void>
   onRemoveFileGroup: (blockId: string, attachmentIds: readonly string[]) => void | Promise<void>
+  onRemoveCodeBlock?: (blockId: string) => void | Promise<void>
   onActivity: () => void
   onCompositionStart: () => void
   onCompositionEnd: () => void
@@ -24,6 +27,7 @@ interface OanixMixedDocumentWithFilesProps {
 type Segment =
   | { type: 'mixed'; key: string; blocks: EditorSurfaceBlock[] }
   | { type: 'file-group'; key: string; block: OanixFileGroupElement }
+  | { type: 'code'; key: string; block: EditorCodeBlock }
 
 function segmentDocument(blocks: readonly EditorSurfaceBlock[]): Segment[] {
   const segments: Segment[] = []
@@ -38,12 +42,18 @@ function segmentDocument(blocks: readonly EditorSurfaceBlock[]): Segment[] {
 
   for (const block of blocks) {
     const fileGroup = decodeOanixFileGroupElement(block)
-    if (!fileGroup) {
-      pending.push(block)
+    if (fileGroup) {
+      flush()
+      segments.push({ type: 'file-group', key: fileGroup.id, block: fileGroup })
       continue
     }
-    flush()
-    segments.push({ type: 'file-group', key: fileGroup.id, block: fileGroup })
+    const code = decodeCodeBlock(block)
+    if (code) {
+      flush()
+      segments.push({ type: 'code', key: code.id, block: code })
+      continue
+    }
+    pending.push(block)
   }
   flush()
   return segments
@@ -51,7 +61,7 @@ function segmentDocument(blocks: readonly EditorSurfaceBlock[]): Segment[] {
 
 /**
  * Composition wrapper that keeps the validated image/text renderer untouched while
- * inserting OANIX file-group cards at their ordered block positions.
+ * inserting OANIX file-group and code cards at their ordered block positions.
  */
 export function OanixMixedDocumentWithFiles({
   blocks,
@@ -65,6 +75,7 @@ export function OanixMixedDocumentWithFiles({
   onAddFileGroupFiles,
   onRemoveFileGroupFile,
   onRemoveFileGroup,
+  onRemoveCodeBlock,
   onActivity,
   onCompositionStart,
   onCompositionEnd,
@@ -84,6 +95,20 @@ export function OanixMixedDocumentWithFiles({
           onAddFiles={() => onAddFileGroupFiles(segment.block.id)}
           onRemoveFile={(attachmentId) => onRemoveFileGroupFile(segment.block.id, attachmentId)}
           onRemoveGroup={() => onRemoveFileGroup(segment.block.id, segment.block.attachmentIds)}
+          onError={onError}
+        />
+      }
+
+      if (segment.type === 'code') {
+        return <OanixCodeBlockCard
+          key={segment.key}
+          block={segment.block}
+          disabled={disabled}
+          onChange={onTextBlockChange}
+          onRemove={onRemoveCodeBlock ? () => onRemoveCodeBlock(segment.block.id) : undefined}
+          onActivity={onActivity}
+          onCompositionStart={onCompositionStart}
+          onCompositionEnd={onCompositionEnd}
           onError={onError}
         />
       }
