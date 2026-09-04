@@ -25,6 +25,64 @@
     0 0 12px color-mix(in srgb, var(--accent) 36%, transparent);
 }
 
+/* Block-level text formats stay theme-driven and keep the textarea editing model. */
+.oanix-notes .oanix-mixed-document__text[data-oanix-text-format="paragraph"] {
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.7;
+}
+
+.oanix-notes .oanix-mixed-document__text[data-oanix-text-format="h2"] {
+  min-height: 62px;
+  padding: 5px 0;
+  font-size: clamp(1.45rem, 4.8vw, 1.85rem);
+  font-weight: 820;
+  line-height: 1.24;
+  letter-spacing: -.018em;
+}
+
+.oanix-notes .oanix-mixed-document__text[data-oanix-text-format="h3"] {
+  min-height: 56px;
+  padding: 4px 0;
+  font-size: clamp(1.18rem, 4vw, 1.42rem);
+  font-weight: 760;
+  line-height: 1.32;
+  letter-spacing: -.01em;
+}
+
+.oanix-notes .oanix-mixed-document__text[data-oanix-text-format="quote"] {
+  min-height: 64px;
+  padding: 10px 14px 10px 18px;
+  border-left: 4px solid color-mix(in srgb, var(--accent) 78%, var(--color-text) 22%);
+  border-radius: 0 12px 12px 0;
+  background: color-mix(in srgb, var(--color-surface) 91%, var(--accent) 9%);
+  color: var(--color-text);
+  font-size: 1.02rem;
+  font-style: italic;
+  line-height: 1.62;
+}
+
+.oanix-notes .oanix-mixed-document__text[data-oanix-text-format="list"],
+.oanix-notes .oanix-mixed-document__text[data-oanix-text-format="numbered-list"] {
+  min-height: 48px;
+  padding: 5px 4px 5px 34px;
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1.55;
+}
+
+.oanix-notes .oanix-mixed-document__text[data-oanix-text-format="list"] {
+  background-image: radial-gradient(circle, var(--accent) 0 3.5px, transparent 4px);
+  background-repeat: no-repeat;
+  background-position: 10px 14px;
+  background-size: 8px 8px;
+}
+
+.oanix-notes .oanix-mixed-document__text[data-oanix-text-format]:focus {
+  border-radius: 10px;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
 /*
  * This file is imported by the mobile guard while the surface imports its own
  * stylesheet too. The principal surface CSS still contains legacy mobile title
