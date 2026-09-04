@@ -1,0 +1,178 @@
+name: Temporary Separator Surface Patch
+
+on:
+  push:
+    branches: ['feat/oanix-separator-block-2026-09-04']
+    paths: ['.github/workflows/tmp-separator-surface-patch.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/oanix-separator-block-2026-09-04
+      - name: Apply verified separator wiring
+        shell: python
+        run: |
+          from pathlib import Path
+          path = Path('src/features/editor/implementations/OanixNotesSheetSurface.tsx')
+          text = path.read_text()
+
+          def replace_once(old, new):
+              global text
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'Expected exactly one match, got {count}: {old[:100]!r}')
+              text = text.replace(old, new, 1)
+
+          replace_once(
+              "import { insertOanixContactBlock } from '../oanixContactBlockLayer'\n",
+              "import { insertOanixContactBlock } from '../oanixContactBlockLayer'\nimport { insertOanixSeparatorBlock } from '../oanixSeparatorBlockLayer'\n",
+          )
+          replace_once(
+              "  const [contactBusy, setContactBusy] = useState(false)\n",
+              "  const [contactBusy, setContactBusy] = useState(false)\n  const [separatorBusy, setSeparatorBusy] = useState(false)\n",
+          )
+          replace_once(
+              "    if (saving || imageBusy || fileBusy || codeBusy || checklistBusy || contactBusy || closingRef.current) return",
+              "    if (saving || imageBusy || fileBusy || codeBusy || checklistBusy || contactBusy || separatorBusy || closingRef.current) return",
+          )
+
+          marker = "  function handlePlainPaste(event: ReactClipboardEvent<HTMLTextAreaElement>) {"
+          insertion = """  async function insertSeparatorBlockFromMenu() {
+    if (!metadataReady || !loadBlocks || !onRequestBlockSave || separatorBusy || contactBusy || checklistBusy || codeBusy || imageBusy || fileBusy) {
+      setIntegrationError('Separador todavía no está disponible en el estado actual de esta nota.')
+      return
+    }
+    setPanelOpen(false)
+    setSeparatorBusy(true)
+    setIntegrationError('')
+    clearIdleTimer()
+    try {
+      if (saveInFlightRef.current) await saveInFlightRef.current
+      if (documentMode === 'plain') {
+        const textarea = bodyRef.current
+        const text = textarea?.value ?? initialText
+        const title = titleRef.current?.value ?? initialTitle
+        const existingBlocks = await loadBlocks()
+        const result = await insertOanixSeparatorBlock({
+          mode: 'plain',
+          title,
+          text,
+          cursorOffset: lastPlainCursorRef.current,
+          existingBlocks,
+          saveBlockChanges: onRequestBlockSave,
+          savePlainSnapshot: onRequestSave,
+        })
+        if (result.status !== 'committed') {
+          setIntegrationError(`No se pudo insertar el separador de forma segura (${result.status}).`)
+          return
+        }
+        pendingMixedUpsertsRef.current.clear()
+        if (textarea) textarea.value = ''
+        committedSnapshotRef.current = { title, text: '' }
+        setMixedBlocks(result.plan.blocks)
+        setDocumentMode('mixed')
+        markClean()
+        onActivity?.()
+        focusAfterInsertedElement(result.plan.separatorBlockId, result.plan.afterTextBlockId)
+        return
+      }
+
+      const target = pendingMixedImageTargetRef.current ?? fallbackMixedCursor()
+      pendingMixedImageTargetRef.current = null
+      if (!target) {
+        setIntegrationError('Coloca el cursor en un tramo de texto antes de insertar el separador.')
+        return
+      }
+      if (dirtyRef.current && !(await saveCurrentSnapshot())) {
+        setIntegrationError('No se pudo guardar el contenido pendiente antes de insertar el separador.')
+        return
+      }
+      const confirmedBlocks = await loadBlocks()
+      const result = await insertOanixSeparatorBlock({
+        mode: 'mixed',
+        blocks: confirmedBlocks,
+        targetTextBlockId: target.blockId,
+        cursorOffset: target.cursorOffset,
+        saveBlockChanges: onRequestBlockSave,
+      })
+      if (result.status !== 'committed') {
+        setIntegrationError(`No se pudo insertar el separador de forma segura (${result.status}).`)
+        return
+      }
+      pendingMixedUpsertsRef.current.clear()
+      setMixedBlocks(result.plan.blocks)
+      markClean()
+      onActivity?.()
+      focusAfterInsertedElement(result.plan.separatorBlockId, result.plan.afterTextBlockId)
+    } catch {
+      setIntegrationError('No se pudo insertar el separador de forma segura.')
+    } finally {
+      setSeparatorBusy(false)
+      if (dirtyRef.current) armAutosaveTimer()
+    }
+  }
+
+  async function removeSeparatorBlock(blockId: string) {
+    if (!onRequestBlockSave || separatorBusy || contactBusy || checklistBusy || codeBusy || imageBusy || fileBusy) return
+    setSeparatorBusy(true)
+    setIntegrationError('')
+    clearIdleTimer()
+    try {
+      if (saveInFlightRef.current) await saveInFlightRef.current
+      if (dirtyRef.current && !(await saveCurrentSnapshot())) {
+        setIntegrationError('No se pudo guardar el contenido pendiente antes de eliminar el separador.')
+        return
+      }
+      const nextBlocks = mixedBlocks.filter((block) => block.id !== blockId)
+      const removed = await onRequestBlockSave({ deletes: [blockId], order: nextBlocks.map((block) => block.id) })
+      if (!removed) {
+        setIntegrationError('No se pudo eliminar el separador.')
+        return
+      }
+      pendingMixedUpsertsRef.current.delete(blockId)
+      setMixedBlocks(nextBlocks)
+      markClean()
+      onActivity?.()
+    } catch {
+      setIntegrationError('No se pudo eliminar el separador.')
+    } finally {
+      setSeparatorBusy(false)
+      if (dirtyRef.current) armAutosaveTimer()
+    }
+  }
+
+"""
+          replace_once(marker, insertion + marker)
+
+          replace_once(
+              "  const editingDisabled = saving || closing || imageBusy || fileBusy || codeBusy || checklistBusy || contactBusy\n",
+              "  const editingDisabled = saving || closing || imageBusy || fileBusy || codeBusy || checklistBusy || contactBusy || separatorBusy\n",
+          )
+          replace_once(
+              "  const status = saving || saveInFlightRef.current || showImageProgress || fileBusy || codeBusy || checklistBusy || contactBusy ? 'saving' : dirty ? 'unsaved' : 'saved'\n  const statusLabel = contactBusy\n    ? 'Guardando contacto…'",
+              "  const status = saving || saveInFlightRef.current || showImageProgress || fileBusy || codeBusy || checklistBusy || contactBusy || separatorBusy ? 'saving' : dirty ? 'unsaved' : 'saved'\n  const statusLabel = separatorBusy\n    ? 'Guardando separador…'\n    : contactBusy\n      ? 'Guardando contacto…'",
+          )
+          replace_once(
+              "                  onRemoveContactBlock={removeContactBlock}\n",
+              "                  onRemoveContactBlock={removeContactBlock}\n                  onRemoveSeparatorBlock={removeSeparatorBlock}\n",
+          )
+          replace_once(
+              "            if (tool === 'contact') void insertContactBlockFromMenu()\n",
+              "            if (tool === 'contact') void insertContactBlockFromMenu()\n            if (tool === 'separator') void insertSeparatorBlockFromMenu()\n",
+          )
+
+          path.write_text(text)
+      - name: Commit patched surface
+        run: |
+          git config user.name "OANIX automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add src/features/editor/implementations/OanixNotesSheetSurface.tsx
+          git diff --cached --check
+          git commit -m "feat: wire separator into OANIX Notes surface"
+          git push origin HEAD:feat/oanix-separator-block-2026-09-04
