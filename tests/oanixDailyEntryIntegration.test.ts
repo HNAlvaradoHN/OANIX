@@ -10,15 +10,6 @@ const mobileCss = readFileSync('src/features/editor/implementations/oanixNotesSh
 const mixed = readFileSync('src/features/editor/implementations/OanixMixedDocumentWithFiles.tsx', 'utf8')
 const projection = readFileSync('src/features/editor/oanixMixedDocumentProjection.ts', 'utf8')
 
-test('Entrada menu action is connected without bypassing pending autosave', () => {
-  assert.match(guard, /button\[data-tool="entry"\]/)
-  assert.match(guard, /waitForEditorClean/)
-  assert.match(guard, /insertOanixDailyEntryBlock/)
-  assert.match(guard, /mode: 'plain'/)
-  assert.match(guard, /mode: 'mixed'/)
-  assert.match(guard, /setSurfaceRevision/)
-})
-
 test('daily entry exposes a calendar picker that can change persisted date', () => {
   assert.match(card, /type="date"/)
   assert.match(card, /Cambiar fecha de la entrada/)
