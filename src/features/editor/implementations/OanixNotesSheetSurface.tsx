@@ -191,6 +191,15 @@ export function OanixNotesSheetSurface({
     if (target) pendingMixedImageTargetRef.current = target
   }
 
+  function resolveMixedInsertionTarget(): MixedCursorTarget | null {
+    const current = currentMixedCursor()
+    if (current) {
+      rememberMixedCursor(current.blockId, current.cursorOffset)
+      return current
+    }
+    return pendingMixedImageTargetRef.current ?? fallbackMixedCursor()
+  }
+
   function clearIdleTimer() {
     if (idleTimerRef.current === null) return
     window.clearTimeout(idleTimerRef.current)
@@ -592,7 +601,7 @@ export function OanixNotesSheetSurface({
       pendingImageCursorRef.current = lastPlainCursorRef.current
       pendingMixedImageTargetRef.current = null
     } else {
-      const target = currentMixedCursor() ?? fallbackMixedCursor()
+      const target = resolveMixedInsertionTarget()
       if (!target) {
         setIntegrationError('Coloca el cursor en un tramo de texto antes de insertar la imagen.')
         return
@@ -797,7 +806,7 @@ export function OanixNotesSheetSurface({
         rememberPlainCursor()
         pendingFileCursorRef.current = lastPlainCursorRef.current
       } else {
-        const target = currentMixedCursor() ?? fallbackMixedCursor()
+        const target = resolveMixedInsertionTarget()
         if (!target) {
           setIntegrationError('Coloca el cursor en un tramo de texto antes de insertar la tarjeta de archivos.')
           return
@@ -809,7 +818,6 @@ export function OanixNotesSheetSurface({
     setPanelOpen(false)
     fileInputRef.current?.click()
   }
-
 
   async function insertCodeBlockFromMenu() {
     if (!metadataReady || !loadBlocks || !onRequestBlockSave || codeBusy || imageBusy || fileBusy) {
@@ -856,7 +864,7 @@ export function OanixNotesSheetSurface({
         return
       }
 
-      const target = pendingMixedImageTargetRef.current ?? fallbackMixedCursor()
+      const target = resolveMixedInsertionTarget()
       pendingMixedImageTargetRef.current = null
       if (!target) {
         setIntegrationError('Coloca el cursor en un tramo de texto antes de insertar el bloque de código.')
@@ -929,7 +937,6 @@ export function OanixNotesSheetSurface({
     }
   }
 
-
   async function insertChecklistBlockFromMenu() {
     if (!metadataReady || !loadBlocks || !onRequestBlockSave || checklistBusy || codeBusy || imageBusy || fileBusy) {
       setIntegrationError('Checklist todavía no está disponible en el estado actual de esta nota.')
@@ -975,7 +982,7 @@ export function OanixNotesSheetSurface({
         return
       }
 
-      const target = pendingMixedImageTargetRef.current ?? fallbackMixedCursor()
+      const target = resolveMixedInsertionTarget()
       pendingMixedImageTargetRef.current = null
       if (!target) {
         setIntegrationError('Coloca el cursor en un tramo de texto antes de insertar la checklist.')
@@ -1048,7 +1055,6 @@ export function OanixNotesSheetSurface({
     }
   }
 
-
   async function insertContactBlockFromMenu() {
     if (!metadataReady || !loadBlocks || !onRequestBlockSave || contactBusy || checklistBusy || codeBusy || imageBusy || fileBusy) {
       setIntegrationError('Contacto todavía no está disponible en el estado actual de esta nota.')
@@ -1083,7 +1089,7 @@ export function OanixNotesSheetSurface({
         focusAfterInsertedElement(result.plan.contactBlockId, result.plan.afterTextBlockId)
         return
       }
-      const target = pendingMixedImageTargetRef.current ?? fallbackMixedCursor()
+      const target = resolveMixedInsertionTarget()
       pendingMixedImageTargetRef.current = null
       if (!target) {
         setIntegrationError('Coloca el cursor en un tramo de texto antes de insertar el contacto.')
@@ -1184,7 +1190,7 @@ export function OanixNotesSheetSurface({
         return
       }
 
-      const target = pendingMixedImageTargetRef.current ?? fallbackMixedCursor()
+      const target = resolveMixedInsertionTarget()
       pendingMixedImageTargetRef.current = null
       if (!target) {
         setIntegrationError('Coloca el cursor en un tramo de texto antes de insertar el separador.')
