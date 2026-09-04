@@ -53,6 +53,17 @@ test('all add-content tools suppress automatic soft-keyboard refocus until an ex
   assert.doesNotMatch(guard, /oanix-daily-entry__title'\)\?\.focus/)
 })
 
+test('daily entry exposes deletion and removes its persisted block plus order entry', () => {
+  assert.match(card, /Eliminar entrada/)
+  assert.match(card, /window\.confirm\('¿Eliminar esta entrada\?'\)/)
+  assert.match(card, /oanix-daily-entry-remove/)
+  assert.match(guard, /handleDailyEntryRemove/)
+  assert.match(guard, /block\.kind === 'dailyEntry'/)
+  assert.match(guard, /deletes: \[blockId\]/)
+  assert.match(guard, /order: nextBlocks\.map\(\(block\) => block\.id\)/)
+  assert.match(guard, /setSurfaceRevision/)
+})
+
 test('mixed document projection and renderer recognize daily entries', () => {
   assert.match(projection, /type: 'daily-entry'/)
   assert.match(projection, /decodeDailyEntryBlock/)
