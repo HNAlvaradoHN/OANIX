@@ -45,3 +45,26 @@ export async function flushOanixTextLineEditors(noteId: string) {
   }))
   return results.every(Boolean)
 }
+
+export interface OanixTextLineSelection {
+  noteId: string
+  blockId: string
+  selectionStart: number
+  selectionEnd: number
+}
+
+let lastTextLineSelection: OanixTextLineSelection | null = null
+
+export function rememberOanixTextLineSelection(selection: OanixTextLineSelection) {
+  lastTextLineSelection = selection
+}
+
+export function readOanixTextLineSelection(noteId: string) {
+  return lastTextLineSelection?.noteId === noteId ? lastTextLineSelection : null
+}
+
+export function clearOanixTextLineSelection(noteId: string, blockId?: string) {
+  if (!lastTextLineSelection || lastTextLineSelection.noteId !== noteId) return
+  if (blockId && lastTextLineSelection.blockId !== blockId) return
+  lastTextLineSelection = null
+}
