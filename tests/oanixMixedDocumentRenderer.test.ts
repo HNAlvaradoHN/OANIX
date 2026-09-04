@@ -90,5 +90,5 @@ test('mobile caret guard follows dynamically rendered mixed text without imposin
   assert.match(guard, /editor\.addEventListener\('beforeinput'/)
   assert.match(guard, /classList\.contains\('oanix-notes__body'\)/)
   assert.match(guard, /if \(!textarea\.classList\.contains\('oanix-notes__body'\)\) return/)
-  assert.doesNotMatch(guard, /querySelector<HTMLTextAreaElement>\('\.oanix-notes__body'\)/)
+  assert.match(guard, /const active = document\.activeElement[\s\S]*return isGuardedTextarea\(active\) && editor\.contains\(active\) \? active : null/)
 })
