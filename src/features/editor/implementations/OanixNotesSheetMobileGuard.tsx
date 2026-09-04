@@ -8,12 +8,23 @@ const TOP_SAFE_GAP = 18
 const BOTTOM_SAFE_GAP = 72
 const BODY_MIN_HEIGHT = 280
 const ENTRY_SAVE_WAIT_MS = 7_000
+const ADD_CONTENT_TOOLS = new Set(['entry', 'image', 'files', 'code', 'checklist', 'contact', 'separator'])
 
 type MixedCursorTarget = { blockId: string; cursorOffset: number }
 
 function isGuardedTextarea(target: EventTarget | null): target is HTMLTextAreaElement {
   return target instanceof HTMLTextAreaElement
     && (target.classList.contains('oanix-notes__body') || target.classList.contains('oanix-mixed-document__text'))
+}
+
+function isSoftKeyboardEditable(target: EventTarget | null): target is HTMLElement {
+  if (!(target instanceof HTMLElement)) return false
+  if (target instanceof HTMLTextAreaElement) return true
+  if (target instanceof HTMLInputElement) {
+    const type = target.type.toLowerCase()
+    return !['button', 'checkbox', 'color', 'date', 'file', 'hidden', 'image', 'radio', 'range', 'reset', 'submit'].includes(type)
+  }
+  return target.isContentEditable || target.dataset.editorLocalEditable === 'true'
 }
 
 function getCaretTop(textarea: HTMLTextAreaElement): number {
@@ -125,7 +136,8 @@ export function OanixNotesSheetMobileGuard(props: EditorSurfaceProps) {
   const entryBusyRef = useRef(false)
   const lastPlainCursorRef = useRef<number | null>(null)
   const lastMixedCursorRef = useRef<MixedCursorTarget | null>(null)
-  const pendingEntryFocusRef = useRef<string | null>(null)
+  const pendingEntryRevealRef = useRef<string | null>(null)
+  const suppressToolKeyboardRef = useRef(false)
 
   useEffect(() => {
     const editor = document.querySelector<HTMLElement>(`.oanix-notes[data-note-id="${CSS.escape(props.noteId)}"]`)
@@ -263,7 +275,7 @@ export function OanixNotesSheetMobileGuard(props: EditorSurfaceProps) {
             setEntryError(`No se pudo insertar la entrada de forma segura (${result.status}).`)
             return
           }
-          pendingEntryFocusRef.current = result.plan.dailyEntryBlockId
+          pendingEntryRevealRef.current = result.plan.dailyEntryBlockId
         } else {
           let target = lastMixedCursorRef.current
           if (!target) {
@@ -287,7 +299,7 @@ export function OanixNotesSheetMobileGuard(props: EditorSurfaceProps) {
             setEntryError(`No se pudo insertar la entrada de forma segura (${result.status}).`)
             return
           }
-          pendingEntryFocusRef.current = result.plan.dailyEntryBlockId
+          pendingEntryRevealRef.current = result.plan.dailyEntryBlockId
         }
 
         props.onActivity?.()
@@ -328,14 +340,60 @@ export function OanixNotesSheetMobileGuard(props: EditorSurfaceProps) {
   }, [props])
 
   useEffect(() => {
-    const blockId = pendingEntryFocusRef.current
+    const findEditor = () => document.querySelector<HTMLElement>(`.oanix-notes[data-note-id="${CSS.escape(props.noteId)}"]`)
+
+    const handleToolClickCapture = (event: MouseEvent) => {
+      const target = event.target
+      if (!(target instanceof Element)) return
+      const button = target.closest<HTMLButtonElement>('button[data-tool]')
+      const tool = button?.dataset.tool ?? ''
+      const editor = findEditor()
+      if (!button || !ADD_CONTENT_TOOLS.has(tool) || !editor || !editor.contains(button) || button.disabled) return
+
+      suppressToolKeyboardRef.current = true
+      const active = document.activeElement
+      if (isSoftKeyboardEditable(active) && editor.contains(active)) active.blur()
+    }
+
+    const handlePointerDownCapture = (event: PointerEvent) => {
+      if (!suppressToolKeyboardRef.current || !isSoftKeyboardEditable(event.target)) return
+      const editor = findEditor()
+      if (editor?.contains(event.target)) suppressToolKeyboardRef.current = false
+    }
+
+    const handleKeyDownCapture = (event: KeyboardEvent) => {
+      if (!suppressToolKeyboardRef.current || (event.key !== 'Tab' && event.key !== 'Enter')) return
+      const editor = findEditor()
+      if (editor?.contains(event.target as Node)) suppressToolKeyboardRef.current = false
+    }
+
+    const handleFocusInCapture = (event: FocusEvent) => {
+      if (!suppressToolKeyboardRef.current || !isSoftKeyboardEditable(event.target)) return
+      const editor = findEditor()
+      if (!editor || !editor.contains(event.target)) return
+      event.target.blur()
+    }
+
+    document.addEventListener('click', handleToolClickCapture, true)
+    document.addEventListener('pointerdown', handlePointerDownCapture, true)
+    document.addEventListener('keydown', handleKeyDownCapture, true)
+    document.addEventListener('focusin', handleFocusInCapture, true)
+    return () => {
+      document.removeEventListener('click', handleToolClickCapture, true)
+      document.removeEventListener('pointerdown', handlePointerDownCapture, true)
+      document.removeEventListener('keydown', handleKeyDownCapture, true)
+      document.removeEventListener('focusin', handleFocusInCapture, true)
+    }
+  }, [props.noteId])
+
+  useEffect(() => {
+    const blockId = pendingEntryRevealRef.current
     if (!blockId) return
-    pendingEntryFocusRef.current = null
+    pendingEntryRevealRef.current = null
     window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
       const editor = document.querySelector<HTMLElement>(`.oanix-notes[data-note-id="${CSS.escape(props.noteId)}"]`)
       const entry = editor?.querySelector<HTMLElement>(`[data-oanix-element-id="${CSS.escape(blockId)}"]`)
       entry?.scrollIntoView({ block: 'center' })
-      entry?.querySelector<HTMLInputElement>('.oanix-daily-entry__title')?.focus({ preventScroll: true })
     }))
   }, [props.noteId, surfaceRevision])
 
