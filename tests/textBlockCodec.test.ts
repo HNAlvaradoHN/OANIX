@@ -13,7 +13,7 @@ const encoded = encodeTextBlock({
   text: 'Hola\nOANIX',
 })
 
-test('text segment codec round-trips plain text only', () => {
+test('paragraph encoding stays compact while decoding exposes the canonical paragraph format', () => {
   assert.deepEqual(encoded, {
     id: 'text-1',
     kind: TEXT_BLOCK_KIND,
@@ -23,6 +23,7 @@ test('text segment codec round-trips plain text only', () => {
     id: 'text-1',
     kind: TEXT_BLOCK_KIND,
     text: 'Hola\nOANIX',
+    format: 'paragraph',
   })
 })
 
