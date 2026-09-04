@@ -10,24 +10,77 @@ Fecha: 2026-09-04
 - **Imágenes**: cerrado y validado físicamente.
 - **Archivos**: cerrado técnicamente; validación física pendiente.
 - **Código**: cerrado técnicamente; validación física pendiente.
-- **Checklist**: cerrado técnicamente; validación física pendiente.
+- **Checklist**: cerrado técnicamente con corrección de contraste por tema; validación física pendiente.
 - **Contacto**: cerrado técnicamente con los ajustes más recientes; validación física pendiente.
 - **Separador**: cerrado técnicamente; validación física pendiente.
-- **Entrada**: cerrado técnicamente con ajuste visual/tema/teclado; validación física pendiente.
+- **Entrada**: cerrado técnicamente con marco, calendario, eliminación, preservación de tema y política de teclado; validación física pendiente.
 
-## AJUSTE MÁS RECIENTE — ENTRADA, TEMAS Y TECLADO
+## AJUSTE MÁS RECIENTE — CONTRASTE DE CHECKLIST Y PRESERVACIÓN DE TEMA
+
+Se cerró técnicamente el PR #620 después de detectar en validación física que **Checklist** conservaba una superficie clara dentro de temas oscuros y que el remount usado por **Entrada** podía devolver la hoja al tema claro.
+
+Quedó implementado:
+
+- Checklist dejó de depender de las variables antiguas `--oanix-text` y `--oanix-sheet`, cuyos fallbacks producían fondo claro y texto de bajo contraste en temas oscuros.
+- Checklist ahora deriva superficie, texto, texto secundario y placeholder de `--color-surface`, `--color-text`, `--color-text-secondary` y `--color-placeholder` del tema activo.
+- Encabezado, filas, controles, placeholder y pie de Checklist se adaptan al tema seleccionado.
+- Entrada captura el modo visual y el tema exacto antes del remount requerido al insertar o eliminar una Entrada.
+- Después del remount se restauran el modo y el tema seleccionados, evitando que una inserción o eliminación de Entrada cambie visualmente la hoja a Claro.
+- La política común de no reabrir automáticamente el teclado al usar `Añadir contenido` se mantiene intacta.
+- Se añadieron regresiones para impedir volver a usar las variables antiguas de Checklist y para exigir preservación del tema durante el remount de Entrada.
+
+### PR, head, gates y merge
+
+- PR **#620 — `fix: corrige contraste de Checklist y conserva tema al añadir Entrada`**.
+- Head final: `fd83d421a019c1557f60c49dc68cc589456a4af7`.
+- OANIX CI #2646: **success**.
+- OANIX Android #1998: **success**.
+- Qwen Independent PR Review #918: **success**.
+- Merge squash a `main`: `2cfd3b8305b86c3fcebe9c9ce5d5011ae3e978c8`.
+
+### Validación física pendiente — ajuste #620
+
+Comprobar manualmente en Android:
+
+- Checklist en Claro, Crema, Sepia, Oscuro, Medianoche, Bosque, Rosa y Lavanda, verificando que texto, fondo, botones y placeholder tengan contraste legible;
+- seleccionar un tema distinto de Claro, insertar Entrada y confirmar que el tema no cambia;
+- eliminar una Entrada y confirmar que el tema tampoco cambia;
+- confirmar que el teclado continúa sin reaparecer automáticamente al añadir contenido.
+
+No marcar esta validación física como completada hasta confirmación del usuario.
+
+## ENTRADA — ELIMINACIÓN DURABLE
+
+Se cerró técnicamente el PR #619 para completar la regla de producto: **si un elemento se puede añadir, también debe existir una vía segura y persistente para quitarlo**.
+
+Quedó implementado:
+
+- Entrada muestra `Eliminar entrada`.
+- Pide confirmación antes de borrar.
+- Espera a que no existan cambios pendientes sin guardar.
+- Elimina el bloque `dailyEntry` persistido y actualiza el orden del documento.
+- Después de borrar remonta la superficie para que desaparezca inmediatamente y no reaparezca al cerrar/reabrir.
+
+### PR, head, gates y merge
+
+- PR **#619 — `fix: permite eliminar Entrada de forma durable`**.
+- Head final: `34a90a381f43969d203ca985775710f4f8eea98a`.
+- OANIX CI #2643: **success**.
+- OANIX Android #1995: **success**.
+- Qwen Independent PR Review #917: **success**.
+- Merge squash a `main`: `e0a4d8227e6375b62e510dd61ce73b141071bdc0`.
+
+## ENTRADA, TEMAS Y TECLADO — PR #618
 
 Se cerró técnicamente la corrección solicitada durante la revisión física de **Entrada** mediante el PR #618.
 
 Quedó implementado:
 
-- Entrada ahora se presenta como tarjeta/marco independiente de la hoja, con borde, radio, fondo y sombra propios.
-- Sus colores se derivan de `--color-surface` y `--color-text`, conservando contraste en temas claros y oscuros y evitando depender de una variable específica del texto de la hoja.
-- Título, contenido, placeholders y líneas internas mantienen contraste usando el tema activo.
+- Entrada se presenta como tarjeta/marco independiente de la hoja, con borde, radio, fondo y sombra propios.
+- Sus colores se derivan de `--color-surface` y `--color-text`.
 - Se estableció como regla común para `Añadir contenido` que insertar **Entrada, Imagen, Archivos, Código, Checklist, Contacto o Separador** no reactive automáticamente el teclado.
 - Tras una inserción, el foco editable se suprime hasta que el usuario toca explícitamente un campo donde quiera escribir.
 - Entrada conserva el desplazamiento para mostrar el bloque recién insertado, pero ya no enfoca automáticamente el título.
-- Se amplió la prueba de integración para cubrir el marco/tema y la política común de no reabrir el teclado.
 
 ### PR, head, gates y merge
 
@@ -38,18 +91,6 @@ Quedó implementado:
 - Qwen Independent PR Review #916: **success**.
 - Merge squash a `main`: `694737417ef82966dc3e5b943bb9486dd884f661`.
 
-### Validación física pendiente — ajuste #618
-
-Comprobar manualmente en Android:
-
-- Entrada se percibe como tarjeta/marco independiente de la hoja;
-- Entrada se mantiene legible y con contraste correcto en tema claro y oscuro;
-- con el teclado abierto, insertar Entrada, Imagen, Archivos, Código, Checklist, Contacto y Separador y confirmar que el teclado se cierra/no reaparece;
-- confirmar que el teclado solo vuelve cuando el usuario toca explícitamente un campo editable;
-- confirmar que Entrada sigue desplazándose a la zona insertada sin enfocar automáticamente el título.
-
-No marcar esta validación física como completada hasta confirmación del usuario.
-
 ## ENTRADA — IMPLEMENTACIÓN BASE CERRADA
 
 Se cerró técnicamente la opción **Entrada** del menú de OANIX Notes mediante el PR #617.
@@ -59,12 +100,9 @@ Quedó implementado:
 - `Añadir contenido -> Entrada` inserta el bloque en la posición guardada del cursor, tanto desde nota plain como mixed.
 - La entrada usa fecha local automática del dispositivo en formato persistido `YYYY-MM-DD`, sin conversión UTC.
 - El icono de calendario y la fecha visible son tocables y abren el selector de fecha.
-- Se puede cambiar la fecha de una entrada a una fecha pasada o futura; el cambio afecta únicamente ese bloque y queda persistido.
+- Se puede cambiar la fecha a una fecha pasada o futura y el cambio queda persistido solo en ese bloque.
 - Cada Entrada dispone de título opcional y contenido editable dentro de una isla atómica independiente.
 - El bloque se reconoce y reconstruye al cerrar y reabrir la nota.
-- La inserción espera el estado guardado real del editor cuando existen cambios pendientes para evitar perder texto al reconstruir la superficie.
-- Se añadieron pruebas de codec, inserción plain/mixed, rollback transaccional, calendario, atomicidad, renderer y proyección.
-- Durante el primer pase de CI se detectó una aserción estática antigua demasiado amplia en el guard móvil; se corrigió la prueba para validar la regla real sin bloquear la localización legítima del textarea plain requerida por Entrada.
 
 ### PR, head, gates y merge
 
@@ -74,19 +112,6 @@ Quedó implementado:
 - OANIX Android #1989: **success**.
 - Qwen Independent PR Review #915: **success**.
 - Merge squash a `main`: `7aecaf0357a2cc9af12eee96244849b0549f3f47`.
-
-### Validación física pendiente — Entrada
-
-Comprobar manualmente en Android:
-
-- colocar el cursor en medio de texto y tocar Entrada;
-- confirmar que aparece exactamente allí y toma la fecha local del día;
-- tocar el icono o la fecha y cambiarla a una fecha pasada y luego futura;
-- confirmar que la fecha elegida persiste solo en esa entrada;
-- escribir título opcional y contenido, cerrar/reabrir y verificar persistencia;
-- repetir la inserción dentro de una nota mixed con otros bloques.
-
-No marcar Entrada como validada físicamente hasta confirmación del usuario.
 
 ## CONTACTO — AJUSTES TÉCNICOS CERRADOS, VALIDACIÓN FÍSICA PENDIENTE
 
@@ -111,8 +136,8 @@ No marcar Entrada como validada físicamente hasta confirmación del usuario.
 
 ## Validación física pendiente — orden recomendado
 
-Validar primero el ajuste recién cerrado de **Entrada + temas + teclado global de añadidos** y los ajustes recientes de **Contacto**. Después continuar con Archivos, Código, Checklist y Separador, y finalmente una nota combinada con texto + imagen + archivos + código + checklist + contacto + separador + entrada; cerrar, reabrir, editar y volver a cerrar.
+Validar primero el ajuste recién cerrado del PR #620: contraste de Checklist en todos los temas y preservación de tema al insertar/eliminar Entrada. En la misma pasada comprobar eliminación durable de Entrada (#619) y la política de teclado (#618). Después continuar con Contacto, Archivos, Código, Checklist y Separador, y finalmente una nota combinada con texto + imagen + archivos + código + checklist + contacto + separador + entrada; cerrar, reabrir, editar y volver a cerrar.
 
 ## Siguiente acción exacta
 
-Validar físicamente en Android el PR #618: marco independiente de Entrada, contraste correcto en tema claro/oscuro y teclado que no reaparece automáticamente al insertar cualquiera de los elementos de `Añadir contenido`. No marcar esta validación física como completada hasta confirmación del usuario. Después continuar con los ajustes físicos pendientes de Contacto y los demás bloques.
+Validar físicamente en Android el PR #620. No marcarlo como validado físicamente hasta confirmación del usuario. Después continuar con los demás bloques pendientes.
