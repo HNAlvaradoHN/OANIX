@@ -63,8 +63,6 @@ export function OanixContactBlockCard({ block, disabled, onChange, onRemove, onA
     }
   }
 
-  const fieldReadOnly = disabled || !editing
-
   return <article
     className="oanix-contact-block"
     data-oanix-element-id={block.id}
