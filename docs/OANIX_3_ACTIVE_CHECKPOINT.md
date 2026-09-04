@@ -12,56 +12,69 @@ Fecha: 2026-09-04
 - **Código**: cerrado técnicamente; validación física pendiente.
 - **Checklist**: cerrado técnicamente; validación física pendiente.
 - **Contacto**: cerrado técnicamente; validación física pendiente.
+- **Separador**: cerrado técnicamente; validación física pendiente.
 
 ## ÚLTIMO TRABAJO REALIZADO
 
-Se cerró técnicamente **Contacto** mediante el PR #611, con una tarjeta privada autocontenida que no depende de permisos de la agenda del dispositivo para persistir ni reabrirse.
+Se cerró técnicamente **Separador** mediante el PR #612. Con este merge quedó completada la secuencia técnica solicitada de bloques `Archivos -> Código -> Checklist -> Contacto -> Separador` sin dejar ningún bloque de esa secuencia a medias.
 
-### Contacto — CIERRE TÉCNICO
+### Separador — CIERRE TÉCNICO
 
 Quedó implementado:
 
-- `Añadir contenido -> Contacto` inserta en la posición del cursor desde notas plain y mixed.
+- `Añadir contenido -> Separador` inserta en la posición del cursor desde notas plain y mixed.
+- Codec mínimo `separatorBlockCodec`: el bloque persiste solo `id`, `kind = separator` y `data: {}`; no guarda contenido de usuario ni assets.
 - Transición plain -> mixed transaccional con rollback si falla el snapshot plain.
 - Inserción mixed guarda primero contenido pendiente y trabaja sobre bloques confirmados.
-- Campos persistidos: nombre, teléfono, correo, organización y notas.
-- Edición integrada al autosave genérico de bloques.
-- Acciones opcionales `Llamar` (`tel:`) y `Correo` (`mailto:`) cuando existen esos datos.
-- Eliminación confirmada y durable de la tarjeta completa.
-- Reapertura mediante reconocimiento de `contact` como nodo renderizable del documento mixed.
-- Estado `contactBusy` integrado al bloqueo visual durante operaciones estructurales.
-- Persistencia básica independiente de permisos nativos/contactos del teléfono.
-- Se preserva compatibilidad de lectura: valores persistidos existentes no se rechazan por superar el límite de edición del UI.
-- No se modificó la lógica interna cerrada de Imágenes, Archivos, Código ni Checklist.
+- Render visual a ancho completo, responsive y compatible con los temas actuales.
+- Botón de eliminación con confirmación.
+- Eliminación durable: actualiza `deletes` y el orden persistido del documento antes de actualizar la UI.
+- Reapertura mediante reconocimiento de `separator` como nodo renderizable del documento mixed.
+- Estado `separatorBusy` integrado al cierre, bloqueo visual y estado de guardado.
+- No se modificó la lógica interna cerrada de Imágenes, Archivos, Código, Checklist ni Contacto; solo wiring/composición mínimo.
+- La transformación puntual de `OanixNotesSheetSurface.tsx` se aplicó con verificaciones exactas y los artefactos temporales usados para esa transformación fueron eliminados antes del PR; no aparecen en el diff final.
 
 ### PR, head y merge
 
-- PR: **#611 — `feat: tarjeta de contacto en OANIX Notes`**.
-- Head final validado: `290429be66345047a134fec458ddd685e745b97f`.
-- Merge a `main`: `20cb50dddc5f74a82a8db20abebe76b1814b5b2c`.
+- PR: **#612 — `feat: separador estructural en OANIX Notes`**.
+- Head final validado: `69ff6892bb0819a8731a349cc02b0339f971b76d`.
+- Merge a `main`: `fefce0b8f6209692ba607ff812b876330dbfcb50`.
 
 ### Validaciones del head final
 
-- OANIX CI #2616: **success**.
-- OANIX Android #1968: **success**.
-- Qwen Independent PR Review #907: **success**.
+- OANIX CI #2619: **success**.
+  - `Test OANIX`: success.
+  - `Build OANIX`: success.
+  - `Audit offline production bundle`: success.
+- OANIX Android #1971: **success**.
+  - build web Android: success.
+  - Capacitor sync: success.
+  - debug APK + release AAB: success.
+  - artifacts Android: success.
+- Qwen Independent PR Review #908: **success**.
 
-### Validación física pendiente — Contacto
+### Validación física pendiente — Separador
 
 Comprobar manualmente:
 
-- insertar contacto en nota plain y mixed;
-- editar nombre, teléfono, correo, organización y notas;
-- esperar autosave, cerrar y reabrir confirmando todos los campos;
-- probar `Llamar` con teléfono válido;
-- probar `Correo` con correo válido;
-- dejar teléfono/correo vacíos y confirmar que las acciones opcionales desaparecen;
-- eliminar la tarjeta completa y confirmar que no reaparece;
-- revisar visualmente móvil y desktop.
+- insertar separador en nota plain exactamente en la posición del cursor;
+- insertar uno o varios separadores en nota mixed entre texto y otros bloques;
+- cerrar y reabrir confirmando posición y persistencia;
+- eliminar un separador y confirmar que no reaparece;
+- comprobar que el separador no altera Imágenes, Archivos, Código, Checklist ni Contacto cercanos;
+- revisar visualmente móvil y desktop en temas claros y oscuros.
 
-No marcar Contacto como validado físicamente hasta confirmación del usuario.
+No marcar Separador como validado físicamente hasta confirmación del usuario.
 
 ## Cierres técnicos anteriores
+
+### Contacto
+
+- PR #611.
+- Head `290429be66345047a134fec458ddd685e745b97f`.
+- Merge `20cb50dddc5f74a82a8db20abebe76b1814b5b2c`.
+- CI #2616 ✅ · Android #1968 ✅ · Qwen #907 ✅.
+- Validación física pendiente: inserción plain/mixed, campos, autosave/reapertura, llamar/correo, eliminación y responsive.
 
 ### Checklist
 
@@ -94,21 +107,19 @@ No marcar Contacto como validado físicamente hasta confirmación del usuario.
 - PR #607 merge `153948cd77f14ad5f42c08e48717d158bbb97c8a`.
 - CI #2598 ✅ · Android #1950 ✅ · Qwen #898 ✅.
 
-No volver a modificar Imágenes, Archivos, Código, Checklist ni Contacto cerrados salvo regresión funcional real.
+No volver a modificar Imágenes, Archivos, Código, Checklist, Contacto ni Separador cerrados salvo regresión funcional real.
 
-## Siguiente bloque
+## Validación física pendiente — orden recomendado
 
-Continuar con **Separador** dentro de `Añadir contenido`.
+Al comenzar la revisión manual, validar en este orden para detectar regresiones estructurales con el menor número de notas de prueba:
 
-Antes de modificar código:
-
-1. Auditar codecs, modelos, pruebas y UI existente de separadores en `main`.
-2. Mantenerlo como bloque estructural mínimo, reabrible y eliminable, sin introducir almacenamiento adicional innecesario.
-3. Inserción plain/mixed con las mismas garantías transaccionales de los bloques cerrados.
-4. Render visual responsive y compatible con los temas actuales.
-5. PR independiente y CI + Android + Qwen verdes antes de merge.
-6. No tocar bloques cerrados salvo el wiring/composición mínimo necesario para reconocer Separador.
+1. Archivos.
+2. Código.
+3. Checklist.
+4. Contacto.
+5. Separador.
+6. Una nota combinada con texto + imagen + archivos + código + checklist + contacto + separador; cerrar, reabrir, editar y volver a cerrar.
 
 ## Siguiente acción exacta
 
-Auditar en `main` toda la infraestructura existente de **Separador** y, si no existe un codec reusable, implementar el bloque mínimo completo con inserción, reapertura, eliminación durable y pruebas.
+Comenzar por la validación física de **Archivos** y avanzar bloque por bloque. Si toda la secuencia queda aprobada, definir el siguiente bloque/función de `Añadir contenido` antes de modificar más arquitectura. No iniciar un bloque nuevo no acordado solo por llenar tiempo.
