@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
-import { buildHeadingEnterPlan } from '../src/features/editor/oanixTextBehaviorBridge.ts'
+import { buildHeadingEnterPlan } from '../src/features/editor/oanixHeadingEnterPlan.ts'
 import { decodeTextBlock, encodeTextBlock, TEXT_BLOCK_KIND } from '../src/features/editor/textBlockCodec.ts'
 
 test('Enter after H2 keeps heading and creates paragraph immediately after', () => {
