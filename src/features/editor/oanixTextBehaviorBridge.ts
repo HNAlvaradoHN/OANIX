@@ -108,7 +108,7 @@ export function installOanixTextBehaviorBridge(options: InstallOptions) {
       const blocks = await loadBlocks()
       let lastSavedText: string | null = null
       while (lastSavedText !== reset.latestText) {
-        const nextText = reset.latestText
+        const nextText: string = reset.latestText
         const paragraph = buildHeadingParagraphReset(blocks, blockId, nextText)
         if (!paragraph) {
           options.onRefresh()
