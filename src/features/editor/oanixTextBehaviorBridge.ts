@@ -34,7 +34,7 @@ function restoreVisualState(noteId: string, state: PendingVisualState, focusBloc
     if (!editor) return
 
     if (state.modeLabel) {
-      const modeButton = Array.from(editor.querySelectorAll<HTMLButtonElement>('.oanix-notes__mode-row button'))
+      const modeButton = Array.from(editor.querySelectorAll<HTMLButtonElement>('.oanix-notes__mode-row button.is-active, .oanix-notes__mode-row button'))
         .find((button) => button.textContent?.trim() === state.modeLabel)
       modeButton?.click()
     }
@@ -55,11 +55,12 @@ function restoreVisualState(noteId: string, state: PendingVisualState, focusBloc
   }))
 }
 
-function buildHeadingEnterPlan(
+export function buildHeadingEnterPlan(
   blocks: readonly EditorSurfaceBlock[],
   targetId: string,
   selectionStart: number,
   selectionEnd: number,
+  createId: () => string = () => `oanix-text-${crypto.randomUUID()}`,
 ) {
   const index = blocks.findIndex((block) => block.id === targetId)
   if (index < 0) return null
@@ -68,7 +69,7 @@ function buildHeadingEnterPlan(
 
   const start = Math.max(0, Math.min(selectionStart, selectionEnd, target.text.length))
   const end = Math.max(start, Math.min(Math.max(selectionStart, selectionEnd), target.text.length))
-  const paragraphId = `oanix-text-${crypto.randomUUID()}`
+  const paragraphId = createId()
   const heading = encodeTextBlock({
     id: target.id,
     kind: TEXT_BLOCK_KIND,
