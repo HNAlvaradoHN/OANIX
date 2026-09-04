@@ -78,3 +78,13 @@ test('editor bridge connects every text format and keeps theme-driven visuals', 
   assert.match(css, /tool-h2::after/)
   assert.match(css, /content: "H2"/)
 })
+
+test('paragraph ruled test keeps text cadence locked to the ruling and removes focus box', () => {
+  const css = readFileSync('src/features/editor/implementations/oanixNotesSheetMobileSafeArea.css', 'utf8')
+  assert.match(css, /--oanix-ruled-step:\s*30px/)
+  assert.match(css, /line-height:\s*var\(--oanix-ruled-step\)/)
+  assert.match(css, /background-size:\s*100% var\(--oanix-ruled-step\)/)
+  assert.match(css, /repeating-linear-gradient/)
+  assert.match(css, /box-shadow:\s*none/)
+  assert.match(css, /border-radius:\s*0/)
+})
