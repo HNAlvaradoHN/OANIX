@@ -88,7 +88,7 @@ test('the selected OANIX Notes sheet owns visual mixed editing while storage sta
 })
 
 test('the superseded plain-text adapter remains isolated and reusable during transition', () => {
-  assert.match(plainTextAdapter, /import \{ NoteEditor \} from '\.\.\/editor\/NoteEditor'/)
+  assert.match(plainTextAdapter, /import \{ NoteEditor \} from '\.\.\/NoteEditor'/)
   assert.match(plainTextAdapter, /export function PlainTextEditorSurface\(\{/)
   assert.match(plainTextAdapter, /\}: EditorSurfaceProps\)/)
   assert.match(plainTextAdapter, /<NoteEditor/)
