@@ -13,9 +13,44 @@ Fecha: 2026-09-04
 - **Checklist**: cerrado técnicamente con corrección de contraste por tema; validación física pendiente.
 - **Contacto**: cerrado técnicamente con los ajustes más recientes; validación física pendiente.
 - **Separador**: cerrado técnicamente; validación física pendiente.
-- **Entrada**: cerrado técnicamente con marco, calendario, eliminación, preservación de tema y política de teclado; validación física pendiente.
+- **Entrada**: cerrado técnicamente con tarjeta reforzada, calendario, eliminación, preservación de tema y política de teclado; validación física pendiente.
 
-## AJUSTE MÁS RECIENTE — CONTRASTE DE CHECKLIST Y PRESERVACIÓN DE TEMA
+## AJUSTE MÁS RECIENTE — TARJETA DE ENTRADA E INDICADOR LATERAL
+
+Se cerró técnicamente el PR #621 después de la validación física donde **Entrada** todavía se percibía demasiado integrada con la hoja y la barrita del menú lateral podía perderse visualmente según el tema.
+
+Quedó implementado:
+
+- Entrada conserva `--color-surface`, `--color-text` y el `--accent` del tema activo, pero ahora usa una superficie ligeramente tintada por el acento del tema, borde más definido y una elevación visual más clara.
+- Se añadió una pequeña guía superior con el mismo `--accent` para reforzar la percepción de tarjeta independiente sin convertirla en un elemento ajeno al tema.
+- Título y contenido de Entrada se separan mejor del fondo de la tarjeta y mantienen contraste en temas claros y oscuros.
+- La barrita ubicada junto a los tres puntos del indicador lateral conserva el color `--accent` de cada tema.
+- Esa barrita ahora tiene un brillo sutil de dos niveles, tipo luz encendida, para localizarla más fácilmente sin volverla estridente.
+- No se modificaron el arrastre, la posición, la apertura del menú ni la política de teclado.
+- Se añadieron regresiones para exigir que Entrada siga derivando de las variables del tema y que el indicador lateral mantenga `--accent` con brillo sutil.
+
+### PR, head, gates y merge
+
+- PR **#621 — `ui: separa Entrada y realza el indicador lateral por tema`**.
+- Head final: `044f7d33d6267bb087bf2c58676f6ade3e06f620`.
+- OANIX CI #2649: **success**.
+- OANIX Android #2001: **success**.
+- Qwen Independent PR Review #919: **success**.
+- Merge squash a `main`: `5084b1daaa0287d2d7393539c8772bcb636d37db`.
+
+### Validación física pendiente — ajuste #621
+
+Comprobar manualmente en Android:
+
+- Entrada en Claro, Crema, Sepia, Oscuro, Medianoche, Bosque, Rosa y Lavanda;
+- confirmar que Entrada se percibe como tarjeta independiente de la hoja, pero sigue armonizando con el tema;
+- confirmar que los campos internos mantienen contraste correcto;
+- revisar la barrita lateral junto a los tres puntos en cada tema y confirmar que el brillo ayuda a encontrarla sin ser excesivo;
+- confirmar que el color de la barrita sigue cambiando con el `--accent` del tema.
+
+No marcar esta validación física como completada hasta confirmación del usuario.
+
+## AJUSTE — CONTRASTE DE CHECKLIST Y PRESERVACIÓN DE TEMA
 
 Se cerró técnicamente el PR #620 después de detectar en validación física que **Checklist** conservaba una superficie clara dentro de temas oscuros y que el remount usado por **Entrada** podía devolver la hoja al tema claro.
 
@@ -136,8 +171,8 @@ Quedó implementado:
 
 ## Validación física pendiente — orden recomendado
 
-Validar primero el ajuste recién cerrado del PR #620: contraste de Checklist en todos los temas y preservación de tema al insertar/eliminar Entrada. En la misma pasada comprobar eliminación durable de Entrada (#619) y la política de teclado (#618). Después continuar con Contacto, Archivos, Código, Checklist y Separador, y finalmente una nota combinada con texto + imagen + archivos + código + checklist + contacto + separador + entrada; cerrar, reabrir, editar y volver a cerrar.
+Validar primero el ajuste recién cerrado del PR #621: separación visual de Entrada y brillo temático del indicador lateral. En la misma pasada volver a confirmar Checklist y preservación de tema del PR #620, eliminación durable de Entrada (#619) y la política de teclado (#618). Después continuar con Contacto, Archivos, Código, Checklist y Separador, y finalmente una nota combinada con texto + imagen + archivos + código + checklist + contacto + separador + entrada; cerrar, reabrir, editar y volver a cerrar.
 
 ## Siguiente acción exacta
 
-Validar físicamente en Android el PR #620. No marcarlo como validado físicamente hasta confirmación del usuario. Después continuar con los demás bloques pendientes.
+Validar físicamente en Android el PR #621. No marcarlo como validado físicamente hasta confirmación del usuario. Después continuar con los demás bloques pendientes.
