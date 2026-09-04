@@ -25,6 +25,11 @@ interface PendingHeadingReset {
   running: boolean
 }
 
+interface PendingHeadingFocus {
+  format: 'h2' | 'h3'
+  sourceBlockId: string | null
+}
+
 function findEditor(noteId: string) {
   return document.querySelector<HTMLElement>(`.oanix-notes[data-note-id="${CSS.escape(noteId)}"]`)
 }
@@ -48,6 +53,32 @@ function captureVisualState(editor: HTMLElement): PendingVisualState {
     anchorBlockId,
     anchorViewportTop: activeText?.getBoundingClientRect().top ?? null,
   }
+}
+
+function normalizeRuledHeight(textarea: HTMLTextAreaElement) {
+  const format = textarea.dataset.oanixTextFormat
+  const minimum = format === 'h2' ? 42 : format === 'h3' ? 36 : format === 'paragraph' ? 30 : null
+  if (minimum === null) return
+  textarea.style.height = 'auto'
+  textarea.style.height = `${Math.max(minimum, textarea.scrollHeight)}px`
+}
+
+function focusInsertedHeading(noteId: string, pending: PendingHeadingFocus | null) {
+  if (!pending) return
+  const editor = findEditor(noteId)
+  if (!editor) return
+  const textareas = Array.from(editor.querySelectorAll<HTMLTextAreaElement>('.oanix-mixed-document__text'))
+  const sourceIndex = pending.sourceBlockId
+    ? textareas.findIndex((textarea) => textarea.dataset.oanixMixedTextId === pending.sourceBlockId)
+    : -1
+  const candidates = sourceIndex >= 0 ? textareas.slice(sourceIndex + 1) : textareas
+  const target = candidates.find((textarea) =>
+    textarea.dataset.oanixTextFormat === pending.format && textarea.value.length === 0,
+  )
+  if (!target) return
+  target.focus({ preventScroll: true })
+  target.setSelectionRange(0, 0)
+  normalizeRuledHeight(target)
 }
 
 function restoreVisualState(noteId: string, state: PendingVisualState, focusBlockId?: string) {
@@ -112,16 +143,9 @@ function restoreVisualState(noteId: string, state: PendingVisualState, focusBloc
   }))
 }
 
-function normalizeRuledHeight(textarea: HTMLTextAreaElement) {
-  const format = textarea.dataset.oanixTextFormat
-  const minimum = format === 'h2' ? 42 : format === 'h3' ? 36 : format === 'paragraph' ? 30 : null
-  if (minimum === null) return
-  textarea.style.height = 'auto'
-  textarea.style.height = `${Math.max(minimum, textarea.scrollHeight)}px`
-}
-
 export function installOanixTextBehaviorBridge(options: InstallOptions) {
   let pendingFormatVisual: PendingVisualState | null = null
+  let pendingHeadingFocus: PendingHeadingFocus | null = null
   let restoreScheduled = false
   const pendingHeadingResets = new Map<string, PendingHeadingReset>()
 
@@ -129,10 +153,15 @@ export function installOanixTextBehaviorBridge(options: InstallOptions) {
     if (!pendingFormatVisual || restoreScheduled) return
     restoreScheduled = true
     const state = pendingFormatVisual
+    const headingFocus = pendingHeadingFocus
     pendingFormatVisual = null
+    pendingHeadingFocus = null
     window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
       restoreScheduled = false
       restoreVisualState(options.noteId, state)
+      window.requestAnimationFrame(() => focusInsertedHeading(options.noteId, headingFocus))
+      window.setTimeout(() => focusInsertedHeading(options.noteId, headingFocus), 80)
+      window.setTimeout(() => focusInsertedHeading(options.noteId, headingFocus), 220)
     }))
   }
 
@@ -145,6 +174,19 @@ export function installOanixTextBehaviorBridge(options: InstallOptions) {
     const editor = findEditor(options.noteId)
     if (!editor || !button || !editor.contains(button)) return
     pendingFormatVisual = captureVisualState(editor)
+
+    const active = document.activeElement
+    if ((tool === 'h2' || tool === 'h3') && active instanceof HTMLTextAreaElement && editor.contains(active)) {
+      const selectionStart = active.selectionStart ?? 0
+      const selectionEnd = active.selectionEnd ?? selectionStart
+      if (selectionStart === selectionEnd) {
+        pendingHeadingFocus = {
+          format: tool,
+          sourceBlockId: active.dataset.oanixMixedTextId ?? null,
+        }
+        event.preventDefault()
+      }
+    }
   }
 
   const persistParagraphPriority = async (blockId: string, reset: PendingHeadingReset) => {
@@ -225,13 +267,35 @@ export function installOanixTextBehaviorBridge(options: InstallOptions) {
   }
 
   const onKeyDownCapture = (event: KeyboardEvent) => {
-    if (event.key !== 'Enter' || event.shiftKey || event.altKey || event.ctrlKey || event.metaKey || event.isComposing) return
+    if (event.altKey || event.ctrlKey || event.metaKey || event.isComposing) return
     const target = event.target
     if (!(target instanceof HTMLTextAreaElement) || !target.classList.contains('oanix-mixed-document__text')) return
     const editor = findEditor(options.noteId)
+    if (!editor || !editor.contains(target)) return
+
+    if (event.key === 'Backspace' && !event.shiftKey) {
+      const selectionStart = target.selectionStart ?? 0
+      const selectionEnd = target.selectionEnd ?? selectionStart
+      if (selectionStart !== 0 || selectionEnd !== 0) return
+
+      const textareas = Array.from(editor.querySelectorAll<HTMLTextAreaElement>('.oanix-mixed-document__text'))
+      const index = textareas.indexOf(target)
+      const previous = index > 0 ? textareas[index - 1] : null
+      if (!previous) return
+
+      event.preventDefault()
+      event.stopPropagation()
+      previous.focus({ preventScroll: true })
+      const end = previous.value.length
+      previous.setSelectionRange(end, end)
+      normalizeRuledHeight(previous)
+      return
+    }
+
+    if (event.key !== 'Enter' || event.shiftKey) return
     const loadBlocks = options.loadBlocks
     const saveBlocks = options.onRequestBlockSave
-    if (!editor || !editor.contains(target) || !loadBlocks || !saveBlocks) return
+    if (!loadBlocks || !saveBlocks) return
     const format = target.dataset.oanixTextFormat
     if (format !== 'h2' && format !== 'h3') return
     const blockId = target.dataset.oanixMixedTextId
