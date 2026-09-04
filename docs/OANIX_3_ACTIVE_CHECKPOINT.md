@@ -7,46 +7,49 @@ Fecha: 2026-09-03
 - Chat activo: `OANIX #3`.
 - Usuario: `Inge`.
 - GitHub sigue siendo la fuente de verdad.
-- Último `main` conocido al iniciar este bloque: `659dfab49647f3e8ac8627d98c7570676643418f`.
 
 ## ÚLTIMO TRABAJO REALIZADO
 
-El usuario validó físicamente el resultado del PR #603 y confirmó que, al salir de una nota y volver a entrar sin bloquear la bóveda, la imagen reaparece rápido pero todavía alcanza a mostrar brevemente `Descifrando imagen…`.
+El usuario validó físicamente el resultado del PR #603 y confirmó que, al salir de una nota y volver a entrar sin bloquear la bóveda, la imagen reaparecía rápido pero todavía alcanzaba a mostrar brevemente `Descifrando imagen…`.
 
 ### Causa confirmada
 
 En `OanixMixedImage`, el renderer ejecutaba `setLoading(true)` inmediatamente antes de llamar a `loadAttachmentFile()`. Aunque `loadAttachmentFile()` devolviera el `File` desde la caché de sesión creada por PR #603, React podía pintar el estado de carga antes de recibir el resultado, produciendo un destello visual falso de descifrado.
 
-### Corrección implementada
+### Corrección terminada y fusionada
 
-- Rama: `fix/image-cache-loading-flicker-2026-09-03`.
+- Rama de trabajo: `fix/image-cache-loading-flicker-2026-09-03`.
 - PR: `#604` — `fix: evitar destello de descifrado en imágenes cacheadas`.
-- Head actual del PR: `f6e512e9e931bb55ba97dbb11cad3b65f49425dd`.
+- Head final validado del PR: `773c552fa03870c939adfe1b9207295bce73a266`.
 - Commit de código: `dc27d1c81471cd3897e661b4ac60cc6ec0b779ea`.
-- Commit de prueba: `f6e512e9e931bb55ba97dbb11cad3b65f49425dd`.
+- Commit que corrigió la prueba: `773c552fa03870c939adfe1b9207295bce73a266`.
+- Merge a `main`: `aa04e45260a2a54b7b409d1c04677495764f34d7`.
 
-El renderer mantiene `loading=true` desde el inicio para conservar el bloqueo de reintentos, pero retrasa 120 ms únicamente la etiqueta `Descifrando imagen…`. Si la caché responde antes, la etiqueta no aparece; si una carga real tarda más, el mensaje sí se muestra. Se limpia el temporizador al resolver o desmontar.
+El renderer mantiene `loading=true` desde el inicio para conservar el bloqueo de reintentos, pero retrasa 120 ms únicamente la etiqueta `Descifrando imagen…`. Si la caché responde antes, la etiqueta no aparece; si una carga real tarda más, el mensaje sí se muestra. El temporizador se limpia al resolver o desmontar.
 
-Se añadió `tests/oanixImageCachedLoadingLabel.test.ts` para fijar esta conducta.
+Se añadió `tests/oanixImageCachedLoadingLabel.test.ts` para fijar esta conducta. La primera versión de esa prueba falló por una expresión regular sobre-escapada; se corrigió la aserción sin cambiar la lógica del producto y la corrida completa posterior pasó.
+
+### Validaciones confirmadas antes del merge
+
+- OANIX CI #2587: **success** — pruebas, build y auditoría offline.
+- OANIX Android #1939: **success** — bundle web, sync Capacitor, APK/AAB y subida de artefactos.
+- Qwen Independent PR Review #894: **success**.
+- PR #604 fusionado a `main` únicamente después de estos gates.
 
 ### Alcance preservado
 
-No se modificaron carga lazy, IntersectionObserver, caché LRU de 48 MiB, cifrado, IndexedDB, formato de adjuntos ni limpieza de caché al bloquear la bóveda.
+No se modificaron carga lazy, `IntersectionObserver`, caché LRU de 48 MiB, cifrado, IndexedDB, formato de adjuntos ni limpieza de caché al bloquear la bóveda.
 
-## Validación pendiente
+## Validación física pendiente
 
-Al momento de escribir este checkpoint:
+La siguiente prueba del usuario es estrictamente visual/funcional:
 
-- OANIX CI #2585: `in_progress`.
-- OANIX Android #1937: `in_progress`.
-- Qwen Independent PR Review #893: `in_progress`.
-- Vercel: `pending`.
-
-No fusionar PR #604 hasta confirmar los gates relevantes. Después de integrarlo, repetir prueba física: abrir nota con imagen ya cargada, salir, volver a entrar sin bloquear OANIX y comprobar que no aparezca el texto `Descifrando imagen…` en la reapertura cacheada.
+1. abrir una nota con una imagen y dejar que cargue;
+2. salir a la lista de notas;
+3. volver a entrar en esa misma nota **sin bloquear la bóveda**;
+4. confirmar que la imagen cacheada reaparece sin mostrar el texto `Descifrando imagen…`;
+5. adicionalmente, tras bloquear/desbloquear OANIX, confirmar que una carga real que tarde más de 120 ms todavía puede mostrar `Descifrando imagen…` normalmente.
 
 ## Siguiente acción exacta
 
-1. Confirmar resultados de CI/Android/review del PR #604.
-2. Si están correctos, fusionar #604 a `main`.
-3. Registrar SHA final de merge y validaciones en este checkpoint.
-4. Pedir prueba física al usuario sobre la reapertura cacheada.
+Esperar el resultado de esa prueba física. Si la reapertura cacheada todavía muestra el mensaje, investigar la duración/ruta real de `loadAttachmentFile()` en Android antes de aumentar el umbral o esconder más estados. No aplicar otro parche visual sin medir primero la causa.
