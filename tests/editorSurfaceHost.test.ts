@@ -78,7 +78,7 @@ test('the selected OANIX Notes sheet owns visual mixed editing while storage sta
   assert.match(selectedSurface, /onRequestClose\(snapshot\)|onRequestClose\(null\)/)
   assert.match(selectedSurface, /decideOanixMixedDocumentLoad/)
   assert.match(selectedSurface, /insertOanixImageBatch/)
-  assert.match(selectedSurface, /OanixMixedDocumentBody/)
+  assert.match(selectedSurface, /OanixMixedDocumentWithFiles/)
   assert.match(selectedSurface, /pendingMixedUpsertsRef/)
   assert.match(selectedSurface, /oanix-notes__slide-handle/)
   assert.match(selectedSurface, /oanix-notes__side-panel/)
