@@ -5,6 +5,7 @@ import { decodeContactBlock, type EditorContactBlock } from './contactBlockCodec
 import { decodeOanixFileGroupElement, type OanixFileGroupElement } from './oanixFileGroupElementCodec.ts'
 import { decodeOanixImageElement, type OanixImageElement } from './oanixImageElementCodec.ts'
 import { decodeOanixLongTextElement, type OanixLongTextElement } from './oanixLongTextElementCodec.ts'
+import { decodeSeparatorBlock, type EditorSeparatorBlock } from './separatorBlockCodec.ts'
 import { decodeTextBlock, type EditorTextBlock } from './textBlockCodec.ts'
 
 export type OanixMixedDocumentNode =
@@ -14,6 +15,7 @@ export type OanixMixedDocumentNode =
   | { type: 'code'; block: EditorCodeBlock }
   | { type: 'checklist'; block: EditorChecklistBlock }
   | { type: 'contact'; block: EditorContactBlock }
+  | { type: 'separator'; block: EditorSeparatorBlock }
   | { type: 'long-text'; block: OanixLongTextElement }
   | { type: 'unsupported'; block: EditorSurfaceBlock }
 
@@ -32,6 +34,8 @@ export function projectOanixMixedDocument(blocks: readonly EditorSurfaceBlock[])
     if (checklist) return { type: 'checklist', block: checklist }
     const contact = decodeContactBlock(block)
     if (contact) return { type: 'contact', block: contact }
+    const separator = decodeSeparatorBlock(block)
+    if (separator) return { type: 'separator', block: separator }
     const longText = decodeOanixLongTextElement(block)
     if (longText) return { type: 'long-text', block: longText }
     return { type: 'unsupported', block }
@@ -46,6 +50,7 @@ export function hasRenderableOanixMixedContent(blocks: readonly EditorSurfaceBlo
     || node.type === 'code'
     || node.type === 'checklist'
     || node.type === 'contact'
+    || node.type === 'separator'
     || node.type === 'long-text'
   ))
 }
