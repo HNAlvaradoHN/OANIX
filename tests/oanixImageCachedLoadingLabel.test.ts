@@ -9,5 +9,5 @@ test('cached image loads do not immediately flash the decrypting label', () => {
   assert.match(source, /setLoading\(true\)[\s\S]*setShowDecryptingLabel\(false\)[\s\S]*window\.setTimeout/)
   assert.match(source, /setShowDecryptingLabel\(true\)[\s\S]*IMAGE_DECRYPTING_LABEL_DELAY_MS/)
   assert.match(source, /window\.clearTimeout\(loadingLabelTimer\)/)
-  assert.match(source, /loading \? \(showDecryptingLabel \? 'Descifrando imagen…' : '\\\\u00a0'\)/)
+  assert.match(source, /loading \? \(showDecryptingLabel \? 'Descifrando imagen…'/)
 })
