@@ -87,6 +87,7 @@ export function OanixDailyEntryBlockCard({
         window.dispatchEvent(new CustomEvent('oanix-daily-entry-remove', {
           detail: { blockId: block.id },
         }))
+        setRemoving(false)
       }
     } catch {
       setRemoving(false)
