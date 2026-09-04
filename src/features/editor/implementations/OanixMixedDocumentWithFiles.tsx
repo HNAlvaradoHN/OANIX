@@ -1,9 +1,11 @@
 import type { EditorSurfaceAttachment, EditorSurfaceBlock } from '../editorSurfaceContract.ts'
 import { decodeChecklistBlock, type EditorChecklistBlock } from '../checklistBlockCodec.ts'
 import { decodeCodeBlock, type EditorCodeBlock } from '../codeBlockCodec.ts'
+import { decodeContactBlock, type EditorContactBlock } from '../contactBlockCodec.ts'
 import { decodeOanixFileGroupElement, type OanixFileGroupElement } from '../oanixFileGroupElementCodec.ts'
 import { OanixChecklistBlockCard } from './OanixChecklistBlockCard.tsx'
 import { OanixCodeBlockCard } from './OanixCodeBlockCard.tsx'
+import { OanixContactBlockCard } from './OanixContactBlockCard.tsx'
 import { OanixFileGroupCard } from './OanixFileGroupCard.tsx'
 import { OanixMixedDocumentBody } from './OanixMixedDocumentBody.tsx'
 
@@ -21,6 +23,7 @@ interface OanixMixedDocumentWithFilesProps {
   onRemoveFileGroup: (blockId: string, attachmentIds: readonly string[]) => void | Promise<void>
   onRemoveCodeBlock?: (blockId: string) => void | Promise<void>
   onRemoveChecklistBlock?: (blockId: string) => void | Promise<void>
+  onRemoveContactBlock?: (blockId: string) => void | Promise<void>
   onActivity: () => void
   onCompositionStart: () => void
   onCompositionEnd: () => void
@@ -32,6 +35,7 @@ type Segment =
   | { type: 'file-group'; key: string; block: OanixFileGroupElement }
   | { type: 'code'; key: string; block: EditorCodeBlock }
   | { type: 'checklist'; key: string; block: EditorChecklistBlock }
+  | { type: 'contact'; key: string; block: EditorContactBlock }
 
 function segmentDocument(blocks: readonly EditorSurfaceBlock[]): Segment[] {
   const segments: Segment[] = []
@@ -63,6 +67,12 @@ function segmentDocument(blocks: readonly EditorSurfaceBlock[]): Segment[] {
       segments.push({ type: 'checklist', key: checklist.id, block: checklist })
       continue
     }
+    const contact = decodeContactBlock(block)
+    if (contact) {
+      flush()
+      segments.push({ type: 'contact', key: contact.id, block: contact })
+      continue
+    }
     pending.push(block)
   }
   flush()
@@ -71,7 +81,7 @@ function segmentDocument(blocks: readonly EditorSurfaceBlock[]): Segment[] {
 
 /**
  * Composition wrapper that keeps the validated image/text renderer untouched while
- * inserting OANIX file-group, code and checklist cards at their ordered block positions.
+ * inserting OANIX file-group, code, checklist and contact cards at their ordered block positions.
  */
 export function OanixMixedDocumentWithFiles({
   blocks,
@@ -87,6 +97,7 @@ export function OanixMixedDocumentWithFiles({
   onRemoveFileGroup,
   onRemoveCodeBlock,
   onRemoveChecklistBlock,
+  onRemoveContactBlock,
   onActivity,
   onCompositionStart,
   onCompositionEnd,
@@ -131,6 +142,18 @@ export function OanixMixedDocumentWithFiles({
           disabled={disabled}
           onChange={onTextBlockChange}
           onRemove={onRemoveChecklistBlock ? () => onRemoveChecklistBlock(segment.block.id) : undefined}
+          onActivity={onActivity}
+          onError={onError}
+        />
+      }
+
+      if (segment.type === 'contact') {
+        return <OanixContactBlockCard
+          key={segment.key}
+          block={segment.block}
+          disabled={disabled}
+          onChange={onTextBlockChange}
+          onRemove={onRemoveContactBlock ? () => onRemoveContactBlock(segment.block.id) : undefined}
           onActivity={onActivity}
           onError={onError}
         />

@@ -1,6 +1,7 @@
 import type { EditorSurfaceBlock } from './editorSurfaceContract.ts'
 import { decodeChecklistBlock, type EditorChecklistBlock } from './checklistBlockCodec.ts'
 import { decodeCodeBlock, type EditorCodeBlock } from './codeBlockCodec.ts'
+import { decodeContactBlock, type EditorContactBlock } from './contactBlockCodec.ts'
 import { decodeOanixFileGroupElement, type OanixFileGroupElement } from './oanixFileGroupElementCodec.ts'
 import { decodeOanixImageElement, type OanixImageElement } from './oanixImageElementCodec.ts'
 import { decodeOanixLongTextElement, type OanixLongTextElement } from './oanixLongTextElementCodec.ts'
@@ -12,34 +13,27 @@ export type OanixMixedDocumentNode =
   | { type: 'file-group'; block: OanixFileGroupElement }
   | { type: 'code'; block: EditorCodeBlock }
   | { type: 'checklist'; block: EditorChecklistBlock }
+  | { type: 'contact'; block: EditorContactBlock }
   | { type: 'long-text'; block: OanixLongTextElement }
   | { type: 'unsupported'; block: EditorSurfaceBlock }
 
-/**
- * Converts persisted rich blocks into the minimal mixed-document vocabulary that
- * OANIX Notes can render today. Unknown blocks are preserved as explicit nodes
- * instead of being discarded, so adding a renderer later cannot silently lose data.
- */
+/** Converts persisted rich blocks into the mixed-document vocabulary rendered by OANIX Notes. */
 export function projectOanixMixedDocument(blocks: readonly EditorSurfaceBlock[]): OanixMixedDocumentNode[] {
   return blocks.map((block) => {
     const text = decodeTextBlock(block)
     if (text) return { type: 'text', block: text }
-
     const image = decodeOanixImageElement(block)
     if (image) return { type: 'image', block: image }
-
     const fileGroup = decodeOanixFileGroupElement(block)
     if (fileGroup) return { type: 'file-group', block: fileGroup }
-
     const code = decodeCodeBlock(block)
     if (code) return { type: 'code', block: code }
-
     const checklist = decodeChecklistBlock(block)
     if (checklist) return { type: 'checklist', block: checklist }
-
+    const contact = decodeContactBlock(block)
+    if (contact) return { type: 'contact', block: contact }
     const longText = decodeOanixLongTextElement(block)
     if (longText) return { type: 'long-text', block: longText }
-
     return { type: 'unsupported', block }
   })
 }
@@ -51,6 +45,7 @@ export function hasRenderableOanixMixedContent(blocks: readonly EditorSurfaceBlo
     || node.type === 'file-group'
     || node.type === 'code'
     || node.type === 'checklist'
+    || node.type === 'contact'
     || node.type === 'long-text'
   ))
 }
