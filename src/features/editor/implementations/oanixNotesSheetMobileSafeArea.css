@@ -25,6 +25,17 @@
     0 0 12px color-mix(in srgb, var(--accent) 36%, transparent);
 }
 
+/* The H2 tile label already said H2; hide the old H1-looking glyph and render H2 consistently. */
+.oanix-notes .oanix-notes__tool-icon.tool-h2 svg {
+  display: none;
+}
+
+.oanix-notes .oanix-notes__tool-icon.tool-h2::after {
+  content: "H2";
+  font: 750 1.35rem/1 system-ui, sans-serif;
+  letter-spacing: -.04em;
+}
+
 /* Block-level text formats stay theme-driven and keep the textarea editing model. */
 .oanix-notes .oanix-mixed-document__text[data-oanix-text-format="paragraph"] {
   font-size: 1rem;
