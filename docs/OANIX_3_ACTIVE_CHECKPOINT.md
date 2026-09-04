@@ -11,63 +11,65 @@ Fecha: 2026-09-04
 - **Archivos**: cerrado técnicamente; validación física pendiente.
 - **Código**: cerrado técnicamente; validación física pendiente.
 - **Checklist**: cerrado técnicamente; validación física pendiente.
+- **Contacto**: cerrado técnicamente; validación física pendiente.
 
 ## ÚLTIMO TRABAJO REALIZADO
 
-Se cerró técnicamente **Checklist** mediante el PR #610, reutilizando `checklistBlockCodec` y manteniendo toda persistencia detrás de los callbacks genéricos del editor.
+Se cerró técnicamente **Contacto** mediante el PR #611, con una tarjeta privada autocontenida que no depende de permisos de la agenda del dispositivo para persistir ni reabrirse.
 
-### Checklist — CIERRE TÉCNICO
+### Contacto — CIERRE TÉCNICO
 
 Quedó implementado:
 
-- `Añadir contenido -> Checklist` inserta en la posición del cursor desde notas plain y mixed.
+- `Añadir contenido -> Contacto` inserta en la posición del cursor desde notas plain y mixed.
 - Transición plain -> mixed transaccional con rollback si falla el snapshot plain.
 - Inserción mixed guarda primero contenido pendiente y trabaja sobre bloques confirmados.
-- Cada checklist inicia con una tarea editable.
-- Marcar/desmarcar tareas.
-- Editar texto de cada tarea.
-- Añadir tareas con botón o con `Enter`.
-- Quitar tareas individuales.
-- Checklist vacía reutilizable con CTA para volver a añadir.
-- Límite existente respetado: 200 tareas y 2,000 caracteres por tarea.
-- Progreso completadas/total en el encabezado.
-- Eliminación confirmada y durable de la checklist completa.
-- Cambios integrados al autosave genérico de bloques.
-- Reapertura mediante reconocimiento de `checklist` como nodo renderizable del documento mixed.
-- Estado `checklistBusy` integrado al bloqueo visual durante operaciones estructurales.
-- No se modificó la lógica interna cerrada de Imágenes, Archivos ni Código.
+- Campos persistidos: nombre, teléfono, correo, organización y notas.
+- Edición integrada al autosave genérico de bloques.
+- Acciones opcionales `Llamar` (`tel:`) y `Correo` (`mailto:`) cuando existen esos datos.
+- Eliminación confirmada y durable de la tarjeta completa.
+- Reapertura mediante reconocimiento de `contact` como nodo renderizable del documento mixed.
+- Estado `contactBusy` integrado al bloqueo visual durante operaciones estructurales.
+- Persistencia básica independiente de permisos nativos/contactos del teléfono.
+- Se preserva compatibilidad de lectura: valores persistidos existentes no se rechazan por superar el límite de edición del UI.
+- No se modificó la lógica interna cerrada de Imágenes, Archivos, Código ni Checklist.
 
 ### PR, head y merge
 
-- PR: **#610 — `feat: checklist interactiva en OANIX Notes`**.
-- Head final validado: `6828f093884c606110ae5f87330cadc586a2bb94`.
-- Merge a `main`: `e7560ba48a3ca53e93f776fadfa4f71a6afca56c`.
+- PR: **#611 — `feat: tarjeta de contacto en OANIX Notes`**.
+- Head final validado: `290429be66345047a134fec458ddd685e745b97f`.
+- Merge a `main`: `20cb50dddc5f74a82a8db20abebe76b1814b5b2c`.
 
 ### Validaciones del head final
 
-- OANIX CI #2613: **success**.
-- OANIX Android #1965: **success**.
-- Qwen Independent PR Review #906: **success**.
-- Validación adicional previa al PR: `npm test` **success** y `npm run build` **success**.
+- OANIX CI #2616: **success**.
+- OANIX Android #1968: **success**.
+- Qwen Independent PR Review #907: **success**.
 
-### Validación física pendiente — Checklist
+### Validación física pendiente — Contacto
 
 Comprobar manualmente:
 
-- insertar checklist en nota plain y mixed;
-- escribir varias tareas;
-- añadir con botón y con Enter;
-- marcar/desmarcar;
-- quitar tareas individuales;
-- dejarla vacía y volver a añadir;
-- cerrar y reabrir confirmando texto y estados checked;
-- editar una checklist existente, esperar autosave y reabrir;
-- eliminar la checklist completa y confirmar que no reaparece;
+- insertar contacto en nota plain y mixed;
+- editar nombre, teléfono, correo, organización y notas;
+- esperar autosave, cerrar y reabrir confirmando todos los campos;
+- probar `Llamar` con teléfono válido;
+- probar `Correo` con correo válido;
+- dejar teléfono/correo vacíos y confirmar que las acciones opcionales desaparecen;
+- eliminar la tarjeta completa y confirmar que no reaparece;
 - revisar visualmente móvil y desktop.
 
-No marcar Checklist como validado físicamente hasta confirmación del usuario.
+No marcar Contacto como validado físicamente hasta confirmación del usuario.
 
 ## Cierres técnicos anteriores
+
+### Checklist
+
+- PR #610.
+- Head `6828f093884c606110ae5f87330cadc586a2bb94`.
+- Merge `e7560ba48a3ca53e93f776fadfa4f71a6afca56c`.
+- CI #2613 ✅ · Android #1965 ✅ · Qwen #906 ✅.
+- Validación física pendiente: inserción plain/mixed, tareas, Enter, checks, reapertura, autosave, eliminación y responsive.
 
 ### Código
 
@@ -92,21 +94,21 @@ No marcar Checklist como validado físicamente hasta confirmación del usuario.
 - PR #607 merge `153948cd77f14ad5f42c08e48717d158bbb97c8a`.
 - CI #2598 ✅ · Android #1950 ✅ · Qwen #898 ✅.
 
-No volver a modificar Imágenes, Archivos, Código ni Checklist cerrados salvo regresión funcional real.
+No volver a modificar Imágenes, Archivos, Código, Checklist ni Contacto cerrados salvo regresión funcional real.
 
 ## Siguiente bloque
 
-Continuar con **Contacto** dentro de `Añadir contenido`.
+Continuar con **Separador** dentro de `Añadir contenido`.
 
 Antes de modificar código:
 
-1. Auditar codecs, modelos, pruebas y UI existente de contactos en `main`.
-2. Reutilizar infraestructura válida y mantener persistencia detrás del contrato genérico del editor.
-3. Definir un bloque autocontenido que pueda crearse, editarse, eliminarse y reabrirse sin depender de permisos del teléfono para su persistencia básica.
-4. Si existe integración opcional con contactos del dispositivo, aislarla de la representación persistida y manejar ausencia de permisos sin romper el bloque.
+1. Auditar codecs, modelos, pruebas y UI existente de separadores en `main`.
+2. Mantenerlo como bloque estructural mínimo, reabrible y eliminable, sin introducir almacenamiento adicional innecesario.
+3. Inserción plain/mixed con las mismas garantías transaccionales de los bloques cerrados.
+4. Render visual responsive y compatible con los temas actuales.
 5. PR independiente y CI + Android + Qwen verdes antes de merge.
-6. No iniciar Separador hasta cerrar Contacto técnicamente.
+6. No tocar bloques cerrados salvo el wiring/composición mínimo necesario para reconocer Separador.
 
 ## Siguiente acción exacta
 
-Auditar en `main` toda la infraestructura existente de **Contacto** y determinar la mínima integración completa con la superficie OANIX actual antes de escribir el nuevo bloque.
+Auditar en `main` toda la infraestructura existente de **Separador** y, si no existe un codec reusable, implementar el bloque mínimo completo con inserción, reapertura, eliminación durable y pruebas.
