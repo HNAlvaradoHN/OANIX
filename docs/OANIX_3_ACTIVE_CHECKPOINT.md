@@ -10,52 +10,41 @@ Fecha: 2026-09-03
 
 ## ÚLTIMO TRABAJO REALIZADO
 
-El usuario comparó físicamente el resultado posterior al PR #605 y reportó que la versión anterior se sentía más rápida y que veía `•••` sobre las imágenes, afectando visualmente la nota. Se revisó el diff exacto entre #604 y #605 antes de tocar código.
+El usuario confirmó que, tras PR #606, los tres puntos negros `•••` seguían visibles en el centro de las imágenes en Android.
 
-### Hallazgos
+### Causa verificada
 
-- PR #605 no introdujo el botón `•••`; ese texto ya existía en el JSX de #604.
-- PR #605 sí añadió una caché de `objectURL` y una consulta síncrona desde `OanixMixedImage` al montar.
-- Esa solución añadió complejidad y trabajo síncrono al montaje para intentar evitar el placeholder, mientras que el usuario percibió peor experiencia.
-- Se decidió reciclar #605 completo en vez de seguir ocultando síntomas con más capas.
+El botón táctil que cubre la imagen todavía contiene literalmente `•••` en el JSX. El CSS local ya intentaba ocultar ese contenido con `color: transparent` y `font-size: 0`, pero en la validación física de Android esos caracteres seguían llegando a pintarse.
 
-### Reversión terminada y fusionada
+### Corrección terminada y fusionada
 
-- Rama: `fix/revert-object-url-cache-clean-image-menu-2026-09-03`.
-- PR: `#606` — `revert: retirar caché de objectURL de sesión`.
-- Head validado: `9dd126914069f78e27befe19c6b6914beccfff30`.
-- Merge a `main`: `27f1ec72be19988ffe899a3ecbff7cfc0386b17b`.
+- Rama: `fix/hide-image-menu-dots-2026-09-03`.
+- PR: `#607` — `fix: ocultar puntos visibles sobre imágenes`.
+- Head validado: `19bfc9cfdb3ac8f1a2cc8852669de96fddab83d6`.
+- Merge a `main`: `153948cd77f14ad5f42c08e48717d158bbb97c8a`.
 
-PR #606 restaura exactamente la implementación de carga de imágenes de #604 en los archivos afectados por #605:
+El cambio es exclusivamente visual y refuerza el ocultamiento del contenido del botón transparente de imagen mediante `color: transparent !important`, `font-size: 0 !important`, `line-height: 0 !important`, `text-indent` y `overflow: hidden`.
 
-- `AttachmentSessionCache` vuelve a conservar solo el `File` descifrado dentro del LRU de 48 MiB.
-- `OanixMixedImage` vuelve al flujo lazy con `IntersectionObserver` y crea/revoca su `objectURL` dentro del componente.
-- Se eliminó `tests/oanixImageCachedObjectUrl.test.ts`.
-- Se restauró `tests/oanixMixedDocumentRenderer.test.ts` a la aserción anterior.
-- Se conserva la mejora de #604 que retrasa 120 ms únicamente el texto `Descifrando imagen…`.
+Se conserva intacta toda el área de la imagen como objetivo táctil para abrir el menú. No se modificó la ruta de carga restaurada en PR #606 ni caché, cifrado, lazy loading, resize, pantalla completa, zoom o pan.
 
-### Validaciones del PR #606
+### Validaciones del PR #607
 
-- OANIX CI #2595: **success**.
-- OANIX Android #1947: **success**.
-- Qwen Independent PR Review #897: **success**.
-- PR #606 fusionado únicamente después de esos tres gates.
+- OANIX CI #2598: **success**.
+- OANIX Android #1950: **success**.
+- Qwen Independent PR Review #898: **success**.
+- PR #607 fusionado únicamente después de esos tres gates.
 
-### Alcance preservado
+### Estado de carga de imágenes
 
-No se cambió cifrado, IndexedDB, formato de adjuntos, caché LRU de 48 MiB, limpieza al bloquear la bóveda, carga lazy ni `IntersectionObserver` respecto del estado validado de #604.
-
-## Observación pendiente sobre `•••`
-
-El texto `•••` ya existía antes de #605. El CSS actual intenta convertir ese botón en un área táctil transparente sobre la imagen (`color: transparent` y `font-size: 0`), por lo que el hecho de que el usuario lo haya visto puede corresponder a un estado visual/transitorio o a estilos que no se aplicaron como se esperaba en Android. No se mezcló una corrección de ese detalle dentro de la reversión para no confundir la causa del rendimiento.
+PR #606 continúa vigente: PR #605 fue reciclado y OANIX usa nuevamente la implementación de #604 para carga y caché de imágenes.
 
 ## Validación física pendiente
 
-1. Abrir una nota con varias imágenes y dejar que carguen.
-2. Salir a la lista y volver a entrar sin bloquear OANIX.
-3. Comparar la velocidad con la versión que tenía #605.
-4. Confirmar si los `•••` siguen apareciendo sobre alguna imagen.
+1. Abrir una nota con imágenes.
+2. Confirmar que ya no se ven los `•••` negros sobre las fotografías.
+3. Tocar una imagen y confirmar que el menú flotante sigue abriendo normalmente.
+4. Confirmar que la velocidad de carga sigue igual que después de PR #606.
 
 ## Siguiente acción exacta
 
-Esperar la prueba física de PR #606. Si los `•••` siguen visibles después de volver al comportamiento de #604, corregir el botón de imagen de forma aislada, preferiblemente eliminando el texto visual del DOM y conservando únicamente el área táctil y `aria-label`, sin tocar de nuevo la ruta de carga.
+Esperar la validación física del PR #607. Si los puntos todavía aparecen, eliminar el contenido `•••` directamente del JSX y conservar el botón vacío con `aria-label`, sin tocar la carga de imágenes.
