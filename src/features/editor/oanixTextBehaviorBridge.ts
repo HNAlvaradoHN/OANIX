@@ -122,7 +122,9 @@ export function installOanixTextBehaviorBridge(options: InstallOptions) {
     const target = event.target
     if (!(target instanceof HTMLTextAreaElement) || !target.classList.contains('oanix-mixed-document__text')) return
     const editor = findEditor(options.noteId)
-    if (!editor || !editor.contains(target) || !options.loadBlocks || !options.onRequestBlockSave) return
+    const loadBlocks = options.loadBlocks
+    const saveBlocks = options.onRequestBlockSave
+    if (!editor || !editor.contains(target) || !loadBlocks || !saveBlocks) return
     const format = target.dataset.oanixTextFormat
     if (format !== 'h2' && format !== 'h3') return
     const blockId = target.dataset.oanixMixedTextId
@@ -134,10 +136,10 @@ export function installOanixTextBehaviorBridge(options: InstallOptions) {
     const selectionStart = target.selectionStart ?? target.value.length
     const selectionEnd = target.selectionEnd ?? selectionStart
 
-    void options.loadBlocks().then(async (blocks) => {
+    void loadBlocks().then(async (blocks) => {
       const plan = buildHeadingEnterPlan(blocks, blockId, selectionStart, selectionEnd)
       if (!plan) return
-      const saved = await options.onRequestBlockSave!({
+      const saved = await saveBlocks({
         upserts: [plan.heading, plan.paragraph],
         order: plan.order,
       })
