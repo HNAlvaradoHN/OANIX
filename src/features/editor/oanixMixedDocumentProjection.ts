@@ -2,6 +2,7 @@ import type { EditorSurfaceBlock } from './editorSurfaceContract.ts'
 import { decodeChecklistBlock, type EditorChecklistBlock } from './checklistBlockCodec.ts'
 import { decodeCodeBlock, type EditorCodeBlock } from './codeBlockCodec.ts'
 import { decodeContactBlock, type EditorContactBlock } from './contactBlockCodec.ts'
+import { decodeDailyEntryBlock, type EditorDailyEntryBlock } from './dailyEntryBlockCodec.ts'
 import { decodeOanixFileGroupElement, type OanixFileGroupElement } from './oanixFileGroupElementCodec.ts'
 import { decodeOanixImageElement, type OanixImageElement } from './oanixImageElementCodec.ts'
 import { decodeOanixLongTextElement, type OanixLongTextElement } from './oanixLongTextElementCodec.ts'
@@ -15,6 +16,7 @@ export type OanixMixedDocumentNode =
   | { type: 'code'; block: EditorCodeBlock }
   | { type: 'checklist'; block: EditorChecklistBlock }
   | { type: 'contact'; block: EditorContactBlock }
+  | { type: 'daily-entry'; block: EditorDailyEntryBlock }
   | { type: 'separator'; block: EditorSeparatorBlock }
   | { type: 'long-text'; block: OanixLongTextElement }
   | { type: 'unsupported'; block: EditorSurfaceBlock }
@@ -34,6 +36,8 @@ export function projectOanixMixedDocument(blocks: readonly EditorSurfaceBlock[])
     if (checklist) return { type: 'checklist', block: checklist }
     const contact = decodeContactBlock(block)
     if (contact) return { type: 'contact', block: contact }
+    const dailyEntry = decodeDailyEntryBlock(block)
+    if (dailyEntry) return { type: 'daily-entry', block: dailyEntry }
     const separator = decodeSeparatorBlock(block)
     if (separator) return { type: 'separator', block: separator }
     const longText = decodeOanixLongTextElement(block)
@@ -50,6 +54,7 @@ export function hasRenderableOanixMixedContent(blocks: readonly EditorSurfaceBlo
     || node.type === 'code'
     || node.type === 'checklist'
     || node.type === 'contact'
+    || node.type === 'daily-entry'
     || node.type === 'separator'
     || node.type === 'long-text'
   ))

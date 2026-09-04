@@ -2,11 +2,13 @@ import type { EditorSurfaceAttachment, EditorSurfaceBlock } from '../editorSurfa
 import { decodeChecklistBlock, type EditorChecklistBlock } from '../checklistBlockCodec.ts'
 import { decodeCodeBlock, type EditorCodeBlock } from '../codeBlockCodec.ts'
 import { decodeContactBlock, type EditorContactBlock } from '../contactBlockCodec.ts'
+import { decodeDailyEntryBlock, type EditorDailyEntryBlock } from '../dailyEntryBlockCodec.ts'
 import { decodeOanixFileGroupElement, type OanixFileGroupElement } from '../oanixFileGroupElementCodec.ts'
 import { decodeSeparatorBlock, type EditorSeparatorBlock } from '../separatorBlockCodec.ts'
 import { OanixChecklistBlockCard } from './OanixChecklistBlockCard.tsx'
 import { OanixCodeBlockCard } from './OanixCodeBlockCard.tsx'
 import { OanixContactBlockCard } from './OanixContactBlockCard.tsx'
+import { OanixDailyEntryBlockCard } from './OanixDailyEntryBlockCard.tsx'
 import { OanixFileGroupCard } from './OanixFileGroupCard.tsx'
 import { OanixMixedDocumentBody } from './OanixMixedDocumentBody.tsx'
 import { OanixSeparatorBlockCard } from './OanixSeparatorBlockCard.tsx'
@@ -26,6 +28,7 @@ interface OanixMixedDocumentWithFilesProps {
   onRemoveCodeBlock?: (blockId: string) => void | Promise<void>
   onRemoveChecklistBlock?: (blockId: string) => void | Promise<void>
   onRemoveContactBlock?: (blockId: string) => void | Promise<void>
+  onRemoveDailyEntryBlock?: (blockId: string) => void | Promise<void>
   onRemoveSeparatorBlock?: (blockId: string) => void | Promise<void>
   onActivity: () => void
   onCompositionStart: () => void
@@ -39,6 +42,7 @@ type Segment =
   | { type: 'code'; key: string; block: EditorCodeBlock }
   | { type: 'checklist'; key: string; block: EditorChecklistBlock }
   | { type: 'contact'; key: string; block: EditorContactBlock }
+  | { type: 'daily-entry'; key: string; block: EditorDailyEntryBlock }
   | { type: 'separator'; key: string; block: EditorSeparatorBlock }
 
 function segmentDocument(blocks: readonly EditorSurfaceBlock[]): Segment[] {
@@ -77,6 +81,12 @@ function segmentDocument(blocks: readonly EditorSurfaceBlock[]): Segment[] {
       segments.push({ type: 'contact', key: contact.id, block: contact })
       continue
     }
+    const dailyEntry = decodeDailyEntryBlock(block)
+    if (dailyEntry) {
+      flush()
+      segments.push({ type: 'daily-entry', key: dailyEntry.id, block: dailyEntry })
+      continue
+    }
     const separator = decodeSeparatorBlock(block)
     if (separator) {
       flush()
@@ -91,7 +101,7 @@ function segmentDocument(blocks: readonly EditorSurfaceBlock[]): Segment[] {
 
 /**
  * Composition wrapper that keeps the validated image/text renderer untouched while
- * inserting OANIX file-group, code, checklist, contact and separator elements at their ordered positions.
+ * inserting OANIX file-group, code, checklist, contact, daily-entry and separator elements at their ordered positions.
  */
 export function OanixMixedDocumentWithFiles({
   blocks,
@@ -108,6 +118,7 @@ export function OanixMixedDocumentWithFiles({
   onRemoveCodeBlock,
   onRemoveChecklistBlock,
   onRemoveContactBlock,
+  onRemoveDailyEntryBlock,
   onRemoveSeparatorBlock,
   onActivity,
   onCompositionStart,
@@ -166,6 +177,20 @@ export function OanixMixedDocumentWithFiles({
           onChange={onTextBlockChange}
           onRemove={onRemoveContactBlock ? () => onRemoveContactBlock(segment.block.id) : undefined}
           onActivity={onActivity}
+          onError={onError}
+        />
+      }
+
+      if (segment.type === 'daily-entry') {
+        return <OanixDailyEntryBlockCard
+          key={segment.key}
+          block={segment.block}
+          disabled={disabled}
+          onChange={onTextBlockChange}
+          onRemove={onRemoveDailyEntryBlock ? () => onRemoveDailyEntryBlock(segment.block.id) : undefined}
+          onActivity={onActivity}
+          onCompositionStart={onCompositionStart}
+          onCompositionEnd={onCompositionEnd}
           onError={onError}
         />
       }
