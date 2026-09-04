@@ -26,6 +26,45 @@ Fecha: 2026-09-04
 
 ## ÚLTIMO TRABAJO REALIZADO
 
+### Lectura en pantalla completa de Código y Contacto — CIERRE TÉCNICO
+
+Se cerró técnicamente el ajuste solicitado durante la revisión física para poder leer con comodidad el contenido de **Código** y **Contacto** en pantalla completa.
+
+Quedó implementado:
+
+- **Código**: botón `⛶` en la cabecera para abrir un lector de pantalla completa.
+- El lector de Código conserva tema oscuro legible, muestra el lenguaje, permite scroll independiente, copiar y cerrar por botón, fondo o `Escape`.
+- **Contacto**: botón `⛶` junto al candado para abrir una vista completa de lectura.
+- La vista de Contacto muestra nombre, teléfono, correo, organización y notas.
+- La pantalla completa de Contacto es solo lectura; el candado sigue siendo la única vía de edición.
+- Ambos lectores bloquean temporalmente el scroll del fondo y usan `100dvh` en móvil con consideración de safe areas.
+- Se ampliaron las pruebas estáticas de revisión física para cubrir la existencia de ambos lectores sin cambiar la persistencia existente.
+
+### PR, head y merge
+
+- PR: **#614 — `feat: lectura en pantalla completa para código y contacto`**.
+- Head final validado: `cbf29ac54c0582827a4806c302ceede587f3ac3d`.
+- Merge squash a `main`: `f86ea972bc20a0300416362c265fe734ab8e1cc3`.
+
+### Validaciones del head final
+
+- OANIX CI #2626: **success**.
+- OANIX Android #1978: **success**.
+- Qwen Independent PR Review #911: **success**.
+
+### Validación física pendiente — pantalla completa
+
+Comprobar manualmente en Android:
+
+- abrir **Código** con `⛶` y confirmar lectura, scroll, copiar y cierre;
+- repetir Código en varios temas;
+- abrir **Contacto** con `⛶` y confirmar que todos los campos y las notas se leen cómodamente;
+- confirmar que la pantalla completa de Contacto no habilita edición y que el candado sigue siendo la única vía para editar.
+
+No marcar este ajuste como validado físicamente hasta confirmación del usuario.
+
+## Trabajo técnico anterior
+
 Se cerró técnicamente **Separador** mediante el PR #612. Con este merge quedó completada la secuencia técnica solicitada de bloques `Archivos -> Código -> Checklist -> Contacto -> Separador` sin dejar ningún bloque de esa secuencia a medias.
 
 ### Separador — CIERRE TÉCNICO
@@ -132,4 +171,4 @@ Al comenzar la revisión manual, validar en este orden para detectar regresiones
 
 ## Siguiente acción exacta
 
-Comenzar por la validación física de **Archivos** y avanzar bloque por bloque. Si toda la secuencia queda aprobada, definir el siguiente bloque/función de `Añadir contenido` antes de modificar más arquitectura. No iniciar un bloque nuevo no acordado solo por llenar tiempo.
+Continuar la validación física del editor. Para el ajuste más reciente, validar primero la pantalla completa de **Código** y **Contacto** en Android; después continuar con los bloques pendientes del orden recomendado. No marcar ninguna validación física como completada hasta confirmación del usuario.
