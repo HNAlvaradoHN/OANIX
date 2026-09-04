@@ -12,13 +12,23 @@ import type {
 } from '../editorSurfaceContract'
 import { findOanixClipboardImage } from '../oanixClipboardImage'
 import {
+  MAX_OANIX_FILE_GROUP_ITEMS,
+  decodeOanixFileGroupElement,
+  encodeOanixFileGroupElement,
+} from '../oanixFileGroupElementCodec'
+import {
+  appendOanixFileGroupFiles,
+  insertOanixFileGroup,
+  type OanixFileGroupProgress,
+} from '../oanixFileGroupLayer'
+import {
   OANIX_IMAGE_BATCH_LIMIT,
   insertOanixImageBatch,
   type OanixImageBatchProgress,
 } from '../oanixImageBatchInsertionCoordinator'
 import { decideOanixMixedDocumentLoad } from '../oanixMixedDocumentLoadPolicy'
 import { useDelayedOperationFeedback } from '../../../shared/useDelayedOperationFeedback'
-import { OanixMixedDocumentBody } from './OanixMixedDocumentBody'
+import { OanixMixedDocumentWithFiles } from './OanixMixedDocumentWithFiles'
 import './oanixNotesSheetSurface.css'
 
 const AUTOSAVE_IDLE_MS = 3_000
@@ -26,6 +36,7 @@ const HANDLE_EDGE_PADDING = 48
 
 type HandleSide = 'left' | 'right'
 type DocumentMode = 'plain' | 'mixed'
+type MixedCursorTarget = { blockId: string; cursorOffset: number }
 
 function snapshotsMatch(left: EditorSurfaceSnapshot, right: EditorSurfaceSnapshot): boolean {
   return left.title === right.title && left.text === right.text
@@ -47,6 +58,13 @@ function imageProgressLabel(progress: OanixImageBatchProgress | null, stillRunni
   return `${prefix}cifrando imágenes ${progress.completed}/${progress.total}…`
 }
 
+function fileProgressLabel(progress: OanixFileGroupProgress | null): string {
+  if (!progress) return 'Procesando archivos…'
+  if (progress.stage === 'committing') return 'Guardando tarjeta de archivos…'
+  if (progress.total === 1) return progress.completed > 0 ? 'Guardando archivo…' : 'Cifrando archivo…'
+  return `Cifrando archivos ${progress.completed}/${progress.total}…`
+}
+
 export function OanixNotesSheetSurface({
   noteId,
   initialTitle,
@@ -66,6 +84,7 @@ export function OanixNotesSheetSurface({
   const titleRef = useRef<HTMLInputElement | null>(null)
   const bodyRef = useRef<HTMLTextAreaElement | null>(null)
   const imageInputRef = useRef<HTMLInputElement | null>(null)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
   const editorRef = useRef<HTMLElement | null>(null)
   const dirtyRef = useRef(false)
   const generationRef = useRef(0)
@@ -78,7 +97,10 @@ export function OanixNotesSheetSurface({
   const handleDragRef = useRef<{ pointerId: number; startX: number; startY: number; moved: boolean } | null>(null)
   const lastPlainCursorRef = useRef(initialText.length)
   const pendingImageCursorRef = useRef<number | null>(null)
-  const pendingMixedImageTargetRef = useRef<{ blockId: string; cursorOffset: number } | null>(null)
+  const pendingMixedImageTargetRef = useRef<MixedCursorTarget | null>(null)
+  const pendingFileCursorRef = useRef<number | null>(null)
+  const pendingMixedFileTargetRef = useRef<MixedCursorTarget | null>(null)
+  const pendingFileGroupBlockIdRef = useRef<string | null>(null)
   const pendingMixedUpsertsRef = useRef<Map<string, EditorSurfaceBlock>>(new Map())
 
   const [dirty, setDirty] = useState(false)
@@ -96,6 +118,8 @@ export function OanixNotesSheetSurface({
   const [metadataReady, setMetadataReady] = useState(false)
   const [imageBusy, setImageBusy] = useState(false)
   const [imageProgress, setImageProgress] = useState<OanixImageBatchProgress | null>(null)
+  const [fileBusy, setFileBusy] = useState(false)
+  const [fileProgress, setFileProgress] = useState<OanixFileGroupProgress | null>(null)
   const [integrationError, setIntegrationError] = useState('')
   const imageFeedback = useDelayedOperationFeedback()
 
@@ -128,6 +152,25 @@ export function OanixNotesSheetSurface({
     lastPlainCursorRef.current = Math.max(0, textarea.selectionStart ?? textarea.value.length)
   }
 
+  function currentMixedCursor(): MixedCursorTarget | null {
+    const active = document.activeElement
+    if (!(active instanceof HTMLTextAreaElement) || !active.matches('.oanix-mixed-document__text')) return null
+    const blockId = active.dataset.oanixMixedTextId
+    if (!blockId) return null
+    return {
+      blockId,
+      cursorOffset: Math.max(0, active.selectionStart ?? active.value.length),
+    }
+  }
+
+  function fallbackMixedCursor(): MixedCursorTarget | null {
+    const textareas = editorRef.current?.querySelectorAll<HTMLTextAreaElement>('.oanix-mixed-document__text')
+    const fallback = textareas?.[Math.max(0, (textareas?.length ?? 1) - 1)]
+    const blockId = fallback?.dataset.oanixMixedTextId
+    if (!fallback || !blockId) return null
+    return { blockId, cursorOffset: fallback.value.length }
+  }
+
   function rememberMixedCursor(blockId: string, cursorOffset: number) {
     pendingMixedImageTargetRef.current = {
       blockId,
@@ -136,11 +179,8 @@ export function OanixNotesSheetSurface({
   }
 
   function rememberMixedCursorFromActiveElement() {
-    const active = document.activeElement
-    if (!(active instanceof HTMLTextAreaElement) || !active.matches('.oanix-mixed-document__text')) return
-    const blockId = active.dataset.oanixMixedTextId
-    if (!blockId) return
-    rememberMixedCursor(blockId, active.selectionStart ?? active.value.length)
+    const target = currentMixedCursor()
+    if (target) pendingMixedImageTargetRef.current = target
   }
 
   function clearIdleTimer() {
@@ -260,7 +300,7 @@ export function OanixNotesSheetSurface({
   }
 
   async function requestClose() {
-    if (saving || imageBusy || closingRef.current) return
+    if (saving || imageBusy || fileBusy || closingRef.current) return
     closingRef.current = true
     setClosing(true)
     clearIdleTimer()
@@ -374,14 +414,21 @@ export function OanixNotesSheetSurface({
     if (shouldOpen) openPanel()
   }
 
-  function focusAfterInsertedImage(imageBlockId: string, afterTextBlockId: string) {
+  function focusAfterInsertedElement(elementBlockId: string, afterTextBlockId: string) {
     window.requestAnimationFrame(() => {
-      const image = editorRef.current?.querySelector<HTMLElement>(`[data-oanix-element-id="${CSS.escape(imageBlockId)}"]`)
-      image?.scrollIntoView({ block: 'center' })
+      const element = editorRef.current?.querySelector<HTMLElement>(`[data-oanix-element-id="${CSS.escape(elementBlockId)}"]`)
+      element?.scrollIntoView({ block: 'center' })
       const nextText = editorRef.current?.querySelector<HTMLTextAreaElement>(`[data-oanix-mixed-text-id="${CSS.escape(afterTextBlockId)}"]`)
       nextText?.focus({ preventScroll: true })
       nextText?.setSelectionRange(0, 0)
       if (nextText) rememberMixedCursor(afterTextBlockId, 0)
+    })
+  }
+
+  function mergeAttachments(inserted: readonly EditorSurfaceAttachment[]) {
+    setAttachments((current) => {
+      const insertedIds = new Set(inserted.map((item) => item.id))
+      return [...current.filter((item) => !insertedIds.has(item.id)), ...inserted]
     })
   }
 
@@ -451,16 +498,13 @@ export function OanixNotesSheetSurface({
       if (textarea) textarea.value = ''
       committedSnapshotRef.current = { title, text: '' }
       setMixedBlocks(result.plan.blocks)
-      setAttachments((current) => {
-        const insertedIds = new Set(result.attachments.map((item) => item.id))
-        return [...current.filter((item) => !insertedIds.has(item.id)), ...result.attachments]
-      })
+      mergeAttachments(result.attachments)
       setDocumentMode('mixed')
       markClean()
       onActivity?.()
 
       const lastImageId = result.plan.imageBlockIds.at(-1)
-      if (lastImageId) focusAfterInsertedImage(lastImageId, result.plan.afterTextBlockId)
+      if (lastImageId) focusAfterInsertedElement(lastImageId, result.plan.afterTextBlockId)
     } catch {
       setIntegrationError('No se pudieron insertar las imágenes de forma segura.')
       if (dirtyRef.current) armAutosaveTimer()
@@ -516,14 +560,11 @@ export function OanixNotesSheetSurface({
 
       pendingMixedUpsertsRef.current.clear()
       setMixedBlocks(result.plan.blocks)
-      setAttachments((current) => {
-        const insertedIds = new Set(result.attachments.map((item) => item.id))
-        return [...current.filter((item) => !insertedIds.has(item.id)), ...result.attachments]
-      })
+      mergeAttachments(result.attachments)
       markClean()
       onActivity?.()
       const lastImageId = result.plan.imageBlockIds.at(-1)
-      if (lastImageId) focusAfterInsertedImage(lastImageId, result.plan.afterTextBlockId)
+      if (lastImageId) focusAfterInsertedElement(lastImageId, result.plan.afterTextBlockId)
     } catch {
       setIntegrationError('No se pudieron insertar las imágenes de forma segura.')
     } finally {
@@ -543,27 +584,228 @@ export function OanixNotesSheetSurface({
       pendingImageCursorRef.current = lastPlainCursorRef.current
       pendingMixedImageTargetRef.current = null
     } else {
-      rememberMixedCursorFromActiveElement()
-      if (!pendingMixedImageTargetRef.current) {
-        const textareas = editorRef.current?.querySelectorAll<HTMLTextAreaElement>('.oanix-mixed-document__text')
-        const fallback = textareas?.[Math.max(0, (textareas?.length ?? 1) - 1)]
-        const blockId = fallback?.dataset.oanixMixedTextId
-        if (fallback && blockId) rememberMixedCursor(blockId, fallback.value.length)
-      }
-      if (!pendingMixedImageTargetRef.current) {
+      const target = currentMixedCursor() ?? fallbackMixedCursor()
+      if (!target) {
         setIntegrationError('Coloca el cursor en un tramo de texto antes de insertar la imagen.')
         return
       }
+      pendingMixedImageTargetRef.current = target
       pendingImageCursorRef.current = null
     }
 
     imageInputRef.current?.click()
   }
 
+  function beginFileOperation(total: number) {
+    setFileBusy(true)
+    setFileProgress({ stage: 'storing', completed: 0, total })
+    setPanelOpen(false)
+    setIntegrationError('')
+    clearIdleTimer()
+  }
+
+  function finishFileOperation() {
+    setFileProgress(null)
+    setFileBusy(false)
+  }
+
+  async function insertFileGroupFiles(files: readonly File[], cursorOffset: number) {
+    if (
+      documentMode !== 'plain'
+      || !metadataReady
+      || !loadBlocks
+      || !onRequestBlockSave
+      || !onRequestAttachmentStore
+      || !onRequestAttachmentRemove
+    ) {
+      setIntegrationError('Archivos todavía no está disponible en el estado actual de esta nota.')
+      return
+    }
+    if (files.length < 1 || files.length > MAX_OANIX_FILE_GROUP_ITEMS) {
+      setIntegrationError(`Puedes seleccionar hasta ${MAX_OANIX_FILE_GROUP_ITEMS} archivos por tarjeta.`)
+      return
+    }
+
+    beginFileOperation(files.length)
+    try {
+      if (saveInFlightRef.current) await saveInFlightRef.current
+      const textarea = bodyRef.current
+      const text = textarea?.value ?? initialText
+      const title = titleRef.current?.value ?? initialTitle
+      const safeCursor = Math.min(Math.max(0, cursorOffset), text.length)
+      const existingBlocks = await loadBlocks()
+      const result = await insertOanixFileGroup({
+        mode: 'plain',
+        files,
+        title,
+        text,
+        cursorOffset: safeCursor,
+        existingBlocks,
+        storeAttachment: onRequestAttachmentStore,
+        saveBlockChanges: onRequestBlockSave,
+        savePlainSnapshot: onRequestSave,
+        removeAttachment: onRequestAttachmentRemove,
+        onProgress: setFileProgress,
+      })
+
+      if (result.status !== 'committed') {
+        setIntegrationError(`No se pudo crear la tarjeta de archivos de forma segura (${result.status}).`)
+        return
+      }
+
+      pendingMixedUpsertsRef.current.clear()
+      if (textarea) textarea.value = ''
+      committedSnapshotRef.current = { title, text: '' }
+      setMixedBlocks(result.plan.blocks)
+      mergeAttachments(result.attachments)
+      setDocumentMode('mixed')
+      markClean()
+      onActivity?.()
+      focusAfterInsertedElement(result.plan.groupBlockId, result.plan.afterTextBlockId)
+    } catch {
+      setIntegrationError('No se pudo crear la tarjeta de archivos de forma segura.')
+    } finally {
+      finishFileOperation()
+      if (dirtyRef.current) armAutosaveTimer()
+    }
+  }
+
+  async function insertMixedFileGroupFiles(files: readonly File[], blockId: string, cursorOffset: number) {
+    if (
+      documentMode !== 'mixed'
+      || !metadataReady
+      || !loadBlocks
+      || !onRequestBlockSave
+      || !onRequestAttachmentStore
+      || !onRequestAttachmentRemove
+    ) {
+      setIntegrationError('Archivos todavía no está disponible en el estado actual de esta nota.')
+      return
+    }
+    if (files.length < 1 || files.length > MAX_OANIX_FILE_GROUP_ITEMS) {
+      setIntegrationError(`Puedes seleccionar hasta ${MAX_OANIX_FILE_GROUP_ITEMS} archivos por tarjeta.`)
+      return
+    }
+
+    beginFileOperation(files.length)
+    try {
+      if (saveInFlightRef.current) await saveInFlightRef.current
+      if (dirtyRef.current && !(await saveCurrentSnapshot())) {
+        setIntegrationError('No se pudo guardar el texto pendiente antes de insertar la tarjeta de archivos.')
+        return
+      }
+      const confirmedBlocks = await loadBlocks()
+      const result = await insertOanixFileGroup({
+        mode: 'mixed',
+        files,
+        blocks: confirmedBlocks,
+        targetTextBlockId: blockId,
+        cursorOffset,
+        storeAttachment: onRequestAttachmentStore,
+        saveBlockChanges: onRequestBlockSave,
+        removeAttachment: onRequestAttachmentRemove,
+        onProgress: setFileProgress,
+      })
+
+      if (result.status !== 'committed') {
+        setIntegrationError(`No se pudo crear la tarjeta de archivos de forma segura (${result.status}).`)
+        return
+      }
+      pendingMixedUpsertsRef.current.clear()
+      setMixedBlocks(result.plan.blocks)
+      mergeAttachments(result.attachments)
+      markClean()
+      onActivity?.()
+      focusAfterInsertedElement(result.plan.groupBlockId, result.plan.afterTextBlockId)
+    } catch {
+      setIntegrationError('No se pudo crear la tarjeta de archivos de forma segura.')
+    } finally {
+      finishFileOperation()
+      if (dirtyRef.current) armAutosaveTimer()
+    }
+  }
+
+  async function appendFilesToGroup(groupBlockId: string, files: readonly File[]) {
+    if (
+      documentMode !== 'mixed'
+      || !onRequestBlockSave
+      || !onRequestAttachmentStore
+      || !onRequestAttachmentRemove
+    ) return
+    if (files.length < 1) return
+    const currentBlock = mixedBlocks.find((block) => block.id === groupBlockId)
+    const group = currentBlock ? decodeOanixFileGroupElement(currentBlock) : null
+    if (!currentBlock || !group) {
+      setIntegrationError('La tarjeta de archivos ya no está disponible.')
+      return
+    }
+    if (group.attachmentIds.length + files.length > MAX_OANIX_FILE_GROUP_ITEMS) {
+      setIntegrationError(`Una tarjeta puede contener hasta ${MAX_OANIX_FILE_GROUP_ITEMS} archivos.`)
+      return
+    }
+
+    beginFileOperation(files.length)
+    try {
+      if (saveInFlightRef.current) await saveInFlightRef.current
+      if (dirtyRef.current && !(await saveCurrentSnapshot())) {
+        setIntegrationError('No se pudo guardar el texto pendiente antes de añadir archivos.')
+        return
+      }
+      const result = await appendOanixFileGroupFiles({
+        groupBlock: currentBlock,
+        files,
+        storeAttachment: onRequestAttachmentStore,
+        saveBlockChanges: onRequestBlockSave,
+        removeAttachment: onRequestAttachmentRemove,
+        onProgress: setFileProgress,
+      })
+      if (result.status !== 'committed') {
+        setIntegrationError(`No se pudieron añadir los archivos de forma segura (${result.status}).`)
+        return
+      }
+      setMixedBlocks((current) => current.map((block) => block.id === groupBlockId ? result.block : block))
+      mergeAttachments(result.attachments)
+      onActivity?.()
+    } catch {
+      setIntegrationError('No se pudieron añadir los archivos a la tarjeta.')
+    } finally {
+      finishFileOperation()
+      if (dirtyRef.current) armAutosaveTimer()
+    }
+  }
+
+  function openFilePicker(groupBlockId?: string) {
+    if (!metadataReady || !mixedAvailable || fileBusy || imageBusy) {
+      setIntegrationError('Archivos todavía no está disponible en el estado actual de esta nota.')
+      return
+    }
+
+    pendingFileGroupBlockIdRef.current = groupBlockId ?? null
+    pendingFileCursorRef.current = null
+    pendingMixedFileTargetRef.current = null
+
+    if (!groupBlockId) {
+      if (documentMode === 'plain') {
+        rememberPlainCursor()
+        pendingFileCursorRef.current = lastPlainCursorRef.current
+      } else {
+        const target = currentMixedCursor() ?? fallbackMixedCursor()
+        if (!target) {
+          setIntegrationError('Coloca el cursor en un tramo de texto antes de insertar la tarjeta de archivos.')
+          return
+        }
+        pendingMixedFileTargetRef.current = target
+      }
+    }
+
+    setPanelOpen(false)
+    fileInputRef.current?.click()
+  }
+
   function handlePlainPaste(event: ReactClipboardEvent<HTMLTextAreaElement>) {
     const file = findOanixClipboardImage(event.clipboardData)
     if (!file) return
-    if (!metadataReady || !mixedAvailable || imageBusy) return
+    if (!metadataReady || !mixedAvailable || imageBusy || fileBusy) return
     event.preventDefault()
     const cursor = Math.max(0, event.currentTarget.selectionStart ?? event.currentTarget.value.length)
     lastPlainCursorRef.current = cursor
@@ -571,7 +813,7 @@ export function OanixNotesSheetSurface({
   }
 
   async function removeMixedImage(blockId: string, attachmentId: string) {
-    if (!onRequestBlockSave || !onRequestAttachmentRemove || imageBusy) return
+    if (!onRequestBlockSave || !onRequestAttachmentRemove || imageBusy || fileBusy) return
     setImageBusy(true)
     setIntegrationError('')
     clearIdleTimer()
@@ -602,6 +844,89 @@ export function OanixNotesSheetSurface({
       setIntegrationError('No se pudo eliminar la imagen.')
     } finally {
       setImageBusy(false)
+      if (dirtyRef.current) armAutosaveTimer()
+    }
+  }
+
+  async function removeFileFromGroup(blockId: string, attachmentId: string) {
+    if (!onRequestBlockSave || !onRequestAttachmentRemove || fileBusy || imageBusy) return
+    const currentBlock = mixedBlocks.find((block) => block.id === blockId)
+    const group = currentBlock ? decodeOanixFileGroupElement(currentBlock) : null
+    if (!group || !group.attachmentIds.includes(attachmentId)) return
+
+    setFileBusy(true)
+    setIntegrationError('')
+    clearIdleTimer()
+    try {
+      if (dirtyRef.current && !(await saveCurrentSnapshot())) {
+        setIntegrationError('No se pudo guardar el texto pendiente antes de quitar el archivo.')
+        return
+      }
+      const nextBlock = encodeOanixFileGroupElement({
+        ...group,
+        attachmentIds: group.attachmentIds.filter((id) => id !== attachmentId),
+      })
+      const saved = await onRequestBlockSave({ upserts: [nextBlock] })
+      if (!saved) {
+        setIntegrationError('No se pudo quitar el archivo de la tarjeta.')
+        return
+      }
+      setMixedBlocks((current) => current.map((block) => block.id === blockId ? nextBlock : block))
+      const removedAsset = await onRequestAttachmentRemove(attachmentId)
+      if (removedAsset) {
+        setAttachments((current) => current.filter((item) => item.id !== attachmentId))
+      } else {
+        setIntegrationError('El archivo se quitó de la tarjeta, pero su asset cifrado quedó pendiente de limpieza.')
+      }
+      onActivity?.()
+    } catch {
+      setIntegrationError('No se pudo quitar el archivo de la tarjeta.')
+    } finally {
+      setFileBusy(false)
+      if (dirtyRef.current) armAutosaveTimer()
+    }
+  }
+
+  async function removeFileGroup(blockId: string, attachmentIds: readonly string[]) {
+    if (!onRequestBlockSave || !onRequestAttachmentRemove || fileBusy || imageBusy) return
+    setFileBusy(true)
+    setIntegrationError('')
+    clearIdleTimer()
+    try {
+      if (dirtyRef.current && !(await saveCurrentSnapshot())) {
+        setIntegrationError('No se pudo guardar el texto pendiente antes de eliminar la tarjeta.')
+        return
+      }
+      const nextBlocks = mixedBlocks.filter((block) => block.id !== blockId)
+      const removedFromDocument = await onRequestBlockSave({
+        deletes: [blockId],
+        order: nextBlocks.map((block) => block.id),
+      })
+      if (!removedFromDocument) {
+        setIntegrationError('No se pudo eliminar la tarjeta de archivos.')
+        return
+      }
+      setMixedBlocks(nextBlocks)
+
+      const outcomes = await Promise.all(attachmentIds.map(async (attachmentId) => {
+        try {
+          return [attachmentId, await onRequestAttachmentRemove(attachmentId)] as const
+        } catch {
+          return [attachmentId, false] as const
+        }
+      }))
+      const removedIds = new Set(outcomes.filter(([, removed]) => removed).map(([attachmentId]) => attachmentId))
+      if (removedIds.size > 0) {
+        setAttachments((current) => current.filter((item) => !removedIds.has(item.id)))
+      }
+      if (outcomes.some(([, removed]) => !removed)) {
+        setIntegrationError('La tarjeta se eliminó, pero uno o más assets cifrados quedaron pendientes de limpieza.')
+      }
+      onActivity?.()
+    } catch {
+      setIntegrationError('No se pudo eliminar la tarjeta de archivos.')
+    } finally {
+      setFileBusy(false)
       if (dirtyRef.current) armAutosaveTimer()
     }
   }
@@ -687,12 +1012,14 @@ export function OanixNotesSheetSurface({
     return () => media.removeEventListener('change', listener)
   }, [mode])
 
-  const editingDisabled = saving || closing || imageBusy
+  const editingDisabled = saving || closing || imageBusy || fileBusy
   const showImageProgress = imageBusy && imageFeedback.visible
-  const status = saving || saveInFlightRef.current || showImageProgress ? 'saving' : dirty ? 'unsaved' : 'saved'
-  const statusLabel = showImageProgress
-    ? imageProgressLabel(imageProgress, imageFeedback.stillRunning)
-    : status === 'saving' ? 'Guardando…' : status === 'saved' ? 'Guardado' : 'Sin guardar'
+  const status = saving || saveInFlightRef.current || showImageProgress || fileBusy ? 'saving' : dirty ? 'unsaved' : 'saved'
+  const statusLabel = fileBusy
+    ? fileProgressLabel(fileProgress)
+    : showImageProgress
+      ? imageProgressLabel(imageProgress, imageFeedback.stillRunning)
+      : status === 'saving' ? 'Guardando…' : status === 'saved' ? 'Guardado' : 'Sin guardar'
   const visibleError = error || integrationError
 
   return (
@@ -730,7 +1057,7 @@ export function OanixNotesSheetSurface({
             </div>
             <div className="oanix-notes__body-wrap">
               {documentMode === 'mixed' && loadAttachmentFile ? (
-                <OanixMixedDocumentBody
+                <OanixMixedDocumentWithFiles
                   blocks={mixedBlocks}
                   attachments={attachments}
                   disabled={editingDisabled}
@@ -739,6 +1066,9 @@ export function OanixNotesSheetSurface({
                   onTextCursorChange={rememberMixedCursor}
                   onPasteImage={(file, blockId, cursorOffset) => void insertMixedImageFiles([file], blockId, cursorOffset)}
                   onRemoveImage={removeMixedImage}
+                  onAddFileGroupFiles={openFilePicker}
+                  onRemoveFileGroupFile={removeFileFromGroup}
+                  onRemoveFileGroup={removeFileGroup}
                   onActivity={markActivity}
                   onCompositionStart={() => { composingRef.current = true; onActivity?.() }}
                   onCompositionEnd={() => { composingRef.current = false; markActivity() }}
@@ -778,7 +1108,10 @@ export function OanixNotesSheetSurface({
         <div className="oanix-notes__panel-body">
           <section className="oanix-notes__panel-section"><span className="oanix-notes__section-label">Etiquetas</span><div className="oanix-notes__tags"><span>Sin etiquetas</span><button type="button" aria-label="Añadir etiqueta"><Icon width={16} height={16}><path d="M12 5v14"/><path d="M5 12h14"/></Icon></button></div></section>
           <div className="oanix-notes__divider"/>
-          <ToolSection label="Añadir contenido" tools={[[ 'entry','Entrada' ],[ 'image','Imagen' ],[ 'file','Archivos' ],[ 'code','Código' ],[ 'checklist','Checklist' ],[ 'contact','Contacto' ],[ 'separator','Separador' ]]} onTool={(tool) => { if (tool === 'image') openImagePicker() }}/>
+          <ToolSection label="Añadir contenido" tools={[[ 'entry','Entrada' ],[ 'image','Imagen' ],[ 'file','Archivos' ],[ 'code','Código' ],[ 'checklist','Checklist' ],[ 'contact','Contacto' ],[ 'separator','Separador' ]]} onTool={(tool) => {
+            if (tool === 'image') openImagePicker()
+            if (tool === 'file') openFilePicker()
+          }}/>
           <div className="oanix-notes__divider"/>
           <ToolSection label="Formato de texto" tools={[[ 'paragraph','Párrafo' ],[ 'h2','H2' ],[ 'h3','H3' ],[ 'quote','Cita' ],[ 'list','Lista' ],[ 'numbered-list','Numérica' ]]}/>
         </div>
@@ -820,6 +1153,33 @@ export function OanixNotesSheetSurface({
           }
           if (mixedTarget) void insertMixedImageFiles(selectedFiles, mixedTarget.blockId, mixedTarget.cursorOffset)
           else void insertImageFiles(selectedFiles, cursor)
+        }}
+      />
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        tabIndex={-1}
+        aria-hidden="true"
+        style={{ display: 'none' }}
+        onChange={(event) => {
+          const selectedFiles = Array.from(event.currentTarget.files ?? [])
+          event.currentTarget.value = ''
+          const groupBlockId = pendingFileGroupBlockIdRef.current
+          const mixedTarget = pendingMixedFileTargetRef.current
+          const cursor = pendingFileCursorRef.current ?? lastPlainCursorRef.current
+          pendingFileGroupBlockIdRef.current = null
+          pendingMixedFileTargetRef.current = null
+          pendingFileCursorRef.current = null
+          if (selectedFiles.length < 1) return
+          if (selectedFiles.length > MAX_OANIX_FILE_GROUP_ITEMS) {
+            setIntegrationError(`Puedes seleccionar hasta ${MAX_OANIX_FILE_GROUP_ITEMS} archivos por tarjeta.`)
+            return
+          }
+          if (groupBlockId) void appendFilesToGroup(groupBlockId, selectedFiles)
+          else if (mixedTarget) void insertMixedFileGroupFiles(selectedFiles, mixedTarget.blockId, mixedTarget.cursorOffset)
+          else void insertFileGroupFiles(selectedFiles, cursor)
         }}
       />
     </section>
