@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import { getCachedAttachmentObjectUrl } from '../../attachments/attachmentSessionCache.ts'
 import type { EditorSurfaceAttachment, EditorSurfaceBlock } from '../editorSurfaceContract.ts'
 import { findOanixClipboardImage } from '../oanixClipboardImage.ts'
 import {
@@ -303,11 +302,8 @@ function OanixMixedImage({
 }) {
   const hostRef = useRef<HTMLElement | null>(null)
   const menuRef = useRef<HTMLDivElement | null>(null)
-  const componentOwnedUrlRef = useRef<string | null>(null)
-  const [url, setUrl] = useState<string | null>(() => (
-    attachment && !attachment.remote ? getCachedAttachmentObjectUrl(attachment.id) : null
-  ))
-  const [requested, setRequested] = useState(Boolean(url))
+  const [requested, setRequested] = useState(false)
+  const [url, setUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [showDecryptingLabel, setShowDecryptingLabel] = useState(false)
   const [loadAttempt, setLoadAttempt] = useState(0)
@@ -355,14 +351,7 @@ function OanixMixedImage({
         onError?.('No se pudo abrir la imagen cifrada.')
         return
       }
-      const cachedUrl = getCachedAttachmentObjectUrl(attachment.id)
-      if (cachedUrl) {
-        setUrl(cachedUrl)
-        return
-      }
-      const objectUrl = URL.createObjectURL(file)
-      componentOwnedUrlRef.current = objectUrl
-      setUrl(objectUrl)
+      setUrl(URL.createObjectURL(file))
     }).catch(() => {
       if (active) onError?.('No se pudo abrir la imagen cifrada.')
     }).finally(() => {
@@ -379,8 +368,8 @@ function OanixMixedImage({
   }, [attachment, loadAttachmentFile, loadAttempt, onError, requested, url])
 
   useEffect(() => () => {
-    if (componentOwnedUrlRef.current) URL.revokeObjectURL(componentOwnedUrlRef.current)
-  }, [])
+    if (url) URL.revokeObjectURL(url)
+  }, [url])
 
   function persistPresentation(nextWidth: number, nextLocked: boolean) {
     setWidthPercent(nextWidth)

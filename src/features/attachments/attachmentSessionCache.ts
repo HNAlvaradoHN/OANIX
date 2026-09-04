@@ -6,7 +6,6 @@ export const DEFAULT_DECRYPTED_ATTACHMENT_CACHE_BYTES = 48 * 1024 * 1024
 interface CachedFileEntry {
   file: File
   byteLength: number
-  objectUrl: string | null
 }
 
 export class AttachmentSessionCache {
@@ -19,30 +18,12 @@ export class AttachmentSessionCache {
     this.maxFileBytes = maxFileBytes
   }
 
-  private touch(attachmentId: string, existing: CachedFileEntry): void {
-    this.files.delete(attachmentId)
-    this.files.set(attachmentId, existing)
-  }
-
-  private revokeObjectUrl(existing: CachedFileEntry | undefined): void {
-    if (!existing?.objectUrl) return
-    URL.revokeObjectURL(existing.objectUrl)
-    existing.objectUrl = null
-  }
-
   getFile(attachmentId: string): File | null {
     const existing = this.files.get(attachmentId)
     if (!existing) return null
-    this.touch(attachmentId, existing)
+    this.files.delete(attachmentId)
+    this.files.set(attachmentId, existing)
     return existing.file
-  }
-
-  getObjectUrl(attachmentId: string): string | null {
-    const existing = this.files.get(attachmentId)
-    if (!existing) return null
-    this.touch(attachmentId, existing)
-    if (!existing.objectUrl) existing.objectUrl = URL.createObjectURL(existing.file)
-    return existing.objectUrl
   }
 
   putFile(attachmentId: string, file: File): void {
@@ -50,7 +31,6 @@ export class AttachmentSessionCache {
 
     const existing = this.files.get(attachmentId)
     if (existing) {
-      this.revokeObjectUrl(existing)
       this.cachedFileBytes -= existing.byteLength
       this.files.delete(attachmentId)
     }
@@ -59,19 +39,17 @@ export class AttachmentSessionCache {
       const oldestId = this.files.keys().next().value as string | undefined
       if (!oldestId) break
       const oldest = this.files.get(oldestId)
-      this.revokeObjectUrl(oldest)
       this.files.delete(oldestId)
       if (oldest) this.cachedFileBytes -= oldest.byteLength
     }
 
-    this.files.set(attachmentId, { file, byteLength: file.size, objectUrl: null })
+    this.files.set(attachmentId, { file, byteLength: file.size })
     this.cachedFileBytes += file.size
   }
 
   removeFile(attachmentId: string): void {
     const existing = this.files.get(attachmentId)
     if (!existing) return
-    this.revokeObjectUrl(existing)
     this.files.delete(attachmentId)
     this.cachedFileBytes -= existing.byteLength
   }
@@ -94,7 +72,6 @@ export class AttachmentSessionCache {
   }
 
   clear(): void {
-    for (const existing of this.files.values()) this.revokeObjectUrl(existing)
     this.files.clear()
     this.metadataByNote.clear()
     this.cachedFileBytes = 0
@@ -106,10 +83,6 @@ registerVaultSessionCleanup(() => attachmentSessionCache.clear())
 
 export function getCachedAttachmentFile(attachmentId: string): File | null {
   return attachmentSessionCache.getFile(attachmentId)
-}
-
-export function getCachedAttachmentObjectUrl(attachmentId: string): string | null {
-  return attachmentSessionCache.getObjectUrl(attachmentId)
 }
 
 export function cacheAttachmentFile(attachmentId: string, file: File): void {
