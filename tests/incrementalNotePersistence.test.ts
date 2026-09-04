@@ -6,7 +6,10 @@ const planner = readFileSync('src/features/rebuild/incrementalNoteText.ts', 'utf
 const service = readFileSync('src/features/rebuild/rebuildService.ts', 'utf8')
 const repository = readFileSync('src/storage/repositories/encryptedV2RecordRepository.ts', 'utf8')
 const rebuild = readFileSync('src/features/rebuild/RebuildApp.tsx', 'utf8')
-const editor = readFileSync('src/features/editor/NoteEditor.tsx', 'utf8')
+const editor = readFileSync(
+  'src/features/editor/implementations/OanixNotesSheetSurface.tsx',
+  'utf8',
+)
 
 test('incremental text persistence uses bounded stable chunks instead of rewriting the whole note', () => {
   assert.match(planner, /TARGET_CHUNK_CHARS = 16 \* 1024/)
@@ -45,12 +48,13 @@ test('editor keeps the latest committed baseline across idle and close saves', (
   assert.doesNotMatch(rebuild, /saveRebuildNote\([^\n]*onInput/)
 })
 
-test('close boundary persists the current DOM snapshot even before idle dirty tracking settles', () => {
-  assert.match(editor, /committedSnapshotRef = useRef<NoteEditorSnapshot>/)
+test('active OANIX editor closes from the current DOM snapshot and committed baseline', () => {
+  assert.match(editor, /committedSnapshotRef = useRef<EditorSurfaceSnapshot>/)
+  assert.match(editor, /function readSnapshot\(\): EditorSurfaceSnapshot/)
   assert.match(editor, /const snapshot = readSnapshot\(\)/)
   assert.match(editor, /snapshotsMatch\(snapshot, committedSnapshotRef\.current\)/)
-  assert.match(editor, /closed = await onRequestClose\(snapshot\)/)
-  assert.doesNotMatch(editor, /if \(!dirtyRef\.current\) \{\s*closed = await onRequestClose\(null\)/)
+  assert.match(editor, /await onRequestClose\(snapshot\)/)
+  assert.match(editor, /if \(closed\) committedSnapshotRef\.current = snapshot/)
 })
 
 test('encrypted repository batches requested reads and atomic writes/deletes', () => {
