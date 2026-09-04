@@ -11,8 +11,52 @@ Fecha: 2026-09-04
 - **Archivos**: cerrado técnicamente; validación física pendiente.
 - **Código**: cerrado técnicamente; validación física pendiente.
 - **Checklist**: cerrado técnicamente; validación física pendiente.
-- **Contacto**: cerrado técnicamente; validación física pendiente.
+- **Contacto**: cerrado técnicamente con los ajustes más recientes; validación física pendiente.
 - **Separador**: cerrado técnicamente; validación física pendiente.
+
+## AJUSTE MÁS RECIENTE — CONTACTO
+
+Se cerró técnicamente la corrección solicitada durante la validación física de **Contacto**.
+
+Quedó implementado:
+
+- Los contactos nuevos nacen con el nombre vacío; no se precarga `Nuevo contacto`.
+- Las tarjetas antiguas que conserven exactamente el valor legado `Nuevo contacto` se muestran con el nombre vacío para poder escribir directamente sin borrar texto previo.
+- El teléfono acepta y persiste solo dígitos, sin prefijo fijo `+504`, para no asumir país.
+- El correo solo se persiste cuando tiene formato válido; si es inválido al salir del campo, se descarta silenciosamente.
+- Se eliminó el mensaje rojo, `aria-invalid` y el aviso visual intrusivo del correo inválido.
+- El botón `⛶` de Contacto pertenece únicamente a **Notas**.
+- La pantalla completa de Notas respeta el candado: lectura cuando está bloqueado y edición cuando está desbloqueado.
+- No se fuerza una migración destructiva de datos históricos; se conserva compatibilidad de lectura con contactos antiguos.
+
+### PRs, heads y merges
+
+- PR **#615 — `fix: valida campos y concentra pantalla completa en notas de contacto`**.
+  - Head final: `aadcc40c4805f56cc18991eea9a7f0d05e1ba3ed`.
+  - Merge squash: `2246a1f2142d874c67f090620e9c443915b50c42`.
+  - OANIX CI #2631: **success**.
+  - OANIX Android #1983: **success**.
+  - Qwen Independent PR Review #912: **success**.
+- PR **#616 — `fix: limpia nombre legado y alerta visual de correo en contacto`**.
+  - Head final: `d07c6c2cd0f3e1fcf09b9de18ae10e501e3a6176`.
+  - Merge squash: `73775614e7103cf27ec054790811dc851687cb11`.
+  - OANIX CI #2633: **success**.
+  - OANIX Android #1985: **success**.
+  - Qwen Independent PR Review #913: **success**.
+
+### Validación física pendiente — Contacto
+
+Comprobar manualmente en Android:
+
+- crear un contacto y confirmar que el nombre aparece vacío, sin `Nuevo contacto`;
+- abrir una tarjeta antigua con `Nuevo contacto` y confirmar que se puede escribir el nombre directamente;
+- escribir o pegar teléfono con letras/símbolos y confirmar que solo quedan dígitos;
+- confirmar que no aparece `+504` por defecto;
+- escribir un correo válido y comprobar que se conserva;
+- escribir un correo inválido, salir del campo y confirmar que se descarta sin mensaje rojo ni aviso visual;
+- confirmar que `⛶` aparece únicamente en Notas y que la pantalla completa respeta el estado del candado.
+
+No marcar Contacto como validado físicamente hasta confirmación del usuario.
 
 ## CIERRE NOCTURNO FINAL
 
@@ -24,19 +68,18 @@ Fecha: 2026-09-04
 - Los únicos PRs abiertos detectados al cierre son experimentos draft antiguos (#589, #590 y #591); no forman parte del trabajo nocturno y no deben fusionarse durante esta revisión.
 - **Punto exacto para comenzar la revisión:** partir del `main` actual y validar físicamente **Archivos** primero. No revisar ramas de feature nocturnas como fuente principal.
 
-## ÚLTIMO TRABAJO REALIZADO
+## ÚLTIMO TRABAJO REALIZADO ANTES DE LOS AJUSTES DE CONTACTO
 
 ### Lectura en pantalla completa de Código y Contacto — CIERRE TÉCNICO
 
 Se cerró técnicamente el ajuste solicitado durante la revisión física para poder leer con comodidad el contenido de **Código** y **Contacto** en pantalla completa.
 
-Quedó implementado:
+> Nota de continuidad: la descripción original de Contacto de esta sección quedó **supersedida** por los PR #615 y #616. Actualmente el `⛶` de Contacto abre únicamente **Notas**, y las notas respetan el estado del candado.
+
+Quedó implementado originalmente:
 
 - **Código**: botón `⛶` en la cabecera para abrir un lector de pantalla completa.
 - El lector de Código conserva tema oscuro legible, muestra el lenguaje, permite scroll independiente, copiar y cerrar por botón, fondo o `Escape`.
-- **Contacto**: botón `⛶` junto al candado para abrir una vista completa de lectura.
-- La vista de Contacto muestra nombre, teléfono, correo, organización y notas.
-- La pantalla completa de Contacto es solo lectura; el candado sigue siendo la única vía de edición.
 - Ambos lectores bloquean temporalmente el scroll del fondo y usan `100dvh` en móvil con consideración de safe areas.
 - Se ampliaron las pruebas estáticas de revisión física para cubrir la existencia de ambos lectores sin cambiar la persistencia existente.
 
@@ -51,17 +94,6 @@ Quedó implementado:
 - OANIX CI #2626: **success**.
 - OANIX Android #1978: **success**.
 - Qwen Independent PR Review #911: **success**.
-
-### Validación física pendiente — pantalla completa
-
-Comprobar manualmente en Android:
-
-- abrir **Código** con `⛶` y confirmar lectura, scroll, copiar y cierre;
-- repetir Código en varios temas;
-- abrir **Contacto** con `⛶` y confirmar que todos los campos y las notas se leen cómodamente;
-- confirmar que la pantalla completa de Contacto no habilita edición y que el candado sigue siendo la única vía para editar.
-
-No marcar este ajuste como validado físicamente hasta confirmación del usuario.
 
 ## Trabajo técnico anterior
 
@@ -171,4 +203,4 @@ Al comenzar la revisión manual, validar en este orden para detectar regresiones
 
 ## Siguiente acción exacta
 
-Continuar la validación física del editor. Para el ajuste más reciente, validar primero la pantalla completa de **Código** y **Contacto** en Android; después continuar con los bloques pendientes del orden recomendado. No marcar ninguna validación física como completada hasta confirmación del usuario.
+Validar físicamente en Android los ajustes de **Contacto** de los PR #615 y #616: nombre vacío sin `Nuevo contacto`, teléfono solo numérico y sin prefijo fijo, correo inválido descartado sin mensaje rojo y `⛶` únicamente en Notas respetando el candado. Después continuar con los bloques pendientes del orden recomendado. No marcar ninguna validación física como completada hasta confirmación del usuario.
