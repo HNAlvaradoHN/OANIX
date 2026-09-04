@@ -14,6 +14,16 @@ Fecha: 2026-09-04
 - **Contacto**: cerrado técnicamente; validación física pendiente.
 - **Separador**: cerrado técnicamente; validación física pendiente.
 
+## CIERRE NOCTURNO FINAL
+
+- `main` auditado al cierre: `bccd4e08c4e3676df343f38f817c841b05958328` antes de esta actualización documental.
+- La secuencia técnica nocturna quedó completa: **Archivos -> Código -> Checklist -> Contacto -> Separador**.
+- PRs cerrados y fusionados: **#608, #609, #610, #611 y #612**.
+- Todos los heads finales de esos cinco PRs tienen **OANIX CI + OANIX Android + Qwen Independent PR Review en success**.
+- No se inició ningún bloque nuevo después de Separador.
+- Los únicos PRs abiertos detectados al cierre son experimentos draft antiguos (#589, #590 y #591); no forman parte del trabajo nocturno y no deben fusionarse durante esta revisión.
+- **Punto exacto para comenzar la revisión:** partir del `main` actual y validar físicamente **Archivos** primero. No revisar ramas de feature nocturnas como fuente principal.
+
 ## ÚLTIMO TRABAJO REALIZADO
 
 Se cerró técnicamente **Separador** mediante el PR #612. Con este merge quedó completada la secuencia técnica solicitada de bloques `Archivos -> Código -> Checklist -> Contacto -> Separador` sin dejar ningún bloque de esa secuencia a medias.
