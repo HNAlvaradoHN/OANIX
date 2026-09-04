@@ -5,6 +5,7 @@ import { decodeContactBlock, type EditorContactBlock } from '../contactBlockCode
 import { decodeDailyEntryBlock, type EditorDailyEntryBlock } from '../dailyEntryBlockCodec.ts'
 import { decodeOanixFileGroupElement, type OanixFileGroupElement } from '../oanixFileGroupElementCodec.ts'
 import { decodeSeparatorBlock, type EditorSeparatorBlock } from '../separatorBlockCodec.ts'
+import { decodeTextBlock } from '../textBlockCodec.ts'
 import { OanixChecklistBlockCard } from './OanixChecklistBlockCard.tsx'
 import { OanixCodeBlockCard } from './OanixCodeBlockCard.tsx'
 import { OanixContactBlockCard } from './OanixContactBlockCard.tsx'
@@ -12,6 +13,7 @@ import { OanixDailyEntryBlockCard } from './OanixDailyEntryBlockCard.tsx'
 import { OanixFileGroupCard } from './OanixFileGroupCard.tsx'
 import { OanixMixedDocumentBody } from './OanixMixedDocumentBody.tsx'
 import { OanixSeparatorBlockCard } from './OanixSeparatorBlockCard.tsx'
+import { OanixTextLineEditor } from './OanixTextLineEditor.tsx'
 
 interface OanixMixedDocumentWithFilesProps {
   blocks: readonly EditorSurfaceBlock[]
@@ -37,6 +39,7 @@ interface OanixMixedDocumentWithFilesProps {
 }
 
 type Segment =
+  | { type: 'text-lines'; key: string; blocks: EditorSurfaceBlock[] }
   | { type: 'mixed'; key: string; blocks: EditorSurfaceBlock[] }
   | { type: 'file-group'; key: string; block: OanixFileGroupElement }
   | { type: 'code'; key: string; block: EditorCodeBlock }
@@ -47,61 +50,82 @@ type Segment =
 
 function segmentDocument(blocks: readonly EditorSurfaceBlock[]): Segment[] {
   const segments: Segment[] = []
-  let pending: EditorSurfaceBlock[] = []
+  let pendingText: EditorSurfaceBlock[] = []
+  let pendingMixed: EditorSurfaceBlock[] = []
   let runIndex = 0
 
-  const flush = () => {
-    if (pending.length === 0) return
-    segments.push({ type: 'mixed', key: `mixed-${runIndex++}-${pending[0].id}`, blocks: pending })
-    pending = []
+  const flushText = () => {
+    if (pendingText.length === 0) return
+    segments.push({ type: 'text-lines', key: `text-${runIndex++}-${pendingText[0].id}`, blocks: pendingText })
+    pendingText = []
+  }
+
+  const flushMixed = () => {
+    if (pendingMixed.length === 0) return
+    segments.push({ type: 'mixed', key: `mixed-${runIndex++}-${pendingMixed[0].id}`, blocks: pendingMixed })
+    pendingMixed = []
+  }
+
+  const flushPending = () => {
+    flushText()
+    flushMixed()
   }
 
   for (const block of blocks) {
     const fileGroup = decodeOanixFileGroupElement(block)
     if (fileGroup) {
-      flush()
+      flushPending()
       segments.push({ type: 'file-group', key: fileGroup.id, block: fileGroup })
       continue
     }
     const code = decodeCodeBlock(block)
     if (code) {
-      flush()
+      flushPending()
       segments.push({ type: 'code', key: code.id, block: code })
       continue
     }
     const checklist = decodeChecklistBlock(block)
     if (checklist) {
-      flush()
+      flushPending()
       segments.push({ type: 'checklist', key: checklist.id, block: checklist })
       continue
     }
     const contact = decodeContactBlock(block)
     if (contact) {
-      flush()
+      flushPending()
       segments.push({ type: 'contact', key: contact.id, block: contact })
       continue
     }
     const dailyEntry = decodeDailyEntryBlock(block)
     if (dailyEntry) {
-      flush()
+      flushPending()
       segments.push({ type: 'daily-entry', key: dailyEntry.id, block: dailyEntry })
       continue
     }
     const separator = decodeSeparatorBlock(block)
     if (separator) {
-      flush()
+      flushPending()
       segments.push({ type: 'separator', key: separator.id, block: separator })
       continue
     }
-    pending.push(block)
+
+    if (decodeTextBlock(block)) {
+      flushMixed()
+      pendingText.push(block)
+      continue
+    }
+
+    flushText()
+    pendingMixed.push(block)
   }
-  flush()
+  flushPending()
   return segments
 }
 
 /**
- * Composition wrapper that keeps the validated image/text renderer untouched while
- * inserting OANIX file-group, code, checklist, contact, daily-entry and separator elements at their ordered positions.
+ * Composition wrapper that keeps atomic OANIX cards isolated while text uses the
+ * stable line editor. Images and unsupported mixed elements remain on the existing
+ * renderer so their attachment/decryption behavior is unchanged.
  */
 export function OanixMixedDocumentWithFiles({
   blocks,
@@ -201,6 +225,20 @@ export function OanixMixedDocumentWithFiles({
           block={segment.block}
           disabled={disabled}
           onRemove={onRemoveSeparatorBlock ? () => onRemoveSeparatorBlock(segment.block.id) : undefined}
+          onError={onError}
+        />
+      }
+
+      if (segment.type === 'text-lines') {
+        return <OanixTextLineEditor
+          key={segment.key}
+          blocks={segment.blocks}
+          disabled={disabled}
+          onTextCursorChange={onTextCursorChange}
+          onPasteImage={onPasteImage}
+          onActivity={onActivity}
+          onCompositionStart={onCompositionStart}
+          onCompositionEnd={onCompositionEnd}
           onError={onError}
         />
       }
