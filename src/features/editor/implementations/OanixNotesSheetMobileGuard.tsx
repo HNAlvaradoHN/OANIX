@@ -12,6 +12,8 @@ const ADD_CONTENT_TOOLS = new Set(['entry', 'image', 'files', 'code', 'checklist
 
 type MixedCursorTarget = { blockId: string; cursorOffset: number }
 
+type DailyEntryRemoveDetail = { blockId?: string }
+
 function isGuardedTextarea(target: EventTarget | null): target is HTMLTextAreaElement {
   return target instanceof HTMLTextAreaElement
     && (target.classList.contains('oanix-notes__body') || target.classList.contains('oanix-mixed-document__text'))
@@ -337,6 +339,59 @@ export function OanixNotesSheetMobileGuard(props: EditorSurfaceProps) {
       document.removeEventListener('pointerup', rememberCursor, true)
       document.removeEventListener('click', handleClick)
     }
+  }, [props])
+
+  useEffect(() => {
+    const handleDailyEntryRemove = (event: Event) => {
+      if (!(event instanceof CustomEvent)) return
+      const blockId = (event.detail as DailyEntryRemoveDetail | null)?.blockId
+      if (!blockId || entryBusyRef.current || !props.loadBlocks || !props.onRequestBlockSave) return
+
+      const editor = document.querySelector<HTMLElement>(`.oanix-notes[data-note-id="${CSS.escape(props.noteId)}"]`)
+      const entry = editor?.querySelector<HTMLElement>(`[data-oanix-element-id="${CSS.escape(blockId)}"][data-oanix-element-kind="dailyEntry"]`)
+      if (!editor || !entry) return
+
+      void (async () => {
+        entryBusyRef.current = true
+        setEntryBusy(true)
+        setEntryError('')
+        try {
+          const clean = await waitForEditorClean(editor)
+          if (!clean) {
+            setEntryError('No se pudo guardar el contenido pendiente antes de eliminar la entrada.')
+            return
+          }
+
+          const blocks = await props.loadBlocks!()
+          if (!blocks.some((block) => block.id === blockId && block.kind === 'dailyEntry')) {
+            setEntryError('La entrada ya no está disponible.')
+            return
+          }
+          const nextBlocks = blocks.filter((block) => block.id !== blockId)
+          const removed = await props.onRequestBlockSave!({
+            deletes: [blockId],
+            order: nextBlocks.map((block) => block.id),
+          })
+          if (!removed) {
+            setEntryError('No se pudo eliminar la entrada.')
+            return
+          }
+
+          props.onActivity?.()
+          lastMixedCursorRef.current = null
+          lastPlainCursorRef.current = null
+          setSurfaceRevision((revision) => revision + 1)
+        } catch {
+          setEntryError('No se pudo eliminar la entrada.')
+        } finally {
+          entryBusyRef.current = false
+          setEntryBusy(false)
+        }
+      })()
+    }
+
+    window.addEventListener('oanix-daily-entry-remove', handleDailyEntryRemove)
+    return () => window.removeEventListener('oanix-daily-entry-remove', handleDailyEntryRemove)
   }, [props])
 
   useEffect(() => {
