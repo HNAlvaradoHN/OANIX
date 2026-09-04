@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
 import type { EditorSurfaceBlockChangeSet } from '../src/features/editor/editorSurfaceContract.ts'
+import { buildHeadingEnterPlan, buildHeadingParagraphReset } from '../src/features/editor/oanixHeadingEnterPlan.ts'
 import { applyOanixTextFormat } from '../src/features/editor/oanixTextFormatLayer.ts'
 import { TEXT_BLOCK_KIND, decodeTextBlock, encodeTextBlock } from '../src/features/editor/textBlockCodec.ts'
 
@@ -62,6 +63,27 @@ test('mixed multi-line selection creates one semantic list item per selected lin
   ])
 })
 
+test('live H2/H3 state wins when Enter lands before the persisted format catches up', () => {
+  const persistedParagraph = encodeTextBlock({ id: 'source', kind: TEXT_BLOCK_KIND, text: 'viejo', format: 'paragraph' })
+  const plan = buildHeadingEnterPlan([persistedParagraph], 'source', 5, 5, () => 'next', 'Título', 'h2')
+  assert.ok(plan)
+  assert.equal(decodeTextBlock(plan.heading)?.format, 'h2')
+  assert.equal(decodeTextBlock(plan.heading)?.text, 'Títul')
+  assert.equal(decodeTextBlock(plan.paragraph)?.format, 'paragraph')
+  assert.equal(decodeTextBlock(plan.paragraph)?.text, 'o')
+})
+
+test('empty heading reset always canonicalizes the writable text block back to paragraph', () => {
+  const persistedHeading = encodeTextBlock({ id: 'source', kind: TEXT_BLOCK_KIND, text: 'Título', format: 'h3' })
+  const resetFromHeading = buildHeadingParagraphReset([persistedHeading], 'source', '')
+  assert.equal(decodeTextBlock(resetFromHeading!)?.format, 'paragraph')
+  assert.equal(decodeTextBlock(resetFromHeading!)?.text, '')
+
+  const alreadyParagraph = encodeTextBlock({ id: 'source', kind: TEXT_BLOCK_KIND, text: '', format: 'paragraph' })
+  const resetFromParagraph = buildHeadingParagraphReset([alreadyParagraph], 'source', '')
+  assert.equal(decodeTextBlock(resetFromParagraph!)?.format, 'paragraph')
+})
+
 test('editor bridge connects every text format and keeps theme-driven visuals', () => {
   const guard = readFileSync('src/features/editor/implementations/OanixNotesSheetMobileGuard.tsx', 'utf8')
   const css = readFileSync('src/features/editor/implementations/oanixNotesSheetMobileSafeArea.css', 'utf8')
@@ -77,6 +99,16 @@ test('editor bridge connects every text format and keeps theme-driven visuals', 
   assert.match(css, /var\(--color-text\)/)
   assert.match(css, /tool-h2::after/)
   assert.match(css, /content: "H2"/)
+})
+
+test('heading bridge anchors remounts instead of trusting one scrollTop snapshot', () => {
+  const bridge = readFileSync('src/features/editor/oanixTextBehaviorBridge.ts', 'utf8')
+  assert.match(bridge, /pageScrollY:\s*window\.scrollY/)
+  assert.match(bridge, /anchorBlockId/)
+  assert.match(bridge, /anchorViewportTop/)
+  assert.match(bridge, /window\.scrollTo\(state\.pageScrollX, state\.pageScrollY\)/)
+  assert.match(bridge, /window\.setTimeout\(settle, 220\)/)
+  assert.match(bridge, /buildHeadingEnterPlan\(blocks, blockId, selectionStart, selectionEnd, undefined, liveText, format\)/)
 })
 
 test('paragraph ruled test keeps text cadence locked to the ruling and removes focus box', () => {
