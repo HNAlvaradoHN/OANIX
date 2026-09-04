@@ -24,9 +24,15 @@ interface OanixContactBlockCardProps {
 
 type ContactDraft = Omit<EditorContactBlock, 'id' | 'kind'>
 
+const LEGACY_NEW_CONTACT_NAME = 'Nuevo contacto'
+
+function editableContactName(name: string): string {
+  return name.trim() === LEGACY_NEW_CONTACT_NAME ? '' : name
+}
+
 export function OanixContactBlockCard({ block, disabled, onChange, onRemove, onActivity, onError }: OanixContactBlockCardProps) {
   const [draft, setDraft] = useState<ContactDraft>(() => ({
-    name: block.name,
+    name: editableContactName(block.name),
     phone: block.phone,
     email: block.email,
     organization: block.organization,
@@ -35,7 +41,6 @@ export function OanixContactBlockCard({ block, disabled, onChange, onRemove, onA
   const [editing, setEditing] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [notesExpanded, setNotesExpanded] = useState(false)
-  const [emailRejected, setEmailRejected] = useState(false)
 
   const initials = useMemo(() => {
     const parts = draft.name.trim().split(/\s+/).filter(Boolean)
@@ -80,7 +85,6 @@ export function OanixContactBlockCard({ block, disabled, onChange, onRemove, onA
     const nextEmail = value.slice(0, MAX_CONTACT_EMAIL_LENGTH)
     const next = { ...draft, email: nextEmail }
     setDraft(next)
-    setEmailRejected(false)
     onActivity()
     if (!isValidContactEmail(nextEmail)) return
     void Promise.resolve(onChange(encodeContactBlock({ ...block, ...next }))).catch(() => {
@@ -90,7 +94,6 @@ export function OanixContactBlockCard({ block, disabled, onChange, onRemove, onA
 
   function handleEmailBlur() {
     if (!editing || disabled || isValidContactEmail(draft.email)) return
-    setEmailRejected(true)
     persist({ ...draft, email: '' })
   }
 
@@ -162,8 +165,7 @@ export function OanixContactBlockCard({ block, disabled, onChange, onRemove, onA
         </label>
         <label className="oanix-contact-block__field">
           <span>Correo</span>
-          <input type="email" inputMode="email" value={draft.email} maxLength={MAX_CONTACT_EMAIL_LENGTH} disabled={disabled} readOnly={!editing} aria-invalid={emailRejected || undefined} placeholder="nombre@correo.com" onChange={(event) => handleEmailChange(event.currentTarget.value)} onBlur={handleEmailBlur} />
-          {emailRejected && <small className="oanix-contact-block__validation">Correo no válido; no se guardó.</small>}
+          <input type="email" inputMode="email" value={draft.email} maxLength={MAX_CONTACT_EMAIL_LENGTH} disabled={disabled} readOnly={!editing} placeholder="nombre@correo.com" onChange={(event) => handleEmailChange(event.currentTarget.value)} onBlur={handleEmailBlur} />
         </label>
         <label className="oanix-contact-block__field oanix-contact-block__field--wide">
           <span>Organización</span>
