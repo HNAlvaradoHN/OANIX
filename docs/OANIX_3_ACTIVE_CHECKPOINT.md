@@ -10,41 +10,60 @@ Fecha: 2026-09-03
 
 ## ÚLTIMO TRABAJO REALIZADO
 
-El usuario confirmó que, tras PR #606, los tres puntos negros `•••` seguían visibles en el centro de las imágenes en Android.
+El usuario validó físicamente el resultado del PR #607 y confirmó que los tres puntos negros `•••` ya no aparecen sobre las imágenes. También indicó que el flujo de añadir imágenes ya puede considerarse correcto.
 
-### Causa verificada
+### Bloque de imágenes — CERRADO
 
-El botón táctil que cubre la imagen todavía contiene literalmente `•••` en el JSX. El CSS local ya intentaba ocultar ese contenido con `color: transparent` y `font-size: 0`, pero en la validación física de Android esos caracteres seguían llegando a pintarse.
+Queda aceptado como terminado el flujo de imágenes del editor OANIX:
 
-### Corrección terminada y fusionada
+- inserción de imágenes en la nota;
+- almacenamiento cifrado;
+- carga lazy mediante `IntersectionObserver`;
+- caché de sesión del `File` descifrado con LRU de 48 MiB;
+- retraso visual de 120 ms para evitar mostrar falsamente `Descifrando imagen…` en cargas muy rápidas;
+- menú contextual de imagen;
+- bloqueo/desbloqueo de tamaño;
+- redimensionado;
+- pantalla completa;
+- zoom y pan;
+- eliminación;
+- corrección visual del botón táctil para que `•••` no se vea sobre la foto.
 
-- Rama: `fix/hide-image-menu-dots-2026-09-03`.
-- PR: `#607` — `fix: ocultar puntos visibles sobre imágenes`.
-- Head validado: `19bfc9cfdb3ac8f1a2cc8852669de96fddab83d6`.
-- Merge a `main`: `153948cd77f14ad5f42c08e48717d158bbb97c8a`.
+### Implementación final relevante
 
-El cambio es exclusivamente visual y refuerza el ocultamiento del contenido del botón transparente de imagen mediante `color: transparent !important`, `font-size: 0 !important`, `line-height: 0 !important`, `text-indent` y `overflow: hidden`.
+- PR #606 recicló por completo la caché de `objectURL` de PR #605 y restauró el comportamiento de carga de PR #604.
+- PR #606 merge a `main`: `27f1ec72be19988ffe899a3ecbff7cfc0386b17b`.
+- PR #607 corrigió exclusivamente la visibilidad de `•••` sin tocar la ruta de carga.
+- PR #607 head validado: `19bfc9cfdb3ac8f1a2cc8852669de96fddab83d6`.
+- PR #607 merge a `main`: `153948cd77f14ad5f42c08e48717d158bbb97c8a`.
 
-Se conserva intacta toda el área de la imagen como objetivo táctil para abrir el menú. No se modificó la ruta de carga restaurada en PR #606 ni caché, cifrado, lazy loading, resize, pantalla completa, zoom o pan.
-
-### Validaciones del PR #607
+### Validaciones del último cambio
 
 - OANIX CI #2598: **success**.
 - OANIX Android #1950: **success**.
 - Qwen Independent PR Review #898: **success**.
-- PR #607 fusionado únicamente después de esos tres gates.
 
-### Estado de carga de imágenes
+## Decisión de continuidad
 
-PR #606 continúa vigente: PR #605 fue reciclado y OANIX usa nuevamente la implementación de #604 para carga y caché de imágenes.
+No seguir optimizando ni alargando la ruta de carga de imágenes mientras no aparezca un fallo funcional nuevo. La solución actual queda aceptada y estable para continuar el editor.
 
-## Validación física pendiente
+## Siguiente bloque recomendado
 
-1. Abrir una nota con imágenes.
-2. Confirmar que ya no se ven los `•••` negros sobre las fotografías.
-3. Tocar una imagen y confirmar que el menú flotante sigue abriendo normalmente.
-4. Confirmar que la velocidad de carga sigue igual que después de PR #606.
+Continuar con **Archivos** dentro de `Añadir contenido`.
+
+Objetivo del siguiente bloque:
+
+- seleccionar uno o varios archivos compatibles;
+- almacenarlos cifrados como adjuntos de la nota;
+- insertar una representación limpia dentro del documento;
+- mostrar nombre, tipo y tamaño de forma compacta;
+- permitir abrir/visualizar cuando el formato sea compatible;
+- permitir guardar/exportar el archivo de forma explícita cuando corresponda;
+- permitir eliminarlo de la nota y limpiar su adjunto asociado;
+- mantener funcionamiento offline y no introducir persistencia de contenido descifrado.
+
+No implementar todavía otros botones del menú ni formato de texto hasta cerrar este bloque, salvo que el usuario cambie el orden.
 
 ## Siguiente acción exacta
 
-Esperar la validación física del PR #607. Si los puntos todavía aparecen, eliminar el contenido `•••` directamente del JSX y conservar el botón vacío con `aria-label`, sin tocar la carga de imágenes.
+Revisar en `main` qué infraestructura de adjuntos/elementos insertables ya existe para `Archivos`, identificar qué puede reutilizarse del trabajo de imágenes y diseñar la mínima implementación necesaria antes de modificar código.
