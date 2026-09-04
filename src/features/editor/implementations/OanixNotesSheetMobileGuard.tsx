@@ -1,11 +1,15 @@
-import { useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { EditorSurfaceProps } from '../editorSurfaceContract'
+import { insertOanixDailyEntryBlock } from '../oanixDailyEntryBlockLayer.ts'
 import { OanixNotesSheetSurface } from './OanixNotesSheetSurface'
 import './oanixNotesSheetMobileSafeArea.css'
 
 const TOP_SAFE_GAP = 18
 const BOTTOM_SAFE_GAP = 72
 const BODY_MIN_HEIGHT = 280
+const ENTRY_SAVE_WAIT_MS = 7_000
+
+type MixedCursorTarget = { blockId: string; cursorOffset: number }
 
 function isGuardedTextarea(target: EventTarget | null): target is HTMLTextAreaElement {
   return target instanceof HTMLTextAreaElement
@@ -94,9 +98,37 @@ function freezePlainBodyHeight(textarea: HTMLTextAreaElement, deleting = false) 
   textarea.style.minHeight = `${currentHeight}px`
 }
 
+function waitForEditorClean(editor: HTMLElement): Promise<boolean> {
+  if (editor.dataset.unsaved !== 'true') return Promise.resolve(true)
+
+  return new Promise((resolve) => {
+    let settled = false
+    const finish = (value: boolean) => {
+      if (settled) return
+      settled = true
+      observer.disconnect()
+      window.clearTimeout(timeoutId)
+      resolve(value)
+    }
+    const observer = new MutationObserver(() => {
+      if (editor.dataset.unsaved !== 'true') finish(true)
+    })
+    observer.observe(editor, { attributes: true, attributeFilter: ['data-unsaved'] })
+    const timeoutId = window.setTimeout(() => finish(editor.dataset.unsaved !== 'true'), ENTRY_SAVE_WAIT_MS)
+  })
+}
+
 export function OanixNotesSheetMobileGuard(props: EditorSurfaceProps) {
+  const [surfaceRevision, setSurfaceRevision] = useState(0)
+  const [entryBusy, setEntryBusy] = useState(false)
+  const [entryError, setEntryError] = useState('')
+  const entryBusyRef = useRef(false)
+  const lastPlainCursorRef = useRef<number | null>(null)
+  const lastMixedCursorRef = useRef<MixedCursorTarget | null>(null)
+  const pendingEntryFocusRef = useRef<string | null>(null)
+
   useEffect(() => {
-    const editor = document.querySelector<HTMLElement>('.oanix-notes')
+    const editor = document.querySelector<HTMLElement>(`.oanix-notes[data-note-id="${CSS.escape(props.noteId)}"]`)
     const viewport = window.visualViewport
     if (!editor) return
 
@@ -163,7 +195,154 @@ export function OanixNotesSheetMobileGuard(props: EditorSurfaceProps) {
       viewport?.removeEventListener('resize', syncViewport)
       viewport?.removeEventListener('scroll', syncViewport)
     }
-  }, [])
+  }, [props.noteId, surfaceRevision])
 
-  return <OanixNotesSheetSurface {...props} />
+  useEffect(() => {
+    const findEditor = () => document.querySelector<HTMLElement>(`.oanix-notes[data-note-id="${CSS.escape(props.noteId)}"]`)
+
+    const rememberCursor = (event: Event) => {
+      const target = event.target
+      if (!(target instanceof HTMLTextAreaElement)) return
+      const editor = findEditor()
+      if (!editor || !editor.contains(target)) return
+
+      if (target.classList.contains('oanix-notes__body')) {
+        lastPlainCursorRef.current = Math.max(0, target.selectionStart ?? target.value.length)
+        return
+      }
+      if (!target.classList.contains('oanix-mixed-document__text')) return
+      const blockId = target.dataset.oanixMixedTextId
+      if (!blockId) return
+      lastMixedCursorRef.current = {
+        blockId,
+        cursorOffset: Math.max(0, target.selectionStart ?? target.value.length),
+      }
+    }
+
+    const insertEntry = async () => {
+      if (entryBusyRef.current) return
+      const editor = findEditor()
+      if (!editor || !props.loadBlocks || !props.onRequestBlockSave) {
+        setEntryError('Entrada todavía no está disponible en el estado actual de esta nota.')
+        return
+      }
+
+      entryBusyRef.current = true
+      setEntryBusy(true)
+      setEntryError('')
+      try {
+        const clean = await waitForEditorClean(editor)
+        if (!clean) {
+          setEntryError('No se pudo guardar el contenido pendiente antes de insertar la entrada.')
+          return
+        }
+
+        const mode = editor.dataset.documentMode
+        const existingBlocks = await props.loadBlocks()
+        if (mode === 'plain') {
+          const body = editor.querySelector<HTMLTextAreaElement>('.oanix-notes__body')
+          const title = editor.querySelector<HTMLInputElement>('.oanix-notes__title')
+          if (!body) {
+            setEntryError('No se encontró el punto de inserción de la entrada.')
+            return
+          }
+          const cursorOffset = Math.min(
+            Math.max(0, lastPlainCursorRef.current ?? body.selectionStart ?? body.value.length),
+            body.value.length,
+          )
+          const result = await insertOanixDailyEntryBlock({
+            mode: 'plain',
+            title: title?.value ?? props.initialTitle,
+            text: body.value,
+            cursorOffset,
+            existingBlocks,
+            saveBlockChanges: props.onRequestBlockSave,
+            savePlainSnapshot: props.onRequestSave,
+          })
+          if (result.status !== 'committed') {
+            setEntryError(`No se pudo insertar la entrada de forma segura (${result.status}).`)
+            return
+          }
+          pendingEntryFocusRef.current = result.plan.dailyEntryBlockId
+        } else {
+          let target = lastMixedCursorRef.current
+          if (!target) {
+            const textareas = editor.querySelectorAll<HTMLTextAreaElement>('.oanix-mixed-document__text')
+            const fallback = textareas.item(Math.max(0, textareas.length - 1))
+            const blockId = fallback?.dataset.oanixMixedTextId
+            if (fallback && blockId) target = { blockId, cursorOffset: fallback.value.length }
+          }
+          if (!target) {
+            setEntryError('Coloca el cursor en un tramo de texto antes de insertar la entrada.')
+            return
+          }
+          const result = await insertOanixDailyEntryBlock({
+            mode: 'mixed',
+            blocks: existingBlocks,
+            targetTextBlockId: target.blockId,
+            cursorOffset: target.cursorOffset,
+            saveBlockChanges: props.onRequestBlockSave,
+          })
+          if (result.status !== 'committed') {
+            setEntryError(`No se pudo insertar la entrada de forma segura (${result.status}).`)
+            return
+          }
+          pendingEntryFocusRef.current = result.plan.dailyEntryBlockId
+        }
+
+        props.onActivity?.()
+        lastMixedCursorRef.current = null
+        lastPlainCursorRef.current = null
+        setSurfaceRevision((revision) => revision + 1)
+      } catch {
+        setEntryError('No se pudo insertar la entrada de forma segura.')
+      } finally {
+        entryBusyRef.current = false
+        setEntryBusy(false)
+      }
+    }
+
+    const handleClick = (event: MouseEvent) => {
+      const target = event.target
+      if (!(target instanceof Element)) return
+      const button = target.closest<HTMLButtonElement>('button[data-tool="entry"]')
+      const editor = findEditor()
+      if (!button || !editor || !editor.contains(button) || button.disabled) return
+      void insertEntry()
+    }
+
+    document.addEventListener('focusin', rememberCursor, true)
+    document.addEventListener('input', rememberCursor, true)
+    document.addEventListener('select', rememberCursor, true)
+    document.addEventListener('keyup', rememberCursor, true)
+    document.addEventListener('pointerup', rememberCursor, true)
+    document.addEventListener('click', handleClick)
+    return () => {
+      document.removeEventListener('focusin', rememberCursor, true)
+      document.removeEventListener('input', rememberCursor, true)
+      document.removeEventListener('select', rememberCursor, true)
+      document.removeEventListener('keyup', rememberCursor, true)
+      document.removeEventListener('pointerup', rememberCursor, true)
+      document.removeEventListener('click', handleClick)
+    }
+  }, [props])
+
+  useEffect(() => {
+    const blockId = pendingEntryFocusRef.current
+    if (!blockId) return
+    pendingEntryFocusRef.current = null
+    window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
+      const editor = document.querySelector<HTMLElement>(`.oanix-notes[data-note-id="${CSS.escape(props.noteId)}"]`)
+      const entry = editor?.querySelector<HTMLElement>(`[data-oanix-element-id="${CSS.escape(blockId)}"]`)
+      entry?.scrollIntoView({ block: 'center' })
+      entry?.querySelector<HTMLInputElement>('.oanix-daily-entry__title')?.focus({ preventScroll: true })
+    }))
+  }, [props.noteId, surfaceRevision])
+
+  return <OanixNotesSheetSurface
+    key={surfaceRevision}
+    {...props}
+    saving={props.saving || entryBusy}
+    error={entryError || props.error}
+  />
 }
