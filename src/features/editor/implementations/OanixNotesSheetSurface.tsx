@@ -27,6 +27,7 @@ import {
   type OanixImageBatchProgress,
 } from '../oanixImageBatchInsertionCoordinator'
 import { insertOanixCodeBlock } from '../oanixCodeBlockLayer'
+import { insertOanixChecklistBlock } from '../oanixChecklistBlockLayer'
 import { decideOanixMixedDocumentLoad } from '../oanixMixedDocumentLoadPolicy'
 import { useDelayedOperationFeedback } from '../../../shared/useDelayedOperationFeedback'
 import { OanixMixedDocumentWithFiles } from './OanixMixedDocumentWithFiles'
@@ -122,6 +123,7 @@ export function OanixNotesSheetSurface({
   const [fileBusy, setFileBusy] = useState(false)
   const [fileProgress, setFileProgress] = useState<OanixFileGroupProgress | null>(null)
   const [codeBusy, setCodeBusy] = useState(false)
+  const [checklistBusy, setChecklistBusy] = useState(false)
   const [integrationError, setIntegrationError] = useState('')
   const imageFeedback = useDelayedOperationFeedback()
 
@@ -302,7 +304,7 @@ export function OanixNotesSheetSurface({
   }
 
   async function requestClose() {
-    if (saving || imageBusy || fileBusy || codeBusy || closingRef.current) return
+    if (saving || imageBusy || fileBusy || codeBusy || checklistBusy || closingRef.current) return
     closingRef.current = true
     setClosing(true)
     clearIdleTimer()
@@ -923,6 +925,125 @@ export function OanixNotesSheetSurface({
     }
   }
 
+
+  async function insertChecklistBlockFromMenu() {
+    if (!metadataReady || !loadBlocks || !onRequestBlockSave || checklistBusy || codeBusy || imageBusy || fileBusy) {
+      setIntegrationError('Checklist todavía no está disponible en el estado actual de esta nota.')
+      return
+    }
+
+    setPanelOpen(false)
+    setChecklistBusy(true)
+    setIntegrationError('')
+    clearIdleTimer()
+
+    try {
+      if (saveInFlightRef.current) await saveInFlightRef.current
+
+      if (documentMode === 'plain') {
+        const textarea = bodyRef.current
+        const text = textarea?.value ?? initialText
+        const title = titleRef.current?.value ?? initialTitle
+        const existingBlocks = await loadBlocks()
+        const result = await insertOanixChecklistBlock({
+          mode: 'plain',
+          title,
+          text,
+          cursorOffset: lastPlainCursorRef.current,
+          existingBlocks,
+          saveBlockChanges: onRequestBlockSave,
+          savePlainSnapshot: onRequestSave,
+        })
+
+        if (result.status !== 'committed') {
+          setIntegrationError(`No se pudo insertar la checklist de forma segura (${result.status}).`)
+          return
+        }
+
+        pendingMixedUpsertsRef.current.clear()
+        if (textarea) textarea.value = ''
+        committedSnapshotRef.current = { title, text: '' }
+        setMixedBlocks(result.plan.blocks)
+        setDocumentMode('mixed')
+        markClean()
+        onActivity?.()
+        focusAfterInsertedElement(result.plan.checklistBlockId, result.plan.afterTextBlockId)
+        return
+      }
+
+      const target = pendingMixedImageTargetRef.current ?? fallbackMixedCursor()
+      pendingMixedImageTargetRef.current = null
+      if (!target) {
+        setIntegrationError('Coloca el cursor en un tramo de texto antes de insertar la checklist.')
+        return
+      }
+      if (dirtyRef.current && !(await saveCurrentSnapshot())) {
+        setIntegrationError('No se pudo guardar el contenido pendiente antes de insertar la checklist.')
+        return
+      }
+
+      const confirmedBlocks = await loadBlocks()
+      const result = await insertOanixChecklistBlock({
+        mode: 'mixed',
+        blocks: confirmedBlocks,
+        targetTextBlockId: target.blockId,
+        cursorOffset: target.cursorOffset,
+        saveBlockChanges: onRequestBlockSave,
+      })
+
+      if (result.status !== 'committed') {
+        setIntegrationError(`No se pudo insertar la checklist de forma segura (${result.status}).`)
+        return
+      }
+
+      pendingMixedUpsertsRef.current.clear()
+      setMixedBlocks(result.plan.blocks)
+      markClean()
+      onActivity?.()
+      focusAfterInsertedElement(result.plan.checklistBlockId, result.plan.afterTextBlockId)
+    } catch {
+      setIntegrationError('No se pudo insertar la checklist de forma segura.')
+    } finally {
+      setChecklistBusy(false)
+      if (dirtyRef.current) armAutosaveTimer()
+    }
+  }
+
+  async function removeChecklistBlock(blockId: string) {
+    if (!onRequestBlockSave || checklistBusy || codeBusy || imageBusy || fileBusy) return
+    setChecklistBusy(true)
+    setIntegrationError('')
+    clearIdleTimer()
+
+    try {
+      if (saveInFlightRef.current) await saveInFlightRef.current
+      if (dirtyRef.current && !(await saveCurrentSnapshot())) {
+        setIntegrationError('No se pudo guardar el contenido pendiente antes de eliminar la checklist.')
+        return
+      }
+
+      const nextBlocks = mixedBlocks.filter((block) => block.id !== blockId)
+      const removed = await onRequestBlockSave({
+        deletes: [blockId],
+        order: nextBlocks.map((block) => block.id),
+      })
+      if (!removed) {
+        setIntegrationError('No se pudo eliminar la checklist.')
+        return
+      }
+
+      pendingMixedUpsertsRef.current.delete(blockId)
+      setMixedBlocks(nextBlocks)
+      markClean()
+      onActivity?.()
+    } catch {
+      setIntegrationError('No se pudo eliminar la checklist.')
+    } finally {
+      setChecklistBusy(false)
+      if (dirtyRef.current) armAutosaveTimer()
+    }
+  }
+
   function handlePlainPaste(event: ReactClipboardEvent<HTMLTextAreaElement>) {
     const file = findOanixClipboardImage(event.clipboardData)
     if (!file) return
@@ -1133,11 +1254,13 @@ export function OanixNotesSheetSurface({
     return () => media.removeEventListener('change', listener)
   }, [mode])
 
-  const editingDisabled = saving || closing || imageBusy || fileBusy || codeBusy
+  const editingDisabled = saving || closing || imageBusy || fileBusy || codeBusy || checklistBusy
   const showImageProgress = imageBusy && imageFeedback.visible
-  const status = saving || saveInFlightRef.current || showImageProgress || fileBusy || codeBusy ? 'saving' : dirty ? 'unsaved' : 'saved'
-  const statusLabel = codeBusy
-    ? 'Guardando código…'
+  const status = saving || saveInFlightRef.current || showImageProgress || fileBusy || codeBusy || checklistBusy ? 'saving' : dirty ? 'unsaved' : 'saved'
+  const statusLabel = checklistBusy
+    ? 'Guardando checklist…'
+    : codeBusy
+      ? 'Guardando código…'
     : fileBusy
       ? fileProgressLabel(fileProgress)
       : showImageProgress
@@ -1193,6 +1316,7 @@ export function OanixNotesSheetSurface({
                   onRemoveFileGroupFile={removeFileFromGroup}
                   onRemoveFileGroup={removeFileGroup}
                   onRemoveCodeBlock={removeCodeBlock}
+                  onRemoveChecklistBlock={removeChecklistBlock}
                   onActivity={markActivity}
                   onCompositionStart={() => { composingRef.current = true; onActivity?.() }}
                   onCompositionEnd={() => { composingRef.current = false; markActivity() }}
@@ -1236,6 +1360,7 @@ export function OanixNotesSheetSurface({
             if (tool === 'image') openImagePicker()
             if (tool === 'file') openFilePicker()
             if (tool === 'code') void insertCodeBlockFromMenu()
+            if (tool === 'checklist') void insertChecklistBlockFromMenu()
           }}/>
           <div className="oanix-notes__divider"/>
           <ToolSection label="Formato de texto" tools={[[ 'paragraph','Párrafo' ],[ 'h2','H2' ],[ 'h3','H3' ],[ 'quote','Cita' ],[ 'list','Lista' ],[ 'numbered-list','Numérica' ]]}/>
