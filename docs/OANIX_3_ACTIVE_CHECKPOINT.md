@@ -10,52 +10,52 @@ Fecha: 2026-09-03
 
 ## ÚLTIMO TRABAJO REALIZADO
 
-El usuario confirmó que, incluso después del PR #604, al salir de una nota y volver a entrar sin bloquear la bóveda todavía podía verse un estado visual transitorio antes de que apareciera la imagen cacheada. La imagen reaparecía rápido; el problema restante era que el componente se desmontaba al salir de la nota y perdía su `objectURL`, aunque el `File` descifrado sí seguía en la caché de sesión.
+El usuario comparó físicamente el resultado posterior al PR #605 y reportó que la versión anterior se sentía más rápida y que veía `•••` sobre las imágenes, afectando visualmente la nota. Se revisó el diff exacto entre #604 y #605 antes de tocar código.
 
-### Causa confirmada
+### Hallazgos
 
-PR #603 ya conservaba el `File` descifrado en una caché LRU de sesión, pero `OanixMixedImage` seguía creando el `objectURL` dentro del componente. Al desmontarse la nota, esa URL se revocaba. Al volver a entrar, React montaba primero sin `src`, recuperaba luego el `File` cacheado y recién después creaba otra URL, dejando un breve placeholder aunque no hubiera un descifrado real.
+- PR #605 no introdujo el botón `•••`; ese texto ya existía en el JSX de #604.
+- PR #605 sí añadió una caché de `objectURL` y una consulta síncrona desde `OanixMixedImage` al montar.
+- Esa solución añadió complejidad y trabajo síncrono al montaje para intentar evitar el placeholder, mientras que el usuario percibió peor experiencia.
+- Se decidió reciclar #605 completo en vez de seguir ocultando síntomas con más capas.
 
-### Corrección terminada y fusionada
+### Reversión terminada y fusionada
 
-- Rama: `fix/image-cache-object-url-2026-09-03`.
-- PR: `#605` — `perf: evitar placeholder al reabrir imágenes cacheadas`.
-- Head final validado: `3ac6cf0913a4bc8f8a6ff5725576af0a7ee875e5`.
-- Commit final de ajuste de pruebas: `3ac6cf0913a4bc8f8a6ff5725576af0a7ee875e5`.
-- Merge a `main`: `447f9965d39afa01f5c027fd97c2906cb979c123`.
+- Rama: `fix/revert-object-url-cache-clean-image-menu-2026-09-03`.
+- PR: `#606` — `revert: retirar caché de objectURL de sesión`.
+- Head validado: `9dd126914069f78e27befe19c6b6914beccfff30`.
+- Merge a `main`: `27f1ec72be19988ffe899a3ecbff7cfc0386b17b`.
 
-La caché de sesión ahora conserva también un `objectURL` temporal por archivo cacheado. `OanixMixedImage` consulta esa URL de forma síncrona al inicializar su estado, de modo que una imagen previamente cargada puede tener `src` desde el primer render al reabrir la nota.
+PR #606 restaura exactamente la implementación de carga de imágenes de #604 en los archivos afectados por #605:
 
-Las URLs cacheadas son propiedad de la caché, no del componente. Se revocan cuando el archivo es reemplazado, expulsado por el LRU, eliminado o cuando se limpia la sesión al bloquear la bóveda. Si un archivo no entra en la caché, el componente sigue creando su propia URL de fallback y la revoca al desmontarse.
+- `AttachmentSessionCache` vuelve a conservar solo el `File` descifrado dentro del LRU de 48 MiB.
+- `OanixMixedImage` vuelve al flujo lazy con `IntersectionObserver` y crea/revoca su `objectURL` dentro del componente.
+- Se eliminó `tests/oanixImageCachedObjectUrl.test.ts`.
+- Se restauró `tests/oanixMixedDocumentRenderer.test.ts` a la aserción anterior.
+- Se conserva la mejora de #604 que retrasa 120 ms únicamente el texto `Descifrando imagen…`.
 
-### Incidente de CI y resolución
+### Validaciones del PR #606
 
-La primera corrida del PR #605, OANIX CI #2591, falló únicamente porque una prueba antigua esperaba literalmente `URL.revokeObjectURL(url)` dentro del renderer. Esa aserción dejó de representar la arquitectura correcta, porque ahora la caché es la dueña de las URLs cacheadas.
-
-Se actualizó la prueba para validar la propiedad real: lazy loading intacto, uso de `getCachedAttachmentObjectUrl`, creación de fallback cuando corresponde y revocación únicamente de URLs que el componente posee. No se cambió la lógica del producto para hacer pasar la prueba.
-
-### Validaciones confirmadas antes del merge
-
-- OANIX CI #2592: **success** — `Test OANIX`, build y auditoría offline completados.
-- OANIX Android #1944: **success** — bundle web, sync Capacitor, build APK/AAB y subida de artefactos.
-- Qwen Independent PR Review #896: **success**.
-- PR #605 fusionado únicamente después de esos tres gates.
+- OANIX CI #2595: **success**.
+- OANIX Android #1947: **success**.
+- Qwen Independent PR Review #897: **success**.
+- PR #606 fusionado únicamente después de esos tres gates.
 
 ### Alcance preservado
 
-No se modificaron cifrado, IndexedDB, formato de adjuntos, límite LRU de 48 MiB, política lazy ni `IntersectionObserver`. La URL temporal sigue existiendo solo en memoria de sesión y se elimina junto con la entrada cacheada o al bloquear la bóveda.
+No se cambió cifrado, IndexedDB, formato de adjuntos, caché LRU de 48 MiB, limpieza al bloquear la bóveda, carga lazy ni `IntersectionObserver` respecto del estado validado de #604.
+
+## Observación pendiente sobre `•••`
+
+El texto `•••` ya existía antes de #605. El CSS actual intenta convertir ese botón en un área táctil transparente sobre la imagen (`color: transparent` y `font-size: 0`), por lo que el hecho de que el usuario lo haya visto puede corresponder a un estado visual/transitorio o a estilos que no se aplicaron como se esperaba en Android. No se mezcló una corrección de ese detalle dentro de la reversión para no confundir la causa del rendimiento.
 
 ## Validación física pendiente
 
-Siguiente prueba del usuario:
-
-1. abrir una nota con una imagen y dejar que cargue;
-2. salir a la lista de notas;
-3. volver a entrar en esa misma nota **sin bloquear la bóveda**;
-4. confirmar que la imagen ya aparece directamente, sin `Descifrando imagen…` ni placeholder perceptible.
-
-Después de esa prueba, si queda limpio, el siguiente paso será bloquear/desbloquear OANIX y confirmar que la primera carga vuelve a comportarse como carga real.
+1. Abrir una nota con varias imágenes y dejar que carguen.
+2. Salir a la lista y volver a entrar sin bloquear OANIX.
+3. Comparar la velocidad con la versión que tenía #605.
+4. Confirmar si los `•••` siguen apareciendo sobre alguna imagen.
 
 ## Siguiente acción exacta
 
-Esperar el resultado físico del PR #605 en Android. Si todavía aparece un placeholder al reabrir sin bloquear, investigar el montaje del editor y la disponibilidad síncrona de `getCachedAttachmentObjectUrl()` antes de aplicar otro cambio visual.
+Esperar la prueba física de PR #606. Si los `•••` siguen visibles después de volver al comportamiento de #604, corregir el botón de imagen de forma aislada, preferiblemente eliminando el texto visual del DOM y conservando únicamente el área táctil y `aria-label`, sin tocar de nuevo la ruta de carga.
