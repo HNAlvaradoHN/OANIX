@@ -36,11 +36,34 @@
   letter-spacing: -.04em;
 }
 
-/* Block-level text formats stay theme-driven and keep the textarea editing model. */
-.oanix-notes .oanix-mixed-document__text[data-oanix-text-format="paragraph"] {
+/*
+ * First page-pattern validation: Paragraph uses a ruled writing rhythm.
+ * The line repeat and the text line-height intentionally share the exact same
+ * 30px cadence so successive Enter presses cannot drift away from the ruling.
+ */
+.oanix-notes {
+  --oanix-ruled-step: 30px;
+  --oanix-ruled-baseline: 23px;
+  --oanix-ruled-color: color-mix(in srgb, var(--color-text-secondary) 24%, transparent);
+}
+
+.oanix-notes .oanix-mixed-document__text[data-oanix-text-format="paragraph"],
+.oanix-notes .oanix-notes__body {
   font-size: 1rem;
   font-weight: 400;
-  line-height: 1.7;
+  line-height: var(--oanix-ruled-step);
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent var(--oanix-ruled-baseline),
+    var(--oanix-ruled-color) var(--oanix-ruled-baseline),
+    var(--oanix-ruled-color) calc(var(--oanix-ruled-baseline) + 1px),
+    transparent calc(var(--oanix-ruled-baseline) + 1px),
+    transparent var(--oanix-ruled-step)
+  );
+  background-repeat: repeat-y;
+  background-size: 100% var(--oanix-ruled-step);
+  background-position: 0 0;
 }
 
 .oanix-notes .oanix-mixed-document__text[data-oanix-text-format="h2"] {
@@ -89,9 +112,10 @@
   background-size: 8px 8px;
 }
 
+/* Paragraph and the other text formats stay flush with the sheet while editing. */
 .oanix-notes .oanix-mixed-document__text[data-oanix-text-format]:focus {
-  border-radius: 10px;
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 18%, transparent);
+  border-radius: 0;
+  box-shadow: none;
 }
 
 /*
