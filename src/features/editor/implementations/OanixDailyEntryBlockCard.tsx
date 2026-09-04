@@ -77,11 +77,18 @@ export function OanixDailyEntryBlockCard({
   }
 
   async function removeEntry() {
-    if (!onRemove || disabled || removing) return
+    if (disabled || removing) return
     if (!window.confirm('¿Eliminar esta entrada?')) return
     setRemoving(true)
     try {
-      await onRemove()
+      if (onRemove) {
+        await onRemove()
+      } else {
+        window.dispatchEvent(new CustomEvent('oanix-daily-entry-remove', {
+          detail: { blockId: block.id },
+        }))
+        setRemoving(false)
+      }
     } catch {
       setRemoving(false)
       onError?.('No se pudo eliminar la entrada.')
@@ -119,7 +126,7 @@ export function OanixDailyEntryBlockCard({
         />
       </div>
       <span className="oanix-daily-entry__line" aria-hidden="true"/>
-      {onRemove && <button type="button" className="oanix-daily-entry__remove" disabled={disabled || removing} onClick={() => void removeEntry()} aria-label="Eliminar entrada" title="Eliminar entrada">×</button>}
+      <button type="button" className="oanix-daily-entry__remove" disabled={disabled || removing} onClick={() => void removeEntry()} aria-label="Eliminar entrada" title="Eliminar entrada">×</button>
     </div>
 
     <input
