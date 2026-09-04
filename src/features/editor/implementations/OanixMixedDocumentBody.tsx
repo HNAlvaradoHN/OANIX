@@ -26,6 +26,8 @@ interface OanixMixedDocumentBodyProps {
   onError?: (message: string) => void
 }
 
+const IMAGE_DECRYPTING_LABEL_DELAY_MS = 120
+
 function formatBytes(bytes: number): string {
   if (!Number.isFinite(bytes) || bytes <= 0) return '0 B'
   if (bytes < 1024) return `${bytes} B`
@@ -303,6 +305,7 @@ function OanixMixedImage({
   const [requested, setRequested] = useState(false)
   const [url, setUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [showDecryptingLabel, setShowDecryptingLabel] = useState(false)
   const [loadAttempt, setLoadAttempt] = useState(0)
   const [menuOpen, setMenuOpen] = useState(false)
   const [menuDirection, setMenuDirection] = useState<'up' | 'down'>('down')
@@ -337,6 +340,11 @@ function OanixMixedImage({
     if (!requested || !attachment || attachment.remote || url) return
     let active = true
     setLoading(true)
+    setShowDecryptingLabel(false)
+    const loadingLabelTimer = window.setTimeout(() => {
+      if (active) setShowDecryptingLabel(true)
+    }, IMAGE_DECRYPTING_LABEL_DELAY_MS)
+
     void loadAttachmentFile(attachment.id).then((file) => {
       if (!active) return
       if (!file) {
@@ -347,9 +355,16 @@ function OanixMixedImage({
     }).catch(() => {
       if (active) onError?.('No se pudo abrir la imagen cifrada.')
     }).finally(() => {
-      if (active) setLoading(false)
+      window.clearTimeout(loadingLabelTimer)
+      if (active) {
+        setLoading(false)
+        setShowDecryptingLabel(false)
+      }
     })
-    return () => { active = false }
+    return () => {
+      active = false
+      window.clearTimeout(loadingLabelTimer)
+    }
   }, [attachment, loadAttachmentFile, loadAttempt, onError, requested, url])
 
   useEffect(() => () => {
@@ -440,7 +455,7 @@ function OanixMixedImage({
           }}
         >
           <span aria-hidden="true">▧</span>
-          <small>{attachment?.remote ? 'Imagen remota cifrada' : loading ? 'Descifrando imagen…' : attachment ? 'Tocar para cargar imagen' : 'Adjunto no disponible'}</small>
+          <small>{attachment?.remote ? 'Imagen remota cifrada' : loading ? (showDecryptingLabel ? 'Descifrando imagen…' : '\u00a0') : attachment ? 'Tocar para cargar imagen' : 'Adjunto no disponible'}</small>
         </button>
       )}
 
