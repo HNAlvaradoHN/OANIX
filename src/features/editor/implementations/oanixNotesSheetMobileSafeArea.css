@@ -15,7 +15,6 @@
   scroll-padding-bottom: 84px;
 }
 
-/* Keep the side-menu locator visible without changing its per-theme accent. */
 .oanix-notes .oanix-notes__slide-indicator::after {
   width: 3px;
   height: 27px;
@@ -25,25 +24,20 @@
     0 0 12px color-mix(in srgb, var(--accent) 36%, transparent);
 }
 
-/* The H2 tile label already said H2; hide the old H1-looking glyph and render H2 consistently. */
-.oanix-notes .oanix-notes__tool-icon.tool-h2 svg {
-  display: none;
-}
-
+.oanix-notes .oanix-notes__tool-icon.tool-h2 svg { display: none; }
 .oanix-notes .oanix-notes__tool-icon.tool-h2::after {
   content: "H2";
   font: 750 1.35rem/1 system-ui, sans-serif;
   letter-spacing: -.04em;
 }
 
-/*
- * First page-pattern validation: Paragraph uses a ruled writing rhythm.
- * The line repeat and the text line-height intentionally share the exact same
- * 30px cadence so successive Enter presses cannot drift away from the ruling.
- */
 .oanix-notes {
   --oanix-ruled-step: 30px;
   --oanix-ruled-baseline: 23px;
+  --oanix-h2-ruled-step: 42px;
+  --oanix-h2-ruled-baseline: 34px;
+  --oanix-h3-ruled-step: 36px;
+  --oanix-h3-ruled-baseline: 29px;
   --oanix-ruled-color: color-mix(in srgb, var(--color-text-secondary) 24%, transparent);
 }
 
@@ -52,36 +46,54 @@
   font-size: 1rem;
   font-weight: 400;
   line-height: var(--oanix-ruled-step);
-  background-image: repeating-linear-gradient(
-    to bottom,
+  background-image: repeating-linear-gradient(to bottom,
     transparent 0,
     transparent var(--oanix-ruled-baseline),
     var(--oanix-ruled-color) var(--oanix-ruled-baseline),
     var(--oanix-ruled-color) calc(var(--oanix-ruled-baseline) + 1px),
     transparent calc(var(--oanix-ruled-baseline) + 1px),
-    transparent var(--oanix-ruled-step)
-  );
+    transparent var(--oanix-ruled-step));
   background-repeat: repeat-y;
   background-size: 100% var(--oanix-ruled-step);
   background-position: 0 0;
 }
 
 .oanix-notes .oanix-mixed-document__text[data-oanix-text-format="h2"] {
-  min-height: 62px;
-  padding: 5px 0;
+  min-height: var(--oanix-h2-ruled-step);
+  padding: 0;
   font-size: clamp(1.45rem, 4.8vw, 1.85rem);
   font-weight: 820;
-  line-height: 1.24;
+  line-height: var(--oanix-h2-ruled-step);
   letter-spacing: -.018em;
+  background-image: repeating-linear-gradient(to bottom,
+    transparent 0,
+    transparent var(--oanix-h2-ruled-baseline),
+    var(--oanix-ruled-color) var(--oanix-h2-ruled-baseline),
+    var(--oanix-ruled-color) calc(var(--oanix-h2-ruled-baseline) + 1px),
+    transparent calc(var(--oanix-h2-ruled-baseline) + 1px),
+    transparent var(--oanix-h2-ruled-step));
+  background-repeat: repeat-y;
+  background-size: 100% var(--oanix-h2-ruled-step);
+  background-position: 0 0;
 }
 
 .oanix-notes .oanix-mixed-document__text[data-oanix-text-format="h3"] {
-  min-height: 56px;
-  padding: 4px 0;
+  min-height: var(--oanix-h3-ruled-step);
+  padding: 0;
   font-size: clamp(1.18rem, 4vw, 1.42rem);
   font-weight: 760;
-  line-height: 1.32;
+  line-height: var(--oanix-h3-ruled-step);
   letter-spacing: -.01em;
+  background-image: repeating-linear-gradient(to bottom,
+    transparent 0,
+    transparent var(--oanix-h3-ruled-baseline),
+    var(--oanix-ruled-color) var(--oanix-h3-ruled-baseline),
+    var(--oanix-ruled-color) calc(var(--oanix-h3-ruled-baseline) + 1px),
+    transparent calc(var(--oanix-h3-ruled-baseline) + 1px),
+    transparent var(--oanix-h3-ruled-step));
+  background-repeat: repeat-y;
+  background-size: 100% var(--oanix-h3-ruled-step);
+  background-position: 0 0;
 }
 
 .oanix-notes .oanix-mixed-document__text[data-oanix-text-format="quote"] {
@@ -112,18 +124,11 @@
   background-size: 8px 8px;
 }
 
-/* Paragraph and the other text formats stay flush with the sheet while editing. */
 .oanix-notes .oanix-mixed-document__text[data-oanix-text-format]:focus {
   border-radius: 0;
   box-shadow: none;
 }
 
-/*
- * This file is imported by the mobile guard while the surface imports its own
- * stylesheet too. The principal surface CSS still contains legacy mobile title
- * sizes, so these declarations intentionally use stronger specificity and
- * !important until that legacy rule is removed from the shared stylesheet.
- */
 .oanix-notes .oanix-notes__title {
   font-size: 42px !important;
   font-weight: 900 !important;
@@ -131,22 +136,12 @@
   letter-spacing: -0.035em !important;
 }
 
-.oanix-notes .oanix-notes__title::placeholder {
-  font-weight: 800 !important;
-}
-
-.oanix-notes__body-wrap {
-  padding-bottom: 88px;
-}
-
-.oanix-notes:focus-within .oanix-notes__body-wrap {
-  padding-bottom: clamp(180px, 24dvh, 260px);
-}
+.oanix-notes .oanix-notes__title::placeholder { font-weight: 800 !important; }
+.oanix-notes__body-wrap { padding-bottom: 88px; }
+.oanix-notes:focus-within .oanix-notes__body-wrap { padding-bottom: clamp(180px, 24dvh, 260px); }
 
 @media (min-width: 768px) {
-  .oanix-notes .oanix-notes__title {
-    font-size: 48px !important;
-  }
+  .oanix-notes .oanix-notes__title { font-size: 48px !important; }
 }
 
 @media (max-width: 520px) {
@@ -154,12 +149,6 @@
     font-size: 42px !important;
     font-weight: 900 !important;
   }
-
-  .oanix-notes__body-wrap {
-    padding-bottom: 96px;
-  }
-
-  .oanix-notes:focus-within .oanix-notes__body-wrap {
-    padding-bottom: clamp(200px, 28dvh, 300px);
-  }
+  .oanix-notes__body-wrap { padding-bottom: 96px; }
+  .oanix-notes:focus-within .oanix-notes__body-wrap { padding-bottom: clamp(200px, 28dvh, 300px); }
 }
