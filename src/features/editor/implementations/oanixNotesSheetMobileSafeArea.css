@@ -15,6 +15,16 @@
   scroll-padding-bottom: 84px;
 }
 
+/* Keep the side-menu locator visible without changing its per-theme accent. */
+.oanix-notes .oanix-notes__slide-indicator::after {
+  width: 3px;
+  height: 27px;
+  opacity: .98;
+  box-shadow:
+    0 0 6px color-mix(in srgb, var(--accent) 72%, transparent),
+    0 0 12px color-mix(in srgb, var(--accent) 36%, transparent);
+}
+
 /*
  * This file is imported by the mobile guard while the surface imports its own
  * stylesheet too. The principal surface CSS still contains legacy mobile title
