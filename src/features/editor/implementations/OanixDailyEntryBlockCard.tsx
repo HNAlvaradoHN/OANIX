@@ -36,10 +36,19 @@ export function OanixDailyEntryBlockCard({
   onError,
 }: OanixDailyEntryBlockCardProps) {
   const dateInputRef = useRef<HTMLInputElement | null>(null)
+  const titleRef = useRef(block.title)
+  const textRef = useRef(block.text)
+  const [date, setDate] = useState(block.date)
   const [removing, setRemoving] = useState(false)
 
-  function persist(next: EditorDailyEntryBlock) {
+  function persist(nextDate = date) {
     onActivity()
+    const next: EditorDailyEntryBlock = {
+      ...block,
+      date: nextDate,
+      title: titleRef.current,
+      text: textRef.current,
+    }
     void Promise.resolve(onChange(encodeDailyEntryBlock(next))).catch(() => {
       onError?.('No se pudo preparar el cambio de la entrada.')
     })
@@ -62,8 +71,9 @@ export function OanixDailyEntryBlockCard({
   }
 
   function updateDate(value: string) {
-    if (!isValidDailyEntryDate(value) || value === block.date) return
-    persist({ ...block, date: value })
+    if (!isValidDailyEntryDate(value) || value === date) return
+    setDate(value)
+    persist(value)
   }
 
   async function removeEntry() {
@@ -78,6 +88,8 @@ export function OanixDailyEntryBlockCard({
     }
   }
 
+  const dateLabel = formatDailyEntryDate(date)
+
   return <article
     className="oanix-daily-entry"
     data-oanix-element-id={block.id}
@@ -90,14 +102,14 @@ export function OanixDailyEntryBlockCard({
         <button type="button" className="oanix-daily-entry__calendar" disabled={disabled} onClick={openDatePicker} aria-label="Cambiar fecha de la entrada" title="Cambiar fecha">
           <CalendarIcon/>
         </button>
-        <button type="button" className="oanix-daily-entry__date-label" disabled={disabled} onClick={openDatePicker} aria-label={`Cambiar fecha: ${formatDailyEntryDate(block.date)}`}>
-          {formatDailyEntryDate(block.date)}
+        <button type="button" className="oanix-daily-entry__date-label" disabled={disabled} onClick={openDatePicker} aria-label={`Cambiar fecha: ${dateLabel}`}>
+          {dateLabel}
         </button>
         <input
           ref={dateInputRef}
           className="oanix-daily-entry__date-input"
           type="date"
-          value={block.date}
+          value={date}
           min="0001-01-01"
           max="9999-12-31"
           tabIndex={-1}
@@ -114,14 +126,17 @@ export function OanixDailyEntryBlockCard({
       className="oanix-daily-entry__title"
       data-editor-local-editable="true"
       type="text"
-      value={block.title}
+      defaultValue={block.title}
       maxLength={MAX_DAILY_ENTRY_TITLE_LENGTH}
       disabled={disabled}
       placeholder="Título (opcional)"
       autoComplete="off"
       autoCapitalize="sentences"
       spellCheck
-      onChange={(event) => persist({ ...block, title: event.currentTarget.value })}
+      onInput={(event) => {
+        titleRef.current = event.currentTarget.value
+        persist()
+      }}
       onCompositionStart={onCompositionStart}
       onCompositionEnd={onCompositionEnd}
       aria-label="Título de la entrada"
@@ -130,14 +145,17 @@ export function OanixDailyEntryBlockCard({
     <textarea
       className="oanix-daily-entry__text"
       data-editor-local-editable="true"
-      value={block.text}
+      defaultValue={block.text}
       maxLength={MAX_DAILY_ENTRY_TEXT_LENGTH}
       disabled={disabled}
       rows={4}
       placeholder="Escribe esta entrada…"
       autoCapitalize="sentences"
       spellCheck
-      onChange={(event) => persist({ ...block, text: event.currentTarget.value })}
+      onInput={(event) => {
+        textRef.current = event.currentTarget.value
+        persist()
+      }}
       onCompositionStart={onCompositionStart}
       onCompositionEnd={onCompositionEnd}
       aria-label="Contenido de la entrada"
