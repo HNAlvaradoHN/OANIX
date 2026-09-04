@@ -38,11 +38,13 @@
   --oanix-h2-ruled-baseline: 34px;
   --oanix-h3-ruled-step: 36px;
   --oanix-h3-ruled-baseline: 29px;
+  --oanix-text-block-gap: 14px;
   --oanix-ruled-color: color-mix(in srgb, var(--color-text-secondary) 24%, transparent);
 }
 
 .oanix-notes .oanix-mixed-document__text[data-oanix-text-format="paragraph"],
 .oanix-notes .oanix-notes__body {
+  min-height: var(--oanix-ruled-step);
   font-size: 1rem;
   font-weight: 400;
   line-height: var(--oanix-ruled-step);
@@ -96,6 +98,11 @@
   background-position: 0 0;
 }
 
+.oanix-notes .oanix-mixed-document__text[data-oanix-text-format="h2"] + .oanix-mixed-document__text[data-oanix-text-format="paragraph"],
+.oanix-notes .oanix-mixed-document__text[data-oanix-text-format="h3"] + .oanix-mixed-document__text[data-oanix-text-format="paragraph"] {
+  margin-top: calc(-1 * var(--oanix-text-block-gap));
+}
+
 .oanix-notes .oanix-mixed-document__text[data-oanix-text-format="quote"] {
   min-height: 64px;
   padding: 10px 14px 10px 18px;
@@ -142,6 +149,10 @@
 
 @media (min-width: 768px) {
   .oanix-notes .oanix-notes__title { font-size: 48px !important; }
+}
+
+@media (max-width: 640px) {
+  .oanix-notes { --oanix-text-block-gap: 12px; }
 }
 
 @media (max-width: 520px) {
