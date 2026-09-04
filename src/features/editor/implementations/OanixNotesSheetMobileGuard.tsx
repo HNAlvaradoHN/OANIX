@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import type { EditorSurfaceProps } from '../editorSurfaceContract'
 import { insertOanixDailyEntryBlock } from '../oanixDailyEntryBlockLayer.ts'
+import { applyOanixTextFormat } from '../oanixTextFormatLayer.ts'
+import { decodeTextBlock, type EditorTextBlockFormat } from '../textBlockCodec.ts'
 import { OanixNotesSheetSurface } from './OanixNotesSheetSurface'
 import './oanixNotesSheetMobileSafeArea.css'
 
@@ -9,8 +11,11 @@ const BOTTOM_SAFE_GAP = 72
 const BODY_MIN_HEIGHT = 280
 const ENTRY_SAVE_WAIT_MS = 7_000
 const ADD_CONTENT_TOOLS = new Set(['entry', 'image', 'files', 'code', 'checklist', 'contact', 'separator'])
+const TEXT_FORMAT_TOOLS = new Set<EditorTextBlockFormat>(['paragraph', 'h2', 'h3', 'quote', 'list', 'numbered-list'])
 
 type MixedCursorTarget = { blockId: string; cursorOffset: number }
+type TextSelectionTarget = { blockId: string; selectionStart: number; selectionEnd: number }
+type PlainSelection = { selectionStart: number; selectionEnd: number }
 type DailyEntryRemoveDetail = { blockId?: string }
 type EditorVisualState = { theme: string; modeLabel: string }
 
@@ -45,6 +50,43 @@ function restoreEditorVisualState(editor: HTMLElement, visual: EditorVisualState
   }
   const preview = editor.querySelector<HTMLElement>(`.oanix-notes__theme-preview.theme-${CSS.escape(visual.theme)}`)
   preview?.closest<HTMLButtonElement>('button')?.click()
+}
+
+function numberedMarker(index: number, color: string): string {
+  const safeColor = color.replace('#', '%23')
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26"><text x="1" y="18" font-size="14" font-family="system-ui,sans-serif" font-weight="700" fill="${safeColor}">${index}.</text></svg>`
+  return `url("data:image/svg+xml,${encodeURIComponent(svg).replace(/%2523/g, '%23')}")`
+}
+
+function decorateFormattedTextBlocks(editor: HTMLElement, blocks: Awaited<ReturnType<NonNullable<EditorSurfaceProps['loadBlocks']>>>) {
+  const byId = new Map(blocks.map((block) => [block.id, decodeTextBlock(block)]))
+  const textareas = Array.from(editor.querySelectorAll<HTMLTextAreaElement>('.oanix-mixed-document__text'))
+  let previous: HTMLTextAreaElement | null = null
+  let numberedIndex = 0
+
+  for (const textarea of textareas) {
+    const blockId = textarea.dataset.oanixMixedTextId
+    const block = blockId ? byId.get(blockId) : null
+    const format = block?.format ?? 'paragraph'
+    textarea.dataset.oanixTextFormat = format
+    textarea.style.removeProperty('background-image')
+    textarea.style.removeProperty('background-repeat')
+    textarea.style.removeProperty('background-position')
+    textarea.style.removeProperty('background-size')
+
+    if (format === 'numbered-list') {
+      const contiguous = previous?.nextElementSibling === textarea && previous.dataset.oanixTextFormat === 'numbered-list'
+      numberedIndex = contiguous ? numberedIndex + 1 : 1
+      const color = window.getComputedStyle(textarea).color || '#64748b'
+      textarea.style.backgroundImage = numberedMarker(numberedIndex, color)
+      textarea.style.backgroundRepeat = 'no-repeat'
+      textarea.style.backgroundPosition = '2px 5px'
+      textarea.style.backgroundSize = '26px 26px'
+    } else {
+      numberedIndex = 0
+    }
+    previous = textarea
+  }
 }
 
 function getCaretTop(textarea: HTMLTextAreaElement): number {
@@ -156,6 +198,8 @@ export function OanixNotesSheetMobileGuard(props: EditorSurfaceProps) {
   const entryBusyRef = useRef(false)
   const lastPlainCursorRef = useRef<number | null>(null)
   const lastMixedCursorRef = useRef<MixedCursorTarget | null>(null)
+  const lastPlainSelectionRef = useRef<PlainSelection | null>(null)
+  const lastMixedSelectionRef = useRef<TextSelectionTarget | null>(null)
   const pendingEntryRevealRef = useRef<string | null>(null)
   const pendingVisualStateRef = useRef<EditorVisualState | null>(null)
   const suppressToolKeyboardRef = useRef(false)
@@ -234,18 +278,19 @@ export function OanixNotesSheetMobileGuard(props: EditorSurfaceProps) {
       if (!(target instanceof HTMLTextAreaElement)) return
       const editor = findEditor()
       if (!editor || !editor.contains(target)) return
+      const selectionStart = Math.max(0, target.selectionStart ?? target.value.length)
+      const selectionEnd = Math.max(selectionStart, target.selectionEnd ?? selectionStart)
 
       if (target.classList.contains('oanix-notes__body')) {
-        lastPlainCursorRef.current = Math.max(0, target.selectionStart ?? target.value.length)
+        lastPlainCursorRef.current = selectionStart
+        lastPlainSelectionRef.current = { selectionStart, selectionEnd }
         return
       }
       if (!target.classList.contains('oanix-mixed-document__text')) return
       const blockId = target.dataset.oanixMixedTextId
       if (!blockId) return
-      lastMixedCursorRef.current = {
-        blockId,
-        cursorOffset: Math.max(0, target.selectionStart ?? target.value.length),
-      }
+      lastMixedCursorRef.current = { blockId, cursorOffset: selectionStart }
+      lastMixedSelectionRef.current = { blockId, selectionStart, selectionEnd }
     }
 
     const insertEntry = async () => {
@@ -323,6 +368,8 @@ export function OanixNotesSheetMobileGuard(props: EditorSurfaceProps) {
         props.onActivity?.()
         lastMixedCursorRef.current = null
         lastPlainCursorRef.current = null
+        lastMixedSelectionRef.current = null
+        lastPlainSelectionRef.current = null
         setSurfaceRevision((revision) => revision + 1)
       } catch {
         setEntryError('No se pudo insertar la entrada de forma segura.')
@@ -332,13 +379,109 @@ export function OanixNotesSheetMobileGuard(props: EditorSurfaceProps) {
       }
     }
 
+    const applyTextFormat = async (format: EditorTextBlockFormat) => {
+      if (entryBusyRef.current) return
+      const editor = findEditor()
+      if (!editor || !props.loadBlocks || !props.onRequestBlockSave) {
+        setEntryError('El formato de texto todavía no está disponible en el estado actual de esta nota.')
+        return
+      }
+
+      entryBusyRef.current = true
+      setEntryBusy(true)
+      setEntryError('')
+      try {
+        const clean = await waitForEditorClean(editor)
+        if (!clean) {
+          setEntryError('No se pudo guardar el contenido pendiente antes de aplicar el formato.')
+          return
+        }
+
+        const blocks = await props.loadBlocks()
+        if (editor.dataset.documentMode === 'plain') {
+          const body = editor.querySelector<HTMLTextAreaElement>('.oanix-notes__body')
+          const title = editor.querySelector<HTMLInputElement>('.oanix-notes__title')
+          if (!body) {
+            setEntryError('No se encontró el texto que quieres formatear.')
+            return
+          }
+          const selection = lastPlainSelectionRef.current ?? {
+            selectionStart: body.selectionStart ?? body.value.length,
+            selectionEnd: body.selectionEnd ?? body.selectionStart ?? body.value.length,
+          }
+          const result = await applyOanixTextFormat({
+            mode: 'plain',
+            format,
+            title: title?.value ?? props.initialTitle,
+            text: body.value,
+            selectionStart: selection.selectionStart,
+            selectionEnd: selection.selectionEnd,
+            existingBlocks: blocks,
+            saveBlockChanges: props.onRequestBlockSave,
+            savePlainSnapshot: props.onRequestSave,
+          })
+          if (result.status !== 'committed') {
+            setEntryError(`No se pudo aplicar el formato de forma segura (${result.status}).`)
+            return
+          }
+        } else {
+          let selection = lastMixedSelectionRef.current
+          if (!selection) {
+            const textareas = editor.querySelectorAll<HTMLTextAreaElement>('.oanix-mixed-document__text')
+            const fallback = textareas.item(Math.max(0, textareas.length - 1))
+            const blockId = fallback?.dataset.oanixMixedTextId
+            if (fallback && blockId) {
+              selection = { blockId, selectionStart: fallback.value.length, selectionEnd: fallback.value.length }
+            }
+          }
+          if (!selection) {
+            setEntryError('Coloca el cursor o selecciona texto antes de aplicar el formato.')
+            return
+          }
+          const result = await applyOanixTextFormat({
+            mode: 'mixed',
+            format,
+            blocks,
+            targetTextBlockId: selection.blockId,
+            selectionStart: selection.selectionStart,
+            selectionEnd: selection.selectionEnd,
+            saveBlockChanges: props.onRequestBlockSave,
+          })
+          if (result.status !== 'committed') {
+            setEntryError(`No se pudo aplicar el formato de forma segura (${result.status}).`)
+            return
+          }
+        }
+
+        pendingVisualStateRef.current = captureEditorVisualState(editor)
+        props.onActivity?.()
+        lastMixedCursorRef.current = null
+        lastPlainCursorRef.current = null
+        lastMixedSelectionRef.current = null
+        lastPlainSelectionRef.current = null
+        setSurfaceRevision((revision) => revision + 1)
+      } catch {
+        setEntryError('No se pudo aplicar el formato de texto de forma segura.')
+      } finally {
+        entryBusyRef.current = false
+        setEntryBusy(false)
+      }
+    }
+
     const handleClick = (event: MouseEvent) => {
       const target = event.target
       if (!(target instanceof Element)) return
-      const button = target.closest<HTMLButtonElement>('button[data-tool="entry"]')
+      const button = target.closest<HTMLButtonElement>('button[data-tool]')
       const editor = findEditor()
       if (!button || !editor || !editor.contains(button) || button.disabled) return
-      void insertEntry()
+      const tool = button.dataset.tool ?? ''
+      if (tool === 'entry') {
+        void insertEntry()
+        return
+      }
+      if (TEXT_FORMAT_TOOLS.has(tool as EditorTextBlockFormat)) {
+        void applyTextFormat(tool as EditorTextBlockFormat)
+      }
     }
 
     document.addEventListener('focusin', rememberCursor, true)
@@ -397,6 +540,8 @@ export function OanixNotesSheetMobileGuard(props: EditorSurfaceProps) {
           props.onActivity?.()
           lastMixedCursorRef.current = null
           lastPlainCursorRef.current = null
+          lastMixedSelectionRef.current = null
+          lastPlainSelectionRef.current = null
           setSurfaceRevision((revision) => revision + 1)
         } catch {
           setEntryError('No se pudo eliminar la entrada.')
@@ -457,6 +602,32 @@ export function OanixNotesSheetMobileGuard(props: EditorSurfaceProps) {
       document.removeEventListener('focusin', handleFocusInCapture, true)
     }
   }, [props.noteId])
+
+  useEffect(() => {
+    if (!props.loadBlocks) return
+    const editor = document.querySelector<HTMLElement>(`.oanix-notes[data-note-id="${CSS.escape(props.noteId)}"]`)
+    if (!editor) return
+    let active = true
+    let refreshTicket = 0
+
+    const refresh = () => {
+      const ticket = ++refreshTicket
+      void props.loadBlocks!().then((blocks) => {
+        if (!active || ticket !== refreshTicket) return
+        decorateFormattedTextBlocks(editor, blocks)
+      }).catch(() => undefined)
+    }
+
+    const observer = new MutationObserver((records) => {
+      if (records.some((record) => record.type === 'childList')) refresh()
+    })
+    observer.observe(editor, { childList: true, subtree: true })
+    refresh()
+    return () => {
+      active = false
+      observer.disconnect()
+    }
+  }, [props.loadBlocks, props.noteId, surfaceRevision])
 
   useEffect(() => {
     const visual = pendingVisualStateRef.current
