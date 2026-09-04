@@ -11,8 +11,8 @@ const ENTRY_SAVE_WAIT_MS = 7_000
 const ADD_CONTENT_TOOLS = new Set(['entry', 'image', 'files', 'code', 'checklist', 'contact', 'separator'])
 
 type MixedCursorTarget = { blockId: string; cursorOffset: number }
-
 type DailyEntryRemoveDetail = { blockId?: string }
+type EditorVisualState = { theme: string; modeLabel: string }
 
 function isGuardedTextarea(target: EventTarget | null): target is HTMLTextAreaElement {
   return target instanceof HTMLTextAreaElement
@@ -27,6 +27,24 @@ function isSoftKeyboardEditable(target: EventTarget | null): target is HTMLEleme
     return !['button', 'checkbox', 'color', 'date', 'file', 'hidden', 'image', 'radio', 'range', 'reset', 'submit'].includes(type)
   }
   return target.isContentEditable || target.dataset.editorLocalEditable === 'true'
+}
+
+function captureEditorVisualState(editor: HTMLElement): EditorVisualState {
+  const activeMode = editor.querySelector<HTMLButtonElement>('.oanix-notes__mode-row button.is-active')
+  return {
+    theme: editor.dataset.theme || 'default',
+    modeLabel: activeMode?.textContent?.trim() ?? '',
+  }
+}
+
+function restoreEditorVisualState(editor: HTMLElement, visual: EditorVisualState) {
+  if (visual.modeLabel) {
+    const modeButton = Array.from(editor.querySelectorAll<HTMLButtonElement>('.oanix-notes__mode-row button'))
+      .find((button) => button.textContent?.trim() === visual.modeLabel)
+    modeButton?.click()
+  }
+  const preview = editor.querySelector<HTMLElement>(`.oanix-notes__theme-preview.theme-${CSS.escape(visual.theme)}`)
+  preview?.closest<HTMLButtonElement>('button')?.click()
 }
 
 function getCaretTop(textarea: HTMLTextAreaElement): number {
@@ -139,6 +157,7 @@ export function OanixNotesSheetMobileGuard(props: EditorSurfaceProps) {
   const lastPlainCursorRef = useRef<number | null>(null)
   const lastMixedCursorRef = useRef<MixedCursorTarget | null>(null)
   const pendingEntryRevealRef = useRef<string | null>(null)
+  const pendingVisualStateRef = useRef<EditorVisualState | null>(null)
   const suppressToolKeyboardRef = useRef(false)
 
   useEffect(() => {
@@ -163,10 +182,6 @@ export function OanixNotesSheetMobileGuard(props: EditorSurfaceProps) {
       if (textarea) scheduleCaretCheck(textarea, false)
     }
 
-    // The approved plain body briefly assigns height:auto while measuring. Freeze only
-    // that textarea at its reached height so normal typing never flashes it smaller.
-    // Mixed text segments already own a compact local autosize contract and must not
-    // inherit the 280px minimum of the continuous body.
     const handleBeforeInput = (event: InputEvent) => {
       if (!isGuardedTextarea(event.target) || !editor.contains(event.target)) return
       freezePlainBodyHeight(event.target, event.inputType.startsWith('delete'))
@@ -304,6 +319,7 @@ export function OanixNotesSheetMobileGuard(props: EditorSurfaceProps) {
           pendingEntryRevealRef.current = result.plan.dailyEntryBlockId
         }
 
+        pendingVisualStateRef.current = captureEditorVisualState(editor)
         props.onActivity?.()
         lastMixedCursorRef.current = null
         lastPlainCursorRef.current = null
@@ -377,6 +393,7 @@ export function OanixNotesSheetMobileGuard(props: EditorSurfaceProps) {
             return
           }
 
+          pendingVisualStateRef.current = captureEditorVisualState(editor)
           props.onActivity?.()
           lastMixedCursorRef.current = null
           lastPlainCursorRef.current = null
@@ -440,6 +457,16 @@ export function OanixNotesSheetMobileGuard(props: EditorSurfaceProps) {
       document.removeEventListener('focusin', handleFocusInCapture, true)
     }
   }, [props.noteId])
+
+  useEffect(() => {
+    const visual = pendingVisualStateRef.current
+    if (!visual) return
+    pendingVisualStateRef.current = null
+    window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
+      const editor = document.querySelector<HTMLElement>(`.oanix-notes[data-note-id="${CSS.escape(props.noteId)}"]`)
+      if (editor) restoreEditorVisualState(editor, visual)
+    }))
+  }, [props.noteId, surfaceRevision])
 
   useEffect(() => {
     const blockId = pendingEntryRevealRef.current
