@@ -37,13 +37,16 @@
 }
 
 /*
- * First page-pattern validation: Paragraph uses a ruled writing rhythm.
- * The line repeat and the text line-height intentionally share the exact same
- * 30px cadence so successive Enter presses cannot drift away from the ruling.
+ * Ruled text formats. Each format owns one fixed vertical cadence so wrapped
+ * lines stay locked to their visible rule instead of drifting as text grows.
  */
 .oanix-notes {
   --oanix-ruled-step: 30px;
   --oanix-ruled-baseline: 23px;
+  --oanix-h2-ruled-step: 42px;
+  --oanix-h2-ruled-baseline: 34px;
+  --oanix-h3-ruled-step: 36px;
+  --oanix-h3-ruled-baseline: 29px;
   --oanix-ruled-color: color-mix(in srgb, var(--color-text-secondary) 24%, transparent);
 }
 
@@ -67,21 +70,45 @@
 }
 
 .oanix-notes .oanix-mixed-document__text[data-oanix-text-format="h2"] {
-  min-height: 62px;
-  padding: 5px 0;
+  min-height: var(--oanix-h2-ruled-step);
+  padding: 0;
   font-size: clamp(1.45rem, 4.8vw, 1.85rem);
   font-weight: 820;
-  line-height: 1.24;
+  line-height: var(--oanix-h2-ruled-step);
   letter-spacing: -.018em;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent var(--oanix-h2-ruled-baseline),
+    var(--oanix-ruled-color) var(--oanix-h2-ruled-baseline),
+    var(--oanix-ruled-color) calc(var(--oanix-h2-ruled-baseline) + 1px),
+    transparent calc(var(--oanix-h2-ruled-baseline) + 1px),
+    transparent var(--oanix-h2-ruled-step)
+  );
+  background-repeat: repeat-y;
+  background-size: 100% var(--oanix-h2-ruled-step);
+  background-position: 0 0;
 }
 
 .oanix-notes .oanix-mixed-document__text[data-oanix-text-format="h3"] {
-  min-height: 56px;
-  padding: 4px 0;
+  min-height: var(--oanix-h3-ruled-step);
+  padding: 0;
   font-size: clamp(1.18rem, 4vw, 1.42rem);
   font-weight: 760;
-  line-height: 1.32;
+  line-height: var(--oanix-h3-ruled-step);
   letter-spacing: -.01em;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent var(--oanix-h3-ruled-baseline),
+    var(--oanix-ruled-color) var(--oanix-h3-ruled-baseline),
+    var(--oanix-ruled-color) calc(var(--oanix-h3-ruled-baseline) + 1px),
+    transparent calc(var(--oanix-h3-ruled-baseline) + 1px),
+    transparent var(--oanix-h3-ruled-step)
+  );
+  background-repeat: repeat-y;
+  background-size: 100% var(--oanix-h3-ruled-step);
+  background-position: 0 0;
 }
 
 .oanix-notes .oanix-mixed-document__text[data-oanix-text-format="quote"] {
@@ -112,7 +139,7 @@
   background-size: 8px 8px;
 }
 
-/* Paragraph and the other text formats stay flush with the sheet while editing. */
+/* Text formats stay flush with the sheet while editing. */
 .oanix-notes .oanix-mixed-document__text[data-oanix-text-format]:focus {
   border-radius: 0;
   box-shadow: none;
