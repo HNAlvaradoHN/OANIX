@@ -6,6 +6,7 @@ const surface = readFileSync('src/features/editor/implementations/QwenSheetSurfa
 const richBlocks = readFileSync('src/features/editor/implementations/QwenRichBlocks.tsx', 'utf8')
 const registry = readFileSync('src/features/editor/editorSurfaceRegistry.ts', 'utf8')
 const activeSheet = readFileSync('src/features/editor/implementations/OanixNotesSheetSurface.tsx', 'utf8')
+const mixedWithFiles = readFileSync('src/features/editor/implementations/OanixMixedDocumentWithFiles.tsx', 'utf8')
 
 test('checklist UI stays above persistence and uses the generic block session', () => {
   assert.match(richBlocks, /decodeChecklistBlock/)
@@ -44,6 +45,8 @@ test('Qwen rich UI stays preserved while active OANIX Notes uses its own generic
   assert.match(registry, /attachments: true/)
   assert.match(surface, /<QwenRichBlocks/)
   assert.match(surface, /onActivity=\{markActivity\}/)
-  assert.match(activeSheet, /OanixMixedDocumentBody/)
+  assert.match(activeSheet, /OanixMixedDocumentWithFiles/)
+  assert.match(mixedWithFiles, /OanixMixedDocumentBody/)
   assert.doesNotMatch(activeSheet, /QwenRichBlocks|QwenSheetSurface/)
+  assert.doesNotMatch(mixedWithFiles, /QwenRichBlocks|QwenSheetSurface/)
 })
