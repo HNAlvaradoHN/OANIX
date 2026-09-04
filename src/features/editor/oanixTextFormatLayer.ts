@@ -113,7 +113,68 @@ function splitForFormat(
   return { beforeBlocks, selectedBlocks, afterBlocks }
 }
 
+function buildPlainHeadingInsertionPlan(options: PlainOptions): OanixTextFormatPlan {
+  const nextId = makeIdFactory(options.createId)
+  const caret = clamp(options.selectionStart, 0, options.text.length)
+  const lineBreak = options.text.indexOf('\n', caret)
+  const lineEnd = lineBreak < 0 ? options.text.length : lineBreak
+  const beforeText = options.text.slice(0, lineEnd)
+  const afterText = lineBreak < 0 ? '' : options.text.slice(lineEnd + 1)
+  const beforeBlocks = beforeText.length > 0
+    ? chunkText(beforeText).map((chunk) => makeTextBlock(nextId(), chunk, 'paragraph'))
+    : [makeTextBlock(nextId(), '', 'paragraph')]
+  const heading = makeTextBlock(nextId(), '', options.format)
+  const afterBlocks = afterText.length > 0
+    ? chunkText(afterText).map((chunk) => makeTextBlock(nextId(), chunk, 'paragraph'))
+    : []
+  const blocks = [...beforeBlocks, heading, ...afterBlocks]
+  return {
+    blocks,
+    upserts: blocks,
+    deletes: [],
+    order: blocks.map((block) => block.id),
+    formattedBlockIds: [heading.id],
+  }
+}
+
+function buildMixedHeadingInsertionPlan(options: MixedOptions): OanixTextFormatPlan | null {
+  const targetIndex = options.blocks.findIndex((block) => block.id === options.targetTextBlockId)
+  if (targetIndex < 0) return null
+  const target = decodeTextBlock(options.blocks[targetIndex])
+  if (!target) return null
+
+  const nextId = makeIdFactory(options.createId)
+  const sourceText = target.text
+  const caret = clamp(options.selectionStart, 0, sourceText.length)
+  const lineBreak = sourceText.indexOf('\n', caret)
+  const lineEnd = lineBreak < 0 ? sourceText.length : lineBreak
+  const currentText = sourceText.slice(0, lineEnd)
+  const afterText = lineBreak < 0 ? '' : sourceText.slice(lineEnd + 1)
+  const current = makeTextBlock(target.id, currentText, target.format ?? 'paragraph')
+  const heading = makeTextBlock(nextId(), '', options.format)
+  const afterBlocks = afterText.length > 0
+    ? chunkText(afterText).map((chunk) => makeTextBlock(nextId(), chunk, target.format ?? 'paragraph'))
+    : []
+  const replacement = [current, heading, ...afterBlocks]
+  const blocks = [
+    ...options.blocks.slice(0, targetIndex),
+    ...replacement,
+    ...options.blocks.slice(targetIndex + 1),
+  ]
+  return {
+    blocks,
+    upserts: replacement,
+    deletes: [],
+    order: blocks.map((block) => block.id),
+    formattedBlockIds: [heading.id],
+  }
+}
+
 function buildPlainPlan(options: PlainOptions): OanixTextFormatPlan {
+  if ((options.format === 'h2' || options.format === 'h3') && options.selectionStart === options.selectionEnd) {
+    return buildPlainHeadingInsertionPlan(options)
+  }
+
   const split = splitForFormat(
     options.text,
     options.selectionStart,
@@ -133,6 +194,10 @@ function buildPlainPlan(options: PlainOptions): OanixTextFormatPlan {
 }
 
 function buildMixedPlan(options: MixedOptions): OanixTextFormatPlan | null {
+  if ((options.format === 'h2' || options.format === 'h3') && options.selectionStart === options.selectionEnd) {
+    return buildMixedHeadingInsertionPlan(options)
+  }
+
   const targetIndex = options.blocks.findIndex((block) => block.id === options.targetTextBlockId)
   if (targetIndex < 0) return null
   const target = decodeTextBlock(options.blocks[targetIndex])
