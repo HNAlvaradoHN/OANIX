@@ -10,46 +10,52 @@ Fecha: 2026-09-03
 
 ## ÚLTIMO TRABAJO REALIZADO
 
-El usuario validó físicamente el resultado del PR #603 y confirmó que, al salir de una nota y volver a entrar sin bloquear la bóveda, la imagen reaparecía rápido pero todavía alcanzaba a mostrar brevemente `Descifrando imagen…`.
+El usuario confirmó que, incluso después del PR #604, al salir de una nota y volver a entrar sin bloquear la bóveda todavía podía verse un estado visual transitorio antes de que apareciera la imagen cacheada. La imagen reaparecía rápido; el problema restante era que el componente se desmontaba al salir de la nota y perdía su `objectURL`, aunque el `File` descifrado sí seguía en la caché de sesión.
 
 ### Causa confirmada
 
-En `OanixMixedImage`, el renderer ejecutaba `setLoading(true)` inmediatamente antes de llamar a `loadAttachmentFile()`. Aunque `loadAttachmentFile()` devolviera el `File` desde la caché de sesión creada por PR #603, React podía pintar el estado de carga antes de recibir el resultado, produciendo un destello visual falso de descifrado.
+PR #603 ya conservaba el `File` descifrado en una caché LRU de sesión, pero `OanixMixedImage` seguía creando el `objectURL` dentro del componente. Al desmontarse la nota, esa URL se revocaba. Al volver a entrar, React montaba primero sin `src`, recuperaba luego el `File` cacheado y recién después creaba otra URL, dejando un breve placeholder aunque no hubiera un descifrado real.
 
 ### Corrección terminada y fusionada
 
-- Rama de trabajo: `fix/image-cache-loading-flicker-2026-09-03`.
-- PR: `#604` — `fix: evitar destello de descifrado en imágenes cacheadas`.
-- Head final validado del PR: `773c552fa03870c939adfe1b9207295bce73a266`.
-- Commit de código: `dc27d1c81471cd3897e661b4ac60cc6ec0b779ea`.
-- Commit que corrigió la prueba: `773c552fa03870c939adfe1b9207295bce73a266`.
-- Merge a `main`: `aa04e45260a2a54b7b409d1c04677495764f34d7`.
+- Rama: `fix/image-cache-object-url-2026-09-03`.
+- PR: `#605` — `perf: evitar placeholder al reabrir imágenes cacheadas`.
+- Head final validado: `3ac6cf0913a4bc8f8a6ff5725576af0a7ee875e5`.
+- Commit final de ajuste de pruebas: `3ac6cf0913a4bc8f8a6ff5725576af0a7ee875e5`.
+- Merge a `main`: `447f9965d39afa01f5c027fd97c2906cb979c123`.
 
-El renderer mantiene `loading=true` desde el inicio para conservar el bloqueo de reintentos, pero retrasa 120 ms únicamente la etiqueta `Descifrando imagen…`. Si la caché responde antes, la etiqueta no aparece; si una carga real tarda más, el mensaje sí se muestra. El temporizador se limpia al resolver o desmontar.
+La caché de sesión ahora conserva también un `objectURL` temporal por archivo cacheado. `OanixMixedImage` consulta esa URL de forma síncrona al inicializar su estado, de modo que una imagen previamente cargada puede tener `src` desde el primer render al reabrir la nota.
 
-Se añadió `tests/oanixImageCachedLoadingLabel.test.ts` para fijar esta conducta. La primera versión de esa prueba falló por una expresión regular sobre-escapada; se corrigió la aserción sin cambiar la lógica del producto y la corrida completa posterior pasó.
+Las URLs cacheadas son propiedad de la caché, no del componente. Se revocan cuando el archivo es reemplazado, expulsado por el LRU, eliminado o cuando se limpia la sesión al bloquear la bóveda. Si un archivo no entra en la caché, el componente sigue creando su propia URL de fallback y la revoca al desmontarse.
+
+### Incidente de CI y resolución
+
+La primera corrida del PR #605, OANIX CI #2591, falló únicamente porque una prueba antigua esperaba literalmente `URL.revokeObjectURL(url)` dentro del renderer. Esa aserción dejó de representar la arquitectura correcta, porque ahora la caché es la dueña de las URLs cacheadas.
+
+Se actualizó la prueba para validar la propiedad real: lazy loading intacto, uso de `getCachedAttachmentObjectUrl`, creación de fallback cuando corresponde y revocación únicamente de URLs que el componente posee. No se cambió la lógica del producto para hacer pasar la prueba.
 
 ### Validaciones confirmadas antes del merge
 
-- OANIX CI #2587: **success** — pruebas, build y auditoría offline.
-- OANIX Android #1939: **success** — bundle web, sync Capacitor, APK/AAB y subida de artefactos.
-- Qwen Independent PR Review #894: **success**.
-- PR #604 fusionado a `main` únicamente después de estos gates.
+- OANIX CI #2592: **success** — `Test OANIX`, build y auditoría offline completados.
+- OANIX Android #1944: **success** — bundle web, sync Capacitor, build APK/AAB y subida de artefactos.
+- Qwen Independent PR Review #896: **success**.
+- PR #605 fusionado únicamente después de esos tres gates.
 
 ### Alcance preservado
 
-No se modificaron carga lazy, `IntersectionObserver`, caché LRU de 48 MiB, cifrado, IndexedDB, formato de adjuntos ni limpieza de caché al bloquear la bóveda.
+No se modificaron cifrado, IndexedDB, formato de adjuntos, límite LRU de 48 MiB, política lazy ni `IntersectionObserver`. La URL temporal sigue existiendo solo en memoria de sesión y se elimina junto con la entrada cacheada o al bloquear la bóveda.
 
 ## Validación física pendiente
 
-La siguiente prueba del usuario es estrictamente visual/funcional:
+Siguiente prueba del usuario:
 
 1. abrir una nota con una imagen y dejar que cargue;
 2. salir a la lista de notas;
 3. volver a entrar en esa misma nota **sin bloquear la bóveda**;
-4. confirmar que la imagen cacheada reaparece sin mostrar el texto `Descifrando imagen…`;
-5. adicionalmente, tras bloquear/desbloquear OANIX, confirmar que una carga real que tarde más de 120 ms todavía puede mostrar `Descifrando imagen…` normalmente.
+4. confirmar que la imagen ya aparece directamente, sin `Descifrando imagen…` ni placeholder perceptible.
+
+Después de esa prueba, si queda limpio, el siguiente paso será bloquear/desbloquear OANIX y confirmar que la primera carga vuelve a comportarse como carga real.
 
 ## Siguiente acción exacta
 
-Esperar el resultado de esa prueba física. Si la reapertura cacheada todavía muestra el mensaje, investigar la duración/ruta real de `loadAttachmentFile()` en Android antes de aumentar el umbral o esconder más estados. No aplicar otro parche visual sin medir primero la causa.
+Esperar el resultado físico del PR #605 en Android. Si todavía aparece un placeholder al reabrir sin bloquear, investigar el montaje del editor y la disponibilidad síncrona de `getCachedAttachmentObjectUrl()` antes de aplicar otro cambio visual.
