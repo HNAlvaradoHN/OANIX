@@ -12,7 +12,7 @@ test('legacy text blocks decode as paragraph without migration', () => {
   assert.deepEqual(encodeTextBlock({ id: 'p', kind: TEXT_BLOCK_KIND, text: 'hola', format: 'paragraph' }).data, { text: 'hola' })
 })
 
-test('plain formatting promotes the selected line and preserves surrounding text', async () => {
+test('H2 without selection creates a new empty heading after the current plain line', async () => {
   let changes: EditorSurfaceBlockChangeSet | null = null
   let snapshotText = 'not-saved'
   const result = await applyOanixTextFormat({
@@ -30,7 +30,53 @@ test('plain formatting promotes the selected line and preserves surrounding text
 
   assert.equal(result.status, 'committed')
   assert.equal(snapshotText, '')
-  assert.equal(changes?.upserts?.length, 3)
+  const decoded = changes?.upserts?.map((block) => decodeTextBlock(block)) ?? []
+  assert.deepEqual(decoded.map((block) => [block?.text, block?.format]), [
+    ['uno\ndos', 'paragraph'],
+    ['', 'h2'],
+    ['tres', 'paragraph'],
+  ])
+})
+
+test('H3 without selection inserts the new heading after the active mixed line and keeps that line unchanged', async () => {
+  const original = encodeTextBlock({ id: 'source', kind: TEXT_BLOCK_KIND, text: 'uno\ndos\ntres', format: 'paragraph' })
+  let changes: EditorSurfaceBlockChangeSet | null = null
+  const result = await applyOanixTextFormat({
+    mode: 'mixed',
+    format: 'h3',
+    blocks: [original],
+    targetTextBlockId: 'source',
+    selectionStart: 5,
+    selectionEnd: 5,
+    createId: (index) => `m-${index}`,
+    saveBlockChanges: async (next) => { changes = next; return true },
+  })
+
+  assert.equal(result.status, 'committed')
+  assert.equal(changes?.deletes, undefined)
+  const decoded = changes?.upserts?.map((block) => decodeTextBlock(block)) ?? []
+  assert.deepEqual(decoded.map((block) => [block?.id, block?.text, block?.format]), [
+    ['source', 'uno\ndos', 'paragraph'],
+    ['m-0', '', 'h3'],
+    ['m-1', 'tres', 'paragraph'],
+  ])
+})
+
+test('selecting text converts that text line and its ruling to H2', async () => {
+  const original = encodeTextBlock({ id: 'source', kind: TEXT_BLOCK_KIND, text: 'uno\ndos\ntres', format: 'paragraph' })
+  let changes: EditorSurfaceBlockChangeSet | null = null
+  const result = await applyOanixTextFormat({
+    mode: 'mixed',
+    format: 'h2',
+    blocks: [original],
+    targetTextBlockId: 'source',
+    selectionStart: 5,
+    selectionEnd: 7,
+    createId: (index) => `s-${index}`,
+    saveBlockChanges: async (next) => { changes = next; return true },
+  })
+
+  assert.equal(result.status, 'committed')
   const decoded = changes?.upserts?.map((block) => decodeTextBlock(block)) ?? []
   assert.deepEqual(decoded.map((block) => [block?.text, block?.format]), [
     ['uno', 'paragraph'],
@@ -99,6 +145,17 @@ test('editor bridge connects every text format and keeps theme-driven visuals', 
   assert.match(css, /var\(--color-text\)/)
   assert.match(css, /tool-h2::after/)
   assert.match(css, /content: "H2"/)
+})
+
+test('heading bridge keeps new heading focused and lets Backspace cross text blocks', () => {
+  const bridge = readFileSync('src/features/editor/oanixTextBehaviorBridge.ts', 'utf8')
+  assert.match(bridge, /focusInsertedHeading/)
+  assert.match(bridge, /selectionStart === selectionEnd/)
+  assert.match(bridge, /event\.preventDefault\(\)/)
+  assert.match(bridge, /event\.key === 'Backspace'/)
+  assert.match(bridge, /textareas\.indexOf\(target\)/)
+  assert.match(bridge, /previous\.focus\(\{ preventScroll: true \}\)/)
+  assert.match(bridge, /previous\.setSelectionRange\(end, end\)/)
 })
 
 test('heading bridge anchors remounts instead of trusting one scrollTop snapshot', () => {
