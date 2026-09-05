@@ -208,7 +208,6 @@
   height: 1.8rem;
   display: grid;
   place-items: center;
-  flex: none;
   border: 1px solid color-mix(in srgb, var(--folder-accent) 28%, transparent);
   border-radius: .58rem;
   background: var(--folder-soft);
