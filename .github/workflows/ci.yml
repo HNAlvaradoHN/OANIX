@@ -29,17 +29,25 @@ jobs:
       - name: Capture npm test failure
         run: npm test > /tmp/oanix-test.log 2>&1 || true
 
-      - name: Publish temporary diagnostic status
+      - name: Publish temporary diagnostic statuses
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          summary="$(grep -m1 -E 'not ok|npm error|npm ERR!' /tmp/oanix-test.log || true)"
-          if [ -z "$summary" ]; then summary="$(tail -n 1 /tmp/oanix-test.log)"; fi
-          summary="$(printf '%s' "$summary" | tr '\n\r' '  ' | cut -c1-120)"
-          gh api "repos/${{ github.repository }}/statuses/${{ github.event.pull_request.head.sha }}" \
-            -f state=success \
-            -f context='diagnostic/npm-test' \
-            -f description="$summary"
+          block="$(grep -A24 -m1 '^not ok ' /tmp/oanix-test.log || true)"
+          title="$(printf '%s\n' "$block" | head -n 1)"
+          location="$(printf '%s\n' "$block" | grep -m1 -E 'location:|file:///' || true)"
+          error="$(printf '%s\n' "$block" | grep -m1 -E 'error:|expected:|actual:' || true)"
+          publish() {
+            context="$1"
+            value="$2"
+            if [ -z "$value" ]; then value='(not found)'; fi
+            value="$(printf '%s' "$value" | tr '\n\r' '  ' | cut -c1-120)"
+            gh api "repos/${{ github.repository }}/statuses/${{ github.event.pull_request.head.sha }}" \
+              -f state=success -f context="$context" -f description="$value"
+          }
+          publish 'diagnostic/npm-title' "$title"
+          publish 'diagnostic/npm-location' "$location"
+          publish 'diagnostic/npm-error' "$error"
 
       - name: Test OANIX
         run: npm test
