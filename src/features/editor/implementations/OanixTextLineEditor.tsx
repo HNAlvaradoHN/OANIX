@@ -1,9 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import type {
-  ClipboardEvent as ReactClipboardEvent,
-  FormEvent as ReactFormEvent,
-  KeyboardEvent as ReactKeyboardEvent,
-} from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import type { EditorSurfaceBlock, EditorSurfaceBlockChangeSet } from '../editorSurfaceContract.ts'
 import { findOanixClipboardImage } from '../oanixClipboardImage.ts'
 import {
@@ -56,25 +51,38 @@ const TEXT_FORMATS = new Set<EditorTextBlockFormat>([
   'numbered-list',
 ])
 const TEXT_SAVE_IDLE_MS = 3_000
+const LINE_SELECTOR = '.oanix-text-line-editor__line'
+
+/**
+ * A note may render several text-line editors separated by atomic blocks.
+ * Only the editor that most recently owned a live selection may handle the
+ * shared OANIX format/history controls.
+ */
+const activeTextLineEditorByNote = new Map<string, symbol>()
 
 function createTextLineId() {
   return `oanix-text-${crypto.randomUUID()}`
 }
 
-function cloneLines(lines: readonly LineData[]) {
-  return lines.map((line) => ({ ...line }))
+function cloneLines(source: readonly LineData[]) {
+  return source.map((line) => ({ ...line }))
 }
 
 function decodeLines(blocks: readonly EditorSurfaceBlock[]) {
-  return blocks.map((block) => decodeTextBlock(block)).filter((block): block is LineData => Boolean(block))
+  return blocks
+    .map((block) => decodeTextBlock(block))
+    .filter((block): block is LineData => Boolean(block))
 }
 
-function lineSignature(lines: readonly LineData[]) {
-  return lines.map((line) => `${line.id}\u0000${line.format ?? 'paragraph'}\u0000${line.text}`).join('\u0001')
+function lineSignature(source: readonly LineData[]) {
+  return source
+    .map((line) => [line.id, line.format ?? 'paragraph', line.text].join('\u0000'))
+    .join('\u0001')
 }
 
-function paragraphIfEmpty(line: LineData): LineData {
-  if (line.text.trim().length > 0 || line.format === 'paragraph') return line
+function headingToParagraphIfEmpty(line: LineData): LineData {
+  if (line.text.trim().length > 0) return line
+  if (line.format !== 'h2' && line.format !== 'h3') return line
   return { ...line, format: 'paragraph' }
 }
 
@@ -103,6 +111,7 @@ export function OanixTextLineEditor({
   const runtime = useOanixTextLineRuntime()
   const containerRef = useRef<HTMLDivElement | null>(null)
   const lineRefs = useRef(new Map<string, HTMLDivElement>())
+  const linesRef = useRef<LineData[]>([])
   const dirtyBlocksRef = useRef(new Map<string, EditorSurfaceBlock>())
   const saveTimerRef = useRef<number | null>(null)
   const saveQueueRef = useRef<Promise<boolean>>(Promise.resolve(true))
@@ -110,16 +119,43 @@ export function OanixTextLineEditor({
   const undoStackRef = useRef<LineData[][]>([])
   const redoStackRef = useRef<LineData[][]>([])
   const lastSelectionRef = useRef<StoredSelection | null>(null)
+  const disabledRef = useRef(disabled)
+  const runtimeRef = useRef(runtime)
+  const editorTokenRef = useRef(Symbol('oanix-text-line-editor'))
+  const callbacksRef = useRef({
+    onTextCursorChange,
+    onPasteImage,
+    onActivity,
+    onCompositionStart,
+    onCompositionEnd,
+    onError,
+  })
+
+  runtimeRef.current = runtime
+  callbacksRef.current = {
+    onTextCursorChange,
+    onPasteImage,
+    onActivity,
+    onCompositionStart,
+    onCompositionEnd,
+    onError,
+  }
 
   const decodedExternal = useMemo(() => decodeLines(blocks), [blocks])
   const externalSignature = useMemo(() => lineSignature(decodedExternal), [decodedExternal])
-  const [lines, setLines] = useState<LineData[]>(() => cloneLines(decodedExternal))
-  const linesRef = useRef(lines)
+  const initialLinesRef = useRef(decodedExternal)
+  initialLinesRef.current = decodedExternal
   const lastExternalSignatureRef = useRef(externalSignature)
 
-  function replaceLines(next: LineData[]) {
-    linesRef.current = next
-    setLines(next)
+  function activateInteractionTarget() {
+    const noteId = runtimeRef.current?.noteId
+    if (!noteId) return
+    activeTextLineEditorByNote.set(noteId, editorTokenRef.current)
+  }
+
+  function isActiveInteractionTarget() {
+    const noteId = runtimeRef.current?.noteId
+    return Boolean(noteId && activeTextLineEditorByNote.get(noteId) === editorTokenRef.current)
   }
 
   function getLine(id: string) {
@@ -154,9 +190,9 @@ export function OanixTextLineEditor({
     const range = selection.getRangeAt(0)
     const anchor = range.startContainer
     const candidate = anchor.nodeType === Node.TEXT_NODE
-      ? anchor.parentElement?.closest<HTMLDivElement>('.oanix-text-line-editor__line') ?? null
+      ? anchor.parentElement?.closest<HTMLDivElement>(LINE_SELECTOR) ?? null
       : anchor instanceof Element
-        ? anchor.closest<HTMLDivElement>('.oanix-text-line-editor__line')
+        ? anchor.closest<HTMLDivElement>(LINE_SELECTOR)
         : null
     const lineEl = candidate && containerRef.current?.contains(candidate) ? candidate : null
     if (!lineEl) return emptyContext()
@@ -168,19 +204,24 @@ export function OanixTextLineEditor({
     const selectionStart = offsetInsideLine(lineEl, range.startContainer, range.startOffset)
     let selectionEnd = selectionStart
     const endCandidate = range.endContainer.nodeType === Node.TEXT_NODE
-      ? range.endContainer.parentElement?.closest<HTMLDivElement>('.oanix-text-line-editor__line') ?? null
+      ? range.endContainer.parentElement?.closest<HTMLDivElement>(LINE_SELECTOR) ?? null
       : range.endContainer instanceof Element
-        ? range.endContainer.closest<HTMLDivElement>('.oanix-text-line-editor__line')
+        ? range.endContainer.closest<HTMLDivElement>(LINE_SELECTOR)
         : null
     if (endCandidate === lineEl) {
       selectionEnd = offsetInsideLine(lineEl, range.endContainer, range.endOffset)
     } else if (!selection.isCollapsed) {
-      selectionEnd = line.text.length
+      selectionEnd = lineEl.textContent.length
     }
 
     const start = Math.min(selectionStart, selectionEnd)
     const end = Math.max(selectionStart, selectionEnd)
-    lastSelectionRef.current = { blockId: line.id, selectionStart: start, selectionEnd: end }
+    lastSelectionRef.current = {
+      blockId: line.id,
+      selectionStart: start,
+      selectionEnd: end,
+    }
+    activateInteractionTarget()
 
     return {
       lineEl,
@@ -188,8 +229,8 @@ export function OanixTextLineEditor({
       offset: start,
       selectionStart: start,
       selectionEnd: end,
-      hasSelection: !selection.isCollapsed,
-      selectedText: !selection.isCollapsed ? range.toString() : '',
+      hasSelection: end > start,
+      selectedText: end > start ? lineEl.textContent.slice(start, end) : '',
     }
   }
 
@@ -202,8 +243,10 @@ export function OanixTextLineEditor({
     const line = getLine(stored.blockId)
     const lineEl = getLineEl(stored.blockId)
     if (!line || !lineEl) return emptyContext()
-    const start = Math.min(Math.max(0, stored.selectionStart), line.text.length)
-    const end = Math.min(Math.max(start, stored.selectionEnd), line.text.length)
+
+    const text = lineEl.textContent
+    const start = Math.min(Math.max(0, stored.selectionStart), text.length)
+    const end = Math.min(Math.max(start, stored.selectionEnd), text.length)
     return {
       lineEl,
       line,
@@ -211,55 +254,113 @@ export function OanixTextLineEditor({
       selectionStart: start,
       selectionEnd: end,
       hasSelection: end > start,
-      selectedText: line.text.slice(start, end),
+      selectedText: text.slice(start, end),
     }
   }
 
-  function focusLine(lineId: string, offset?: number) {
-    window.requestAnimationFrame(() => {
-      const el = getLineEl(lineId)
-      if (!el) return
-      el.focus({ preventScroll: true })
+  function resolveTextPoint(el: HTMLDivElement, offset: number): { node: Node; offset: number } {
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
+    let remaining = Math.max(0, offset)
+    let node = walker.nextNode()
 
-      const range = document.createRange()
-      const selection = window.getSelection()
-      const textNode = el.firstChild
-      if (typeof offset === 'number' && textNode?.nodeType === Node.TEXT_NODE) {
-        const safeOffset = Math.min(Math.max(0, offset), textNode.textContent?.length ?? 0)
-        range.setStart(textNode, safeOffset)
-        range.collapse(true)
-        lastSelectionRef.current = {
-          blockId: lineId,
-          selectionStart: safeOffset,
-          selectionEnd: safeOffset,
-        }
-      } else {
-        range.selectNodeContents(el)
-        range.collapse(false)
-        const end = el.textContent.length
-        lastSelectionRef.current = { blockId: lineId, selectionStart: end, selectionEnd: end }
-      }
-      selection?.removeAllRanges()
-      selection?.addRange(range)
-      el.scrollIntoView({ block: 'nearest' })
-      const ctx = readLiveContext()
-      if (ctx.line) onTextCursorChange?.(ctx.line.id, ctx.offset)
-    })
+    while (node) {
+      const length = node.textContent?.length ?? 0
+      if (remaining <= length) return { node, offset: remaining }
+      remaining -= length
+      node = walker.nextNode()
+    }
+
+    return { node: el, offset: el.childNodes.length }
   }
 
-  function updateToolbar() {
-    const ctx = getCurrentContext()
-    const root = containerRef.current?.closest<HTMLElement>('.oanix-notes')
-    root?.querySelectorAll<HTMLButtonElement>('.oanix-notes__tool[data-tool]').forEach((button) => {
-      const format = button.dataset.tool as EditorTextBlockFormat | undefined
-      if (!format || !TEXT_FORMATS.has(format)) return
-      button.classList.toggle('is-active', Boolean(ctx.line && format === (ctx.line.format ?? 'paragraph')))
+  function placeSelection(el: HTMLDivElement, start: number, end = start) {
+    const textLength = el.textContent.length
+    const safeStart = Math.min(Math.max(0, start), textLength)
+    const safeEnd = Math.min(Math.max(safeStart, end), textLength)
+    const startPoint = resolveTextPoint(el, safeStart)
+    const endPoint = resolveTextPoint(el, safeEnd)
+    const range = document.createRange()
+    range.setStart(startPoint.node, startPoint.offset)
+    range.setEnd(endPoint.node, endPoint.offset)
+
+    const selection = window.getSelection()
+    selection?.removeAllRanges()
+    selection?.addRange(range)
+
+    const blockId = el.dataset.oanixMixedTextId
+    if (blockId) {
+      lastSelectionRef.current = {
+        blockId,
+        selectionStart: safeStart,
+        selectionEnd: safeEnd,
+      }
+    }
+  }
+
+  function focusLine(lineId: string, start?: number, end?: number) {
+    const el = getLineEl(lineId)
+    if (!el) return
+
+    el.focus({ preventScroll: true })
+    const textLength = el.textContent.length
+    const at = typeof start === 'number' ? start : textLength
+    placeSelection(el, at, typeof end === 'number' ? end : at)
+    activateInteractionTarget()
+    el.scrollIntoView({ block: 'nearest' })
+
+    const ctx = readLiveContext()
+    if (ctx.line) callbacksRef.current.onTextCursorChange?.(ctx.line.id, ctx.offset)
+  }
+
+  function buildLineEl(line: LineData): HTMLDivElement {
+    const el = document.createElement('div')
+    el.className = 'oanix-mixed-document__text oanix-text-line-editor__line'
+    el.dataset.oanixMixedTextId = line.id
+    el.dataset.oanixTextFormat = line.format ?? 'paragraph'
+    el.dataset.placeholder = ''
+    el.contentEditable = !disabledRef.current ? 'true' : 'false'
+    el.setAttribute('role', 'textbox')
+    el.setAttribute('aria-multiline', 'false')
+    el.setAttribute('aria-label', 'Renglón de texto de la nota')
+    el.spellcheck = true
+    el.textContent = line.text
+
+    el.addEventListener('input', () => apiRef.current.handleInput(line.id, el))
+    el.addEventListener('keydown', (event) => apiRef.current.handleKeyDown(event, line.id))
+    el.addEventListener('paste', (event) => apiRef.current.handlePaste(event, line.id))
+    el.addEventListener('compositionstart', () => {
+      composingRef.current = true
+      callbacksRef.current.onCompositionStart()
     })
-    if (ctx.line) onTextCursorChange?.(ctx.line.id, ctx.offset)
+    el.addEventListener('compositionend', () => {
+      composingRef.current = false
+      callbacksRef.current.onCompositionEnd()
+      apiRef.current.handleInput(line.id, el)
+    })
+    el.addEventListener('focus', () => apiRef.current.updateToolbar())
+    el.addEventListener('click', () => apiRef.current.updateToolbar())
+    el.addEventListener('keyup', () => apiRef.current.updateToolbar())
+    el.addEventListener('pointerup', () => apiRef.current.updateToolbar())
+
+    lineRefs.current.set(line.id, el)
+    return el
+  }
+
+  function rebuildFromBlocks(source: readonly LineData[]) {
+    const container = containerRef.current
+    if (!container) return
+
+    container.replaceChildren()
+    lineRefs.current.clear()
+    linesRef.current = cloneLines(source)
+    for (const line of linesRef.current) {
+      container.appendChild(buildLineEl(line))
+    }
+    lastSelectionRef.current = null
   }
 
   function reportSaveFailure() {
-    onError?.('No se pudo guardar el renglón de texto.')
+    callbacksRef.current.onError?.('No se pudo guardar el renglón de texto.')
   }
 
   function enqueueTask(task: () => Promise<boolean>) {
@@ -288,11 +389,13 @@ export function OanixTextLineEditor({
       window.clearTimeout(saveTimerRef.current)
       saveTimerRef.current = null
     }
+
     const pending = takeDirtyBlocks()
     if (pending.length > 0) {
       enqueueTask(async () => {
-        if (!runtime?.saveBlockChanges) return false
-        const saved = await runtime.saveBlockChanges({ upserts: pending })
+        const saveBlockChanges = runtimeRef.current?.saveBlockChanges
+        if (!saveBlockChanges) return false
+        const saved = await saveBlockChanges({ upserts: pending })
         if (!saved) {
           for (const block of pending) {
             if (!dirtyBlocksRef.current.has(block.id)) dirtyBlocksRef.current.set(block.id, block)
@@ -301,6 +404,7 @@ export function OanixTextLineEditor({
         return saved
       })
     }
+
     return saveQueueRef.current
   }
 
@@ -323,47 +427,56 @@ export function OanixTextLineEditor({
     const pending = takeDirtyBlocks()
 
     enqueueTask(async () => {
-      if (!runtime?.loadBlocks || !runtime.saveBlockChanges) return false
-      if (pending.length > 0 && !(await runtime.saveBlockChanges({ upserts: pending }))) return false
-      const globalBlocks = await runtime.loadBlocks()
+      const currentRuntime = runtimeRef.current
+      if (!currentRuntime?.loadBlocks || !currentRuntime.saveBlockChanges) return false
+      if (pending.length > 0 && !(await currentRuntime.saveBlockChanges({ upserts: pending }))) return false
+      const globalBlocks = await currentRuntime.loadBlocks()
       const changes = buildChanges(globalBlocks)
       if (!changes) return true
-      return runtime.saveBlockChanges(changes)
+      return currentRuntime.saveBlockChanges(changes)
     })
   }
 
   function setLineType(id: string, format: EditorTextBlockFormat) {
     const line = getLine(id)
     if (!line) return null
+
     const next = { ...line, format }
-    linesRef.current = linesRef.current.map((item) => item.id === id ? next : item)
-    setLines([...linesRef.current])
+    linesRef.current = linesRef.current.map((item) => (item.id === id ? next : item))
+    const el = getLineEl(id)
+    if (el) el.dataset.oanixTextFormat = format
     return next
   }
 
   function insertLineAfter(refId: string, format: EditorTextBlockFormat, text: string) {
-    const index = linesRef.current.findIndex((line) => line.id === refId)
+    const index = linesRef.current.findIndex((item) => item.id === refId)
     if (index < 0) return null
-    const ref = linesRef.current[index]
+    const refEl = getLineEl(refId)
+    if (!refEl) return null
+
     const line: LineData = {
       id: createTextLineId(),
-      kind: ref.kind,
+      kind: linesRef.current[index].kind,
       text,
       format,
     }
-    replaceLines([
+    const el = buildLineEl(line)
+    refEl.after(el)
+    linesRef.current = [
       ...linesRef.current.slice(0, index + 1),
       line,
       ...linesRef.current.slice(index + 1),
-    ])
+    ]
     return line
   }
 
-  function resetIfEmpty(line: LineData) {
+  function resetIfEmpty(line: LineData): LineData {
     const el = getLineEl(line.id)
-    if (!el || el.textContent.trim().length > 0 || line.format === 'paragraph') return line
+    if (!el || el.textContent.trim().length > 0) return line
+    if (line.format !== 'h2' && line.format !== 'h3') return line
+
     const next = { ...line, format: 'paragraph' as const }
-    linesRef.current = linesRef.current.map((item) => item.id === line.id ? next : item)
+    linesRef.current = linesRef.current.map((item) => (item.id === line.id ? next : item))
     el.dataset.oanixTextFormat = 'paragraph'
     return next
   }
@@ -375,7 +488,7 @@ export function OanixTextLineEditor({
     if (ctx.hasSelection && ctx.selectedText.trim().length > 0) {
       const next = setLineType(ctx.line.id, format)
       if (next) enqueueStructuralSave(() => ({ upserts: [encodeTextBlock(next)] }))
-      focusLine(ctx.line.id, ctx.selectionEnd)
+      focusLine(ctx.line.id, ctx.selectionStart, ctx.selectionEnd)
     } else if (ctx.lineEl.textContent.trim().length === 0) {
       const next = setLineType(ctx.line.id, format)
       if (next) enqueueStructuralSave(() => ({ upserts: [encodeTextBlock(next)] }))
@@ -383,16 +496,17 @@ export function OanixTextLineEditor({
     } else {
       const inserted = insertLineAfter(ctx.line.id, format, '')
       if (!inserted) return
+
       enqueueStructuralSave((globalBlocks) => {
         const targetIndex = globalBlocks.findIndex((block) => block.id === ctx.line!.id)
         const order = globalBlocks.map((block) => block.id)
         if (targetIndex >= 0) order.splice(targetIndex + 1, 0, inserted.id)
         return { upserts: [encodeTextBlock(inserted)], order }
       })
-      focusLine(inserted.id)
+      focusLine(inserted.id, 0)
     }
 
-    onActivity()
+    callbacksRef.current.onActivity()
     saveState()
     updateToolbar()
   }
@@ -400,6 +514,7 @@ export function OanixTextLineEditor({
   function handleEnter() {
     const ctx = readLiveContext()
     if (!ctx.line || !ctx.lineEl) return
+
     const selection = window.getSelection()
     if (!selection || selection.rangeCount === 0) return
     const range = selection.getRangeAt(0)
@@ -414,20 +529,28 @@ export function OanixTextLineEditor({
     afterRange.setEnd(ctx.lineEl, ctx.lineEl.childNodes.length)
     const afterText = afterRange.toString()
 
-    const current = paragraphIfEmpty({ ...ctx.line, text: beforeText })
+    const index = linesRef.current.findIndex((item) => item.id === ctx.line!.id)
+    if (index < 0) return
+
+    const current = headingToParagraphIfEmpty({ ...ctx.line, text: beforeText })
+    ctx.lineEl.textContent = beforeText
+    ctx.lineEl.dataset.oanixTextFormat = current.format ?? 'paragraph'
+
     const next: LineData = {
       id: createTextLineId(),
       kind: ctx.line.kind,
       text: afterText,
       format: 'paragraph',
     }
-    const index = linesRef.current.findIndex((line) => line.id === ctx.line!.id)
-    replaceLines([
+    const nextEl = buildLineEl(next)
+    ctx.lineEl.after(nextEl)
+
+    linesRef.current = [
       ...linesRef.current.slice(0, index),
       current,
       next,
       ...linesRef.current.slice(index + 1),
-    ])
+    ]
 
     dirtyBlocksRef.current.delete(current.id)
     dirtyBlocksRef.current.delete(next.id)
@@ -441,29 +564,39 @@ export function OanixTextLineEditor({
       }
     })
 
-    onActivity()
-    lastSelectionRef.current = { blockId: next.id, selectionStart: 0, selectionEnd: 0 }
     focusLine(next.id, 0)
+    callbacksRef.current.onActivity()
     saveState()
     updateToolbar()
   }
 
   function mergeWithPrevious(index: number) {
     if (index <= 0 || index >= linesRef.current.length) return
+
     const current = linesRef.current[index]
     const previous = linesRef.current[index - 1]
     const currentEl = getLineEl(current.id)
     const previousEl = getLineEl(previous.id)
-    const previousText = previousEl?.textContent ?? previous.text
-    const currentText = currentEl?.textContent ?? current.text
-    const caretAt = previousText.length
-    const merged = { ...previous, text: previousText + currentText }
+    if (!currentEl || !previousEl) return
 
-    replaceLines([
+    const previousText = previousEl.textContent
+    const currentText = currentEl.textContent
+    const caretAt = previousText.length
+    const merged: LineData = {
+      ...previous,
+      text: previousText + currentText,
+    }
+
+    currentEl.remove()
+    lineRefs.current.delete(current.id)
+    previousEl.textContent = merged.text
+    previousEl.dataset.oanixTextFormat = merged.format ?? 'paragraph'
+    linesRef.current = [
       ...linesRef.current.slice(0, index - 1),
       merged,
       ...linesRef.current.slice(index + 1),
-    ])
+    ]
+
     dirtyBlocksRef.current.delete(current.id)
     dirtyBlocksRef.current.delete(previous.id)
     enqueueStructuralSave((globalBlocks) => ({
@@ -472,13 +605,9 @@ export function OanixTextLineEditor({
       order: globalBlocks.filter((block) => block.id !== current.id).map((block) => block.id),
     }))
 
-    onActivity()
-    lastSelectionRef.current = {
-      blockId: merged.id,
-      selectionStart: caretAt,
-      selectionEnd: caretAt,
-    }
-    focusLine(merged.id, caretAt)
+    focusLine(previous.id, caretAt)
+    callbacksRef.current.onActivity()
+    updateToolbar()
   }
 
   function persistRestoredState(previous: readonly LineData[], next: readonly LineData[]) {
@@ -504,47 +633,59 @@ export function OanixTextLineEditor({
     })
   }
 
+  function restoreFocusAfterHistory(preferredId: string | null) {
+    const target = preferredId && getLine(preferredId)
+      ? preferredId
+      : linesRef.current[linesRef.current.length - 1]?.id ?? null
+    if (target) focusLine(target)
+  }
+
   function undo() {
     if (undoStackRef.current.length <= 1) return
-    const previous = cloneLines(linesRef.current)
+
+    const previousFocus = getCurrentContext().line?.id ?? null
     const current = undoStackRef.current.pop()
     if (current) redoStackRef.current.push(current)
+    const previous = cloneLines(linesRef.current)
     const next = cloneLines(undoStackRef.current[undoStackRef.current.length - 1])
-    replaceLines(next)
-    lastSelectionRef.current = null
     persistRestoredState(previous, next)
-    onActivity()
+    rebuildFromBlocks(next)
+    restoreFocusAfterHistory(previousFocus)
+    callbacksRef.current.onActivity()
     updateToolbar()
   }
 
   function redo() {
     if (redoStackRef.current.length === 0) return
-    const previous = cloneLines(linesRef.current)
+
+    const previousFocus = getCurrentContext().line?.id ?? null
     const next = cloneLines(redoStackRef.current.pop()!)
+    const previous = cloneLines(linesRef.current)
     undoStackRef.current.push(cloneLines(next))
-    replaceLines(next)
-    lastSelectionRef.current = null
     persistRestoredState(previous, next)
-    onActivity()
+    rebuildFromBlocks(next)
+    restoreFocusAfterHistory(previousFocus)
+    callbacksRef.current.onActivity()
     updateToolbar()
   }
 
-  function handleInput(event: ReactFormEvent<HTMLDivElement>, lineId: string) {
+  function handleInput(lineId: string, el: HTMLDivElement) {
     if (composingRef.current) return
+
     const line = getLine(lineId)
     if (!line) return
-    const text = event.currentTarget.textContent
-    let next: LineData = { ...line, text }
-    linesRef.current = linesRef.current.map((item) => item.id === lineId ? next : item)
+    let next: LineData = { ...line, text: el.textContent }
+    linesRef.current = linesRef.current.map((item) => (item.id === lineId ? next : item))
     next = resetIfEmpty(next)
-    onActivity()
+
+    callbacksRef.current.onActivity()
     scheduleTextSave(encodeTextBlock(next))
     const ctx = readLiveContext()
-    if (ctx.line) onTextCursorChange?.(ctx.line.id, ctx.offset)
+    if (ctx.line) callbacksRef.current.onTextCursorChange?.(ctx.line.id, ctx.offset)
   }
 
-  function handleKeyDown(event: ReactKeyboardEvent<HTMLDivElement>, line: LineData) {
-    if (event.nativeEvent.isComposing || composingRef.current) return
+  function handleKeyDown(event: KeyboardEvent, lineId: string) {
+    if (event.isComposing || composingRef.current) return
 
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
       event.preventDefault()
@@ -565,24 +706,30 @@ export function OanixTextLineEditor({
       return
     }
 
+    // Normal/repeated Backspace belongs to the browser while the caret is
+    // inside the line. OANIX intervenes only at the structural boundary.
     if (event.key !== 'Backspace' || event.shiftKey) return
     const ctx = readLiveContext()
-    if (!ctx.line || ctx.line.id !== line.id || ctx.hasSelection || ctx.offset !== 0) return
-    const index = linesRef.current.findIndex((item) => item.id === line.id)
+    if (!ctx.line || ctx.line.id !== lineId || ctx.hasSelection || ctx.offset !== 0) return
+
+    const index = linesRef.current.findIndex((item) => item.id === lineId)
     if (index <= 0) return
+
     event.preventDefault()
     mergeWithPrevious(index)
     saveState()
   }
 
-  function handlePaste(event: ReactClipboardEvent<HTMLDivElement>, line: LineData) {
-    if (disabled) return
+  function handlePaste(event: ClipboardEvent, lineId: string) {
+    if (disabledRef.current) return
+
     const image = findOanixClipboardImage(event.clipboardData)
-    if (image && onPasteImage) {
+    if (image && callbacksRef.current.onPasteImage) {
       event.preventDefault()
       const ctx = readLiveContext()
-      const cursorOffset = ctx.line?.id === line.id ? ctx.offset : line.text.length
-      void flushPending().then(() => onPasteImage(image, line.id, cursorOffset))
+      const line = getLine(lineId)
+      const cursorOffset = ctx.line?.id === lineId ? ctx.offset : (line?.text.length ?? 0)
+      void flushPending().then(() => callbacksRef.current.onPasteImage?.(image, lineId, cursorOffset))
       return
     }
 
@@ -590,38 +737,116 @@ export function OanixTextLineEditor({
     const text = event.clipboardData.getData('text/plain') || ''
     const selection = window.getSelection()
     if (!selection || selection.rangeCount === 0) return
+
     const range = selection.getRangeAt(0)
     const node = document.createTextNode(text)
     range.deleteContents()
     range.insertNode(node)
+
     const nextRange = document.createRange()
     nextRange.setStartAfter(node)
     nextRange.collapse(true)
     selection.removeAllRanges()
     selection.addRange(nextRange)
 
-    const lineEl = node.parentElement?.closest<HTMLDivElement>('.oanix-text-line-editor__line')
+    const lineEl = node.parentElement?.closest<HTMLDivElement>(LINE_SELECTOR) ?? null
     const id = lineEl?.dataset.oanixMixedTextId
     const current = id ? getLine(id) : null
     if (current && lineEl) {
       const next = resetIfEmpty({ ...current, text: lineEl.textContent })
-      linesRef.current = linesRef.current.map((item) => item.id === next.id ? next : item)
+      linesRef.current = linesRef.current.map((item) => (item.id === next.id ? next : item))
       scheduleTextSave(encodeTextBlock(next))
-      onActivity()
+      callbacksRef.current.onActivity()
       const ctx = readLiveContext()
-      if (ctx.line) onTextCursorChange?.(ctx.line.id, ctx.offset)
+      if (ctx.line) callbacksRef.current.onTextCursorChange?.(ctx.line.id, ctx.offset)
     }
+
     saveState()
     updateToolbar()
   }
 
+  function updateToolbar() {
+    const ctx = getCurrentContext()
+    const root = containerRef.current?.closest<HTMLElement>('.oanix-notes')
+    root?.querySelectorAll<HTMLButtonElement>('.oanix-notes__tool[data-tool]').forEach((button) => {
+      const format = button.dataset.tool as EditorTextBlockFormat | undefined
+      if (!format || !TEXT_FORMATS.has(format)) return
+      button.classList.toggle('is-active', Boolean(ctx.line && format === (ctx.line.format ?? 'paragraph')))
+    })
+    if (ctx.line) callbacksRef.current.onTextCursorChange?.(ctx.line.id, ctx.offset)
+  }
+
+  const apiRef = useRef({
+    applyFormat,
+    handleEnter,
+    mergeWithPrevious,
+    resetIfEmpty,
+    handleInput,
+    handleKeyDown,
+    handlePaste,
+    updateToolbar,
+    flushPending,
+    undo,
+    redo,
+  })
+  apiRef.current = {
+    applyFormat,
+    handleEnter,
+    mergeWithPrevious,
+    resetIfEmpty,
+    handleInput,
+    handleKeyDown,
+    handlePaste,
+    updateToolbar,
+    flushPending,
+    undo,
+    redo,
+  }
+
   useEffect(() => {
-    if (undoStackRef.current.length === 0) saveState()
+    rebuildFromBlocks(initialLinesRef.current)
+    undoStackRef.current = [cloneLines(linesRef.current)]
+    redoStackRef.current = []
+    return () => {
+      containerRef.current?.replaceChildren()
+      lineRefs.current.clear()
+    }
   }, [])
 
   useEffect(() => {
-    if (!runtime) return
-    return registerOanixTextLineFlusher(runtime.noteId, flushPending)
+    const noteId = runtime?.noteId
+    return () => {
+      if (noteId && activeTextLineEditorByNote.get(noteId) === editorTokenRef.current) {
+        activeTextLineEditorByNote.delete(noteId)
+      }
+    }
+  }, [runtime?.noteId])
+
+  useEffect(() => {
+    disabledRef.current = disabled
+    lineRefs.current.forEach((el) => {
+      el.contentEditable = !disabled ? 'true' : 'false'
+    })
+  }, [disabled])
+
+  useEffect(() => {
+    if (externalSignature === lastExternalSignatureRef.current) return
+    lastExternalSignatureRef.current = externalSignature
+
+    // A persistence echo must not rebuild contentEditable nodes or move caret.
+    if (externalSignature === lineSignature(linesRef.current)) return
+
+    void flushPending().then(() => {
+      rebuildFromBlocks(decodedExternal)
+      undoStackRef.current = [cloneLines(linesRef.current)]
+      redoStackRef.current = []
+    })
+  }, [externalSignature, decodedExternal])
+
+  useEffect(() => {
+    const noteId = runtimeRef.current?.noteId
+    if (!noteId) return
+    return registerOanixTextLineFlusher(noteId, () => apiRef.current.flushPending())
   }, [runtime?.noteId, runtime?.saveBlockChanges])
 
   useEffect(() => () => {
@@ -629,29 +854,18 @@ export function OanixTextLineEditor({
   }, [])
 
   useEffect(() => {
-    if (externalSignature === lastExternalSignatureRef.current) return
-    lastExternalSignatureRef.current = externalSignature
-    void flushPending().then(() => {
-      const next = cloneLines(decodedExternal)
-      replaceLines(next)
-      lastSelectionRef.current = null
-      undoStackRef.current = [cloneLines(next)]
-      redoStackRef.current = []
-    })
-  }, [externalSignature])
-
-  useEffect(() => {
     const handleSelectionChange = () => {
       const ctx = readLiveContext()
-      if (!ctx.line) return
-      updateToolbar()
+      if (ctx.line) updateToolbar()
     }
 
     const handlePointerDown = (event: PointerEvent) => {
+      if (!isActiveInteractionTarget()) return
       const target = event.target
-      if (!(target instanceof Element) || !runtime) return
+      if (!(target instanceof Element)) return
+
       const root = target.closest<HTMLElement>('.oanix-notes')
-      if (root?.dataset.noteId !== runtime.noteId) return
+      if (!root || root.dataset.noteId !== runtimeRef.current?.noteId) return
 
       const formatButton = target.closest<HTMLButtonElement>('button[data-tool]')
       const format = formatButton?.dataset.tool as EditorTextBlockFormat | undefined
@@ -660,31 +874,38 @@ export function OanixTextLineEditor({
         return
       }
 
-      const historyButton = target.closest<HTMLButtonElement>('button[aria-label="Deshacer"], button[aria-label="Rehacer"]')
+      const historyButton = target.closest<HTMLButtonElement>(
+        'button[aria-label="Deshacer"], button[aria-label="Rehacer"]',
+      )
       if (historyButton && getCurrentContext().line) event.preventDefault()
     }
 
     const handleClick = (event: MouseEvent) => {
+      if (!isActiveInteractionTarget()) return
       const target = event.target
-      if (!(target instanceof Element) || !runtime) return
+      if (!(target instanceof Element)) return
+
       const root = target.closest<HTMLElement>('.oanix-notes')
-      if (root?.dataset.noteId !== runtime.noteId) return
+      if (!root || root.dataset.noteId !== runtimeRef.current?.noteId) return
 
       const formatButton = target.closest<HTMLButtonElement>('button[data-tool]')
       const format = formatButton?.dataset.tool as EditorTextBlockFormat | undefined
       if (formatButton && format && TEXT_FORMATS.has(format) && getCurrentContext().line) {
         event.preventDefault()
         event.stopImmediatePropagation()
-        applyFormat(format)
+        apiRef.current.applyFormat(format)
         return
       }
 
-      const historyButton = target.closest<HTMLButtonElement>('button[aria-label="Deshacer"], button[aria-label="Rehacer"]')
+      const historyButton = target.closest<HTMLButtonElement>(
+        'button[aria-label="Deshacer"], button[aria-label="Rehacer"]',
+      )
       if (!historyButton || !getCurrentContext().line) return
+
       event.preventDefault()
       event.stopImmediatePropagation()
-      if (historyButton.getAttribute('aria-label') === 'Deshacer') undo()
-      else redo()
+      if (historyButton.getAttribute('aria-label') === 'Deshacer') apiRef.current.undo()
+      else apiRef.current.redo()
     }
 
     document.addEventListener('selectionchange', handleSelectionChange)
@@ -697,39 +918,5 @@ export function OanixTextLineEditor({
     }
   }, [runtime?.noteId])
 
-  return <div ref={containerRef} className="oanix-text-line-editor" data-oanix-text-lines="true">
-    {lines.map((line) => <div
-      key={line.id}
-      ref={(node) => {
-        if (node) lineRefs.current.set(line.id, node)
-        else lineRefs.current.delete(line.id)
-      }}
-      className="oanix-mixed-document__text oanix-text-line-editor__line"
-      data-oanix-mixed-text-id={line.id}
-      data-oanix-text-format={line.format ?? 'paragraph'}
-      data-placeholder=""
-      contentEditable={!disabled}
-      suppressContentEditableWarning
-      role="textbox"
-      aria-multiline="false"
-      aria-label="Renglón de texto de la nota"
-      spellCheck
-      onInput={(event) => handleInput(event, line.id)}
-      onFocus={() => updateToolbar()}
-      onClick={() => window.setTimeout(updateToolbar, 10)}
-      onKeyUp={() => updateToolbar()}
-      onPointerUp={() => updateToolbar()}
-      onKeyDown={(event) => handleKeyDown(event, line)}
-      onPaste={(event) => handlePaste(event, line)}
-      onCompositionStart={() => {
-        composingRef.current = true
-        onCompositionStart()
-      }}
-      onCompositionEnd={(event) => {
-        composingRef.current = false
-        onCompositionEnd()
-        handleInput(event, line.id)
-      }}
-    >{line.text}</div>)}
-  </div>
+  return <div ref={containerRef} className="oanix-text-line-editor" data-oanix-text-lines="true" />
 }
