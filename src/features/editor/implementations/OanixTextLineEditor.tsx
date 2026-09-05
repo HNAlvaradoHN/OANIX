@@ -722,8 +722,10 @@ export function OanixTextLineEditor({
 
   function handlePaste(event: ClipboardEvent, lineId: string) {
     if (disabledRef.current) return
+    const clipboardData = event.clipboardData
+    if (!clipboardData) return
 
-    const image = findOanixClipboardImage(event.clipboardData)
+    const image = findOanixClipboardImage(clipboardData)
     if (image && callbacksRef.current.onPasteImage) {
       event.preventDefault()
       const ctx = readLiveContext()
@@ -734,7 +736,7 @@ export function OanixTextLineEditor({
     }
 
     event.preventDefault()
-    const text = event.clipboardData.getData('text/plain') || ''
+    const text = clipboardData.getData('text/plain') || ''
     const selection = window.getSelection()
     if (!selection || selection.rangeCount === 0) return
 
