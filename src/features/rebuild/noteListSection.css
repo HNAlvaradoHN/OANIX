@@ -1,19 +1,28 @@
 .rebuild-note-row[data-note-tint="true"] {
-  background: color-mix(in srgb, var(--note-card-accent) 16%, transparent);
   border-bottom-color: color-mix(in srgb, var(--note-card-accent) 30%, var(--rb-line));
 }
 
-.rebuild-note-row[data-note-tint="true"]:hover,
-.rebuild-note-row[data-note-tint="true"]:focus-within {
+.rebuild-note-row[data-note-tint="true"]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: color-mix(in srgb, var(--note-card-accent) 16%, transparent);
+  transition: background-color 140ms ease;
+}
+
+.rebuild-note-row[data-note-tint="true"]:hover::before,
+.rebuild-note-row[data-note-tint="true"]:focus-within::before {
   background: color-mix(in srgb, var(--note-card-accent) 20%, transparent);
 }
 
-[data-oanix-theme-mode="light"] .rebuild-note-row[data-note-tint="true"] {
+[data-oanix-theme-mode="light"] .rebuild-note-row[data-note-tint="true"]::before {
   background: color-mix(in srgb, var(--note-card-accent) 14%, transparent);
 }
 
-[data-oanix-theme-mode="light"] .rebuild-note-row[data-note-tint="true"]:hover,
-[data-oanix-theme-mode="light"] .rebuild-note-row[data-note-tint="true"]:focus-within {
+[data-oanix-theme-mode="light"] .rebuild-note-row[data-note-tint="true"]:hover::before,
+[data-oanix-theme-mode="light"] .rebuild-note-row[data-note-tint="true"]:focus-within::before {
   background: color-mix(in srgb, var(--note-card-accent) 18%, transparent);
 }
 
@@ -30,6 +39,8 @@
 }
 
 .rebuild-note-row {
+  position: relative;
+  isolation: isolate;
   transition:
     opacity 140ms ease,
     transform 140ms ease,
@@ -43,7 +54,6 @@
 }
 
 .rebuild-note-row.is-dragging {
-  position: relative;
   z-index: 4;
   opacity: 1;
   transform: scale(1.018);
@@ -68,6 +78,8 @@
 }
 
 .rebuild-note-row__open {
+  position: relative;
+  z-index: 1;
   min-width: 0;
   display: flex;
   align-items: center;
@@ -88,6 +100,8 @@
 }
 
 .rebuild-note-row__actions {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   gap: .18rem;
@@ -149,6 +163,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .rebuild-note-row,
+  .rebuild-note-row[data-note-tint="true"]::before,
   .rebuild-note-row__drag {
     transition: none;
   }
