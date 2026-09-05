@@ -301,7 +301,9 @@ export function OanixTextLineEditor({
     const el = getLineEl(lineId)
     if (!el) return
 
-    el.focus({ preventScroll: true })
+    // Keep the reference editor's direct focus semantics so Android/PWA can
+    // reopen the IME in the same user gesture that applied the format.
+    el.focus()
     const textLength = el.textContent.length
     const at = typeof start === 'number' ? start : textLength
     placeSelection(el, at, typeof end === 'number' ? end : at)
@@ -869,6 +871,18 @@ export function OanixTextLineEditor({
       const root = target.closest<HTMLElement>('.oanix-notes')
       if (!root || root.dataset.noteId !== runtimeRef.current?.noteId) return
 
+      // Capture the editor context before the panel opener can move focus away
+      // from contentEditable. Removing the live range + blur reliably dismisses
+      // the mobile IME while lastSelectionRef keeps the formatting target.
+      const panelOpener = target.closest<HTMLElement>('button[aria-label="Más"], .oanix-notes__slide-handle')
+      if (panelOpener && getCurrentContext().line) {
+        event.preventDefault()
+        const active = document.activeElement
+        if (active instanceof HTMLElement) active.blur()
+        window.getSelection()?.removeAllRanges()
+        return
+      }
+
       const formatButton = target.closest<HTMLButtonElement>('button[data-tool]')
       const format = formatButton?.dataset.tool as EditorTextBlockFormat | undefined
       if (formatButton && format && TEXT_FORMATS.has(format) && getCurrentContext().line) {
@@ -895,6 +909,10 @@ export function OanixTextLineEditor({
       if (formatButton && format && TEXT_FORMATS.has(format) && getCurrentContext().line) {
         event.preventDefault()
         event.stopImmediatePropagation()
+
+        // Close the React-owned side panel first, then restore focus/caret in
+        // the same user click so Android and PWA can immediately reopen input.
+        root.querySelector<HTMLButtonElement>('.oanix-notes__panel-close')?.click()
         apiRef.current.applyFormat(format)
         return
       }
