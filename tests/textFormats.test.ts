@@ -1,18 +1,21 @@
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import test from 'node:test'
 import type { EditorSurfaceBlockChangeSet } from '../src/features/editor/editorSurfaceContract.ts'
-import { buildHeadingEnterPlan, buildHeadingParagraphReset } from '../src/features/editor/oanixHeadingEnterPlan.ts'
 import { applyOanixTextFormat } from '../src/features/editor/oanixTextFormatLayer.ts'
-import { TEXT_BLOCK_KIND, decodeTextBlock, encodeTextBlock } from '../src/features/editor/textBlockCodec.ts'
+import { TEXT_BLOCK_KIND, decodeTextBlock, encodeTextBlock, type EditorTextBlock } from '../src/features/editor/textBlockCodec.ts'
+
+function line(id: string, text: string, format: EditorTextBlock['format'] = 'paragraph'): EditorTextBlock {
+  return { id, kind: TEXT_BLOCK_KIND, text, format }
+}
 
 test('legacy text blocks decode as paragraph without migration', () => {
   const block = decodeTextBlock({ id: 'legacy', kind: TEXT_BLOCK_KIND, data: { text: 'hola' } })
   assert.equal(block?.format, 'paragraph')
-  assert.deepEqual(encodeTextBlock({ id: 'p', kind: TEXT_BLOCK_KIND, text: 'hola', format: 'paragraph' }).data, { text: 'hola' })
+  assert.deepEqual(encodeTextBlock(line('p', 'hola')).data, { text: 'hola' })
 })
 
-test('H2 without selection creates a new empty heading after the current plain line', async () => {
+test('plain notes can still enter the rich text document safely', async () => {
   let changes: EditorSurfaceBlockChangeSet | null = null
   let snapshotText = 'not-saved'
   const result = await applyOanixTextFormat({
@@ -30,148 +33,144 @@ test('H2 without selection creates a new empty heading after the current plain l
 
   assert.equal(result.status, 'committed')
   assert.equal(snapshotText, '')
-  const decoded = changes?.upserts?.map((block) => decodeTextBlock(block)) ?? []
-  assert.deepEqual(decoded.map((block) => [block?.text, block?.format]), [
-    ['uno\ndos', 'paragraph'],
-    ['', 'h2'],
-    ['tres', 'paragraph'],
-  ])
+  assert.ok((changes?.upserts?.length ?? 0) >= 2)
 })
 
-test('H3 without selection inserts the new heading after the active mixed line and keeps that line unchanged', async () => {
-  const original = encodeTextBlock({ id: 'source', kind: TEXT_BLOCK_KIND, text: 'uno\ndos\ntres', format: 'paragraph' })
-  let changes: EditorSurfaceBlockChangeSet | null = null
-  const result = await applyOanixTextFormat({
-    mode: 'mixed',
-    format: 'h3',
-    blocks: [original],
-    targetTextBlockId: 'source',
-    selectionStart: 5,
-    selectionEnd: 5,
-    createId: (index) => `m-${index}`,
-    saveBlockChanges: async (next) => { changes = next; return true },
-  })
+test('live line editor owns the NotebookEditor behavior without a parallel text-line model', () => {
+  const editor = readFileSync('src/features/editor/implementations/OanixTextLineEditor.tsx', 'utf8')
+  const host = readFileSync('src/features/editor/EditorSurface.tsx', 'utf8')
+  const runtime = readFileSync('src/features/editor/oanixTextLineRuntime.tsx', 'utf8')
 
-  assert.equal(result.status, 'committed')
-  assert.equal(changes?.deletes, undefined)
-  const decoded = changes?.upserts?.map((block) => decodeTextBlock(block)) ?? []
-  assert.deepEqual(decoded.map((block) => [block?.id, block?.text, block?.format]), [
-    ['source', 'uno\ndos', 'paragraph'],
-    ['m-0', '', 'h3'],
-    ['m-1', 'tres', 'paragraph'],
-  ])
+  assert.equal(existsSync('src/features/editor/oanixTextLineModel.ts'), false)
+  assert.equal(existsSync('src/features/editor/oanixTextBehaviorBridge.ts'), false)
+  assert.equal(existsSync('src/features/editor/oanixHeadingEnterPlan.ts'), false)
+  assert.equal(existsSync('tests/textBehaviorBridge.test.ts'), false)
+
+  assert.doesNotMatch(host, /behaviorRevision|installOanixTextBehaviorBridge/)
+  assert.doesNotMatch(runtime, /handleEnter|mergeWithPrevious|resetIfEmpty|applyFormat/)
+  assert.doesNotMatch(editor, /useState|setLines|requestAnimationFrame/)
+  assert.doesNotMatch(editor, /<textarea/)
+
+  assert.match(editor, /document\.createElement\('div'\)/)
+  assert.match(editor, /el\.contentEditable = !disabledRef\.current \? 'true' : 'false'/)
+  assert.match(editor, /document\.createRange\(\)/)
+  assert.match(editor, /document\.createTreeWalker\(el, NodeFilter\.SHOW_TEXT\)/)
+  assert.match(editor, /lastSelectionRef/)
+  assert.match(editor, /function getCurrentContext\(\)/)
+  assert.match(editor, /const stored = lastSelectionRef\.current/)
+  assert.match(editor, /el\.focus\(\)/)
+  assert.match(editor, /scrollIntoView\(\{ block: 'nearest' \}\)/)
 })
 
-test('selecting text converts that text line and its ruling to H2', async () => {
-  const original = encodeTextBlock({ id: 'source', kind: TEXT_BLOCK_KIND, text: 'uno\ndos\ntres', format: 'paragraph' })
-  let changes: EditorSurfaceBlockChangeSet | null = null
-  const result = await applyOanixTextFormat({
-    mode: 'mixed',
-    format: 'h2',
-    blocks: [original],
-    targetTextBlockId: 'source',
-    selectionStart: 5,
-    selectionEnd: 7,
-    createId: (index) => `s-${index}`,
-    saveBlockChanges: async (next) => { changes = next; return true },
-  })
+test('format behavior follows the reference applyFormat contract on the live editor', () => {
+  const editor = readFileSync('src/features/editor/implementations/OanixTextLineEditor.tsx', 'utf8')
 
-  assert.equal(result.status, 'committed')
-  const decoded = changes?.upserts?.map((block) => decodeTextBlock(block)) ?? []
-  assert.deepEqual(decoded.map((block) => [block?.text, block?.format]), [
-    ['uno', 'paragraph'],
-    ['dos', 'h2'],
-    ['tres', 'paragraph'],
-  ])
+  assert.match(editor, /function applyFormat\(format: EditorTextBlockFormat\)/)
+  assert.match(editor, /ctx\.hasSelection && ctx\.selectedText\.trim\(\)\.length > 0/)
+  assert.match(editor, /setLineType\(ctx\.line\.id, format\)/)
+  assert.match(editor, /ctx\.lineEl\.textContent\.trim\(\)\.length === 0/)
+  assert.match(editor, /insertLineAfter\(ctx\.line\.id, format, ''\)/)
+  assert.match(editor, /focusLine\(inserted\.id, 0\)/)
+  assert.match(editor, /lastSelectionRef/)
+  assert.match(editor, /activeTextLineEditorByNote/)
 })
 
-test('mixed multi-line selection creates one semantic list item per selected line', async () => {
-  const original = encodeTextBlock({ id: 'source', kind: TEXT_BLOCK_KIND, text: 'a\nb\nc', format: 'paragraph' })
-  let changes: EditorSurfaceBlockChangeSet | null = null
-  const result = await applyOanixTextFormat({
-    mode: 'mixed',
-    format: 'list',
-    blocks: [original],
-    targetTextBlockId: 'source',
-    selectionStart: 0,
-    selectionEnd: 3,
-    createId: (index) => `m-${index}`,
-    saveBlockChanges: async (next) => { changes = next; return true },
-  })
+test('opening the side panel dismisses the live IME while preserving the stored formatting target', () => {
+  const editor = readFileSync('src/features/editor/implementations/OanixTextLineEditor.tsx', 'utf8')
 
-  assert.equal(result.status, 'committed')
-  assert.deepEqual(changes?.deletes, ['source'])
-  const decoded = changes?.upserts?.map((block) => decodeTextBlock(block)) ?? []
-  assert.deepEqual(decoded.map((block) => [block?.text, block?.format]), [
-    ['a', 'list'],
-    ['b', 'list'],
-    ['c', 'paragraph'],
-  ])
+  assert.match(editor, /button\[aria-label="Más"\], \.oanix-notes__slide-handle/)
+  assert.match(editor, /if \(active instanceof HTMLElement\) active\.blur\(\)/)
+  assert.match(editor, /window\.getSelection\(\)\?\.removeAllRanges\(\)/)
+  assert.match(editor, /const stored = lastSelectionRef\.current/)
 })
 
-test('live H2/H3 state wins when Enter lands before the persisted format catches up', () => {
-  const persistedParagraph = encodeTextBlock({ id: 'source', kind: TEXT_BLOCK_KIND, text: 'viejo', format: 'paragraph' })
-  const plan = buildHeadingEnterPlan([persistedParagraph], 'source', 5, 5, () => 'next', 'Título', 'h2')
-  assert.ok(plan)
-  assert.equal(decodeTextBlock(plan.heading)?.format, 'h2')
-  assert.equal(decodeTextBlock(plan.heading)?.text, 'Títul')
-  assert.equal(decodeTextBlock(plan.paragraph)?.format, 'paragraph')
-  assert.equal(decodeTextBlock(plan.paragraph)?.text, 'o')
+test('format click closes the side panel and restores direct editing focus in the same gesture', () => {
+  const editor = readFileSync('src/features/editor/implementations/OanixTextLineEditor.tsx', 'utf8')
+
+  assert.match(editor, /root\.querySelector<HTMLButtonElement>\('\.oanix-notes__panel-close'\)\?\.click\(\)/)
+  assert.match(editor, /apiRef\.current\.applyFormat\(format\)/)
+  assert.match(editor, /el\.focus\(\)/)
 })
 
-test('empty heading reset always canonicalizes the writable text block back to paragraph', () => {
-  const persistedHeading = encodeTextBlock({ id: 'source', kind: TEXT_BLOCK_KIND, text: 'Título', format: 'h3' })
-  const resetFromHeading = buildHeadingParagraphReset([persistedHeading], 'source', '')
-  assert.equal(decodeTextBlock(resetFromHeading!)?.format, 'paragraph')
-  assert.equal(decodeTextBlock(resetFromHeading!)?.text, '')
+test('Enter mutates the live DOM at the caret and keeps the reference focus-at-end behavior', () => {
+  const editor = readFileSync('src/features/editor/implementations/OanixTextLineEditor.tsx', 'utf8')
 
-  const alreadyParagraph = encodeTextBlock({ id: 'source', kind: TEXT_BLOCK_KIND, text: '', format: 'paragraph' })
-  const resetFromParagraph = buildHeadingParagraphReset([alreadyParagraph], 'source', '')
-  assert.equal(decodeTextBlock(resetFromParagraph!)?.format, 'paragraph')
+  assert.match(editor, /function handleEnter\(\)/)
+  assert.match(editor, /beforeRange\.setEnd\(range\.startContainer, range\.startOffset\)/)
+  assert.match(editor, /afterRange\.setStart\(range\.endContainer, range\.endOffset\)/)
+  assert.match(editor, /ctx\.lineEl\.textContent = beforeText/)
+  assert.match(editor, /format: 'paragraph'/)
+  assert.match(editor, /ctx\.lineEl\.after\(nextEl\)/)
+  assert.match(editor, /focusLine\(next\.id\)/)
+  assert.doesNotMatch(editor, /focusLine\(next\.id, 0\)/)
 })
 
-test('editor bridge connects every text format and keeps theme-driven visuals', () => {
-  const guard = readFileSync('src/features/editor/implementations/OanixNotesSheetMobileGuard.tsx', 'utf8')
+test('held Backspace keeps the same contentEditable alive across structural merges', () => {
+  const editor = readFileSync('src/features/editor/implementations/OanixTextLineEditor.tsx', 'utf8')
+
+  assert.match(editor, /if \(event\.key !== 'Backspace' \|\| event\.shiftKey\) return/)
+  assert.match(editor, /ctx\.hasSelection \|\| ctx\.offset !== 0/)
+  assert.match(editor, /const currentLineId = \(\) => el\.dataset\.oanixMixedTextId \?\? line\.id/)
+  assert.match(editor, /handleKeyDown\(event, currentLineId\(\)\)/)
+  assert.match(editor, /previousEl\.remove\(\)/)
+  assert.doesNotMatch(editor, /currentEl\.remove\(\)/)
+  assert.match(editor, /currentEl\.dataset\.oanixMixedTextId = previous\.id/)
+  assert.match(editor, /currentEl\.textContent = merged\.text/)
+  assert.match(editor, /lineRefs\.current\.set\(previous\.id, currentEl\)/)
+  assert.match(editor, /placeSelection\(currentEl, caretAt\)/)
+})
+
+test('only empty H2/H3 reset to paragraph in the extended OANIX format set', () => {
+  const editor = readFileSync('src/features/editor/implementations/OanixTextLineEditor.tsx', 'utf8')
+
+  assert.match(editor, /line\.format !== 'h2' && line\.format !== 'h3'/)
+  assert.match(editor, /format: 'paragraph' as const/)
+})
+
+test('paragraph is the permanent base mode and headings do not pull the next row upward', () => {
   const css = readFileSync('src/features/editor/implementations/oanixNotesSheetMobileSafeArea.css', 'utf8')
 
-  for (const format of ['paragraph', 'h2', 'h3', 'quote', 'list', 'numbered-list']) {
-    assert.match(guard, new RegExp(`['"]${format}['"]`))
-    assert.match(css, new RegExp(`data-oanix-text-format=\\"${format}\\"`))
-  }
-  assert.match(guard, /applyOanixTextFormat/)
-  assert.match(guard, /lastPlainSelectionRef/)
-  assert.match(guard, /lastMixedSelectionRef/)
-  assert.match(css, /var\(--accent\)/)
-  assert.match(css, /var\(--color-text\)/)
-  assert.match(css, /tool-h2::after/)
-  assert.match(css, /content: "H2"/)
+  assert.match(css, /\.oanix-notes \.oanix-notes__tool\[data-tool="paragraph"\][\s\S]*display:\s*none/)
+  assert.match(css, /\.oanix-mixed-document__text\[data-oanix-text-format="paragraph"\],[\s\S]*\.oanix-notes \.oanix-notes__body/)
+  assert.doesNotMatch(css, /margin-top:\s*calc\(-1 \* var\(--oanix-text-block-gap\)\)/)
+  assert.doesNotMatch(css, /--oanix-text-block-gap/)
 })
 
-test('heading bridge keeps new heading focused and lets Backspace cross text blocks', () => {
-  const bridge = readFileSync('src/features/editor/oanixTextBehaviorBridge.ts', 'utf8')
-  assert.match(bridge, /focusInsertedHeading/)
-  assert.match(bridge, /selectionStart === selectionEnd/)
-  assert.match(bridge, /event\.preventDefault\(\)/)
-  assert.match(bridge, /event\.key === 'Backspace'/)
-  assert.match(bridge, /textareas\.indexOf\(target\)/)
-  assert.match(bridge, /previous\.focus\(\{ preventScroll: true \}\)/)
-  assert.match(bridge, /previous\.setSelectionRange\(end, end\)/)
+test('paste remains plain text and structural focus does not depend on remount timers', () => {
+  const editor = readFileSync('src/features/editor/implementations/OanixTextLineEditor.tsx', 'utf8')
+
+  assert.match(editor, /clipboardData\.getData\('text\/plain'\)/)
+  assert.match(editor, /document\.createTextNode\(text\)/)
+  assert.match(editor, /range\.deleteContents\(\)/)
+  assert.match(editor, /range\.insertNode\(node\)/)
+  assert.doesNotMatch(editor, /behaviorRevision|installOanixTextBehaviorBridge|oanixHeadingEnterPlan/)
 })
 
-test('heading bridge anchors remounts instead of trusting one scrollTop snapshot', () => {
-  const bridge = readFileSync('src/features/editor/oanixTextBehaviorBridge.ts', 'utf8')
-  assert.match(bridge, /pageScrollY:\s*window\.scrollY/)
-  assert.match(bridge, /anchorBlockId/)
-  assert.match(bridge, /anchorViewportTop/)
-  assert.match(bridge, /window\.scrollTo\(state\.pageScrollX, state\.pageScrollY\)/)
-  assert.match(bridge, /window\.setTimeout\(settle, 220\)/)
-  assert.match(bridge, /buildHeadingEnterPlan\(blocks, blockId, selectionStart, selectionEnd, undefined, liveText, format\)/)
+test('customization closes completely and panel focus cannot consume editor writing space', () => {
+  const surface = readFileSync('src/features/editor/implementations/OanixNotesSheetSurface.tsx', 'utf8')
+  const css = readFileSync('src/features/editor/implementations/oanixNotesSheetMobileSafeArea.css', 'utf8')
+
+  assert.match(surface, /function closeCustomize\(\)/)
+  assert.match(surface, /active\.closest\('\.oanix-notes__customize'\)/)
+  assert.match(surface, /function closeCustomizeFromPointer\(event: ReactPointerEvent<HTMLButtonElement>\)/)
+  assert.match(surface, /event\.preventDefault\(\)/)
+  assert.match(surface, /event\.stopPropagation\(\)/)
+  assert.match(surface, /aria-label="Cerrar personalización" onPointerDown=\{closeCustomizeFromPointer\} onClick=\{closeCustomize\}/)
+  assert.match(surface, /aria-label="Cerrar" onPointerDown=\{closeCustomizeFromPointer\} onClick=\{closeCustomize\}/)
+  assert.match(css, /\.oanix-notes__customize\[aria-hidden="true"\][\s\S]*display:\s*none/)
+  assert.match(css, /\.oanix-notes__editor-container:focus-within \.oanix-notes__body-wrap/)
+  assert.doesNotMatch(css, /\.oanix-notes:focus-within \.oanix-notes__body-wrap/)
+  assert.match(css, /touch-action:\s*manipulation/)
 })
 
-test('paragraph ruled test keeps text cadence locked to the ruling and removes focus box', () => {
+test('paragraph ruling keeps text cadence locked to the page line and no focus box', () => {
   const css = readFileSync('src/features/editor/implementations/oanixNotesSheetMobileSafeArea.css', 'utf8')
   assert.match(css, /--oanix-ruled-step:\s*30px/)
+  assert.match(css, /--oanix-h2-ruled-step: 42px/)
+  assert.match(css, /--oanix-h3-ruled-step: 36px/)
   assert.match(css, /line-height:\s*var\(--oanix-ruled-step\)/)
+  assert.match(css, /line-height: var\(--oanix-h2-ruled-step\)/)
+  assert.match(css, /line-height: var\(--oanix-h3-ruled-step\)/)
   assert.match(css, /background-size:\s*100% var\(--oanix-ruled-step\)/)
   assert.match(css, /repeating-linear-gradient/)
   assert.match(css, /box-shadow:\s*none/)

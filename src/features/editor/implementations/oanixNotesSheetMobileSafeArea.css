@@ -31,6 +31,11 @@
   letter-spacing: -.04em;
 }
 
+/* Paragraph is the permanent base writing mode; it does not need a menu action. */
+.oanix-notes .oanix-notes__tool[data-tool="paragraph"] {
+  display: none;
+}
+
 .oanix-notes {
   --oanix-ruled-step: 30px;
   --oanix-ruled-baseline: 23px;
@@ -38,7 +43,6 @@
   --oanix-h2-ruled-baseline: 34px;
   --oanix-h3-ruled-step: 36px;
   --oanix-h3-ruled-baseline: 29px;
-  --oanix-text-block-gap: 14px;
   --oanix-ruled-color: color-mix(in srgb, var(--color-text-secondary) 24%, transparent);
 }
 
@@ -98,39 +102,6 @@
   background-position: 0 0;
 }
 
-.oanix-notes .oanix-mixed-document__text[data-oanix-text-format="h2"] + .oanix-mixed-document__text[data-oanix-text-format="paragraph"],
-.oanix-notes .oanix-mixed-document__text[data-oanix-text-format="h3"] + .oanix-mixed-document__text[data-oanix-text-format="paragraph"] {
-  margin-top: calc(-1 * var(--oanix-text-block-gap));
-}
-
-.oanix-notes .oanix-mixed-document__text[data-oanix-text-format="quote"] {
-  min-height: 64px;
-  padding: 10px 14px 10px 18px;
-  border-left: 4px solid color-mix(in srgb, var(--accent) 78%, var(--color-text) 22%);
-  border-radius: 0 12px 12px 0;
-  background: color-mix(in srgb, var(--color-surface) 91%, var(--accent) 9%);
-  color: var(--color-text);
-  font-size: 1.02rem;
-  font-style: italic;
-  line-height: 1.62;
-}
-
-.oanix-notes .oanix-mixed-document__text[data-oanix-text-format="list"],
-.oanix-notes .oanix-mixed-document__text[data-oanix-text-format="numbered-list"] {
-  min-height: 48px;
-  padding: 5px 4px 5px 34px;
-  font-size: 1rem;
-  font-weight: 500;
-  line-height: 1.55;
-}
-
-.oanix-notes .oanix-mixed-document__text[data-oanix-text-format="list"] {
-  background-image: radial-gradient(circle, var(--accent) 0 3.5px, transparent 4px);
-  background-repeat: no-repeat;
-  background-position: 10px 14px;
-  background-size: 8px 8px;
-}
-
 .oanix-notes .oanix-mixed-document__text[data-oanix-text-format]:focus {
   border-radius: 0;
   box-shadow: none;
@@ -145,14 +116,29 @@
 
 .oanix-notes .oanix-notes__title::placeholder { font-weight: 800 !important; }
 .oanix-notes__body-wrap { padding-bottom: 88px; }
-.oanix-notes:focus-within .oanix-notes__body-wrap { padding-bottom: clamp(180px, 24dvh, 260px); }
+.oanix-notes__editor-container:focus-within .oanix-notes__body-wrap { padding-bottom: clamp(180px, 24dvh, 260px); }
+
+/* Hidden customization must not keep an interactive/focused sheet parked over the editor. */
+.oanix-notes__customize[aria-hidden="true"] {
+  display: none;
+  pointer-events: none;
+}
+
+/* Keep the close target reliable in Android WebView/PWA touch interaction. */
+.oanix-notes__customize-overlay,
+.oanix-notes__customize-header .oanix-notes__icon-btn {
+  touch-action: manipulation;
+}
+
+.oanix-notes__customize-header .oanix-notes__icon-btn {
+  min-width: 44px;
+  min-height: 44px;
+  position: relative;
+  z-index: 2;
+}
 
 @media (min-width: 768px) {
   .oanix-notes .oanix-notes__title { font-size: 48px !important; }
-}
-
-@media (max-width: 640px) {
-  .oanix-notes { --oanix-text-block-gap: 12px; }
 }
 
 @media (max-width: 520px) {
@@ -161,5 +147,5 @@
     font-weight: 900 !important;
   }
   .oanix-notes__body-wrap { padding-bottom: 96px; }
-  .oanix-notes:focus-within .oanix-notes__body-wrap { padding-bottom: clamp(200px, 28dvh, 300px); }
+  .oanix-notes__editor-container:focus-within .oanix-notes__body-wrap { padding-bottom: clamp(200px, 28dvh, 300px); }
 }

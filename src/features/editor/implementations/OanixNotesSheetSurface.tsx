@@ -364,11 +364,23 @@ export function OanixNotesSheetSurface({
     if (active instanceof HTMLElement) active.blur()
   }
 
+  function closeCustomize() {
+    const active = document.activeElement
+    if (active instanceof HTMLElement && active.closest('.oanix-notes__customize')) active.blur()
+    setCustomizeOpen(false)
+  }
+
+  function closeCustomizeFromPointer(event: ReactPointerEvent<HTMLButtonElement>) {
+    event.preventDefault()
+    event.stopPropagation()
+    closeCustomize()
+  }
+
   function openPanel() {
     if (documentMode === 'plain') rememberPlainCursor()
     else rememberMixedCursorFromActiveElement()
     closeKeyboard()
-    setCustomizeOpen(false)
+    closeCustomize()
     setPanelOpen(true)
   }
 
@@ -1346,7 +1358,7 @@ export function OanixNotesSheetSurface({
     clearIdleTimer()
     try {
       if (dirtyRef.current && !(await saveCurrentSnapshot())) {
-        setIntegrationError('No se pudo guardar el texto pendiente antes de eliminar la tarjeta.')
+        setIntegrationError('No se pudo guardar el contenido pendiente antes de eliminar la tarjeta.')
         return
       }
       const nextBlocks = mixedBlocks.filter((block) => block.id !== blockId)
@@ -1586,10 +1598,10 @@ export function OanixNotesSheetSurface({
         <div className="oanix-notes__panel-footer">OANIX v0.1</div>
       </aside>
 
-      <button className={`oanix-notes__customize-overlay${customizeOpen ? ' is-active' : ''}`} type="button" aria-label="Cerrar personalización" onClick={() => setCustomizeOpen(false)}/>
+      <button className={`oanix-notes__customize-overlay${customizeOpen ? ' is-active' : ''}`} type="button" aria-label="Cerrar personalización" onPointerDown={closeCustomizeFromPointer} onClick={closeCustomize}/>
       <section className={`oanix-notes__customize${customizeOpen ? ' is-active' : ''}`} aria-hidden={!customizeOpen}>
         <div className="oanix-notes__customize-handle"/>
-        <div className="oanix-notes__customize-header"><div><strong>Personalizar</strong><span>Apariencia de la hoja</span></div><button className="oanix-notes__icon-btn" type="button" aria-label="Cerrar" onClick={() => setCustomizeOpen(false)}><Icon><path d="M18 6L6 18"/><path d="M6 6l12 12"/></Icon></button></div>
+        <div className="oanix-notes__customize-header"><div><strong>Personalizar</strong><span>Apariencia de la hoja</span></div><button className="oanix-notes__icon-btn" type="button" aria-label="Cerrar" onPointerDown={closeCustomizeFromPointer} onClick={closeCustomize}><Icon><path d="M18 6L6 18"/><path d="M6 6l12 12"/></Icon></button></div>
         <div className="oanix-notes__customize-body">
           <span className="oanix-notes__section-label">Modo</span>
           <div className="oanix-notes__mode-row">{(['light','dark','auto'] as const).map((value) => <button key={value} type="button" className={mode === value ? 'is-active' : ''} onClick={() => applyMode(value)}>{value === 'light' ? 'Día' : value === 'dark' ? 'Noche' : 'Auto'}</button>)}</div>

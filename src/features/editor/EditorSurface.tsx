@@ -1,12 +1,53 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef } from 'react'
 import type {
+  EditorSurfaceBlock,
+  EditorSurfaceBlockChangeSet,
   EditorSurfaceCapabilities,
   EditorSurfaceProps,
 } from './editorSurfaceContract'
 import { activeEditorSurface } from './editorSurfaceRegistry'
-import { installOanixTextBehaviorBridge } from './oanixTextBehaviorBridge'
+import {
+  OanixTextLineRuntimeProvider,
+  flushOanixTextLineEditors,
+} from './oanixTextLineRuntime'
 
 const ActiveSurface = lazy(activeEditorSurface.load)
+
+function applyRuntimeBlockChanges(
+  current: readonly EditorSurfaceBlock[],
+  changes: EditorSurfaceBlockChangeSet,
+): EditorSurfaceBlock[] {
+  const deleted = new Set(changes.deletes ?? [])
+  const upserts = new Map((changes.upserts ?? []).map((block) => [block.id, block]))
+  const map = new Map<string, EditorSurfaceBlock>()
+  const currentOrder: string[] = []
+
+  for (const block of current) {
+    if (deleted.has(block.id)) continue
+    const next = upserts.get(block.id) ?? block
+    map.set(next.id, next)
+    currentOrder.push(next.id)
+    upserts.delete(block.id)
+  }
+
+  for (const block of upserts.values()) {
+    map.set(block.id, block)
+    currentOrder.push(block.id)
+  }
+
+  const requested = changes.order?.filter((id, index, order) => map.has(id) && order.indexOf(id) === index)
+  if (!requested || requested.length === 0) return currentOrder.map((id) => map.get(id)!)
+
+  const containsEveryBlock = currentOrder.every((id) => requested.includes(id))
+  if (containsEveryBlock && requested.length === currentOrder.length) {
+    return requested.map((id) => map.get(id)!)
+  }
+
+  // A stale child surface must never be allowed to drop blocks that were already
+  // committed by the live line editor. Preserve the authoritative runtime order
+  // whenever an incoming order omits existing ids.
+  return currentOrder.map((id) => map.get(id)!)
+}
 
 /**
  * Stable host for the active note editor surface.
@@ -22,7 +63,12 @@ const ActiveSurface = lazy(activeEditorSurface.load)
  * before its document anchoring model is ready.
  */
 export function EditorSurface(props: EditorSurfaceProps) {
-  const [behaviorRevision, setBehaviorRevision] = useState(0)
+  const runtimeBlocksRef = useRef<EditorSurfaceBlock[] | null>(null)
+
+  useEffect(() => {
+    runtimeBlocksRef.current = null
+  }, [props.noteId])
+
   const attachmentCallbacks = useMemo(() => {
     if (!activeEditorSurface.capabilities.attachments) return null
     const noteId = props.noteId
@@ -47,8 +93,46 @@ export function EditorSurface(props: EditorSurfaceProps) {
     }
   }, [props.noteId])
 
+  const sourceLoadBlocks = activeEditorSurface.capabilities.richBlocks ? props.loadBlocks : undefined
+  const sourceSaveBlocks = activeEditorSurface.capabilities.richBlocks ? props.onRequestBlockSave : undefined
+
+  const runtimeBlockCallbacks = useMemo(() => {
+    if (!sourceLoadBlocks || !sourceSaveBlocks) {
+      return { loadBlocks: undefined, onRequestBlockSave: undefined }
+    }
+
+    const loadBlocks = async () => {
+      if (runtimeBlocksRef.current) return runtimeBlocksRef.current.map((block) => block)
+      const loaded = await sourceLoadBlocks()
+      runtimeBlocksRef.current = loaded.map((block) => block)
+      return loaded.map((block) => block)
+    }
+
+    const onRequestBlockSave = async (changes: EditorSurfaceBlockChangeSet) => {
+      const current = runtimeBlocksRef.current ?? await sourceLoadBlocks()
+      const next = applyRuntimeBlockChanges(current, changes)
+      const requestedOrder = changes.order
+      const safeChanges: EditorSurfaceBlockChangeSet = requestedOrder
+        ? { ...changes, order: next.map((block) => block.id) }
+        : changes
+      const saved = await sourceSaveBlocks(safeChanges)
+      if (saved) runtimeBlocksRef.current = next
+      return saved
+    }
+
+    return { loadBlocks, onRequestBlockSave }
+  }, [props.noteId, sourceLoadBlocks, sourceSaveBlocks])
+
   const richProps = activeEditorSurface.capabilities.richBlocks
-    ? props
+    ? {
+        ...props,
+        loadBlocks: runtimeBlockCallbacks.loadBlocks,
+        onRequestBlockSave: runtimeBlockCallbacks.onRequestBlockSave,
+        onRequestClose: async (snapshot: Parameters<EditorSurfaceProps['onRequestClose']>[0]) => {
+          if (!(await flushOanixTextLineEditors(props.noteId))) return false
+          return props.onRequestClose(snapshot)
+        },
+      }
     : {
         ...props,
         loadBlocks: undefined,
@@ -65,17 +149,16 @@ export function EditorSurface(props: EditorSurfaceProps) {
         onRequestAttachmentRemove: undefined,
       }
 
-  useEffect(() => installOanixTextBehaviorBridge({
-    noteId: props.noteId,
-    loadBlocks: surfaceProps.loadBlocks,
-    onRequestBlockSave: surfaceProps.onRequestBlockSave,
-    onRefresh: () => setBehaviorRevision((revision) => revision + 1),
-  }), [props.noteId, surfaceProps.loadBlocks, surfaceProps.onRequestBlockSave])
-
   return (
-    <Suspense fallback={null}>
-      <ActiveSurface key={behaviorRevision} {...surfaceProps} />
-    </Suspense>
+    <OanixTextLineRuntimeProvider value={{
+      noteId: props.noteId,
+      loadBlocks: surfaceProps.loadBlocks,
+      saveBlockChanges: surfaceProps.onRequestBlockSave,
+    }}>
+      <Suspense fallback={null}>
+        <ActiveSurface {...surfaceProps} />
+      </Suspense>
+    </OanixTextLineRuntimeProvider>
   )
 }
 
