@@ -1,20 +1,20 @@
 .rebuild-note-row[data-note-tint="true"] {
-  background: color-mix(in srgb, var(--note-card-accent) 8%, transparent);
-  border-bottom-color: color-mix(in srgb, var(--note-card-accent) 18%, var(--rb-line));
+  background: color-mix(in srgb, var(--note-card-accent) 16%, transparent);
+  border-bottom-color: color-mix(in srgb, var(--note-card-accent) 30%, var(--rb-line));
 }
 
 .rebuild-note-row[data-note-tint="true"]:hover,
 .rebuild-note-row[data-note-tint="true"]:focus-within {
-  background: color-mix(in srgb, var(--note-card-accent) 12%, transparent);
+  background: color-mix(in srgb, var(--note-card-accent) 20%, transparent);
 }
 
 [data-oanix-theme-mode="light"] .rebuild-note-row[data-note-tint="true"] {
-  background: color-mix(in srgb, var(--note-card-accent) 7%, transparent);
+  background: color-mix(in srgb, var(--note-card-accent) 14%, transparent);
 }
 
 [data-oanix-theme-mode="light"] .rebuild-note-row[data-note-tint="true"]:hover,
 [data-oanix-theme-mode="light"] .rebuild-note-row[data-note-tint="true"]:focus-within {
-  background: color-mix(in srgb, var(--note-card-accent) 10%, transparent);
+  background: color-mix(in srgb, var(--note-card-accent) 18%, transparent);
 }
 
 /* Keep the normal note surface scrollable. Only the dedicated drag handle below may claim touch panning. */
