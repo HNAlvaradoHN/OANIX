@@ -105,14 +105,19 @@ test('Enter mutates the live DOM at the caret and keeps the reference focus-at-e
   assert.doesNotMatch(editor, /focusLine\(next\.id, 0\)/)
 })
 
-test('Backspace is native inside a line and only merges at offset zero', () => {
+test('held Backspace keeps the same contentEditable alive across structural merges', () => {
   const editor = readFileSync('src/features/editor/implementations/OanixTextLineEditor.tsx', 'utf8')
 
   assert.match(editor, /if \(event\.key !== 'Backspace' \|\| event\.shiftKey\) return/)
   assert.match(editor, /ctx\.hasSelection \|\| ctx\.offset !== 0/)
-  assert.match(editor, /currentEl\.remove\(\)/)
-  assert.match(editor, /previousEl\.textContent = merged\.text/)
-  assert.match(editor, /focusLine\(previous\.id, caretAt\)/)
+  assert.match(editor, /const currentLineId = \(\) => el\.dataset\.oanixMixedTextId \?\? line\.id/)
+  assert.match(editor, /handleKeyDown\(event, currentLineId\(\)\)/)
+  assert.match(editor, /previousEl\.remove\(\)/)
+  assert.doesNotMatch(editor, /currentEl\.remove\(\)/)
+  assert.match(editor, /currentEl\.dataset\.oanixMixedTextId = previous\.id/)
+  assert.match(editor, /currentEl\.textContent = merged\.text/)
+  assert.match(editor, /lineRefs\.current\.set\(previous\.id, currentEl\)/)
+  assert.match(editor, /placeSelection\(currentEl, caretAt\)/)
 })
 
 test('only empty H2/H3 reset to paragraph in the extended OANIX format set', () => {
