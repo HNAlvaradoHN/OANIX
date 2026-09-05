@@ -14,6 +14,15 @@ test('active note drag ignores finger X while preserving native hit-testing', ()
   assert.match(source, /reorderAtPoint\(noteId, pointer\.y\)/)
 })
 
+test('active drag keeps pointer capture on the stable note list instead of a moving handle', () => {
+  assert.match(source, /const pointerOwner = listRef\.current/)
+  assert.match(source, /pointerOwner\.setPointerCapture\(event\.pointerId\)/)
+  assert.match(source, /onPointerMove=\{moveDrag\}/)
+  assert.match(source, /onPointerUp=\{\(event\) => finishDrag\(event, true\)\}/)
+  assert.match(source, /onPointerCancel=\{\(event\) => finishDrag\(event, false\)\}/)
+  assert.doesNotMatch(source, /className="rebuild-note-row__drag"[\s\S]*?onPointerMove=\{moveDrag\}/)
+})
+
 test('recent successful drag can be regrabbed without arming the first press accidentally', () => {
   assert.match(source, /const REGRAB_GRACE_MS = 650/)
   assert.match(source, /const lastSuccessfulDragEndRef = useRef<number \| null>\(null\)/)
