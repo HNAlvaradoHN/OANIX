@@ -25,28 +25,22 @@ jobs:
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
 
-      # TEMP PR #629 diagnostics. Each probe is non-blocking; the normal suite below
-      # remains the authoritative gate. Remove these probes after the failing contract
-      # is identified.
-      - name: Diagnose text formats
+      # TEMP PR #629 diagnostics. The normal suite below remains authoritative.
+      - name: Diagnose tests A-F
         continue-on-error: true
-        run: node --experimental-strip-types --test tests/textFormats.test.ts
+        run: node --experimental-strip-types --test tests/[a-f]*.test.ts
 
-      - name: Diagnose editor host
+      - name: Diagnose tests G-L
         continue-on-error: true
-        run: node --experimental-strip-types --test tests/editorSurfaceHost.test.ts
+        run: node --experimental-strip-types --test tests/[g-l]*.test.ts
 
-      - name: Diagnose editor save coordination
+      - name: Diagnose tests M-R
         continue-on-error: true
-        run: node --experimental-strip-types --test tests/rebuildEditorSaveCoordination.test.ts
+        run: node --experimental-strip-types --test tests/[m-r]*.test.ts
 
-      - name: Diagnose editor boundaries
+      - name: Diagnose tests S-Z
         continue-on-error: true
-        run: node --experimental-strip-types --test tests/editorSurfaceAttachmentHost.test.ts tests/editorSurfaceBoundary.test.ts tests/editorImplementationIsolation.test.ts
-
-      - name: Diagnose mixed wrapper wiring
-        continue-on-error: true
-        run: node --experimental-strip-types --test tests/oanixFileGroupUiWiring.test.ts tests/oanixCodeBlockUiWiring.test.ts tests/oanixChecklistBlockUiWiring.test.ts tests/oanixContactBlockUiWiring.test.ts tests/oanixDailyEntryIntegration.test.ts tests/oanixSeparatorBlockUiWiring.test.ts tests/oanixImageLayerHost.test.ts
+        run: node --experimental-strip-types --test tests/[s-z]*.test.ts
 
       - name: Test OANIX
         run: npm test
