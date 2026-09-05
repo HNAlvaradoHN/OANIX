@@ -35,6 +35,7 @@ function createSortable(
   node: HTMLElement,
   group: string,
   onPersist: (orderedIds: string[]) => Promise<void>,
+  scrollNode: HTMLElement = node,
 ): Sortable {
   let orderBeforeDrag: string[] | null = null
 
@@ -49,6 +50,10 @@ function createSortable(
     chosenClass: 'workspace-drawer__item--chosen',
     dragClass: 'workspace-drawer__item--dragging',
     group: { name: group, pull: false, put: false },
+    scroll: scrollNode,
+    scrollSensitivity: 72,
+    scrollSpeed: 14,
+    bubbleScroll: false,
     onStart: () => {
       orderBeforeDrag = readOrderedIds(node)
     },
@@ -81,6 +86,7 @@ export function WorkspaceDrawer({
   onReorderFolders,
   onReorderTags,
 }: WorkspaceDrawerProps) {
+  const foldersScrollRef = useRef<HTMLDivElement | null>(null)
   const foldersRef = useRef<HTMLDivElement | null>(null)
   const tagsRef = useRef<HTMLDivElement | null>(null)
   const reorderFoldersRef = useRef(onReorderFolders)
@@ -92,13 +98,15 @@ export function WorkspaceDrawer({
 
   useEffect(() => {
     const foldersNode = foldersRef.current
+    const foldersScrollNode = foldersScrollRef.current
     const tagsNode = tagsRef.current
-    if (!foldersNode || !tagsNode) return
+    if (!foldersNode || !foldersScrollNode || !tagsNode) return
 
     const folderSortable = createSortable(
       foldersNode,
       'oanix-home-folders',
       (orderedIds) => reorderFoldersRef.current(orderedIds),
+      foldersScrollNode,
     )
     const tagSortable = createSortable(
       tagsNode,
@@ -153,7 +161,7 @@ export function WorkspaceDrawer({
         <div className="rebuild-drawer__columns">
           <section aria-label="Carpetas">
             <h3>Carpetas <small>{folders.length}</small></h3>
-            <div className="rebuild-drawer__list workspace-drawer__list">
+            <div ref={foldersScrollRef} className="rebuild-drawer__list workspace-drawer__list">
               <button
                 type="button"
                 className={`workspace-drawer__all${activeFolderId === null ? ' is-active' : ''}`}
