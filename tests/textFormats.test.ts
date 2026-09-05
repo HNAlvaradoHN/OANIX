@@ -92,7 +92,7 @@ test('format click closes the side panel and restores direct editing focus in th
   assert.match(editor, /el\.focus\(\)/)
 })
 
-test('Enter mutates the live DOM at the caret and creates a paragraph below', () => {
+test('Enter mutates the live DOM at the caret and keeps the reference focus-at-end behavior', () => {
   const editor = readFileSync('src/features/editor/implementations/OanixTextLineEditor.tsx', 'utf8')
 
   assert.match(editor, /function handleEnter\(\)/)
@@ -101,7 +101,8 @@ test('Enter mutates the live DOM at the caret and creates a paragraph below', ()
   assert.match(editor, /ctx\.lineEl\.textContent = beforeText/)
   assert.match(editor, /format: 'paragraph'/)
   assert.match(editor, /ctx\.lineEl\.after\(nextEl\)/)
-  assert.match(editor, /focusLine\(next\.id, 0\)/)
+  assert.match(editor, /focusLine\(next\.id\)/)
+  assert.doesNotMatch(editor, /focusLine\(next\.id, 0\)/)
 })
 
 test('Backspace is native inside a line and only merges at offset zero', () => {
