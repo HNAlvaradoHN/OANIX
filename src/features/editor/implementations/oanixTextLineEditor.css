@@ -64,10 +64,28 @@
 .oanix-text-atomic__header {
   display: flex;
   align-items: center;
-  min-height: 22px;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 32px;
   color: var(--color-text-secondary);
   font-size: .78rem;
   letter-spacing: .02em;
+}
+
+.oanix-text-atomic__delete-block {
+  min-height: 32px;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-weight: 700;
+  touch-action: manipulation;
+}
+
+.oanix-text-atomic__delete-block:active {
+  background: color-mix(in srgb, var(--color-text-secondary) 10%, transparent);
 }
 
 .oanix-text-atomic__input {
@@ -157,6 +175,7 @@
   font-weight: 700;
 }
 
+.oanix-text-atomic__delete-block:disabled,
 .oanix-text-atomic__remove:disabled,
 .oanix-text-atomic__add:disabled,
 .oanix-text-atomic__input:disabled {
