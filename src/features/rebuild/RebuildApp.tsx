@@ -617,7 +617,12 @@ export function RebuildApp({ onLock }: RebuildAppProps) {
             <NoteListSection
               notes={visibleNotes}
               folderById={folderById}
-              canReorder={viewMode === 'home' && query.trim().length === 0}
+              canReorder={
+                viewMode === 'home'
+                && activeFolderId === null
+                && activeTagId === null
+                && query.trim().length === 0
+              }
               onOpen={(noteId) => void openNote(noteId)}
               onDelete={(note) => void removeNote(note)}
               onCustomize={setCustomizingNote}
