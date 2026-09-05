@@ -26,9 +26,12 @@ export function NoteCardCustomizationDialog({
 
   useEffect(() => {
     if (!note) return
+    const knownIcon = note.cardIcon
+      ? (V2_FOLDER_ICONS as readonly string[]).includes(note.cardIcon)
+      : false
     setCardColor(note.cardColor ?? null)
-    setCardIcon(note.cardIcon ?? null)
-    setCustomIcon(note.cardIcon && !V2_FOLDER_ICONS.includes(note.cardIcon as never) ? note.cardIcon : '')
+    setCardIcon(knownIcon ? note.cardIcon ?? null : null)
+    setCustomIcon(note.cardIcon && !knownIcon ? note.cardIcon : '')
   }, [note])
 
   if (!note) return null
