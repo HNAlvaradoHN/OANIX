@@ -77,6 +77,12 @@ function validateNoteMeta(value: NoteV2Meta): NoteV2Meta {
     typeof value.title !== 'string' ||
     !Array.isArray(value.tagIds) ||
     (value.order != null && (typeof value.order !== 'number' || !Number.isFinite(value.order))) ||
+    (value.folderOrder != null && (
+      typeof value.folderOrder !== 'object'
+      || !value.folderOrder.folderId
+      || typeof value.folderOrder.order !== 'number'
+      || !Number.isFinite(value.folderOrder.order)
+    )) ||
     (value.cardColor != null && !/^#[0-9a-f]{6}$/i.test(value.cardColor)) ||
     (value.cardIcon != null && (
       typeof value.cardIcon !== 'string'
@@ -180,7 +186,7 @@ async function readIncrementalText(manifest: NoteV2Manifest): Promise<string> {
 
 async function persistNoteMetaUpdate(
   existing: NoteV2Meta,
-  patch: Partial<Pick<NoteV2Meta, 'order' | 'cardColor' | 'cardIcon'>>,
+  patch: Partial<Pick<NoteV2Meta, 'order' | 'folderOrder' | 'cardColor' | 'cardIcon'>>,
 ): Promise<NoteV2Meta> {
   const queuedAt = new Date().toISOString()
   const meta = validateNoteMeta({
@@ -225,6 +231,7 @@ export async function loadRebuildWorkspace(): Promise<RebuildWorkspaceSnapshot> 
 export async function createRebuildNote(
   folderId: string | null = null,
   order?: number,
+  folderOrder?: number,
 ): Promise<RebuildOpenedNote> {
   const now = new Date().toISOString()
   const id = createId()
@@ -237,6 +244,16 @@ export async function createRebuildNote(
     folderId,
     tagIds: [],
     order: typeof order === 'number' && Number.isFinite(order) ? order : -createdAtMs,
+    ...(folderId
+      ? {
+          folderOrder: {
+            folderId,
+            order: typeof folderOrder === 'number' && Number.isFinite(folderOrder)
+              ? folderOrder
+              : -createdAtMs,
+          },
+        }
+      : {}),
     cardColor: null,
     cardIcon: null,
     createdAt: now,
@@ -358,6 +375,21 @@ export async function saveRebuildNoteOrder(existing: NoteV2Meta, order: number):
   if (!Number.isFinite(order)) throw new Error('La posición de la nota no es válida.')
   if (existing.order === order) return existing
   return persistNoteMetaUpdate(existing, { order })
+}
+
+export async function saveRebuildNoteFolderOrder(
+  existing: NoteV2Meta,
+  folderId: string,
+  order: number,
+): Promise<NoteV2Meta> {
+  if (!folderId || existing.folderId !== folderId) {
+    throw new Error('La nota ya no pertenece a esta carpeta.')
+  }
+  if (!Number.isFinite(order)) throw new Error('La posición de la nota en la carpeta no es válida.')
+  if (existing.folderOrder?.folderId === folderId && existing.folderOrder.order === order) {
+    return existing
+  }
+  return persistNoteMetaUpdate(existing, { folderOrder: { folderId, order } })
 }
 
 export async function createRebuildFolder(name: string): Promise<FolderV2Record> {
