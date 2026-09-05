@@ -66,6 +66,17 @@ test('Home and each folder expose their own guarded drag order while tags, searc
   assert.match(list, /onCustomize\(note\)/)
 })
 
+test('normal note surfaces keep native vertical scrolling while only the drag handle blocks panning', () => {
+  const listCss = readFileSync('src/features/rebuild/noteListSection.css', 'utf8')
+
+  assert.match(
+    listCss,
+    /\.rebuild-notes,\s*\.rebuild-note-list,\s*\.rebuild-note-row,\s*\.rebuild-note-row__open\s*\{\s*touch-action: pan-y;/,
+  )
+  assert.match(listCss, /\.rebuild-notes\s*\{\s*-webkit-overflow-scrolling: touch;/)
+  assert.match(listCss, /\.rebuild-note-row__drag\s*\{[\s\S]*?touch-action: none !important;/)
+})
+
 test('active drag dims the other rows and visually lifts the moved note', () => {
   const list = readFileSync('src/features/rebuild/NoteListSection.tsx', 'utf8')
   const listCss = readFileSync('src/features/rebuild/noteListSection.css', 'utf8')
