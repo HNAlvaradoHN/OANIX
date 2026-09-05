@@ -121,7 +121,7 @@ export function NoteListSection({
   const rowElementsRef = useRef(new Map<string, HTMLElement>())
   const rowBeforeReorderRef = useRef(new Map<string, number>())
   const rowAnimationsRef = useRef(new Map<string, Animation>())
-  const lastSuccessfulDragEndRef = useRef(0)
+  const lastSuccessfulDragEndRef = useRef<number | null>(null)
 
   const renderedNotes = useMemo(() => {
     if (!dragOrder) return displayedNotes
@@ -239,7 +239,9 @@ export function NoteListSection({
     event.stopPropagation()
 
     clearPressCandidate()
-    const canRegrabImmediately = performance.now() - lastSuccessfulDragEndRef.current <= REGRAB_GRACE_MS
+    const previousDragEnd = lastSuccessfulDragEndRef.current
+    const canRegrabImmediately = previousDragEnd !== null
+      && performance.now() - previousDragEnd <= REGRAB_GRACE_MS
     const candidate: DragPressCandidate = {
       noteId,
       pointerId: event.pointerId,
@@ -312,26 +314,45 @@ export function NoteListSection({
     }, null)
   }
 
-  function rowAtVerticalPosition(noteId: string, y: number): HTMLElement | null {
+  function stableHitTestX(): number | null {
     const list = listRef.current
     if (!list) return null
-    const rows = [...list.querySelectorAll<HTMLElement>('[data-oanix-note-id]')]
-      .filter((row) => row.dataset.oanixNoteId !== noteId)
-    if (rows.length === 0) return null
+    const rect = list.getBoundingClientRect()
+    return rect.left + rect.width / 2
+  }
 
-    for (const row of rows) {
-      const rect = row.getBoundingClientRect()
-      if (y >= rect.top && y <= rect.bottom) return row
+  function rowAtPointExcludingDragged(noteId: string, x: number, y: number): HTMLElement | null {
+    const list = listRef.current
+    if (!list) return null
+
+    for (const element of document.elementsFromPoint(x, y)) {
+      const row = element.closest<HTMLElement>('[data-oanix-note-id]')
+      if (!row || !list.contains(row) || row.dataset.oanixNoteId === noteId) continue
+      return row
     }
 
-    return nearestRowAtEdge(noteId, y)
+    return null
   }
 
   function reorderAtPoint(noteId: string, y: number) {
     const order = dragOrderRef.current
     if (!order) return
 
-    const target = rowAtVerticalPosition(noteId, y)
+    const x = stableHitTestX()
+    if (x === null) return
+
+    let target = rowAtPointExcludingDragged(noteId, x, y)
+    if (!target) {
+      const container = scrollContainer()
+      const bounds = container ? autoScrollBounds(container) : null
+      if (
+        bounds
+        && (y <= bounds.top + AUTO_SCROLL_EDGE_PX || y >= bounds.bottom - AUTO_SCROLL_EDGE_PX)
+      ) {
+        target = nearestRowAtEdge(noteId, y)
+      }
+    }
+
     const targetId = target?.dataset.oanixNoteId
     if (!target || !targetId) return
 
