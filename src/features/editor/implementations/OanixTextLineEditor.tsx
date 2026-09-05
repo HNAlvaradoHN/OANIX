@@ -35,8 +35,16 @@ type CurrentContext = {
   lineEl: HTMLDivElement | null
   line: LineData | null
   offset: number
+  selectionStart: number
+  selectionEnd: number
   hasSelection: boolean
   selectedText: string
+}
+
+type StoredSelection = {
+  blockId: string
+  selectionStart: number
+  selectionEnd: number
 }
 
 const TEXT_FORMATS = new Set<EditorTextBlockFormat>([
@@ -70,6 +78,18 @@ function paragraphIfEmpty(line: LineData): LineData {
   return { ...line, format: 'paragraph' }
 }
 
+function emptyContext(): CurrentContext {
+  return {
+    lineEl: null,
+    line: null,
+    offset: 0,
+    selectionStart: 0,
+    selectionEnd: 0,
+    hasSelection: false,
+    selectedText: '',
+  }
+}
+
 export function OanixTextLineEditor({
   blocks,
   disabled,
@@ -89,6 +109,7 @@ export function OanixTextLineEditor({
   const composingRef = useRef(false)
   const undoStackRef = useRef<LineData[][]>([])
   const redoStackRef = useRef<LineData[][]>([])
+  const lastSelectionRef = useRef<StoredSelection | null>(null)
 
   const decodedExternal = useMemo(() => decodeLines(blocks), [blocks])
   const externalSignature = useMemo(() => lineSignature(decodedExternal), [decodedExternal])
@@ -115,11 +136,20 @@ export function OanixTextLineEditor({
     redoStackRef.current = []
   }
 
-  function getCurrentContext(): CurrentContext {
-    const selection = window.getSelection()
-    if (!selection || selection.rangeCount === 0) {
-      return { lineEl: null, line: null, offset: 0, hasSelection: false, selectedText: '' }
+  function offsetInsideLine(lineEl: HTMLDivElement, node: Node, offset: number) {
+    try {
+      const range = document.createRange()
+      range.setStart(lineEl, 0)
+      range.setEnd(node, offset)
+      return range.toString().length
+    } catch {
+      return Math.max(0, offset)
     }
+  }
+
+  function readLiveContext(): CurrentContext {
+    const selection = window.getSelection()
+    if (!selection || selection.rangeCount === 0) return emptyContext()
 
     const range = selection.getRangeAt(0)
     const anchor = range.startContainer
@@ -129,32 +159,59 @@ export function OanixTextLineEditor({
         ? anchor.closest<HTMLDivElement>('.oanix-text-line-editor__line')
         : null
     const lineEl = candidate && containerRef.current?.contains(candidate) ? candidate : null
-    if (!lineEl) {
-      return { lineEl: null, line: null, offset: 0, hasSelection: false, selectedText: '' }
-    }
+    if (!lineEl) return emptyContext()
 
     const id = lineEl.dataset.oanixMixedTextId
     const line = id ? getLine(id) : null
-    if (!line) {
-      return { lineEl: null, line: null, offset: 0, hasSelection: false, selectedText: '' }
+    if (!line) return emptyContext()
+
+    const selectionStart = offsetInsideLine(lineEl, range.startContainer, range.startOffset)
+    let selectionEnd = selectionStart
+    const endCandidate = range.endContainer.nodeType === Node.TEXT_NODE
+      ? range.endContainer.parentElement?.closest<HTMLDivElement>('.oanix-text-line-editor__line') ?? null
+      : range.endContainer instanceof Element
+        ? range.endContainer.closest<HTMLDivElement>('.oanix-text-line-editor__line')
+        : null
+    if (endCandidate === lineEl) {
+      selectionEnd = offsetInsideLine(lineEl, range.endContainer, range.endOffset)
+    } else if (!selection.isCollapsed) {
+      selectionEnd = line.text.length
     }
 
-    let offset = 0
-    try {
-      const before = document.createRange()
-      before.setStart(lineEl, 0)
-      before.setEnd(range.startContainer, range.startOffset)
-      offset = before.toString().length
-    } catch {
-      offset = range.startOffset
-    }
+    const start = Math.min(selectionStart, selectionEnd)
+    const end = Math.max(selectionStart, selectionEnd)
+    lastSelectionRef.current = { blockId: line.id, selectionStart: start, selectionEnd: end }
 
     return {
       lineEl,
       line,
-      offset: Math.max(0, offset),
+      offset: start,
+      selectionStart: start,
+      selectionEnd: end,
       hasSelection: !selection.isCollapsed,
       selectedText: !selection.isCollapsed ? range.toString() : '',
+    }
+  }
+
+  function getCurrentContext(): CurrentContext {
+    const live = readLiveContext()
+    if (live.line) return live
+
+    const stored = lastSelectionRef.current
+    if (!stored) return emptyContext()
+    const line = getLine(stored.blockId)
+    const lineEl = getLineEl(stored.blockId)
+    if (!line || !lineEl) return emptyContext()
+    const start = Math.min(Math.max(0, stored.selectionStart), line.text.length)
+    const end = Math.min(Math.max(start, stored.selectionEnd), line.text.length)
+    return {
+      lineEl,
+      line,
+      offset: start,
+      selectionStart: start,
+      selectionEnd: end,
+      hasSelection: end > start,
+      selectedText: line.text.slice(start, end),
     }
   }
 
@@ -168,16 +225,24 @@ export function OanixTextLineEditor({
       const selection = window.getSelection()
       const textNode = el.firstChild
       if (typeof offset === 'number' && textNode?.nodeType === Node.TEXT_NODE) {
-        range.setStart(textNode, Math.min(Math.max(0, offset), textNode.textContent?.length ?? 0))
+        const safeOffset = Math.min(Math.max(0, offset), textNode.textContent?.length ?? 0)
+        range.setStart(textNode, safeOffset)
         range.collapse(true)
+        lastSelectionRef.current = {
+          blockId: lineId,
+          selectionStart: safeOffset,
+          selectionEnd: safeOffset,
+        }
       } else {
         range.selectNodeContents(el)
         range.collapse(false)
+        const end = el.textContent.length
+        lastSelectionRef.current = { blockId: lineId, selectionStart: end, selectionEnd: end }
       }
       selection?.removeAllRanges()
       selection?.addRange(range)
       el.scrollIntoView({ block: 'nearest' })
-      const ctx = getCurrentContext()
+      const ctx = readLiveContext()
       if (ctx.line) onTextCursorChange?.(ctx.line.id, ctx.offset)
     })
   }
@@ -310,9 +375,11 @@ export function OanixTextLineEditor({
     if (ctx.hasSelection && ctx.selectedText.trim().length > 0) {
       const next = setLineType(ctx.line.id, format)
       if (next) enqueueStructuralSave(() => ({ upserts: [encodeTextBlock(next)] }))
+      focusLine(ctx.line.id, ctx.selectionEnd)
     } else if (ctx.lineEl.textContent.trim().length === 0) {
       const next = setLineType(ctx.line.id, format)
       if (next) enqueueStructuralSave(() => ({ upserts: [encodeTextBlock(next)] }))
+      focusLine(ctx.line.id, 0)
     } else {
       const inserted = insertLineAfter(ctx.line.id, format, '')
       if (!inserted) return
@@ -331,7 +398,7 @@ export function OanixTextLineEditor({
   }
 
   function handleEnter() {
-    const ctx = getCurrentContext()
+    const ctx = readLiveContext()
     if (!ctx.line || !ctx.lineEl) return
     const selection = window.getSelection()
     if (!selection || selection.rangeCount === 0) return
@@ -375,7 +442,8 @@ export function OanixTextLineEditor({
     })
 
     onActivity()
-    focusLine(next.id)
+    lastSelectionRef.current = { blockId: next.id, selectionStart: 0, selectionEnd: 0 }
+    focusLine(next.id, 0)
     saveState()
     updateToolbar()
   }
@@ -405,6 +473,11 @@ export function OanixTextLineEditor({
     }))
 
     onActivity()
+    lastSelectionRef.current = {
+      blockId: merged.id,
+      selectionStart: caretAt,
+      selectionEnd: caretAt,
+    }
     focusLine(merged.id, caretAt)
   }
 
@@ -438,6 +511,7 @@ export function OanixTextLineEditor({
     if (current) redoStackRef.current.push(current)
     const next = cloneLines(undoStackRef.current[undoStackRef.current.length - 1])
     replaceLines(next)
+    lastSelectionRef.current = null
     persistRestoredState(previous, next)
     onActivity()
     updateToolbar()
@@ -449,6 +523,7 @@ export function OanixTextLineEditor({
     const next = cloneLines(redoStackRef.current.pop()!)
     undoStackRef.current.push(cloneLines(next))
     replaceLines(next)
+    lastSelectionRef.current = null
     persistRestoredState(previous, next)
     onActivity()
     updateToolbar()
@@ -464,7 +539,7 @@ export function OanixTextLineEditor({
     next = resetIfEmpty(next)
     onActivity()
     scheduleTextSave(encodeTextBlock(next))
-    const ctx = getCurrentContext()
+    const ctx = readLiveContext()
     if (ctx.line) onTextCursorChange?.(ctx.line.id, ctx.offset)
   }
 
@@ -491,7 +566,7 @@ export function OanixTextLineEditor({
     }
 
     if (event.key !== 'Backspace' || event.shiftKey) return
-    const ctx = getCurrentContext()
+    const ctx = readLiveContext()
     if (!ctx.line || ctx.line.id !== line.id || ctx.hasSelection || ctx.offset !== 0) return
     const index = linesRef.current.findIndex((item) => item.id === line.id)
     if (index <= 0) return
@@ -505,7 +580,7 @@ export function OanixTextLineEditor({
     const image = findOanixClipboardImage(event.clipboardData)
     if (image && onPasteImage) {
       event.preventDefault()
-      const ctx = getCurrentContext()
+      const ctx = readLiveContext()
       const cursorOffset = ctx.line?.id === line.id ? ctx.offset : line.text.length
       void flushPending().then(() => onPasteImage(image, line.id, cursorOffset))
       return
@@ -533,6 +608,8 @@ export function OanixTextLineEditor({
       linesRef.current = linesRef.current.map((item) => item.id === next.id ? next : item)
       scheduleTextSave(encodeTextBlock(next))
       onActivity()
+      const ctx = readLiveContext()
+      if (ctx.line) onTextCursorChange?.(ctx.line.id, ctx.offset)
     }
     saveState()
     updateToolbar()
@@ -557,13 +634,19 @@ export function OanixTextLineEditor({
     void flushPending().then(() => {
       const next = cloneLines(decodedExternal)
       replaceLines(next)
+      lastSelectionRef.current = null
       undoStackRef.current = [cloneLines(next)]
       redoStackRef.current = []
     })
   }, [externalSignature])
 
   useEffect(() => {
-    const handleSelectionChange = () => updateToolbar()
+    const handleSelectionChange = () => {
+      const ctx = readLiveContext()
+      if (!ctx.line) return
+      updateToolbar()
+    }
+
     const handlePointerDown = (event: PointerEvent) => {
       const target = event.target
       if (!(target instanceof Element) || !runtime) return
