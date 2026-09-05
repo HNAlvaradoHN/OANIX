@@ -153,6 +153,19 @@
   pointer-events: none;
 }
 
+/* Keep the close target reliable in Android WebView/PWA touch interaction. */
+.oanix-notes__customize-overlay,
+.oanix-notes__customize-header .oanix-notes__icon-btn {
+  touch-action: manipulation;
+}
+
+.oanix-notes__customize-header .oanix-notes__icon-btn {
+  min-width: 44px;
+  min-height: 44px;
+  position: relative;
+  z-index: 2;
+}
+
 @media (min-width: 768px) {
   .oanix-notes .oanix-notes__title { font-size: 48px !important; }
 }
