@@ -327,9 +327,10 @@ export function OanixTextLineEditor({
     el.spellcheck = true
     el.textContent = line.text
 
-    el.addEventListener('input', () => apiRef.current.handleInput(line.id, el))
-    el.addEventListener('keydown', (event) => apiRef.current.handleKeyDown(event, line.id))
-    el.addEventListener('paste', (event) => apiRef.current.handlePaste(event, line.id))
+    const currentLineId = () => el.dataset.oanixMixedTextId ?? line.id
+    el.addEventListener('input', () => apiRef.current.handleInput(currentLineId(), el))
+    el.addEventListener('keydown', (event) => apiRef.current.handleKeyDown(event, currentLineId()))
+    el.addEventListener('paste', (event) => apiRef.current.handlePaste(event, currentLineId()))
     el.addEventListener('compositionstart', () => {
       composingRef.current = true
       callbacksRef.current.onCompositionStart()
@@ -337,7 +338,7 @@ export function OanixTextLineEditor({
     el.addEventListener('compositionend', () => {
       composingRef.current = false
       callbacksRef.current.onCompositionEnd()
-      apiRef.current.handleInput(line.id, el)
+      apiRef.current.handleInput(currentLineId(), el)
     })
     el.addEventListener('focus', () => apiRef.current.updateToolbar())
     el.addEventListener('click', () => apiRef.current.updateToolbar())
@@ -589,10 +590,17 @@ export function OanixTextLineEditor({
       text: previousText + currentText,
     }
 
-    currentEl.remove()
+    // Keep the DOM node that is receiving the physical Backspace press alive.
+    // Android ties key-repeat to that editing host; removing it stops the repeat.
+    // The surviving node adopts the previous block identity and moves naturally
+    // into its place when the old previous node is removed.
+    previousEl.remove()
+    lineRefs.current.delete(previous.id)
     lineRefs.current.delete(current.id)
-    previousEl.textContent = merged.text
-    previousEl.dataset.oanixTextFormat = merged.format ?? 'paragraph'
+    currentEl.dataset.oanixMixedTextId = previous.id
+    currentEl.dataset.oanixTextFormat = merged.format ?? 'paragraph'
+    currentEl.textContent = merged.text
+    lineRefs.current.set(previous.id, currentEl)
     linesRef.current = [
       ...linesRef.current.slice(0, index - 1),
       merged,
@@ -607,7 +615,10 @@ export function OanixTextLineEditor({
       order: globalBlocks.filter((block) => block.id !== current.id).map((block) => block.id),
     }))
 
-    focusLine(previous.id, caretAt)
+    placeSelection(currentEl, caretAt)
+    activateInteractionTarget()
+    currentEl.scrollIntoView({ block: 'nearest' })
+    callbacksRef.current.onTextCursorChange?.(previous.id, caretAt)
     callbacksRef.current.onActivity()
     updateToolbar()
   }
