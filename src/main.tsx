@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { registerSW } from 'virtual:pwa-register'
 import { App } from './app/App'
+import { installOanixAtomicDeleteConfirmation } from './features/editor/oanixAtomicDeleteConfirmation'
 import { applyOanixTheme, readSavedOanixTheme } from './features/personalization/themeCatalog'
 import './styles/global.css'
 import './features/rebuild/activeFolderTheme.css'
@@ -28,6 +29,10 @@ document.documentElement.style.setProperty(
 
 // Theme is a non-sensitive local UI preference. Paper style is now chosen per note.
 applyOanixTheme(readSavedOanixTheme(), false)
+
+// Managed Cita/Lista/Numérica blocks keep deletion inside the editor, but destructive
+// removal is gated globally so a missed tap cannot delete a complete managed element.
+installOanixAtomicDeleteConfirmation()
 
 if (!isCapacitorBuild) {
   // A fresh worker activates and claims clients immediately, but OANIX never reloads
