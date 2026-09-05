@@ -41,6 +41,12 @@ export interface NoteV2Meta {
   title: string
   folderId: string | null
   tagIds: string[]
+  /** Stable manual position on Inicio. Older records fall back to createdAt. */
+  order?: number
+  /** Optional soft card tint. The UI applies this with low opacity. */
+  cardColor?: string | null
+  /** Optional per-note icon shown on the note list card. */
+  cardIcon?: string | null
   createdAt: string
   updatedAt: string
 }
@@ -153,6 +159,12 @@ function colorWithAlpha(hex: string, alpha: number): string {
   const blue = value & 255
   const a = Math.max(0, Math.min(1, alpha))
   return `rgba(${red}, ${green}, ${blue}, ${a})`
+}
+
+export function noteHomeOrder(note: NoteV2Meta): number {
+  if (typeof note.order === 'number' && Number.isFinite(note.order)) return note.order
+  const createdAt = Date.parse(note.createdAt)
+  return Number.isFinite(createdAt) ? -createdAt : 0
 }
 
 export function folderGradientCss(index: number, alpha = 1): string {
