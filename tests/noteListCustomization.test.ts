@@ -30,25 +30,32 @@ test('note card customization uses a low-impact visual dialog with icon and colo
   assert.match(listCss, /\[data-oanix-theme-mode="light"\]/)
 })
 
-test('only the complete Home note list exposes stable move controls while filters, search and recents keep their own ordering', () => {
+test('home note list uses a drag handle while filtered views keep their own ordering', () => {
   const app = readFileSync('src/features/rebuild/RebuildApp.tsx', 'utf8')
   const list = readFileSync('src/features/rebuild/NoteListSection.tsx', 'utf8')
+  const listCss = readFileSync('src/features/rebuild/noteListSection.css', 'utf8')
 
   assert.match(app, /<NoteListSection/)
   assert.match(app, /canReorder=\{\s*viewMode === 'home'\s*&& activeFolderId === null\s*&& activeTagId === null\s*&& query\.trim\(\)\.length === 0\s*\}/)
-  assert.match(app, /saveRebuildNoteOrder/)
-  assert.match(app, /Math\.min\(\.\.\.notes\.map\(\(note\) => noteHomeOrder\(note\)\)\) - 1/)
-  assert.match(list, /noteHomeOrder\(left\) - noteHomeOrder\(right\)/)
-  assert.match(list, /aria-label=\{`Subir/)
-  assert.match(list, /aria-label=\{`Bajar/)
+  assert.match(app, /onMove=\{\(note, previous, next\)/)
+  assert.match(list, /rebuild-note-row__drag/)
+  assert.match(list, /onPointerDown=/)
+  assert.match(list, /document[\s\S]*elementFromPoint/)
+  assert.match(list, /onPointerUp=/)
+  assert.match(list, /onPointerCancel=/)
+  assert.match(listCss, /touch-action: none !important/)
+  assert.doesNotMatch(list, /aria-label=\{`Subir/)
+  assert.doesNotMatch(list, /aria-label=\{`Bajar/)
   assert.match(list, /onCustomize\(note\)/)
 })
 
-test('a failed second move attempts to restore the first note order instead of leaving a silent half-swap', () => {
+test('dropping a note persists only the moved note at an order between its final neighbors', () => {
   const app = readFileSync('src/features/rebuild/RebuildApp.tsx', 'utf8')
 
-  assert.match(app, /updatedFirst = await saveRebuildNoteOrder\(first, secondOrder\)/)
-  assert.match(app, /const updatedSecond = await saveRebuildNoteOrder\(second, firstOrder\)/)
-  assert.match(app, /saveRebuildNoteOrder\(updatedFirst, firstOrder\)/)
-  assert.match(app, /loadRebuildWorkspace\(\)/)
+  assert.match(app, /function orderForMovedNote/)
+  assert.match(app, /previousOrder \+ \(nextOrder - previousOrder\) \/ 2/)
+  assert.match(app, /const updated = await saveRebuildNoteOrder\(note, nextOrder\)/)
+  assert.match(app, /item\.id === note\.id \? optimistic : item/)
+  assert.doesNotMatch(app, /async function swapNotes/)
+  assert.doesNotMatch(app, /saveRebuildNoteOrder\(second/)
 })
