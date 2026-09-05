@@ -10,16 +10,19 @@ import {
 import {
   folderAccent,
   folderSurfaceCss,
+  noteFolderOrder,
   noteHomeOrder,
   type FolderV2Record,
   type NoteV2Meta,
 } from './rebuildModel'
 import './noteListSection.css'
 
+type NoteOrderMode = 'home' | 'folder' | null
+
 interface NoteListSectionProps {
   notes: readonly NoteV2Meta[]
   folderById: ReadonlyMap<string, FolderV2Record>
-  canReorder: boolean
+  orderMode: NoteOrderMode
   onOpen: (noteId: string) => void
   onDelete: (note: NoteV2Meta) => void
   onCustomize: (note: NoteV2Meta) => void
@@ -35,8 +38,15 @@ interface DragPressCandidate {
   armed: boolean
 }
 
+interface PointerPosition {
+  x: number
+  y: number
+}
+
 const DRAG_HOLD_MS = 200
 const DRAG_MOVE_THRESHOLD_PX = 6
+const AUTO_SCROLL_EDGE_PX = 82
+const AUTO_SCROLL_MAX_PX = 18
 
 function folderStyle(folder: FolderV2Record): CSSProperties {
   return {
@@ -61,34 +71,42 @@ function sameOrder(left: readonly string[], right: readonly string[]): boolean {
   return left.length === right.length && left.every((id, index) => id === right[index])
 }
 
+function noteOrder(note: NoteV2Meta, mode: Exclude<NoteOrderMode, null>): number {
+  return mode === 'folder' ? noteFolderOrder(note) : noteHomeOrder(note)
+}
+
 export function NoteListSection({
   notes,
   folderById,
-  canReorder,
+  orderMode,
   onOpen,
   onDelete,
   onCustomize,
   onMove,
   formatTime,
 }: NoteListSectionProps) {
+  const canReorder = orderMode !== null
   const displayedNotes = useMemo(() => {
-    if (!canReorder) return [...notes]
+    if (!orderMode) return [...notes]
     return [...notes].sort((left, right) => {
-      const byOrder = noteHomeOrder(left) - noteHomeOrder(right)
+      const byOrder = noteOrder(left, orderMode) - noteOrder(right, orderMode)
       if (byOrder !== 0) return byOrder
       return left.id.localeCompare(right.id)
     })
-  }, [notes, canReorder])
+  }, [notes, orderMode])
 
   const [pressingId, setPressingId] = useState<string | null>(null)
   const [readyId, setReadyId] = useState<string | null>(null)
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [dragOrder, setDragOrderState] = useState<string[] | null>(null)
+  const listRef = useRef<HTMLDivElement | null>(null)
   const pressCandidateRef = useRef<DragPressCandidate | null>(null)
   const pressTimerRef = useRef<number | null>(null)
   const draggingIdRef = useRef<string | null>(null)
   const dragOrderRef = useRef<string[] | null>(null)
   const pointerIdRef = useRef<number | null>(null)
+  const pointerPositionRef = useRef<PointerPosition | null>(null)
+  const autoScrollFrameRef = useRef<number | null>(null)
 
   const renderedNotes = useMemo(() => {
     if (!dragOrder) return displayedNotes
@@ -103,6 +121,13 @@ export function NoteListSection({
     }
   }
 
+  function stopAutoScroll() {
+    if (autoScrollFrameRef.current !== null) {
+      window.cancelAnimationFrame(autoScrollFrameRef.current)
+      autoScrollFrameRef.current = null
+    }
+  }
+
   function clearPressCandidate() {
     clearPressTimer()
     pressCandidateRef.current = null
@@ -113,6 +138,7 @@ export function NoteListSection({
   useEffect(() => {
     return () => {
       if (pressTimerRef.current !== null) window.clearTimeout(pressTimerRef.current)
+      if (autoScrollFrameRef.current !== null) window.cancelAnimationFrame(autoScrollFrameRef.current)
     }
   }, [])
 
@@ -179,6 +205,95 @@ export function NoteListSection({
     clearPressCandidate()
   }
 
+  function scrollContainer(): HTMLElement | null {
+    return listRef.current?.closest<HTMLElement>('.rebuild-notes') ?? null
+  }
+
+  function nearestRowAtEdge(noteId: string, y: number): HTMLElement | null {
+    const list = listRef.current
+    if (!list) return null
+    const rows = [...list.querySelectorAll<HTMLElement>('[data-oanix-note-id]')]
+      .filter((row) => row.dataset.oanixNoteId !== noteId)
+    if (rows.length === 0) return null
+
+    return rows.reduce<HTMLElement | null>((nearest, row) => {
+      if (!nearest) return row
+      const rowRect = row.getBoundingClientRect()
+      const nearestRect = nearest.getBoundingClientRect()
+      const rowDistance = Math.abs(y - (rowRect.top + rowRect.height / 2))
+      const nearestDistance = Math.abs(y - (nearestRect.top + nearestRect.height / 2))
+      return rowDistance < nearestDistance ? row : nearest
+    }, null)
+  }
+
+  function reorderAtPoint(noteId: string, x: number, y: number) {
+    const order = dragOrderRef.current
+    if (!order) return
+
+    const list = listRef.current
+    let target = document
+      .elementFromPoint(x, y)
+      ?.closest<HTMLElement>('[data-oanix-note-id]') ?? null
+    if (target && list && !list.contains(target)) target = null
+
+    if (!target) {
+      const container = scrollContainer()
+      const rect = container?.getBoundingClientRect()
+      if (
+        rect
+        && (y <= rect.top + AUTO_SCROLL_EDGE_PX || y >= rect.bottom - AUTO_SCROLL_EDGE_PX)
+      ) {
+        target = nearestRowAtEdge(noteId, y)
+      }
+    }
+
+    const targetId = target?.dataset.oanixNoteId
+    if (!target || !targetId || targetId === noteId) return
+
+    const withoutDragged = order.filter((id) => id !== noteId)
+    let insertIndex = withoutDragged.indexOf(targetId)
+    if (insertIndex < 0) return
+
+    const rect = target.getBoundingClientRect()
+    if (y >= rect.top + rect.height / 2) insertIndex += 1
+
+    const next = [...withoutDragged]
+    next.splice(insertIndex, 0, noteId)
+    if (!sameOrder(order, next)) updateDragOrder(next)
+  }
+
+  function runAutoScroll() {
+    autoScrollFrameRef.current = null
+    const noteId = draggingIdRef.current
+    const pointer = pointerPositionRef.current
+    const container = scrollContainer()
+    if (!noteId || !pointer || !container) return
+
+    const rect = container.getBoundingClientRect()
+    let delta = 0
+    if (pointer.y < rect.top + AUTO_SCROLL_EDGE_PX) {
+      const strength = Math.min(1, (rect.top + AUTO_SCROLL_EDGE_PX - pointer.y) / AUTO_SCROLL_EDGE_PX)
+      delta = -Math.max(1, Math.ceil(AUTO_SCROLL_MAX_PX * strength))
+    } else if (pointer.y > rect.bottom - AUTO_SCROLL_EDGE_PX) {
+      const strength = Math.min(1, (pointer.y - (rect.bottom - AUTO_SCROLL_EDGE_PX)) / AUTO_SCROLL_EDGE_PX)
+      delta = Math.max(1, Math.ceil(AUTO_SCROLL_MAX_PX * strength))
+    }
+
+    if (delta === 0) return
+    const before = container.scrollTop
+    container.scrollTop += delta
+    if (container.scrollTop === before) return
+
+    reorderAtPoint(noteId, pointer.x, pointer.y)
+    autoScrollFrameRef.current = window.requestAnimationFrame(runAutoScroll)
+  }
+
+  function ensureAutoScroll() {
+    if (autoScrollFrameRef.current === null) {
+      autoScrollFrameRef.current = window.requestAnimationFrame(runAutoScroll)
+    }
+  }
+
   function moveDrag(event: PointerEvent<HTMLButtonElement>) {
     const candidate = pressCandidateRef.current
     if (!candidate || candidate.pointerId !== event.pointerId) return
@@ -199,26 +314,12 @@ export function NoteListSection({
 
     if (pointerIdRef.current !== event.pointerId) return
     const noteId = draggingIdRef.current
-    const order = dragOrderRef.current
-    if (!noteId || !order) return
+    if (!noteId || !dragOrderRef.current) return
 
     event.preventDefault()
-    const target = document
-      .elementFromPoint(event.clientX, event.clientY)
-      ?.closest<HTMLElement>('[data-oanix-note-id]')
-    const targetId = target?.dataset.oanixNoteId
-    if (!target || !targetId || targetId === noteId) return
-
-    const withoutDragged = order.filter((id) => id !== noteId)
-    let insertIndex = withoutDragged.indexOf(targetId)
-    if (insertIndex < 0) return
-
-    const rect = target.getBoundingClientRect()
-    if (event.clientY >= rect.top + rect.height / 2) insertIndex += 1
-
-    const next = [...withoutDragged]
-    next.splice(insertIndex, 0, noteId)
-    if (!sameOrder(order, next)) updateDragOrder(next)
+    pointerPositionRef.current = { x: event.clientX, y: event.clientY }
+    reorderAtPoint(noteId, event.clientX, event.clientY)
+    ensureAutoScroll()
   }
 
   function finishDrag(event: PointerEvent<HTMLButtonElement>, commit: boolean) {
@@ -235,6 +336,8 @@ export function NoteListSection({
     const order = dragOrderRef.current
     draggingIdRef.current = null
     pointerIdRef.current = null
+    pointerPositionRef.current = null
+    stopAutoScroll()
     setDraggingId(null)
     updateDragOrder(null)
     clearPressCandidate()
@@ -256,7 +359,7 @@ export function NoteListSection({
   }
 
   return (
-    <div className={`rebuild-note-list${draggingId ? ' is-reordering' : ''}`}>
+    <div ref={listRef} className={`rebuild-note-list${draggingId ? ' is-reordering' : ''}`}>
       {renderedNotes.map((note) => {
         const folder = note.folderId ? folderById.get(note.folderId) ?? null : null
         const customized = Boolean(note.cardColor || note.cardIcon)
