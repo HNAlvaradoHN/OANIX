@@ -566,7 +566,7 @@ export function OanixTextLineEditor({
       }
     })
 
-    focusLine(next.id, 0)
+    focusLine(next.id)
     callbacksRef.current.onActivity()
     saveState()
     updateToolbar()
