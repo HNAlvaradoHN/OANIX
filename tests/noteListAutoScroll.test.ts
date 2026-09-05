@@ -16,3 +16,11 @@ test('note drag autoscroll keeps requesting frames while the pointer stays in an
   assert.match(source, /if \(targetVelocity === 0\)[\s\S]*return/)
   assert.match(source, /autoScrollFrameRef\.current = window\.requestAnimationFrame\(runAutoScroll\)/)
 })
+
+test('note drag target selection ignores the dragged row in either direction', () => {
+  assert.match(source, /function rowAtPointExcludingDragged\(noteId: string, x: number, y: number\): HTMLElement \| null/)
+  assert.match(source, /document\.elementsFromPoint\(x, y\)/)
+  assert.match(source, /row\.dataset\.oanixNoteId === noteId\) continue/)
+  assert.match(source, /let target = rowAtPointExcludingDragged\(noteId, x, y\)/)
+  assert.doesNotMatch(source, /targetId === noteId/)
+})
