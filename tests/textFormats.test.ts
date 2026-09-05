@@ -137,6 +137,18 @@ test('paste remains plain text and structural focus does not depend on remount t
   assert.doesNotMatch(editor, /behaviorRevision|installOanixTextBehaviorBridge|oanixHeadingEnterPlan/)
 })
 
+test('customization closes completely and panel focus cannot consume editor writing space', () => {
+  const surface = readFileSync('src/features/editor/implementations/OanixNotesSheetSurface.tsx', 'utf8')
+  const css = readFileSync('src/features/editor/implementations/oanixNotesSheetMobileSafeArea.css', 'utf8')
+
+  assert.match(surface, /aria-label="Cerrar personalización" onClick=\{\(\) => setCustomizeOpen\(false\)\}/)
+  assert.match(surface, /aria-label="Cerrar" onClick=\{\(\) => setCustomizeOpen\(false\)\}/)
+  assert.match(css, /\.oanix-notes__customize\[aria-hidden="true"\][\s\S]*display:\s*none/)
+  assert.match(css, /\.oanix-notes__editor-container:focus-within \.oanix-notes__body-wrap/)
+  assert.doesNotMatch(css, /\.oanix-notes:focus-within \.oanix-notes__body-wrap/)
+  assert.match(css, /touch-action:\s*manipulation/)
+})
+
 test('paragraph ruling keeps text cadence locked to the page line and no focus box', () => {
   const css = readFileSync('src/features/editor/implementations/oanixNotesSheetMobileSafeArea.css', 'utf8')
   assert.match(css, /--oanix-ruled-step:\s*30px/)
