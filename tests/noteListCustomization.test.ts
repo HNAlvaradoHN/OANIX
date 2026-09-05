@@ -30,12 +30,12 @@ test('note card customization uses a low-impact visual dialog with icon and colo
   assert.match(listCss, /\[data-oanix-theme-mode="light"\]/)
 })
 
-test('home note list exposes stable move controls while recents and search keep their own ordering', () => {
+test('only the complete Home note list exposes stable move controls while filters, search and recents keep their own ordering', () => {
   const app = readFileSync('src/features/rebuild/RebuildApp.tsx', 'utf8')
   const list = readFileSync('src/features/rebuild/NoteListSection.tsx', 'utf8')
 
   assert.match(app, /<NoteListSection/)
-  assert.match(app, /canReorder=\{viewMode === 'home' && query\.trim\(\)\.length === 0\}/)
+  assert.match(app, /canReorder=\{\s*viewMode === 'home'\s*&& activeFolderId === null\s*&& activeTagId === null\s*&& query\.trim\(\)\.length === 0\s*\}/)
   assert.match(app, /saveRebuildNoteOrder/)
   assert.match(app, /Math\.min\(\.\.\.notes\.map\(\(note\) => noteHomeOrder\(note\)\)\) - 1/)
   assert.match(list, /noteHomeOrder\(left\) - noteHomeOrder\(right\)/)
