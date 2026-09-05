@@ -92,13 +92,17 @@ test('active drag dims the other rows and visually lifts the moved note', () => 
   assert.match(listCss, /prefers-reduced-motion: reduce/)
 })
 
-test('dragging near the note viewport edges auto-scrolls the real notes container', () => {
+test('dragging near the note viewport edges auto-scrolls smoothly with progressive velocity', () => {
   const list = readFileSync('src/features/rebuild/NoteListSection.tsx', 'utf8')
 
   assert.match(list, /const AUTO_SCROLL_EDGE_PX = 82/)
-  assert.match(list, /const AUTO_SCROLL_MAX_PX = 18/)
-  assert.match(list, /closest<HTMLElement>\('\.rebuild-notes'\)/)
-  assert.match(list, /container\.scrollTop \+= delta/)
+  assert.match(list, /const AUTO_SCROLL_MIN_PX = 0\.8/)
+  assert.match(list, /const AUTO_SCROLL_MAX_PX = 12/)
+  assert.match(list, /const AUTO_SCROLL_EASING = 0\.2/)
+  assert.match(list, /const autoScrollVelocityRef = useRef\(0\)/)
+  assert.match(list, /const easedStrength = strength \* strength/)
+  assert.match(list, /currentVelocity \+ \(targetVelocity - currentVelocity\) \* AUTO_SCROLL_EASING/)
+  assert.match(list, /container\.scrollTop \+= autoScrollVelocityRef\.current/)
   assert.match(list, /window\.requestAnimationFrame\(runAutoScroll\)/)
   assert.match(list, /reorderAtPoint\(noteId, pointer\.x, pointer\.y\)/)
 })
