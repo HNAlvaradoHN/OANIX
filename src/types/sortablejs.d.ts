@@ -40,7 +40,7 @@ declare module 'sortablejs' {
     direction?: 'vertical' | 'horizontal'
     swapThreshold?: number
     invertSwap?: boolean
-    scroll?: boolean
+    scroll?: boolean | HTMLElement
     scrollSensitivity?: number
     scrollSpeed?: number
     bubbleScroll?: boolean
