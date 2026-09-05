@@ -50,6 +50,7 @@ interface AutoScrollBounds {
 }
 
 const DRAG_HOLD_MS = 200
+const REGRAB_GRACE_MS = 650
 const DRAG_MOVE_THRESHOLD_PX = 6
 const AUTO_SCROLL_EDGE_PX = 82
 const AUTO_SCROLL_MIN_PX = 0.8
@@ -120,6 +121,7 @@ export function NoteListSection({
   const rowElementsRef = useRef(new Map<string, HTMLElement>())
   const rowBeforeReorderRef = useRef(new Map<string, number>())
   const rowAnimationsRef = useRef(new Map<string, Animation>())
+  const lastSuccessfulDragEndRef = useRef(0)
 
   const renderedNotes = useMemo(() => {
     if (!dragOrder) return displayedNotes
@@ -237,24 +239,29 @@ export function NoteListSection({
     event.stopPropagation()
 
     clearPressCandidate()
+    const canRegrabImmediately = performance.now() - lastSuccessfulDragEndRef.current <= REGRAB_GRACE_MS
     const candidate: DragPressCandidate = {
       noteId,
       pointerId: event.pointerId,
       startX: event.clientX,
       startY: event.clientY,
-      armed: false,
+      armed: canRegrabImmediately,
     }
     pressCandidateRef.current = candidate
     setPressingId(noteId)
     event.currentTarget.setPointerCapture(event.pointerId)
 
-    pressTimerRef.current = window.setTimeout(() => {
-      const current = pressCandidateRef.current
-      if (!current || current.pointerId !== event.pointerId || current.noteId !== noteId) return
-      current.armed = true
-      pressTimerRef.current = null
+    if (canRegrabImmediately) {
       setReadyId(noteId)
-    }, DRAG_HOLD_MS)
+    } else {
+      pressTimerRef.current = window.setTimeout(() => {
+        const current = pressCandidateRef.current
+        if (!current || current.pointerId !== event.pointerId || current.noteId !== noteId) return
+        current.armed = true
+        pressTimerRef.current = null
+        setReadyId(noteId)
+      }, DRAG_HOLD_MS)
+    }
   }
 
   function activateDrag(noteId: string, pointerId: number) {
@@ -305,36 +312,26 @@ export function NoteListSection({
     }, null)
   }
 
-  function rowAtPointExcludingDragged(noteId: string, x: number, y: number): HTMLElement | null {
+  function rowAtVerticalPosition(noteId: string, y: number): HTMLElement | null {
     const list = listRef.current
     if (!list) return null
+    const rows = [...list.querySelectorAll<HTMLElement>('[data-oanix-note-id]')]
+      .filter((row) => row.dataset.oanixNoteId !== noteId)
+    if (rows.length === 0) return null
 
-    for (const element of document.elementsFromPoint(x, y)) {
-      const row = element.closest<HTMLElement>('[data-oanix-note-id]')
-      if (!row || !list.contains(row) || row.dataset.oanixNoteId === noteId) continue
-      return row
+    for (const row of rows) {
+      const rect = row.getBoundingClientRect()
+      if (y >= rect.top && y <= rect.bottom) return row
     }
 
-    return null
+    return nearestRowAtEdge(noteId, y)
   }
 
-  function reorderAtPoint(noteId: string, x: number, y: number) {
+  function reorderAtPoint(noteId: string, y: number) {
     const order = dragOrderRef.current
     if (!order) return
 
-    let target = rowAtPointExcludingDragged(noteId, x, y)
-
-    if (!target) {
-      const container = scrollContainer()
-      const bounds = container ? autoScrollBounds(container) : null
-      if (
-        bounds
-        && (y <= bounds.top + AUTO_SCROLL_EDGE_PX || y >= bounds.bottom - AUTO_SCROLL_EDGE_PX)
-      ) {
-        target = nearestRowAtEdge(noteId, y)
-      }
-    }
-
+    const target = rowAtVerticalPosition(noteId, y)
     const targetId = target?.dataset.oanixNoteId
     if (!target || !targetId) return
 
@@ -401,7 +398,7 @@ export function NoteListSection({
 
     if (autoScrollVelocityRef.current !== 0) {
       container.scrollTop += autoScrollVelocityRef.current
-      reorderAtPoint(noteId, pointer.x, pointer.y)
+      reorderAtPoint(noteId, pointer.y)
     }
 
     autoScrollFrameRef.current = window.requestAnimationFrame(runAutoScroll)
@@ -437,7 +434,7 @@ export function NoteListSection({
 
     event.preventDefault()
     pointerPositionRef.current = { x: event.clientX, y: event.clientY }
-    reorderAtPoint(noteId, event.clientX, event.clientY)
+    reorderAtPoint(noteId, event.clientY)
     ensureAutoScroll()
   }
 
@@ -453,6 +450,7 @@ export function NoteListSection({
 
     const noteId = draggingIdRef.current
     const order = dragOrderRef.current
+    if (commit && noteId && order) lastSuccessfulDragEndRef.current = performance.now()
     draggingIdRef.current = null
     pointerIdRef.current = null
     pointerPositionRef.current = null
