@@ -14,41 +14,47 @@
 
 ## Estado GitHub verificado
 
-- `main` verificado inmediatamente antes de este cierre documental: `77125e8d507a9208e39885338c85c55452e05a81`.
-- PR #630 — `feat: orden y personalización de tarjetas de nota`: **fusionado**.
-- Merge de #630: `1a0621da1babbefbb0978f3bd891272c10c27371`.
+- `main` vigente antes de este checkpoint: `74aa2e2be43ae249ffac313c97d0cd8294d380d7`.
+- PR #630 — `feat: orden y personalización de tarjetas de nota`: fusionado.
 - Ajuste funcional posterior: `5417265bc6b7b1e59618af9dd04f5a69319cbe31` — conserva el color personalizado de nota al cambiar entre `Todas` y carpetas.
-- PR activo: ninguno verificado para el frente anterior.
+- PR activo: #632 — `fix: restablece scroll táctil real en la lista de notas`.
+- Rama: `fix/note-list-mobile-scroll-2026-09-05`.
+- HEAD funcional verificado de #632: `7355103ad27896141b6a262acf8f0f4874eb928d`.
+- El diff funcional de #632 queda limitado a dos cambios de viewport (`height: 100dvh` en `.rebuild-shell` y `.rebuild-main`) y una prueba de contrato nueva.
 
-## Continuidad corregida en OANIX #5
+## Diagnóstico actual
 
-- `docs/OANIX_CHAT_PROTOCOL.md` fija `HNAlvaradoHN/OANIX` como repositorio canónico y prohíbe descubrir OANIX mediante búsquedas globales cuando la continuidad está disponible.
-- `AGENTS.md` obliga a fijar ese repositorio antes de consultar estado y declara que el número de chat solo pertenece al protocolo/checkpoint rodante.
-- `docs/PROJECT_MEMORY.md` ya no contiene un número histórico de chat como autoridad; conserva únicamente el tratamiento `Inge` y remite al protocolo/checkpoint para el número vigente.
-- Este chat es `OANIX #5`; el próximo es `OANIX #6`.
+La prueba física del usuario demostró que el parche anterior basado solo en `touch-action: pan-y` no resolvió el problema: el gesto vertical no inicia desde el centro de las tarjetas, aunque sí desde zonas periféricas.
 
-## Último trabajo funcional completado
+La causa corregida en #632 es geométrica: `.rebuild-shell` y `.rebuild-main` tenían únicamente `min-height: 100dvh`, por lo que el árbol podía crecer con la lista y `.rebuild-notes` dejaba de actuar como viewport vertical real pese a tener `overflow-y: auto`. Al fijar también `height: 100dvh`, la lista flexible (`flex: 1; min-height: 0; overflow-y: auto`) vuelve a poseer el scroll vertical.
 
-1. Confirmación antes de eliminar Cita/Lista/Numérica.
-2. Orden manual de notas independiente entre `Todas` y cada carpeta.
-3. Arrastre protegido con auto-scroll.
-4. Personalización persistente de icono y color por nota dentro de la metadata cifrada v2.
-5. Corrección para que el tinte personalizado de la nota permanezca visible al alternar entre `Todas` y carpetas.
+No se añadieron handlers táctiles nuevos y no se modificaron drag, orden, personalización, persistencia ni cifrado.
+
+## Gates de #632
+
+Para HEAD `7355103ad27896141b6a262acf8f0f4874eb928d` al registrar este checkpoint:
+
+- OANIX CI #2817: queued.
+- OANIX Android #2169: queued.
+- Qwen Independent PR Review #1060: queued.
+- Vercel correspondiente al HEAD anterior se había iniciado; reconsultar el HEAD actual antes de usar su estado como gate.
+
+No declarar el arreglo cerrado hasta tener gates aplicables verdes y validación física del gesto desde el centro de una tarjeta en móvil/Android.
 
 ## Restricciones vigentes
 
 - Toda operación OANIX debe dirigirse primero y explícitamente a `HNAlvaradoHN/OANIX`.
 - Para el número de chat solo mandan `docs/OANIX_CHAT_PROTOCOL.md` y este checkpoint rodante.
-- Números históricos de chats no deben usarse para identificar el chat actual.
 - GitHub actual manda sobre cualquier resumen anterior.
 - No conservar pruebas o implementaciones obsoletas solo para compatibilidad artificial.
 - No fusionar con gates aplicables en rojo.
 - No afirmar validación física que el usuario no haya confirmado.
+- No volver a tratar Vercel como causa del fallo de scroll salvo evidencia nueva; el síntoma está en la interacción/viewport de la lista.
 
 ## Siguiente acción exacta
 
-Al retomar desarrollo funcional, verificar el `main` vivo de `HNAlvaradoHN/OANIX`, leer el estado general vigente y los últimos commits posteriores a #630, y determinar desde esa evidencia el siguiente frente pendiente sin volver a usar checkpoints numéricos históricos.
+Reconsultar los gates de PR #632 sobre HEAD `7355103ad27896141b6a262acf8f0f4874eb928d`. Si quedan verdes, validar físicamente en móvil/Android que el scroll puede iniciarse arrastrando directamente desde el centro de cualquier tarjeta de nota y que el drag mediante la agarradera sigue funcionando. Solo después decidir el merge.
 
 ## Último trabajo realmente completado
 
-Se corrigió el sistema de continuidad para que todos los chats de OANIX apunten explícitamente a `HNAlvaradoHN/OANIX`, se eliminó de la memoria operativa el número histórico que causaba confusión y quedó registrado el contador rodante `OANIX #5 → #6`.
+Se identificó la causa probable real del fallo de scroll táctil de la lista, se abrió PR #632 con un ajuste mínimo de geometría del viewport y una prueba de regresión, y se verificó que su diff no contiene cambios funcionales ajenos al scroll. La validación automática y física sigue pendiente.
