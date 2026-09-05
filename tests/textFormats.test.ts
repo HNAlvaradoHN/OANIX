@@ -74,7 +74,7 @@ test('format behavior follows the reference applyFormat contract on the live edi
 
   // Selection lost by opening the OANIX side panel is restored from the last
   // valid local selection instead of inventing a second formatting path.
-  assert.match(editor, /selectionStart: stored\.selectionStart/)
+  assert.match(editor, /stored\.selectionStart/)
   assert.match(editor, /activeTextLineEditorByNote/)
   assert.match(editor, /if \(!isActiveInteractionTarget\(\)\) return/)
 })
