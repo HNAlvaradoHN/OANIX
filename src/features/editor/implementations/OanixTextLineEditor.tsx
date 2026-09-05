@@ -397,7 +397,7 @@ export function OanixTextLineEditor({
   }
 
   const handleKeyDown = (event: ReactKeyboardEvent<HTMLTextAreaElement>, line: EditorTextBlock) => {
-    if (event.isComposing || composingRef.current || event.altKey || event.ctrlKey || event.metaKey) return
+    if (event.nativeEvent.isComposing || composingRef.current || event.altKey || event.ctrlKey || event.metaKey) return
 
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault()
