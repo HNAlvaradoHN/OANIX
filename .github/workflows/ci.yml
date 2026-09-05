@@ -25,6 +25,29 @@ jobs:
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
 
+      # TEMP PR #629 diagnostics. Each probe is non-blocking; the normal suite below
+      # remains the authoritative gate. Remove these probes after the failing contract
+      # is identified.
+      - name: Diagnose text formats
+        continue-on-error: true
+        run: node --experimental-strip-types --test tests/textFormats.test.ts
+
+      - name: Diagnose editor host
+        continue-on-error: true
+        run: node --experimental-strip-types --test tests/editorSurfaceHost.test.ts
+
+      - name: Diagnose editor save coordination
+        continue-on-error: true
+        run: node --experimental-strip-types --test tests/rebuildEditorSaveCoordination.test.ts
+
+      - name: Diagnose editor boundaries
+        continue-on-error: true
+        run: node --experimental-strip-types --test tests/editorSurfaceAttachmentHost.test.ts tests/editorSurfaceBoundary.test.ts tests/editorImplementationIsolation.test.ts
+
+      - name: Diagnose mixed wrapper wiring
+        continue-on-error: true
+        run: node --experimental-strip-types --test tests/oanixFileGroupUiWiring.test.ts tests/oanixCodeBlockUiWiring.test.ts tests/oanixChecklistBlockUiWiring.test.ts tests/oanixContactBlockUiWiring.test.ts tests/oanixDailyEntryIntegration.test.ts tests/oanixSeparatorBlockUiWiring.test.ts tests/oanixImageLayerHost.test.ts
+
       - name: Test OANIX
         run: npm test
 
