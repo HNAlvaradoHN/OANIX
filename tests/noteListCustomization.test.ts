@@ -30,7 +30,7 @@ test('note card customization uses a low-impact visual dialog with icon and colo
   assert.match(listCss, /\[data-oanix-theme-mode="light"\]/)
 })
 
-test('home note list uses a drag handle while filtered views keep their own ordering', () => {
+test('home note list uses a guarded drag handle while filtered views keep their own ordering', () => {
   const app = readFileSync('src/features/rebuild/RebuildApp.tsx', 'utf8')
   const list = readFileSync('src/features/rebuild/NoteListSection.tsx', 'utf8')
   const listCss = readFileSync('src/features/rebuild/noteListSection.css', 'utf8')
@@ -39,14 +39,35 @@ test('home note list uses a drag handle while filtered views keep their own orde
   assert.match(app, /canReorder=\{\s*viewMode === 'home'\s*&& activeFolderId === null\s*&& activeTagId === null\s*&& query\.trim\(\)\.length === 0\s*\}/)
   assert.match(app, /onMove=\{\(note, previous, next\)/)
   assert.match(list, /rebuild-note-row__drag/)
+  assert.match(list, /const DRAG_HOLD_MS = 200/)
+  assert.match(list, /const DRAG_MOVE_THRESHOLD_PX = 6/)
+  assert.match(list, /window\.setTimeout/)
+  assert.match(list, /candidate\.armed/)
+  assert.match(list, /Math\.hypot/)
   assert.match(list, /onPointerDown=/)
   assert.match(list, /document[\s\S]*elementFromPoint/)
   assert.match(list, /onPointerUp=/)
   assert.match(list, /onPointerCancel=/)
+  assert.match(list, /onContextMenu=/)
   assert.match(listCss, /touch-action: none !important/)
   assert.doesNotMatch(list, /aria-label=\{`Subir/)
   assert.doesNotMatch(list, /aria-label=\{`Bajar/)
   assert.match(list, /onCustomize\(note\)/)
+})
+
+test('active drag dims the other rows and visually lifts the moved note', () => {
+  const list = readFileSync('src/features/rebuild/NoteListSection.tsx', 'utf8')
+  const listCss = readFileSync('src/features/rebuild/noteListSection.css', 'utf8')
+
+  assert.match(list, /rebuild-note-list\$\{draggingId \? ' is-reordering' : ''\}/)
+  assert.match(list, /is-drag-pressing/)
+  assert.match(list, /is-drag-ready/)
+  assert.match(list, /is-dragging/)
+  assert.match(listCss, /\.rebuild-note-list\.is-reordering \.rebuild-note-row:not\(\.is-dragging\)/)
+  assert.match(listCss, /opacity: \.58/)
+  assert.match(listCss, /transform: scale\(1\.018\)/)
+  assert.match(listCss, /box-shadow:/)
+  assert.match(listCss, /prefers-reduced-motion: reduce/)
 })
 
 test('dropping a note persists only the moved note at an order between its final neighbors', () => {
