@@ -1,3 +1,4 @@
+import { useRef } from 'react'
 import type { EditorSurfaceAttachment, EditorSurfaceBlock } from '../editorSurfaceContract.ts'
 import { decodeChecklistBlock, type EditorChecklistBlock } from '../checklistBlockCodec.ts'
 import { decodeCodeBlock, type EditorCodeBlock } from '../codeBlockCodec.ts'
@@ -5,7 +6,7 @@ import { decodeContactBlock, type EditorContactBlock } from '../contactBlockCode
 import { decodeDailyEntryBlock, type EditorDailyEntryBlock } from '../dailyEntryBlockCodec.ts'
 import { decodeOanixFileGroupElement, type OanixFileGroupElement } from '../oanixFileGroupElementCodec.ts'
 import { decodeSeparatorBlock, type EditorSeparatorBlock } from '../separatorBlockCodec.ts'
-import { decodeTextBlock } from '../textBlockCodec.ts'
+import { TEXT_BLOCK_KIND, decodeTextBlock, encodeTextBlock } from '../textBlockCodec.ts'
 import { OanixChecklistBlockCard } from './OanixChecklistBlockCard.tsx'
 import { OanixCodeBlockCard } from './OanixCodeBlockCard.tsx'
 import { OanixContactBlockCard } from './OanixContactBlockCard.tsx'
@@ -149,7 +150,18 @@ export function OanixMixedDocumentWithFiles({
   onCompositionEnd,
   onError,
 }: OanixMixedDocumentWithFilesProps) {
-  const segments = segmentDocument(blocks)
+  const initialParagraphRef = useRef<EditorSurfaceBlock | null>(null)
+  if (!initialParagraphRef.current) {
+    initialParagraphRef.current = encodeTextBlock({
+      id: `oanix-text-${crypto.randomUUID()}`,
+      kind: TEXT_BLOCK_KIND,
+      text: '',
+      format: 'paragraph',
+    })
+  }
+
+  const effectiveBlocks = blocks.length > 0 ? blocks : [initialParagraphRef.current]
+  const segments = segmentDocument(effectiveBlocks)
 
   return <div className="oanix-mixed-document-with-files">
     {segments.map((segment) => {
