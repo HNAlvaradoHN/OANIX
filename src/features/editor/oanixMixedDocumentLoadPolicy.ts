@@ -3,7 +3,7 @@ import { projectOanixMixedDocument } from './oanixMixedDocumentProjection.ts'
 
 export type OanixMixedDocumentLoadDecision =
   | { mode: 'plain'; reason: 'no-blocks' }
-  | { mode: 'mixed'; reason: 'supported-blocks' }
+  | { mode: 'mixed'; reason: 'supported-blocks' | 'empty-new-note' }
   | { mode: 'recoverable-conflict'; reason: 'plain-and-blocks' }
   | { mode: 'unsupported-blocks'; reason: 'unknown-block-kind'; unsupportedKinds: string[] }
 
@@ -11,15 +11,20 @@ export type OanixMixedDocumentLoadDecision =
  * Decides whether the approved sheet may switch from its continuous plain textarea
  * to the mixed renderer after loading metadata.
  *
- * We never auto-migrate on open. Mixed mode is entered only when persisted blocks
- * are already authoritative and the legacy/plain body is empty. If both sources
- * contain content, preserving both wins over guessing which one is newer.
+ * Empty notes start directly in the ruled line editor so paragraph behavior is
+ * authoritative from the first typed row. Existing plain notes stay plain until
+ * an explicit mixed-content action migrates them; if both sources contain content,
+ * preserving both wins over guessing which one is newer.
  */
 export function decideOanixMixedDocumentLoad(
   plainText: string,
   blocks: readonly EditorSurfaceBlock[],
 ): OanixMixedDocumentLoadDecision {
-  if (blocks.length === 0) return { mode: 'plain', reason: 'no-blocks' }
+  if (blocks.length === 0) {
+    return plainText.length === 0
+      ? { mode: 'mixed', reason: 'empty-new-note' }
+      : { mode: 'plain', reason: 'no-blocks' }
+  }
 
   if (plainText.length > 0) {
     return { mode: 'recoverable-conflict', reason: 'plain-and-blocks' }
