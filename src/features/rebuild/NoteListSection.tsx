@@ -230,15 +230,24 @@ export function NoteListSection({
     }, null)
   }
 
+  function rowAtPointExcludingDragged(noteId: string, x: number, y: number): HTMLElement | null {
+    const list = listRef.current
+    if (!list) return null
+
+    for (const element of document.elementsFromPoint(x, y)) {
+      const row = element.closest<HTMLElement>('[data-oanix-note-id]')
+      if (!row || !list.contains(row) || row.dataset.oanixNoteId === noteId) continue
+      return row
+    }
+
+    return null
+  }
+
   function reorderAtPoint(noteId: string, x: number, y: number) {
     const order = dragOrderRef.current
     if (!order) return
 
-    const list = listRef.current
-    let target = document
-      .elementFromPoint(x, y)
-      ?.closest<HTMLElement>('[data-oanix-note-id]') ?? null
-    if (target && list && !list.contains(target)) target = null
+    let target = rowAtPointExcludingDragged(noteId, x, y)
 
     if (!target) {
       const container = scrollContainer()
@@ -252,7 +261,7 @@ export function NoteListSection({
     }
 
     const targetId = target?.dataset.oanixNoteId
-    if (!target || !targetId || targetId === noteId) return
+    if (!target || !targetId) return
 
     const withoutDragged = order.filter((id) => id !== noteId)
     let insertIndex = withoutDragged.indexOf(targetId)
