@@ -41,6 +41,11 @@ export interface RebuildOpenedNote {
   text: string
 }
 
+export interface RebuildNoteCardCustomization {
+  cardColor: string | null
+  cardIcon: string | null
+}
+
 function createId(): string {
   if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID()
   if (!globalThis.crypto?.getRandomValues) {
@@ -71,6 +76,13 @@ function validateNoteMeta(value: NoteV2Meta): NoteV2Meta {
     !value.id ||
     typeof value.title !== 'string' ||
     !Array.isArray(value.tagIds) ||
+    (value.order != null && (typeof value.order !== 'number' || !Number.isFinite(value.order))) ||
+    (value.cardColor != null && !/^#[0-9a-f]{6}$/i.test(value.cardColor)) ||
+    (value.cardIcon != null && (
+      typeof value.cardIcon !== 'string'
+      || value.cardIcon.trim().length === 0
+      || value.cardIcon.length > 16
+    )) ||
     !value.createdAt ||
     !value.updatedAt
   ) {
@@ -166,6 +178,34 @@ async function readIncrementalText(manifest: NoteV2Manifest): Promise<string> {
   }).join('')
 }
 
+async function persistNoteMetaUpdate(
+  existing: NoteV2Meta,
+  patch: Partial<Pick<NoteV2Meta, 'order' | 'cardColor' | 'cardIcon'>>,
+): Promise<NoteV2Meta> {
+  const queuedAt = new Date().toISOString()
+  const meta = validateNoteMeta({
+    ...existing,
+    ...patch,
+    revision: Math.max(1, existing.revision) + 1,
+  })
+
+  await applyEncryptedV2Changes({
+    writes: [
+      { recordType: NOTE_V2_META_TYPE, recordId: existing.id, value: meta },
+      createPendingSyncWrite(
+        existing.id,
+        NOTE_V2_META_TYPE,
+        existing.id,
+        meta.revision,
+        'upsert',
+        queuedAt,
+      ),
+    ],
+  })
+
+  return meta
+}
+
 export async function loadRebuildWorkspace(): Promise<RebuildWorkspaceSnapshot> {
   const [noteRecords, folderRecords, tagRecords] = await Promise.all([
     listEncryptedV2Records<NoteV2Meta>(NOTE_V2_META_TYPE),
@@ -182,9 +222,13 @@ export async function loadRebuildWorkspace(): Promise<RebuildWorkspaceSnapshot> 
   return { notes, folders, tags }
 }
 
-export async function createRebuildNote(folderId: string | null = null): Promise<RebuildOpenedNote> {
+export async function createRebuildNote(
+  folderId: string | null = null,
+  order?: number,
+): Promise<RebuildOpenedNote> {
   const now = new Date().toISOString()
   const id = createId()
+  const createdAtMs = Date.parse(now)
   const meta: NoteV2Meta = {
     version: 2,
     revision: 1,
@@ -192,6 +236,9 @@ export async function createRebuildNote(folderId: string | null = null): Promise
     title: '',
     folderId,
     tagIds: [],
+    order: typeof order === 'number' && Number.isFinite(order) ? order : -createdAtMs,
+    cardColor: null,
+    cardIcon: null,
     createdAt: now,
     updatedAt: now,
   }
@@ -287,6 +334,30 @@ export async function saveRebuildNote(
 
   await applyEncryptedV2Changes({ writes, deletes })
   return meta
+}
+
+export async function saveRebuildNoteCard(
+  existing: NoteV2Meta,
+  input: RebuildNoteCardCustomization,
+): Promise<NoteV2Meta> {
+  const cardColor = input.cardColor?.trim() || null
+  const cardIcon = input.cardIcon?.trim() || null
+  if (cardColor && !/^#[0-9a-f]{6}$/i.test(cardColor)) {
+    throw new Error('El color de la tarjeta no es válido.')
+  }
+  if (cardIcon && cardIcon.length > 16) {
+    throw new Error('El icono de la nota no es válido.')
+  }
+  if (cardColor === (existing.cardColor ?? null) && cardIcon === (existing.cardIcon ?? null)) {
+    return existing
+  }
+  return persistNoteMetaUpdate(existing, { cardColor, cardIcon })
+}
+
+export async function saveRebuildNoteOrder(existing: NoteV2Meta, order: number): Promise<NoteV2Meta> {
+  if (!Number.isFinite(order)) throw new Error('La posición de la nota no es válida.')
+  if (existing.order === order) return existing
+  return persistNoteMetaUpdate(existing, { order })
 }
 
 export async function createRebuildFolder(name: string): Promise<FolderV2Record> {
