@@ -133,7 +133,7 @@ test('new line editor owns focus, Backspace and scrolling without the old remoun
 
   assert.equal(existsSync('src/features/editor/oanixTextBehaviorBridge.ts'), false)
   assert.doesNotMatch(host, /behaviorRevision|installOanixTextBehaviorBridge/)
-  assert.match(editor, /event\.key === 'Backspace'/)
+  assert.match(editor, /event\.key !== 'Backspace'/)
   assert.match(editor, /focus\(\{ preventScroll: true \}\)/)
   assert.match(editor, /scrollIntoView\(\{ block: 'nearest' \}\)/)
   assert.match(editor, /stopImmediatePropagation\(\)/)
