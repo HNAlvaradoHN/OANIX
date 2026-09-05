@@ -50,6 +50,11 @@ const TEXT_FORMATS = new Set<EditorTextBlockFormat>([
   'list',
   'numbered-list',
 ])
+const ATOMIC_TEXT_FORMATS = new Set<EditorTextBlockFormat>([
+  'quote',
+  'list',
+  'numbered-list',
+])
 const TEXT_SAVE_IDLE_MS = 3_000
 const LINE_SELECTOR = '.oanix-text-line-editor__line'
 
@@ -78,6 +83,10 @@ function lineSignature(source: readonly LineData[]) {
   return source
     .map((line) => [line.id, line.format ?? 'paragraph', line.text].join('\u0000'))
     .join('\u0001')
+}
+
+function isAtomicTextFormat(format: EditorTextBlockFormat | undefined) {
+  return Boolean(format && ATOMIC_TEXT_FORMATS.has(format))
 }
 
 function headingToParagraphIfEmpty(line: LineData): LineData {
@@ -199,7 +208,7 @@ export function OanixTextLineEditor({
 
     const id = lineEl.dataset.oanixMixedTextId
     const line = id ? getLine(id) : null
-    if (!line) return emptyContext()
+    if (!line || isAtomicTextFormat(line.format)) return emptyContext()
 
     const selectionStart = offsetInsideLine(lineEl, range.startContainer, range.startOffset)
     let selectionEnd = selectionStart
@@ -242,7 +251,7 @@ export function OanixTextLineEditor({
     if (!stored) return emptyContext()
     const line = getLine(stored.blockId)
     const lineEl = getLineEl(stored.blockId)
-    if (!line || !lineEl) return emptyContext()
+    if (!line || !lineEl || isAtomicTextFormat(line.format) || !lineEl.matches(LINE_SELECTOR)) return emptyContext()
 
     const text = lineEl.textContent
     const start = Math.min(Math.max(0, stored.selectionStart), text.length)
@@ -299,10 +308,8 @@ export function OanixTextLineEditor({
 
   function focusLine(lineId: string, start?: number, end?: number) {
     const el = getLineEl(lineId)
-    if (!el) return
+    if (!el || !el.matches(LINE_SELECTOR)) return
 
-    // Keep the reference editor's direct focus semantics so Android/PWA can
-    // reopen the IME in the same user gesture that applied the format.
     el.focus()
     const textLength = el.textContent.length
     const at = typeof start === 'number' ? start : textLength
@@ -314,7 +321,174 @@ export function OanixTextLineEditor({
     if (ctx.line) callbacksRef.current.onTextCursorChange?.(ctx.line.id, ctx.offset)
   }
 
+  function clearStoredTextTarget() {
+    lastSelectionRef.current = null
+    activateInteractionTarget()
+    window.getSelection()?.removeAllRanges()
+    apiRef.current.updateToolbar()
+  }
+
+  function commitAtomicText(lineId: string, text: string) {
+    const line = getLine(lineId)
+    if (!line || !isAtomicTextFormat(line.format)) return
+    const next = { ...line, text }
+    linesRef.current = linesRef.current.map((item) => (item.id === lineId ? next : item))
+    callbacksRef.current.onActivity()
+    scheduleTextSave(encodeTextBlock(next))
+  }
+
+  function focusAtomicLine(lineId: string, itemIndex = 0) {
+    const root = getLineEl(lineId)
+    if (!root || !isAtomicTextFormat(getLine(lineId)?.format)) return
+    clearStoredTextTarget()
+    const controls = root.querySelectorAll<HTMLElement>('.oanix-text-atomic__input')
+    controls[Math.min(Math.max(0, itemIndex), Math.max(0, controls.length - 1))]?.focus()
+    root.scrollIntoView({ block: 'nearest' })
+  }
+
+  function buildAtomicLineEl(line: LineData): HTMLDivElement {
+    const format = line.format
+    const root = document.createElement('div')
+    root.className = `oanix-text-atomic oanix-text-atomic--${format}`
+    root.dataset.oanixMixedTextId = line.id
+    root.dataset.oanixTextFormat = format
+    root.dataset.oanixElementId = line.id
+    root.dataset.oanixElementKind = format
+
+    const header = document.createElement('div')
+    header.className = 'oanix-text-atomic__header'
+    const title = document.createElement('strong')
+    title.textContent = format === 'quote' ? 'Cita' : format === 'list' ? 'Lista' : 'Lista numérica'
+    header.appendChild(title)
+    root.appendChild(header)
+
+    const handleAtomicFocus = () => clearStoredTextTarget()
+
+    if (format === 'quote') {
+      const textarea = document.createElement('textarea')
+      textarea.className = 'oanix-text-atomic__input oanix-text-atomic__quote'
+      textarea.value = line.text
+      textarea.rows = 1
+      textarea.maxLength = 200_000
+      textarea.placeholder = 'Escribe una cita…'
+      textarea.setAttribute('aria-label', 'Cita')
+      textarea.disabled = disabledRef.current
+
+      const resize = () => {
+        textarea.style.height = 'auto'
+        textarea.style.height = `${Math.max(42, textarea.scrollHeight)}px`
+      }
+      textarea.addEventListener('focus', handleAtomicFocus)
+      textarea.addEventListener('input', () => {
+        resize()
+        commitAtomicText(line.id, textarea.value)
+      })
+      textarea.addEventListener('compositionstart', () => {
+        composingRef.current = true
+        callbacksRef.current.onCompositionStart()
+      })
+      textarea.addEventListener('compositionend', () => {
+        composingRef.current = false
+        callbacksRef.current.onCompositionEnd()
+        commitAtomicText(line.id, textarea.value)
+      })
+      root.appendChild(textarea)
+      queueMicrotask(resize)
+    } else {
+      const items = line.text.length > 0 ? line.text.split('\n') : ['']
+      const itemsRoot = document.createElement('div')
+      itemsRoot.className = 'oanix-text-atomic__items'
+      root.appendChild(itemsRoot)
+
+      const commitItems = () => commitAtomicText(line.id, items.join('\n'))
+
+      const renderItems = (focusIndex?: number) => {
+        itemsRoot.replaceChildren()
+        items.forEach((text, index) => {
+          const row = document.createElement('div')
+          row.className = 'oanix-text-atomic__row'
+
+          const marker = document.createElement('span')
+          marker.className = 'oanix-text-atomic__marker'
+          marker.textContent = format === 'list' ? '•' : `${index + 1}.`
+          row.appendChild(marker)
+
+          const input = document.createElement('input')
+          input.className = 'oanix-text-atomic__input oanix-text-atomic__item'
+          input.type = 'text'
+          input.value = text
+          input.maxLength = 2_000
+          input.placeholder = 'Escribe un elemento…'
+          input.disabled = disabledRef.current
+          input.setAttribute('aria-label', `${format === 'list' ? 'Elemento' : 'Elemento numerado'} ${index + 1}`)
+          input.addEventListener('focus', handleAtomicFocus)
+          input.addEventListener('input', () => {
+            items[index] = input.value
+            commitItems()
+          })
+          input.addEventListener('keydown', (event) => {
+            if (event.key !== 'Enter' || event.shiftKey) return
+            event.preventDefault()
+            if (items.length >= 200) return
+            items.splice(index + 1, 0, '')
+            commitItems()
+            renderItems(index + 1)
+            saveState()
+          })
+          row.appendChild(input)
+
+          const remove = document.createElement('button')
+          remove.type = 'button'
+          remove.className = 'oanix-text-atomic__remove'
+          remove.textContent = '×'
+          remove.disabled = disabledRef.current
+          remove.setAttribute('aria-label', `Quitar elemento ${index + 1}`)
+          remove.addEventListener('click', () => {
+            if (disabledRef.current) return
+            items.splice(index, 1)
+            if (items.length === 0) items.push('')
+            commitItems()
+            renderItems(Math.min(index, items.length - 1))
+            saveState()
+          })
+          row.appendChild(remove)
+          itemsRoot.appendChild(row)
+        })
+
+        if (typeof focusIndex === 'number') {
+          const inputs = itemsRoot.querySelectorAll<HTMLInputElement>('.oanix-text-atomic__item')
+          inputs[Math.min(Math.max(0, focusIndex), Math.max(0, inputs.length - 1))]?.focus()
+        }
+      }
+
+      renderItems()
+
+      const footer = document.createElement('div')
+      footer.className = 'oanix-text-atomic__footer'
+      const add = document.createElement('button')
+      add.type = 'button'
+      add.className = 'oanix-text-atomic__add'
+      add.textContent = format === 'list' ? '＋ Añadir elemento' : '＋ Añadir número'
+      add.disabled = disabledRef.current || items.length >= 200
+      add.addEventListener('click', () => {
+        if (disabledRef.current || items.length >= 200) return
+        items.push('')
+        commitItems()
+        renderItems(items.length - 1)
+        add.disabled = items.length >= 200
+        saveState()
+      })
+      footer.appendChild(add)
+      root.appendChild(footer)
+    }
+
+    lineRefs.current.set(line.id, root)
+    return root
+  }
+
   function buildLineEl(line: LineData): HTMLDivElement {
+    if (isAtomicTextFormat(line.format)) return buildAtomicLineEl(line)
+
     const el = document.createElement('div')
     el.className = 'oanix-mixed-document__text oanix-text-line-editor__line'
     el.dataset.oanixMixedTextId = line.id
@@ -444,10 +618,16 @@ export function OanixTextLineEditor({
     const line = getLine(id)
     if (!line) return null
 
+    const previousFormat = line.format ?? 'paragraph'
     const next = { ...line, format }
     linesRef.current = linesRef.current.map((item) => (item.id === id ? next : item))
     const el = getLineEl(id)
-    if (el) el.dataset.oanixTextFormat = format
+    if (el && isAtomicTextFormat(previousFormat) !== isAtomicTextFormat(format)) {
+      const replacement = buildLineEl(next)
+      el.replaceWith(replacement)
+    } else if (el) {
+      el.dataset.oanixTextFormat = format
+    }
     return next
   }
 
@@ -484,6 +664,11 @@ export function OanixTextLineEditor({
     return next
   }
 
+  function focusFormattedLine(lineId: string, format: EditorTextBlockFormat, start = 0, end = start) {
+    if (isAtomicTextFormat(format)) focusAtomicLine(lineId)
+    else focusLine(lineId, start, end)
+  }
+
   function applyFormat(format: EditorTextBlockFormat) {
     const ctx = getCurrentContext()
     if (!ctx.line || !ctx.lineEl) return
@@ -491,11 +676,11 @@ export function OanixTextLineEditor({
     if (ctx.hasSelection && ctx.selectedText.trim().length > 0) {
       const next = setLineType(ctx.line.id, format)
       if (next) enqueueStructuralSave(() => ({ upserts: [encodeTextBlock(next)] }))
-      focusLine(ctx.line.id, ctx.selectionStart, ctx.selectionEnd)
+      focusFormattedLine(ctx.line.id, format, ctx.selectionStart, ctx.selectionEnd)
     } else if (ctx.lineEl.textContent.trim().length === 0) {
       const next = setLineType(ctx.line.id, format)
       if (next) enqueueStructuralSave(() => ({ upserts: [encodeTextBlock(next)] }))
-      focusLine(ctx.line.id, 0)
+      focusFormattedLine(ctx.line.id, format)
     } else {
       const inserted = insertLineAfter(ctx.line.id, format, '')
       if (!inserted) return
@@ -506,7 +691,8 @@ export function OanixTextLineEditor({
         if (targetIndex >= 0) order.splice(targetIndex + 1, 0, inserted.id)
         return { upserts: [encodeTextBlock(inserted)], order }
       })
-      focusLine(inserted.id, 0)
+      if (isAtomicTextFormat(format)) focusAtomicLine(inserted.id)
+      else focusLine(inserted.id, 0)
     }
 
     callbacksRef.current.onActivity()
@@ -578,9 +764,11 @@ export function OanixTextLineEditor({
 
     const current = linesRef.current[index]
     const previous = linesRef.current[index - 1]
+    if (isAtomicTextFormat(current.format) || isAtomicTextFormat(previous.format)) return
+
     const currentEl = getLineEl(current.id)
     const previousEl = getLineEl(previous.id)
-    if (!currentEl || !previousEl) return
+    if (!currentEl || !previousEl || !currentEl.matches(LINE_SELECTOR) || !previousEl.matches(LINE_SELECTOR)) return
 
     const previousText = previousEl.textContent
     const currentText = currentEl.textContent
@@ -590,10 +778,6 @@ export function OanixTextLineEditor({
       text: previousText + currentText,
     }
 
-    // Keep the DOM node that is receiving the physical Backspace press alive.
-    // Android ties key-repeat to that editing host; removing it stops the repeat.
-    // The surviving node adopts the previous block identity and moves naturally
-    // into its place when the old previous node is removed.
     previousEl.remove()
     lineRefs.current.delete(previous.id)
     lineRefs.current.delete(current.id)
@@ -650,7 +834,10 @@ export function OanixTextLineEditor({
     const target = preferredId && getLine(preferredId)
       ? preferredId
       : linesRef.current[linesRef.current.length - 1]?.id ?? null
-    if (target) focusLine(target)
+    if (!target) return
+    const line = getLine(target)
+    if (isAtomicTextFormat(line?.format)) focusAtomicLine(target)
+    else focusLine(target)
   }
 
   function undo() {
@@ -686,7 +873,7 @@ export function OanixTextLineEditor({
     if (composingRef.current) return
 
     const line = getLine(lineId)
-    if (!line) return
+    if (!line || isAtomicTextFormat(line.format)) return
     let next: LineData = { ...line, text: el.textContent }
     linesRef.current = linesRef.current.map((item) => (item.id === lineId ? next : item))
     next = resetIfEmpty(next)
@@ -719,14 +906,18 @@ export function OanixTextLineEditor({
       return
     }
 
-    // Normal/repeated Backspace belongs to the browser while the caret is
-    // inside the line. OANIX intervenes only at the structural boundary.
     if (event.key !== 'Backspace' || event.shiftKey) return
     const ctx = readLiveContext()
     if (!ctx.line || ctx.line.id !== lineId || ctx.hasSelection || ctx.offset !== 0) return
 
     const index = linesRef.current.findIndex((item) => item.id === lineId)
     if (index <= 0) return
+
+    const previous = linesRef.current[index - 1]
+    if (previous && isAtomicTextFormat(previous.format)) {
+      event.preventDefault()
+      return
+    }
 
     event.preventDefault()
     mergeWithPrevious(index)
@@ -840,7 +1031,12 @@ export function OanixTextLineEditor({
   useEffect(() => {
     disabledRef.current = disabled
     lineRefs.current.forEach((el) => {
-      el.contentEditable = !disabled ? 'true' : 'false'
+      if (el.matches(LINE_SELECTOR)) {
+        el.contentEditable = !disabled ? 'true' : 'false'
+        return
+      }
+      el.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLButtonElement>('input, textarea, button')
+        .forEach((control) => { control.disabled = disabled })
     })
   }, [disabled])
 
@@ -848,7 +1044,6 @@ export function OanixTextLineEditor({
     if (externalSignature === lastExternalSignatureRef.current) return
     lastExternalSignatureRef.current = externalSignature
 
-    // A persistence echo must not rebuild contentEditable nodes or move caret.
     if (externalSignature === lineSignature(linesRef.current)) return
 
     void flushPending().then(() => {
@@ -882,9 +1077,6 @@ export function OanixTextLineEditor({
       const root = target.closest<HTMLElement>('.oanix-notes')
       if (!root || root.dataset.noteId !== runtimeRef.current?.noteId) return
 
-      // Capture the editor context before the panel opener can move focus away
-      // from contentEditable. Removing the live range + blur reliably dismisses
-      // the mobile IME while lastSelectionRef keeps the formatting target.
       const panelOpener = target.closest<HTMLElement>('button[aria-label="Más"], .oanix-notes__slide-handle')
       if (panelOpener && getCurrentContext().line) {
         event.preventDefault()
@@ -920,9 +1112,6 @@ export function OanixTextLineEditor({
       if (formatButton && format && TEXT_FORMATS.has(format) && getCurrentContext().line) {
         event.preventDefault()
         event.stopImmediatePropagation()
-
-        // Close the React-owned side panel first, then restore focus/caret in
-        // the same user click so Android and PWA can immediately reopen input.
         root.querySelector<HTMLButtonElement>('.oanix-notes__panel-close')?.click()
         apiRef.current.applyFormat(format)
         return
