@@ -865,6 +865,9 @@ export function OanixTextLineEditor({
     const line = linesRef.current[index]
     if (!isAtomicTextFormat(line.format)) return
 
+    const label = line.format === 'quote' ? 'Cita' : line.format === 'list' ? 'Lista' : 'Lista numérica'
+    if (!window.confirm(`¿Eliminar ${label}?\n\nSe eliminará el bloque completo de la nota.`)) return
+
     const previous = cloneLines(linesRef.current)
     getLineEl(lineId)?.remove()
     lineRefs.current.delete(lineId)
