@@ -43,6 +43,11 @@ interface PointerPosition {
   y: number
 }
 
+interface AutoScrollBounds {
+  top: number
+  bottom: number
+}
+
 const DRAG_HOLD_MS = 200
 const DRAG_MOVE_THRESHOLD_PX = 6
 const AUTO_SCROLL_EDGE_PX = 82
@@ -213,6 +218,15 @@ export function NoteListSection({
     return listRef.current?.closest<HTMLElement>('.rebuild-notes') ?? null
   }
 
+  function autoScrollBounds(container: HTMLElement): AutoScrollBounds {
+    const rect = container.getBoundingClientRect()
+    const bottomNav = document.querySelector<HTMLElement>('.rebuild-bottom-nav')
+    return {
+      top: rect.top,
+      bottom: bottomNav ? Math.min(rect.bottom, bottomNav.getBoundingClientRect().top) : rect.bottom,
+    }
+  }
+
   function nearestRowAtEdge(noteId: string, y: number): HTMLElement | null {
     const list = listRef.current
     if (!list) return null
@@ -251,10 +265,10 @@ export function NoteListSection({
 
     if (!target) {
       const container = scrollContainer()
-      const rect = container?.getBoundingClientRect()
+      const bounds = container ? autoScrollBounds(container) : null
       if (
-        rect
-        && (y <= rect.top + AUTO_SCROLL_EDGE_PX || y >= rect.bottom - AUTO_SCROLL_EDGE_PX)
+        bounds
+        && (y <= bounds.top + AUTO_SCROLL_EDGE_PX || y >= bounds.bottom - AUTO_SCROLL_EDGE_PX)
       ) {
         target = nearestRowAtEdge(noteId, y)
       }
@@ -275,16 +289,16 @@ export function NoteListSection({
     if (!sameOrder(order, next)) updateDragOrder(next)
   }
 
-  function autoScrollTargetVelocity(pointerY: number, rect: DOMRect): number {
+  function autoScrollTargetVelocity(pointerY: number, bounds: AutoScrollBounds): number {
     let direction = 0
     let strength = 0
 
-    if (pointerY < rect.top + AUTO_SCROLL_EDGE_PX) {
+    if (pointerY < bounds.top + AUTO_SCROLL_EDGE_PX) {
       direction = -1
-      strength = Math.min(1, (rect.top + AUTO_SCROLL_EDGE_PX - pointerY) / AUTO_SCROLL_EDGE_PX)
-    } else if (pointerY > rect.bottom - AUTO_SCROLL_EDGE_PX) {
+      strength = Math.min(1, (bounds.top + AUTO_SCROLL_EDGE_PX - pointerY) / AUTO_SCROLL_EDGE_PX)
+    } else if (pointerY > bounds.bottom - AUTO_SCROLL_EDGE_PX) {
       direction = 1
-      strength = Math.min(1, (pointerY - (rect.bottom - AUTO_SCROLL_EDGE_PX)) / AUTO_SCROLL_EDGE_PX)
+      strength = Math.min(1, (pointerY - (bounds.bottom - AUTO_SCROLL_EDGE_PX)) / AUTO_SCROLL_EDGE_PX)
     }
 
     if (direction === 0) return 0
@@ -309,7 +323,7 @@ export function NoteListSection({
     const container = scrollContainer()
     if (!noteId || !pointer || !container) return
 
-    const targetVelocity = autoScrollTargetVelocity(pointer.y, container.getBoundingClientRect())
+    const targetVelocity = autoScrollTargetVelocity(pointer.y, autoScrollBounds(container))
     const currentVelocity = autoScrollVelocityRef.current
     const nextVelocity = currentVelocity + (targetVelocity - currentVelocity) * AUTO_SCROLL_EASING
     autoScrollVelocityRef.current = Math.abs(nextVelocity) < 0.08 ? 0 : nextVelocity
