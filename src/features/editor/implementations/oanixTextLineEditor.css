@@ -6,31 +6,50 @@
 }
 
 .oanix-text-line-editor .oanix-text-line-editor__line {
+  position: relative;
   display: block;
   width: 100%;
+  min-height: var(--oanix-ruled-step, 30px);
   margin: 0;
-  resize: none;
-  overflow: hidden;
+  padding: 0 4px;
   border: 0;
   border-radius: 0;
-  outline: 0;
+  outline: none;
   box-shadow: none;
-  background-color: transparent;
+  background: transparent;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-wrap: break-word;
   caret-color: var(--accent);
+  transition: font-size .15s ease, font-weight .15s ease, color .15s ease;
+}
+
+.oanix-text-line-editor .oanix-text-line-editor__line:empty::before {
+  content: attr(data-placeholder);
+  color: var(--color-placeholder);
+  pointer-events: none;
 }
 
 .oanix-text-line-editor .oanix-text-line-editor__line[data-oanix-text-format="paragraph"] {
   min-height: var(--oanix-ruled-step, 30px);
+  line-height: var(--oanix-ruled-step, 30px);
 }
 
 .oanix-text-line-editor .oanix-text-line-editor__line[data-oanix-text-format="h2"] {
   min-height: var(--oanix-h2-ruled-step, 42px);
+  line-height: var(--oanix-h2-ruled-step, 42px);
 }
 
 .oanix-text-line-editor .oanix-text-line-editor__line[data-oanix-text-format="h3"] {
   min-height: var(--oanix-h3-ruled-step, 36px);
+  line-height: var(--oanix-h3-ruled-step, 36px);
 }
 
-.oanix-text-line-editor .oanix-text-line-editor__line + .oanix-text-line-editor__line {
-  margin-top: 0;
+.oanix-text-line-editor .oanix-text-line-editor__line::selection {
+  background: color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+.oanix-notes__tool.is-active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 18%, transparent);
 }
