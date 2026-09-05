@@ -26,21 +26,17 @@ jobs:
         run: npm ci --no-audit --no-fund
 
       # TEMP PR #629 diagnostics. The normal suite below remains authoritative.
-      - name: Diagnose tests A-F
+      - name: Diagnose full suite concurrency 1
         continue-on-error: true
-        run: node --experimental-strip-types --test tests/[a-f]*.test.ts
+        run: node --experimental-strip-types --test --test-concurrency=1 tests/*.test.ts
 
-      - name: Diagnose tests G-L
+      - name: Diagnose full suite concurrency 2
         continue-on-error: true
-        run: node --experimental-strip-types --test tests/[g-l]*.test.ts
+        run: node --experimental-strip-types --test --test-concurrency=2 tests/*.test.ts
 
-      - name: Diagnose tests M-R
+      - name: Diagnose full suite concurrency 4
         continue-on-error: true
-        run: node --experimental-strip-types --test tests/[m-r]*.test.ts
-
-      - name: Diagnose tests S-Z
-        continue-on-error: true
-        run: node --experimental-strip-types --test tests/[s-z]*.test.ts
+        run: node --experimental-strip-types --test --test-concurrency=4 tests/*.test.ts
 
       - name: Test OANIX
         run: npm test
