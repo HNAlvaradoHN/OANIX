@@ -43,12 +43,14 @@ import {
   readRebuildNote,
   saveRebuildNote,
   saveRebuildNoteCard,
+  saveRebuildNoteFolderOrder,
   saveRebuildNoteOrder,
   type RebuildNoteCardCustomization,
 } from './rebuildService'
 import {
   folderAccent,
   folderSurfaceCss,
+  noteFolderOrder,
   noteHomeOrder,
   type FolderV2Record,
   type NoteV2Meta,
@@ -70,6 +72,7 @@ interface OpenedEditor {
 
 type ViewMode = 'home' | 'recents'
 type CreateKind = 'chooser' | 'folder' | 'tag' | null
+type NoteOrderScope = 'home' | 'folder'
 
 const dateFormatter = new Intl.DateTimeFormat('es', {
   day: 'numeric',
@@ -117,15 +120,23 @@ function folderStyle(folder: FolderV2Record): CSSProperties {
   } as CSSProperties
 }
 
-function orderForMovedNote(previous: NoteV2Meta | null, next: NoteV2Meta | null): number | null {
+function noteOrderForScope(note: NoteV2Meta, scope: NoteOrderScope): number {
+  return scope === 'folder' ? noteFolderOrder(note) : noteHomeOrder(note)
+}
+
+function orderForMovedNote(
+  previous: NoteV2Meta | null,
+  next: NoteV2Meta | null,
+  scope: NoteOrderScope,
+): number | null {
   if (previous && next) {
-    const previousOrder = noteHomeOrder(previous)
-    const nextOrder = noteHomeOrder(next)
+    const previousOrder = noteOrderForScope(previous, scope)
+    const nextOrder = noteOrderForScope(next, scope)
     const midpoint = previousOrder + (nextOrder - previousOrder) / 2
     return midpoint > previousOrder && midpoint < nextOrder ? midpoint : null
   }
-  if (previous) return noteHomeOrder(previous) + 1
-  if (next) return noteHomeOrder(next) - 1
+  if (previous) return noteOrderForScope(previous, scope) + 1
+  if (next) return noteOrderForScope(next, scope) - 1
   return null
 }
 
@@ -266,10 +277,20 @@ export function RebuildApp({ onLock }: RebuildAppProps) {
     if (saving || noteCardBusy) return
     setError('')
     try {
+      const folderId = activeFolderId
+      const fallbackOrder = -Date.now()
       const nextOrder = notes.length > 0
         ? Math.min(...notes.map((note) => noteHomeOrder(note))) - 1
-        : -Date.now()
-      const created = await createRebuildNote(activeFolderId, nextOrder)
+        : fallbackOrder
+      const folderNotes = folderId
+        ? notes.filter((note) => note.folderId === folderId)
+        : []
+      const nextFolderOrder = folderId
+        ? folderNotes.length > 0
+          ? Math.min(...folderNotes.map((note) => noteFolderOrder(note))) - 1
+          : fallbackOrder
+        : undefined
+      const created = await createRebuildNote(folderId, nextOrder, nextFolderOrder)
       setNotes((current) => [created.meta, ...current])
       commitOpenedEditor({
         meta: created.meta,
@@ -461,21 +482,28 @@ export function RebuildApp({ onLock }: RebuildAppProps) {
       || openingNote
       || saving
       || viewMode !== 'home'
-      || activeFolderId !== null
       || activeTagId !== null
       || query.trim().length > 0
     ) return
 
-    const nextOrder = orderForMovedNote(previous, next)
-    if (nextOrder === null || nextOrder === noteHomeOrder(note)) return
+    const folderId = activeFolderId
+    const scope: NoteOrderScope = folderId ? 'folder' : 'home'
+    if (folderId && note.folderId !== folderId) return
 
-    const optimistic = { ...note, order: nextOrder }
+    const nextOrder = orderForMovedNote(previous, next, scope)
+    if (nextOrder === null || nextOrder === noteOrderForScope(note, scope)) return
+
+    const optimistic: NoteV2Meta = folderId
+      ? { ...note, folderOrder: { folderId, order: nextOrder } }
+      : { ...note, order: nextOrder }
     setNoteCardBusy(true)
     setError('')
     setNotes((current) => current.map((item) => item.id === note.id ? optimistic : item))
 
     try {
-      const updated = await saveRebuildNoteOrder(note, nextOrder)
+      const updated = folderId
+        ? await saveRebuildNoteFolderOrder(note, folderId, nextOrder)
+        : await saveRebuildNoteOrder(note, nextOrder)
       mergeUpdatedNoteMetadata([updated])
     } catch (moveError) {
       setNotes((current) => current.map((item) => item.id === note.id ? note : item))
@@ -631,11 +659,12 @@ export function RebuildApp({ onLock }: RebuildAppProps) {
             <NoteListSection
               notes={visibleNotes}
               folderById={folderById}
-              canReorder={
+              orderMode={
                 viewMode === 'home'
-                && activeFolderId === null
                 && activeTagId === null
                 && query.trim().length === 0
+                  ? activeFolderId === null ? 'home' : 'folder'
+                  : null
               }
               onOpen={(noteId) => void openNote(noteId)}
               onDelete={(note) => void removeNote(note)}
