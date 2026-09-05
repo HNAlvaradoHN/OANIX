@@ -42,14 +42,22 @@ import {
   loadRebuildWorkspace,
   readRebuildNote,
   saveRebuildNote,
+  saveRebuildNoteCard,
+  saveRebuildNoteFolderOrder,
+  saveRebuildNoteOrder,
+  type RebuildNoteCardCustomization,
 } from './rebuildService'
 import {
   folderAccent,
   folderSurfaceCss,
+  noteFolderOrder,
+  noteHomeOrder,
   type FolderV2Record,
   type NoteV2Meta,
   type TagV2Record,
 } from './rebuildModel'
+import { NoteCardCustomizationDialog } from './NoteCardCustomizationDialog'
+import { NoteListSection } from './NoteListSection'
 import { WorkspaceHomeController } from './WorkspaceHomeController'
 import './rebuild.css'
 
@@ -64,6 +72,7 @@ interface OpenedEditor {
 
 type ViewMode = 'home' | 'recents'
 type CreateKind = 'chooser' | 'folder' | 'tag' | null
+type NoteOrderScope = 'home' | 'folder'
 
 const dateFormatter = new Intl.DateTimeFormat('es', {
   day: 'numeric',
@@ -111,6 +120,26 @@ function folderStyle(folder: FolderV2Record): CSSProperties {
   } as CSSProperties
 }
 
+function noteOrderForScope(note: NoteV2Meta, scope: NoteOrderScope): number {
+  return scope === 'folder' ? noteFolderOrder(note) : noteHomeOrder(note)
+}
+
+function orderForMovedNote(
+  previous: NoteV2Meta | null,
+  next: NoteV2Meta | null,
+  scope: NoteOrderScope,
+): number | null {
+  if (previous && next) {
+    const previousOrder = noteOrderForScope(previous, scope)
+    const nextOrder = noteOrderForScope(next, scope)
+    const midpoint = previousOrder + (nextOrder - previousOrder) / 2
+    return midpoint > previousOrder && midpoint < nextOrder ? midpoint : null
+  }
+  if (previous) return noteOrderForScope(previous, scope) + 1
+  if (next) return noteOrderForScope(next, scope) - 1
+  return null
+}
+
 export function RebuildApp({ onLock }: RebuildAppProps) {
   const [notes, setNotes] = useState<NoteV2Meta[]>([])
   const [folders, setFolders] = useState<FolderV2Record[]>([])
@@ -135,6 +164,8 @@ export function RebuildApp({ onLock }: RebuildAppProps) {
   const editorSaveCoordinator = editorSaveCoordinatorRef.current
   const [saving, setSaving] = useState(false)
   const [openingNote, setOpeningNote] = useState(false)
+  const [customizingNote, setCustomizingNote] = useState<NoteV2Meta | null>(null)
+  const [noteCardBusy, setNoteCardBusy] = useState(false)
   const [accountOpen, setAccountOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [theme, setTheme] = useState<OanixThemePreset['id']>(() => readSavedOanixTheme())
@@ -226,7 +257,7 @@ export function RebuildApp({ onLock }: RebuildAppProps) {
   }
 
   async function openNote(noteId: string) {
-    if (openingNote || saving) return
+    if (openingNote || saving || noteCardBusy) return
     setOpeningNote(true)
     setError('')
     try {
@@ -243,10 +274,23 @@ export function RebuildApp({ onLock }: RebuildAppProps) {
   }
 
   async function createNote() {
-    if (saving) return
+    if (saving || noteCardBusy) return
     setError('')
     try {
-      const created = await createRebuildNote(activeFolderId)
+      const folderId = activeFolderId
+      const fallbackOrder = -Date.now()
+      const nextOrder = notes.length > 0
+        ? Math.min(...notes.map((note) => noteHomeOrder(note))) - 1
+        : fallbackOrder
+      const folderNotes = folderId
+        ? notes.filter((note) => note.folderId === folderId)
+        : []
+      const nextFolderOrder = folderId
+        ? folderNotes.length > 0
+          ? Math.min(...folderNotes.map((note) => noteFolderOrder(note))) - 1
+          : fallbackOrder
+        : undefined
+      const created = await createRebuildNote(folderId, nextOrder, nextFolderOrder)
       setNotes((current) => [created.meta, ...current])
       commitOpenedEditor({
         meta: created.meta,
@@ -393,7 +437,7 @@ export function RebuildApp({ onLock }: RebuildAppProps) {
   }
 
   async function removeNote(note: NoteV2Meta) {
-    if (openingNote || saving) return
+    if (openingNote || saving || noteCardBusy) return
     if (!window.confirm(`¿Eliminar la nota “${note.title}”?\n\nEsta acción eliminará la nota y su contenido.`)) return
 
     setError('')
@@ -402,6 +446,70 @@ export function RebuildApp({ onLock }: RebuildAppProps) {
       setNotes((current) => current.filter((item) => item.id !== note.id))
     } catch (deleteError) {
       setError(deleteError instanceof Error ? deleteError.message : 'No se pudo eliminar la nota.')
+    }
+  }
+
+  async function saveNoteCard(
+    note: NoteV2Meta,
+    input: RebuildNoteCardCustomization,
+  ): Promise<boolean> {
+    if (noteCardBusy || openingNote || saving) return false
+    setNoteCardBusy(true)
+    setError('')
+    try {
+      const updated = await saveRebuildNoteCard(note, input)
+      mergeUpdatedNoteMetadata([updated])
+      const currentEditor = editorRef.current
+      if (currentEditor?.meta.id === updated.id) {
+        commitOpenedEditor({ ...currentEditor, meta: updated })
+      }
+      return true
+    } catch (customizeError) {
+      setError(customizeError instanceof Error ? customizeError.message : 'No se pudo personalizar la nota.')
+      return false
+    } finally {
+      setNoteCardBusy(false)
+    }
+  }
+
+  async function moveNote(
+    note: NoteV2Meta,
+    previous: NoteV2Meta | null,
+    next: NoteV2Meta | null,
+  ) {
+    if (
+      noteCardBusy
+      || openingNote
+      || saving
+      || viewMode !== 'home'
+      || activeTagId !== null
+      || query.trim().length > 0
+    ) return
+
+    const folderId = activeFolderId
+    const scope: NoteOrderScope = folderId ? 'folder' : 'home'
+    if (folderId && note.folderId !== folderId) return
+
+    const nextOrder = orderForMovedNote(previous, next, scope)
+    if (nextOrder === null || nextOrder === noteOrderForScope(note, scope)) return
+
+    const optimistic: NoteV2Meta = folderId
+      ? { ...note, folderOrder: { folderId, order: nextOrder } }
+      : { ...note, order: nextOrder }
+    setNoteCardBusy(true)
+    setError('')
+    setNotes((current) => current.map((item) => item.id === note.id ? optimistic : item))
+
+    try {
+      const updated = folderId
+        ? await saveRebuildNoteFolderOrder(note, folderId, nextOrder)
+        : await saveRebuildNoteOrder(note, nextOrder)
+      mergeUpdatedNoteMetadata([updated])
+    } catch (moveError) {
+      setNotes((current) => current.map((item) => item.id === note.id ? note : item))
+      setError(moveError instanceof Error ? moveError.message : 'No se pudo mover la nota.')
+    } finally {
+      setNoteCardBusy(false)
     }
   }
 
@@ -548,42 +656,22 @@ export function RebuildApp({ onLock }: RebuildAppProps) {
               <p>{query ? 'Prueba con otra búsqueda.' : 'Crea una nota con el botón + para empezar.'}</p>
             </div>
           ) : (
-            <div className="rebuild-note-list">
-              {visibleNotes.map((note) => {
-                const folder = note.folderId ? folderById.get(note.folderId) ?? null : null
-                return (
-                  <div key={note.id} className="rebuild-note-row">
-                    <button
-                      type="button"
-                      className="rebuild-note-row__open"
-                      onClick={() => void openNote(note.id)}
-                    >
-                      <span
-                        className="rebuild-note-row__avatar"
-                        style={folder ? folderStyle(folder) : undefined}
-                        aria-hidden="true"
-                      >
-                        {folder?.icon ?? '📝'}
-                      </span>
-                      <span className="rebuild-note-row__main">
-                        <strong>{note.title}</strong>
-                        <small>{folder?.name ?? 'Sin carpeta'}</small>
-                      </span>
-                      <span className="rebuild-note-row__time">{formatNoteTime(note.updatedAt)}</span>
-                    </button>
-                    <button
-                      type="button"
-                      className="rebuild-note-row__delete"
-                      onClick={() => void removeNote(note)}
-                      aria-label={`Eliminar ${note.title}`}
-                      title="Eliminar nota"
-                    >
-                      🗑️
-                    </button>
-                  </div>
-                )
-              })}
-            </div>
+            <NoteListSection
+              notes={visibleNotes}
+              folderById={folderById}
+              orderMode={
+                viewMode === 'home'
+                && activeTagId === null
+                && query.trim().length === 0
+                  ? activeFolderId === null ? 'home' : 'folder'
+                  : null
+              }
+              onOpen={(noteId) => void openNote(noteId)}
+              onDelete={(note) => void removeNote(note)}
+              onCustomize={setCustomizingNote}
+              onMove={(note, previous, next) => void moveNote(note, previous, next)}
+              formatTime={formatNoteTime}
+            />
           )}
         </section>
 
@@ -732,6 +820,15 @@ export function RebuildApp({ onLock }: RebuildAppProps) {
           </section>
         </div>
       )}
+
+      <NoteCardCustomizationDialog
+        note={customizingNote}
+        busy={noteCardBusy}
+        onClose={() => {
+          if (!noteCardBusy) setCustomizingNote(null)
+        }}
+        onSave={saveNoteCard}
+      />
 
       {settingsOpen && (
         <div className="rebuild-modal-host" role="presentation">

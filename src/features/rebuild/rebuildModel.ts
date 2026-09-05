@@ -34,6 +34,11 @@ export const V2_FOLDER_ICONS = [
   '⚡', '🔥', '☕', '🎓', '🧳', '🩺', '📝', '📦', '🛠️',
 ] as const
 
+export interface NoteV2FolderOrder {
+  folderId: string
+  order: number
+}
+
 export interface NoteV2Meta {
   version: 2
   revision: number
@@ -41,6 +46,14 @@ export interface NoteV2Meta {
   title: string
   folderId: string | null
   tagIds: string[]
+  /** Stable manual position on Inicio → Todas. Older records fall back to createdAt. */
+  order?: number
+  /** Stable manual position inside the note's current folder. */
+  folderOrder?: NoteV2FolderOrder
+  /** Optional soft card tint. The UI applies this with low opacity. */
+  cardColor?: string | null
+  /** Optional per-note icon shown on the note list card. */
+  cardIcon?: string | null
   createdAt: string
   updatedAt: string
 }
@@ -153,6 +166,28 @@ function colorWithAlpha(hex: string, alpha: number): string {
   const blue = value & 255
   const a = Math.max(0, Math.min(1, alpha))
   return `rgba(${red}, ${green}, ${blue}, ${a})`
+}
+
+function fallbackNoteOrder(note: NoteV2Meta): number {
+  const createdAt = Date.parse(note.createdAt)
+  return Number.isFinite(createdAt) ? -createdAt : 0
+}
+
+export function noteHomeOrder(note: NoteV2Meta): number {
+  if (typeof note.order === 'number' && Number.isFinite(note.order)) return note.order
+  return fallbackNoteOrder(note)
+}
+
+export function noteFolderOrder(note: NoteV2Meta): number {
+  if (
+    note.folderId
+    && note.folderOrder?.folderId === note.folderId
+    && typeof note.folderOrder.order === 'number'
+    && Number.isFinite(note.folderOrder.order)
+  ) {
+    return note.folderOrder.order
+  }
+  return fallbackNoteOrder(note)
 }
 
 export function folderGradientCss(index: number, alpha = 1): string {
