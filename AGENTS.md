@@ -2,6 +2,14 @@
 
 Este archivo es la puerta de entrada obligatoria para cualquier IA, agente de código o colaborador que vaya a continuar OANIX.
 
+## Repositorio canónico
+
+- OANIX vive en `HNAlvaradoHN/OANIX`.
+- La rama de autoridad es `main`.
+- Toda consulta o modificación de OANIX debe comenzar explícitamente acotada a `HNAlvaradoHN/OANIX`.
+- Si una herramienta abre, recuerda o sugiere otro repositorio, no usarlo para inferir estado de OANIX. Volver primero a `HNAlvaradoHN/OANIX`.
+- No usar búsquedas globales de GitHub para descubrir el repositorio de OANIX cuando este archivo o la documentación de continuidad estén disponibles.
+
 ## Objetivo
 
 El repositorio debe servir también como memoria operativa del proyecto. Si el usuario entrega únicamente el enlace de GitHub y dice algo como **«continuemos con lo que estaba»**, no se le debe pedir que reconstruya conversaciones anteriores si la información ya está registrada aquí o en la documentación de continuidad.
@@ -9,17 +17,21 @@ El repositorio debe servir también como memoria operativa del proyecto. Si el u
 Antes de proponer o implementar un cambio, leer y contrastar:
 
 1. `AGENTS.md` — reglas de trabajo y traspaso entre IAs.
-2. `docs/CURRENT_STATE.md` — checkpoint corto y actualizado para reanudar desde otro chat.
-3. `docs/ROADMAP.md` — alcance oficial, versión activa y orden obligatorio.
-4. `docs/PROJECT_MEMORY.md` — decisiones funcionales, pendientes, ideas diferidas, excepciones y contexto histórico de continuidad.
-5. `docs/ARCHITECTURE.md` — arquitectura vigente.
-6. `docs/SECURITY.md` — invariantes y modelo de seguridad.
-7. `docs/CHANGELOG.md` — cambios ya realizados.
-8. Código, issues, PRs y pruebas de `main` — verificación final del estado realmente implementado.
+2. `docs/OANIX_CHAT_PROTOCOL.md` — repositorio canónico, número rodante del chat y protocolo de arranque.
+3. `docs/OANIX_ACTIVE_CHECKPOINT.md` — punto operativo único y siguiente acción exacta.
+4. `docs/CURRENT_STATE.md` — checkpoint general actualizado para reanudar desde otro chat.
+5. `docs/ROADMAP.md` — alcance oficial, versión activa y orden obligatorio.
+6. `docs/PROJECT_MEMORY.md` — decisiones funcionales, pendientes, ideas diferidas, excepciones y contexto duradero; **no es autoridad para el número del chat**.
+7. `docs/ARCHITECTURE.md` — arquitectura vigente.
+8. `docs/SECURITY.md` — invariantes y modelo de seguridad.
+9. `docs/CHANGELOG.md` — cambios ya realizados.
+10. Código, issues, PRs y pruebas de `main` — verificación final del estado realmente implementado.
+
+`docs/OANIX_CHAT_PROTOCOL.md` y `docs/OANIX_ACTIVE_CHECKPOINT.md` son las únicas autoridades documentales para identificar qué número OANIX corresponde al chat actual. Los números de chats anteriores pertenecen al historial de Git y no deben inferirse desde ejemplos, memoria duradera o documentos antiguos.
 
 `docs/CURRENT_STATE.md` es un checkpoint operativo, no reemplaza los documentos históricos. Si contradice `main`, prevalece el repositorio real y debe corregirse el checkpoint.
 
-No asumir que un chat, una memoria externa o una descripción antigua representa el estado actual. Verificar siempre el repositorio.
+No asumir que un chat, una memoria externa o una descripción antigua representa el estado actual. Verificar siempre `HNAlvaradoHN/OANIX`.
 
 ## Identidad y principios de OANIX
 
@@ -80,14 +92,14 @@ Usar estados consistentes:
 - `SUPERSEDED`: reemplazado por una decisión posterior; conservar el historial y señalar la nueva decisión.
 - `CANCELLED`: se decidió no hacerlo.
 
-No borrar silenciosamente decisiones anteriores. Si cambian, marcarlas como sustituidas para conservar la trazabilidad.
+No borrar silenciosamente decisiones anteriores. Si cambian, marcarlas como sustituidas para conservar la trazabilidad. Esta regla aplica a decisiones de producto/arquitectura, no al contador rodante de chats: los números anteriores no deben conservarse como autoridad activa.
 
 ## Protocolo después de implementar
 
 Al completar un cambio relevante:
 
 1. verificar pruebas y CI aplicables;
-2. actualizar la documentación de continuidad (`docs/CURRENT_STATE.md` y/o `docs/PROJECT_MEMORY.md` según corresponda);
+2. actualizar la documentación de continuidad (`docs/OANIX_ACTIVE_CHECKPOINT.md`, `docs/CURRENT_STATE.md` y/o `docs/PROJECT_MEMORY.md` según corresponda);
 3. actualizar `docs/CHANGELOG.md` cuando el cambio forme parte del historial de producto;
 4. actualizar `docs/ROADMAP.md` cuando corresponda cambiar el estado oficial de un bloque;
 5. mantener `AGENTS.md` estable salvo que cambien las reglas generales o su checkpoint de continuidad quede obsoleto.
@@ -103,6 +115,8 @@ Detenerse para pedir decisión únicamente cuando exista una alternativa real qu
 ## Regla operativa de GitHub
 
 Cuando el agente tenga herramientas integradas de GitHub debe usarlas directamente para ramas, archivos, PRs, CI, logs, reintentos, merges, issues y artifacts. No convertir al usuario en operador de GitHub si la herramienta puede realizar la acción.
+
+Todas esas operaciones deben dirigirse a `HNAlvaradoHN/OANIX` salvo instrucción explícita del usuario en sentido contrario.
 
 Si una tarea requiere prueba física en Android, el agente debe llegar hasta generar/verificar el artifact y, cuando sus herramientas lo permitan, entregar la APK directamente al usuario. Nunca afirmar que un build fue probado físicamente si solo pasó CI.
 
@@ -123,22 +137,22 @@ No reactivar workspace/runtimes visuales legacy para acelerar esta reconstrucci�
 
 ## Estado de continuidad actual
 
-A fecha de **2026-08-31**:
+El detalle operativo vivo no se duplica aquí. Consultar siempre `docs/OANIX_ACTIVE_CHECKPOINT.md` y verificarlo contra el `main` real antes de continuar.
 
-- `RebuildApp` es la autoridad post-unlock.
-- `encrypted_records_v2` es el store cifrado v2 indexado y aditivo.
-- La UI/runtime legacy ya fue aislada del arranque y la limpieza física del árbol activo está en curso.
-- Seguridad, vault/session, cifrado y datos antiguos permanecen preservados.
-- La sincronización nueva consciente de actividad está decidida pero todavía no conectada.
-- El siguiente bloque es el editor nuevo con la alineación de renglones recuperada del historial.
+Reglas permanentes:
+- `RebuildApp` es la autoridad post-unlock mientras `main` no demuestre una sustitución posterior.
+- `encrypted_records_v2` es el store cifrado v2 indexado y aditivo mientras `main` no demuestre una sustitución posterior.
+- Seguridad, vault/session, cifrado y datos antiguos deben permanecer preservados.
 - Toda UI nueva debe validarse en PC + móvil + Día + Noche.
 - Un trabajo no se considera cerrado mientras CI, Android o Pages aplicables estén rojos; corregir y volver a validar hasta verde.
 
 ## Regla especial de traspaso entre IAs
 
-Cuando una IA nueva reciba este repositorio:
+Cuando una IA nueva reciba este proyecto:
 
-- debe leer `AGENTS.md` y `docs/CURRENT_STATE.md` primero, después los documentos históricos y el estado real de `main`;
+- debe fijar primero `HNAlvaradoHN/OANIX` como repositorio canónico;
+- debe leer `AGENTS.md`, `docs/OANIX_CHAT_PROTOCOL.md` y `docs/OANIX_ACTIVE_CHECKPOINT.md` antes de inferir número o siguiente acción;
+- debe leer después `docs/CURRENT_STATE.md`, los documentos duraderos y el estado real de `main`;
 - no debe inventar requisitos para llenar huecos;
 - si encuentra contradicciones, debe señalarlas y usar evidencia del repo antes de actuar;
 - no debe pedir al usuario que repita decisiones que ya estén registradas;
