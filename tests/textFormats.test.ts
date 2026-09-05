@@ -126,18 +126,22 @@ test('empty heading resulting from line normalization is paragraph immediately',
   assert.equal(normalized.lines[0].format, 'paragraph')
 })
 
-test('new line editor owns focus, Backspace and scrolling without the old remount bridge', () => {
+test('line editor keeps the original contenteditable DOM interaction instead of textarea remounts', () => {
   const editor = readFileSync('src/features/editor/implementations/OanixTextLineEditor.tsx', 'utf8')
   const host = readFileSync('src/features/editor/EditorSurface.tsx', 'utf8')
   const css = readFileSync('src/features/editor/implementations/oanixNotesSheetMobileSafeArea.css', 'utf8')
 
   assert.equal(existsSync('src/features/editor/oanixTextBehaviorBridge.ts'), false)
   assert.doesNotMatch(host, /behaviorRevision|installOanixTextBehaviorBridge/)
+  assert.match(editor, /contentEditable=\{!disabled\}/)
+  assert.doesNotMatch(editor, /<textarea/)
+  assert.match(editor, /document\.createRange\(\)/)
+  assert.match(editor, /range\.deleteContents\(\)/)
   assert.match(editor, /event\.key !== 'Backspace'/)
   assert.match(editor, /focus\(\{ preventScroll: true \}\)/)
   assert.match(editor, /scrollIntoView\(\{ block: 'nearest' \}\)/)
   assert.match(editor, /stopImmediatePropagation\(\)/)
-  assert.match(editor, /value=\{line\.text\}/)
+  assert.match(editor, /clipboardData\.getData\('text\/plain'\)/)
   assert.match(css, /--oanix-h2-ruled-step: 42px/)
   assert.match(css, /--oanix-h3-ruled-step: 36px/)
   assert.match(css, /line-height: var\(--oanix-h2-ruled-step\)/)
