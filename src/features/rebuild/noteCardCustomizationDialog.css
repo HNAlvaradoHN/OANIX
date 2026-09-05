@@ -1,0 +1,111 @@
+.note-card-customization__dialog {
+  width: min(31rem, 100%);
+}
+
+.note-card-customization__hint {
+  margin: -.25rem 0 .9rem;
+  color: var(--rb-muted);
+  font-size: .76rem;
+  line-height: 1.45;
+}
+
+.note-card-customization__group {
+  display: grid;
+  gap: .65rem;
+  margin: 0 0 .9rem;
+  padding: .8rem;
+  border: 1px solid var(--rb-line);
+  border-radius: .85rem;
+  background: color-mix(in srgb, var(--rb-bg-0) 58%, transparent);
+}
+
+.note-card-customization__group legend {
+  padding: 0 .25rem;
+  color: var(--rb-muted);
+  font-size: .7rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.note-card-customization__icons,
+.note-card-customization__colors {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(2.5rem, 1fr));
+  gap: .38rem;
+}
+
+.note-card-customization__icons button,
+.note-card-customization__colors button {
+  min-width: 0;
+  height: 2.55rem;
+  border: 1px solid var(--rb-line);
+  border-radius: .7rem;
+  background-color: var(--rb-bg-2);
+}
+
+.note-card-customization__icons button {
+  font-size: 1.2rem;
+}
+
+.note-card-customization__icons button.is-active,
+.note-card-customization__colors button.is-active {
+  border-color: color-mix(in srgb, #7c5cff 72%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, #7c5cff 18%, transparent);
+}
+
+.note-card-customization__colors button {
+  position: relative;
+  overflow: hidden;
+}
+
+.note-card-customization__colors button::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(rgba(255,255,255,.06), rgba(0,0,0,.08));
+  pointer-events: none;
+}
+
+.note-card-customization__colors .note-card-customization__no-color {
+  display: grid;
+  place-items: center;
+  background: var(--rb-bg-2);
+  color: var(--rb-muted);
+  font-size: 1rem;
+}
+
+.note-card-customization__own-icon,
+.note-card-customization__color-input {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .7rem;
+  color: var(--rb-muted);
+  font-size: .75rem;
+}
+
+.note-card-customization__own-icon input {
+  width: 6rem;
+  min-height: 2.4rem;
+  padding: .45rem .6rem;
+  border: 1px solid var(--rb-line);
+  border-radius: .65rem;
+  outline: 0;
+  background: var(--rb-bg-2);
+  color: var(--rb-text);
+  text-align: center;
+  font-size: 1.05rem;
+}
+
+.note-card-customization__own-icon input:focus {
+  border-color: color-mix(in srgb, #7c5cff 55%, transparent);
+}
+
+.note-card-customization__color-input input[type="color"] {
+  width: 3.15rem;
+  height: 2.4rem;
+  padding: .18rem;
+  border: 1px solid var(--rb-line);
+  border-radius: .65rem;
+  background: var(--rb-bg-2);
+}
