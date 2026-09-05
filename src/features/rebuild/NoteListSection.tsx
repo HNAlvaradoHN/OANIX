@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -54,6 +55,7 @@ const AUTO_SCROLL_EDGE_PX = 82
 const AUTO_SCROLL_MIN_PX = 0.8
 const AUTO_SCROLL_MAX_PX = 12
 const AUTO_SCROLL_EASING = 0.2
+const REORDER_ANIMATION_MS = 120
 
 function folderStyle(folder: FolderV2Record): CSSProperties {
   return {
@@ -115,6 +117,9 @@ export function NoteListSection({
   const pointerPositionRef = useRef<PointerPosition | null>(null)
   const autoScrollFrameRef = useRef<number | null>(null)
   const autoScrollVelocityRef = useRef(0)
+  const rowElementsRef = useRef(new Map<string, HTMLElement>())
+  const rowBeforeReorderRef = useRef(new Map<string, number>())
+  const rowAnimationsRef = useRef(new Map<string, Animation>())
 
   const renderedNotes = useMemo(() => {
     if (!dragOrder) return displayedNotes
@@ -137,6 +142,19 @@ export function NoteListSection({
     }
   }
 
+  function cancelRowAnimations() {
+    for (const animation of rowAnimationsRef.current.values()) animation.cancel()
+    rowAnimationsRef.current.clear()
+  }
+
+  function captureRowPositions() {
+    const positions = new Map<string, number>()
+    for (const [noteId, row] of rowElementsRef.current) {
+      positions.set(noteId, row.getBoundingClientRect().top)
+    }
+    rowBeforeReorderRef.current = positions
+  }
+
   function clearPressCandidate() {
     clearPressTimer()
     pressCandidateRef.current = null
@@ -148,10 +166,53 @@ export function NoteListSection({
     return () => {
       if (pressTimerRef.current !== null) window.clearTimeout(pressTimerRef.current)
       if (autoScrollFrameRef.current !== null) window.cancelAnimationFrame(autoScrollFrameRef.current)
+      cancelRowAnimations()
     }
   }, [])
 
+  useLayoutEffect(() => {
+    const before = rowBeforeReorderRef.current
+    rowBeforeReorderRef.current = new Map()
+    if (!dragOrder || before.size === 0) return
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+
+    const activeId = draggingIdRef.current
+    for (const [noteId, row] of rowElementsRef.current) {
+      const previousTop = before.get(noteId)
+      if (previousTop === undefined) continue
+      const deltaY = previousTop - row.getBoundingClientRect().top
+      if (Math.abs(deltaY) < 0.5) continue
+
+      const scale = noteId === activeId ? 1.018 : 0.985
+      const animation = row.animate(
+        [
+          { transform: `translateY(${deltaY}px) scale(${scale})` },
+          { transform: `translateY(0) scale(${scale})` },
+        ],
+        {
+          duration: REORDER_ANIMATION_MS,
+          easing: 'cubic-bezier(.2,.8,.2,1)',
+        },
+      )
+      rowAnimationsRef.current.set(noteId, animation)
+      const clearAnimation = () => {
+        if (rowAnimationsRef.current.get(noteId) === animation) {
+          rowAnimationsRef.current.delete(noteId)
+        }
+      }
+      animation.onfinish = clearAnimation
+      animation.oncancel = clearAnimation
+    }
+  }, [dragOrder])
+
   function updateDragOrder(next: string[] | null) {
+    if (next && dragOrderRef.current && !sameOrder(dragOrderRef.current, next)) {
+      captureRowPositions()
+      cancelRowAnimations()
+    } else if (next === null) {
+      rowBeforeReorderRef.current = new Map()
+      cancelRowAnimations()
+    }
     dragOrderRef.current = next
     setDragOrderState(next)
   }
@@ -431,6 +492,10 @@ export function NoteListSection({
         return (
           <div
             key={note.id}
+            ref={(row) => {
+              if (row) rowElementsRef.current.set(note.id, row)
+              else rowElementsRef.current.delete(note.id)
+            }}
             className={`rebuild-note-row${dragClass}`}
             data-oanix-note-id={note.id}
             data-note-tint={note.cardColor ? 'true' : undefined}
