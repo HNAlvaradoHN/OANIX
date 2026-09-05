@@ -1,4 +1,5 @@
 import {
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -25,6 +26,17 @@ interface NoteListSectionProps {
   onMove: (note: NoteV2Meta, previous: NoteV2Meta | null, next: NoteV2Meta | null) => void
   formatTime: (iso: string) => string
 }
+
+interface DragPressCandidate {
+  noteId: string
+  pointerId: number
+  startX: number
+  startY: number
+  armed: boolean
+}
+
+const DRAG_HOLD_MS = 200
+const DRAG_MOVE_THRESHOLD_PX = 6
 
 function folderStyle(folder: FolderV2Record): CSSProperties {
   return {
@@ -68,8 +80,12 @@ export function NoteListSection({
     })
   }, [notes, canReorder])
 
+  const [pressingId, setPressingId] = useState<string | null>(null)
+  const [readyId, setReadyId] = useState<string | null>(null)
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [dragOrder, setDragOrderState] = useState<string[] | null>(null)
+  const pressCandidateRef = useRef<DragPressCandidate | null>(null)
+  const pressTimerRef = useRef<number | null>(null)
   const draggingIdRef = useRef<string | null>(null)
   const dragOrderRef = useRef<string[] | null>(null)
   const pointerIdRef = useRef<number | null>(null)
@@ -79,6 +95,26 @@ export function NoteListSection({
     const byId = new Map(displayedNotes.map((note) => [note.id, note]))
     return dragOrder.map((id) => byId.get(id)).filter((note): note is NoteV2Meta => Boolean(note))
   }, [displayedNotes, dragOrder])
+
+  function clearPressTimer() {
+    if (pressTimerRef.current !== null) {
+      window.clearTimeout(pressTimerRef.current)
+      pressTimerRef.current = null
+    }
+  }
+
+  function clearPressCandidate() {
+    clearPressTimer()
+    pressCandidateRef.current = null
+    setPressingId(null)
+    setReadyId(null)
+  }
+
+  useEffect(() => {
+    return () => {
+      if (pressTimerRef.current !== null) window.clearTimeout(pressTimerRef.current)
+    }
+  }, [])
 
   function updateDragOrder(next: string[] | null) {
     dragOrderRef.current = next
@@ -99,20 +135,68 @@ export function NoteListSection({
     onMove(note, previous, next)
   }
 
-  function beginDrag(event: PointerEvent<HTMLButtonElement>, noteId: string) {
+  function beginPress(event: PointerEvent<HTMLButtonElement>, noteId: string) {
     if (!canReorder || event.button !== 0) return
     event.preventDefault()
     event.stopPropagation()
 
+    clearPressCandidate()
+    const candidate: DragPressCandidate = {
+      noteId,
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      armed: false,
+    }
+    pressCandidateRef.current = candidate
+    setPressingId(noteId)
+    event.currentTarget.setPointerCapture(event.pointerId)
+
+    pressTimerRef.current = window.setTimeout(() => {
+      const current = pressCandidateRef.current
+      if (!current || current.pointerId !== event.pointerId || current.noteId !== noteId) return
+      current.armed = true
+      pressTimerRef.current = null
+      setReadyId(noteId)
+    }, DRAG_HOLD_MS)
+  }
+
+  function activateDrag(noteId: string, pointerId: number) {
+    clearPressTimer()
     const order = displayedNotes.map((note) => note.id)
     draggingIdRef.current = noteId
-    pointerIdRef.current = event.pointerId
+    pointerIdRef.current = pointerId
     setDraggingId(noteId)
+    setPressingId(null)
+    setReadyId(null)
     updateDragOrder(order)
-    event.currentTarget.setPointerCapture(event.pointerId)
+  }
+
+  function cancelPendingPress(event: PointerEvent<HTMLButtonElement>) {
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId)
+    }
+    clearPressCandidate()
   }
 
   function moveDrag(event: PointerEvent<HTMLButtonElement>) {
+    const candidate = pressCandidateRef.current
+    if (!candidate || candidate.pointerId !== event.pointerId) return
+
+    const distance = Math.hypot(
+      event.clientX - candidate.startX,
+      event.clientY - candidate.startY,
+    )
+
+    if (!draggingIdRef.current) {
+      if (!candidate.armed) {
+        if (distance >= DRAG_MOVE_THRESHOLD_PX) cancelPendingPress(event)
+        return
+      }
+      if (distance < DRAG_MOVE_THRESHOLD_PX) return
+      activateDrag(candidate.noteId, event.pointerId)
+    }
+
     if (pointerIdRef.current !== event.pointerId) return
     const noteId = draggingIdRef.current
     const order = dragOrderRef.current
@@ -138,7 +222,9 @@ export function NoteListSection({
   }
 
   function finishDrag(event: PointerEvent<HTMLButtonElement>, commit: boolean) {
-    if (pointerIdRef.current !== event.pointerId) return
+    const candidate = pressCandidateRef.current
+    const activePointer = pointerIdRef.current
+    if (candidate?.pointerId !== event.pointerId && activePointer !== event.pointerId) return
     event.preventDefault()
 
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
@@ -151,6 +237,7 @@ export function NoteListSection({
     pointerIdRef.current = null
     setDraggingId(null)
     updateDragOrder(null)
+    clearPressCandidate()
 
     if (commit && noteId && order) commitOrder(noteId, order)
   }
@@ -169,14 +256,21 @@ export function NoteListSection({
   }
 
   return (
-    <div className="rebuild-note-list">
+    <div className={`rebuild-note-list${draggingId ? ' is-reordering' : ''}`}>
       {renderedNotes.map((note) => {
         const folder = note.folderId ? folderById.get(note.folderId) ?? null : null
         const customized = Boolean(note.cardColor || note.cardIcon)
+        const dragClass = draggingId === note.id
+          ? ' is-dragging'
+          : readyId === note.id
+            ? ' is-drag-ready'
+            : pressingId === note.id
+              ? ' is-drag-pressing'
+              : ''
         return (
           <div
             key={note.id}
-            className={`rebuild-note-row${draggingId === note.id ? ' is-dragging' : ''}`}
+            className={`rebuild-note-row${dragClass}`}
             data-oanix-note-id={note.id}
             data-note-tint={note.cardColor ? 'true' : undefined}
             data-note-customized={customized ? 'true' : undefined}
@@ -202,10 +296,11 @@ export function NoteListSection({
                 <button
                   type="button"
                   className="rebuild-note-row__drag"
-                  onPointerDown={(event) => beginDrag(event, note.id)}
+                  onPointerDown={(event) => beginPress(event, note.id)}
                   onPointerMove={moveDrag}
                   onPointerUp={(event) => finishDrag(event, true)}
                   onPointerCancel={(event) => finishDrag(event, false)}
+                  onContextMenu={(event) => event.preventDefault()}
                   onKeyDown={(event) => moveWithKeyboard(event, note.id)}
                   aria-label={`Mover ${note.title || 'nota'}`}
                   title="Mantén presionado y arrastra para mover"
