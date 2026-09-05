@@ -1,6 +1,12 @@
 import { createContext, useContext } from 'react'
 import type { EditorSurfaceBlock, EditorSurfaceBlockChangeSet } from './editorSurfaceContract.ts'
 
+/**
+ * Persistence-only boundary supplied by EditorSurface.
+ *
+ * The notebook interaction model stays entirely inside OanixTextLineEditor; this
+ * context only exposes the existing OANIX block callbacks and the close-time flush.
+ */
 export interface OanixTextLineRuntimeValue {
   noteId: string
   loadBlocks?: () => Promise<EditorSurfaceBlock[]>
@@ -44,27 +50,4 @@ export async function flushOanixTextLineEditors(noteId: string) {
     }
   }))
   return results.every(Boolean)
-}
-
-export interface OanixTextLineSelection {
-  noteId: string
-  blockId: string
-  selectionStart: number
-  selectionEnd: number
-}
-
-let lastTextLineSelection: OanixTextLineSelection | null = null
-
-export function rememberOanixTextLineSelection(selection: OanixTextLineSelection) {
-  lastTextLineSelection = selection
-}
-
-export function readOanixTextLineSelection(noteId: string) {
-  return lastTextLineSelection?.noteId === noteId ? lastTextLineSelection : null
-}
-
-export function clearOanixTextLineSelection(noteId: string, blockId?: string) {
-  if (!lastTextLineSelection || lastTextLineSelection.noteId !== noteId) return
-  if (blockId && lastTextLineSelection.blockId !== blockId) return
-  lastTextLineSelection = null
 }
