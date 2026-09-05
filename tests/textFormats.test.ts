@@ -58,7 +58,7 @@ test('live line editor owns the NotebookEditor behavior without a parallel text-
   assert.match(editor, /lastSelectionRef/)
   assert.match(editor, /function getCurrentContext\(\)/)
   assert.match(editor, /const stored = lastSelectionRef\.current/)
-  assert.match(editor, /focus\(\{ preventScroll: true \}\)/)
+  assert.match(editor, /el\.focus\(\)/)
   assert.match(editor, /scrollIntoView\(\{ block: 'nearest' \}\)/)
 })
 
@@ -71,12 +71,25 @@ test('format behavior follows the reference applyFormat contract on the live edi
   assert.match(editor, /ctx\.lineEl\.textContent\.trim\(\)\.length === 0/)
   assert.match(editor, /insertLineAfter\(ctx\.line\.id, format, ''\)/)
   assert.match(editor, /focusLine\(inserted\.id, 0\)/)
-
-  // Selection lost by opening the OANIX side panel is restored from the last
-  // valid local selection instead of inventing a second formatting path.
-  assert.match(editor, /stored\.selectionStart/)
+  assert.match(editor, /lastSelectionRef/)
   assert.match(editor, /activeTextLineEditorByNote/)
-  assert.match(editor, /if \(!isActiveInteractionTarget\(\)\) return/)
+})
+
+test('opening the side panel dismisses the live IME while preserving the stored formatting target', () => {
+  const editor = readFileSync('src/features/editor/implementations/OanixTextLineEditor.tsx', 'utf8')
+
+  assert.match(editor, /button\[aria-label="Más"\], \.oanix-notes__slide-handle/)
+  assert.match(editor, /if \(active instanceof HTMLElement\) active\.blur\(\)/)
+  assert.match(editor, /window\.getSelection\(\)\?\.removeAllRanges\(\)/)
+  assert.match(editor, /const stored = lastSelectionRef\.current/)
+})
+
+test('format click closes the side panel and restores direct editing focus in the same gesture', () => {
+  const editor = readFileSync('src/features/editor/implementations/OanixTextLineEditor.tsx', 'utf8')
+
+  assert.match(editor, /root\.querySelector<HTMLButtonElement>\('\.oanix-notes__panel-close'\)\?\.click\(\)/)
+  assert.match(editor, /apiRef\.current\.applyFormat\(format\)/)
+  assert.match(editor, /el\.focus\(\)/)
 })
 
 test('Enter mutates the live DOM at the caret and creates a paragraph below', () => {
