@@ -284,6 +284,15 @@ export function NoteListSection({
     return direction * speed
   }
 
+  function reachedScrollBoundary(container: HTMLElement, velocity: number): boolean {
+    if (velocity < 0) return container.scrollTop <= 0
+    if (velocity > 0) {
+      const maxScrollTop = Math.max(0, container.scrollHeight - container.clientHeight)
+      return container.scrollTop >= maxScrollTop - 0.5
+    }
+    return false
+  }
+
   function runAutoScroll() {
     autoScrollFrameRef.current = null
     const noteId = draggingIdRef.current
@@ -296,16 +305,21 @@ export function NoteListSection({
     const nextVelocity = currentVelocity + (targetVelocity - currentVelocity) * AUTO_SCROLL_EASING
     autoScrollVelocityRef.current = Math.abs(nextVelocity) < 0.08 ? 0 : nextVelocity
 
-    if (autoScrollVelocityRef.current === 0) return
-
-    const before = container.scrollTop
-    container.scrollTop += autoScrollVelocityRef.current
-    if (container.scrollTop === before) {
+    if (targetVelocity === 0) {
       autoScrollVelocityRef.current = 0
       return
     }
 
-    reorderAtPoint(noteId, pointer.x, pointer.y)
+    if (reachedScrollBoundary(container, targetVelocity)) {
+      autoScrollVelocityRef.current = 0
+      return
+    }
+
+    if (autoScrollVelocityRef.current !== 0) {
+      container.scrollTop += autoScrollVelocityRef.current
+      reorderAtPoint(noteId, pointer.x, pointer.y)
+    }
+
     autoScrollFrameRef.current = window.requestAnimationFrame(runAutoScroll)
   }
 
