@@ -17,12 +17,42 @@
   background: color-mix(in srgb, var(--note-card-accent) 10%, transparent);
 }
 
+.rebuild-note-row {
+  transition:
+    opacity 140ms ease,
+    transform 140ms ease,
+    box-shadow 140ms ease,
+    background-color 140ms ease;
+}
+
+.rebuild-note-list.is-reordering .rebuild-note-row:not(.is-dragging) {
+  opacity: .58;
+  transform: scale(.985);
+}
+
 .rebuild-note-row.is-dragging {
   position: relative;
-  z-index: 3;
-  opacity: .72;
-  transform: scale(.99);
-  box-shadow: 0 .55rem 1.5rem rgba(0, 0, 0, .12);
+  z-index: 4;
+  opacity: 1;
+  transform: scale(1.018);
+  border-radius: .78rem;
+  background: color-mix(in srgb, var(--rb-bg-2) 88%, transparent);
+  box-shadow:
+    0 .72rem 1.8rem rgba(0, 0, 0, .2),
+    0 0 0 1px color-mix(in srgb, var(--rb-text) 10%, transparent);
+}
+
+.rebuild-note-row.is-drag-pressing .rebuild-note-row__drag {
+  transform: scale(.96);
+  opacity: .86;
+}
+
+.rebuild-note-row.is-drag-ready .rebuild-note-row__drag {
+  transform: scale(1.08);
+  border-color: color-mix(in srgb, #7c5cff 34%, var(--rb-line));
+  background: color-mix(in srgb, #7c5cff 13%, transparent);
+  color: var(--rb-text);
+  box-shadow: 0 0 0 .18rem color-mix(in srgb, #7c5cff 12%, transparent);
 }
 
 .rebuild-note-row__open {
@@ -83,14 +113,33 @@
   user-select: none;
   font-size: 1.05rem;
   line-height: 1;
+  transition:
+    transform 140ms ease,
+    opacity 140ms ease,
+    border-color 140ms ease,
+    background-color 140ms ease,
+    box-shadow 140ms ease;
 }
 
 .rebuild-note-row__drag:active {
   cursor: grabbing;
 }
 
+.rebuild-note-row.is-dragging .rebuild-note-row__drag {
+  cursor: grabbing;
+  transform: scale(1.08);
+  color: var(--rb-text);
+}
+
 .rebuild-note-row__delete {
   font-size: .92rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rebuild-note-row,
+  .rebuild-note-row__drag {
+    transition: none;
+  }
 }
 
 @media (max-width: 560px) {
