@@ -11,7 +11,7 @@
     "verify:pages": "node scripts/verify-pages-deployment.mjs",
     "android:sync": "npm run build:android && npx cap sync android",
     "android:open": "npm run android:sync && npx cap open android",
-    "test": "node --experimental-strip-types --test tests/*.test.ts",
+    "test": "node --experimental-strip-types --test --test-concurrency=4 tests/*.test.ts",
     "preview": "vite preview"
   },
   "dependencies": {
