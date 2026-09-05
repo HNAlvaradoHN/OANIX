@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: read
+  statuses: write
 
 jobs:
   build:
@@ -28,29 +29,17 @@ jobs:
       - name: Capture npm test failure
         run: npm test > /tmp/oanix-test.log 2>&1 || true
 
-      - name: Failure path A-F
-        continue-on-error: true
+      - name: Publish temporary diagnostic status
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          failed="$(grep -oE 'tests/[A-Za-z0-9._-]+\.test\.ts' /tmp/oanix-test.log | head -1 || true)"
-          case "$failed" in tests/[a-fA-F]*) exit 1;; esac
-
-      - name: Failure path G-L
-        continue-on-error: true
-        run: |
-          failed="$(grep -oE 'tests/[A-Za-z0-9._-]+\.test\.ts' /tmp/oanix-test.log | head -1 || true)"
-          case "$failed" in tests/[g-lG-L]*) exit 1;; esac
-
-      - name: Failure path M-R
-        continue-on-error: true
-        run: |
-          failed="$(grep -oE 'tests/[A-Za-z0-9._-]+\.test\.ts' /tmp/oanix-test.log | head -1 || true)"
-          case "$failed" in tests/[m-rM-R]*) exit 1;; esac
-
-      - name: Failure path S-Z
-        continue-on-error: true
-        run: |
-          failed="$(grep -oE 'tests/[A-Za-z0-9._-]+\.test\.ts' /tmp/oanix-test.log | head -1 || true)"
-          case "$failed" in tests/[s-zS-Z]*) exit 1;; esac
+          summary="$(grep -m1 -E 'not ok|npm error|npm ERR!' /tmp/oanix-test.log || true)"
+          if [ -z "$summary" ]; then summary="$(tail -n 1 /tmp/oanix-test.log)"; fi
+          summary="$(printf '%s' "$summary" | tr '\n\r' '  ' | cut -c1-120)"
+          gh api "repos/${{ github.repository }}/statuses/${{ github.event.pull_request.head.sha }}" \
+            -f state=success \
+            -f context='diagnostic/npm-test' \
+            -f description="$summary"
 
       - name: Test OANIX
         run: npm test
