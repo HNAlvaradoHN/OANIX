@@ -117,6 +117,18 @@ function folderStyle(folder: FolderV2Record): CSSProperties {
   } as CSSProperties
 }
 
+function orderForMovedNote(previous: NoteV2Meta | null, next: NoteV2Meta | null): number | null {
+  if (previous && next) {
+    const previousOrder = noteHomeOrder(previous)
+    const nextOrder = noteHomeOrder(next)
+    const midpoint = previousOrder + (nextOrder - previousOrder) / 2
+    return midpoint > previousOrder && midpoint < nextOrder ? midpoint : null
+  }
+  if (previous) return noteHomeOrder(previous) + 1
+  if (next) return noteHomeOrder(next) - 1
+  return null
+}
+
 export function RebuildApp({ onLock }: RebuildAppProps) {
   const [notes, setNotes] = useState<NoteV2Meta[]>([])
   const [folders, setFolders] = useState<FolderV2Record[]>([])
@@ -439,32 +451,34 @@ export function RebuildApp({ onLock }: RebuildAppProps) {
     }
   }
 
-  async function swapNotes(first: NoteV2Meta, second: NoteV2Meta) {
-    if (first.id === second.id || noteCardBusy || openingNote || saving) return
-    const firstOrder = noteHomeOrder(first)
-    const secondOrder = noteHomeOrder(second)
+  async function moveNote(
+    note: NoteV2Meta,
+    previous: NoteV2Meta | null,
+    next: NoteV2Meta | null,
+  ) {
+    if (
+      noteCardBusy
+      || openingNote
+      || saving
+      || viewMode !== 'home'
+      || activeFolderId !== null
+      || activeTagId !== null
+      || query.trim().length > 0
+    ) return
+
+    const nextOrder = orderForMovedNote(previous, next)
+    if (nextOrder === null || nextOrder === noteHomeOrder(note)) return
+
+    const optimistic = { ...note, order: nextOrder }
     setNoteCardBusy(true)
     setError('')
+    setNotes((current) => current.map((item) => item.id === note.id ? optimistic : item))
 
-    let updatedFirst: NoteV2Meta | null = null
     try {
-      updatedFirst = await saveRebuildNoteOrder(first, secondOrder)
-      const updatedSecond = await saveRebuildNoteOrder(second, firstOrder)
-      mergeUpdatedNoteMetadata([updatedFirst, updatedSecond])
+      const updated = await saveRebuildNoteOrder(note, nextOrder)
+      mergeUpdatedNoteMetadata([updated])
     } catch (moveError) {
-      if (updatedFirst) {
-        try {
-          const restored = await saveRebuildNoteOrder(updatedFirst, firstOrder)
-          mergeUpdatedNoteMetadata([restored])
-        } catch {
-          try {
-            const snapshot = await loadRebuildWorkspace()
-            setNotes(snapshot.notes)
-          } catch {
-            // Preserve the current visible state if even the recovery read is unavailable.
-          }
-        }
-      }
+      setNotes((current) => current.map((item) => item.id === note.id ? note : item))
       setError(moveError instanceof Error ? moveError.message : 'No se pudo mover la nota.')
     } finally {
       setNoteCardBusy(false)
@@ -626,7 +640,7 @@ export function RebuildApp({ onLock }: RebuildAppProps) {
               onOpen={(noteId) => void openNote(noteId)}
               onDelete={(note) => void removeNote(note)}
               onCustomize={setCustomizingNote}
-              onSwap={(first, second) => void swapNotes(first, second)}
+              onMove={(note, previous, next) => void moveNote(note, previous, next)}
               formatTime={formatNoteTime}
             />
           )}
