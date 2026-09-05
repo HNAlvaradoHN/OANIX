@@ -20,7 +20,7 @@ test('note metadata supports independent Home and folder order plus soft card cu
   assert.match(service, /createPendingSyncWrite/)
 })
 
-test('note card customization uses a low-impact visual dialog with icon and color choices', () => {
+test('note card customization uses a visible but low-impact tint with icon and color choices', () => {
   const dialog = readFileSync('src/features/rebuild/NoteCardCustomizationDialog.tsx', 'utf8')
   const css = readFileSync('src/features/rebuild/noteCardCustomizationDialog.css', 'utf8')
   const listCss = readFileSync('src/features/rebuild/noteListSection.css', 'utf8')
@@ -31,7 +31,10 @@ test('note card customization uses a low-impact visual dialog with icon and colo
   assert.match(dialog, /V2_FOLDER_ICONS/)
   assert.match(dialog, /V2_FOLDER_GRADIENTS/)
   assert.match(css, /note-card-customization__colors/)
-  assert.match(listCss, /var\(--note-card-accent\) 8%/)
+  assert.match(listCss, /var\(--note-card-accent\) 16%/)
+  assert.match(listCss, /var\(--note-card-accent\) 20%/)
+  assert.match(listCss, /var\(--note-card-accent\) 14%/)
+  assert.match(listCss, /var\(--note-card-accent\) 18%/)
   assert.match(listCss, /\[data-oanix-theme-mode="light"\]/)
 })
 
