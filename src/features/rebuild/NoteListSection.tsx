@@ -46,7 +46,9 @@ interface PointerPosition {
 const DRAG_HOLD_MS = 200
 const DRAG_MOVE_THRESHOLD_PX = 6
 const AUTO_SCROLL_EDGE_PX = 82
-const AUTO_SCROLL_MAX_PX = 18
+const AUTO_SCROLL_MIN_PX = 0.8
+const AUTO_SCROLL_MAX_PX = 12
+const AUTO_SCROLL_EASING = 0.2
 
 function folderStyle(folder: FolderV2Record): CSSProperties {
   return {
@@ -107,6 +109,7 @@ export function NoteListSection({
   const pointerIdRef = useRef<number | null>(null)
   const pointerPositionRef = useRef<PointerPosition | null>(null)
   const autoScrollFrameRef = useRef<number | null>(null)
+  const autoScrollVelocityRef = useRef(0)
 
   const renderedNotes = useMemo(() => {
     if (!dragOrder) return displayedNotes
@@ -122,6 +125,7 @@ export function NoteListSection({
   }
 
   function stopAutoScroll() {
+    autoScrollVelocityRef.current = 0
     if (autoScrollFrameRef.current !== null) {
       window.cancelAnimationFrame(autoScrollFrameRef.current)
       autoScrollFrameRef.current = null
@@ -262,6 +266,24 @@ export function NoteListSection({
     if (!sameOrder(order, next)) updateDragOrder(next)
   }
 
+  function autoScrollTargetVelocity(pointerY: number, rect: DOMRect): number {
+    let direction = 0
+    let strength = 0
+
+    if (pointerY < rect.top + AUTO_SCROLL_EDGE_PX) {
+      direction = -1
+      strength = Math.min(1, (rect.top + AUTO_SCROLL_EDGE_PX - pointerY) / AUTO_SCROLL_EDGE_PX)
+    } else if (pointerY > rect.bottom - AUTO_SCROLL_EDGE_PX) {
+      direction = 1
+      strength = Math.min(1, (pointerY - (rect.bottom - AUTO_SCROLL_EDGE_PX)) / AUTO_SCROLL_EDGE_PX)
+    }
+
+    if (direction === 0) return 0
+    const easedStrength = strength * strength
+    const speed = AUTO_SCROLL_MIN_PX + (AUTO_SCROLL_MAX_PX - AUTO_SCROLL_MIN_PX) * easedStrength
+    return direction * speed
+  }
+
   function runAutoScroll() {
     autoScrollFrameRef.current = null
     const noteId = draggingIdRef.current
@@ -269,20 +291,19 @@ export function NoteListSection({
     const container = scrollContainer()
     if (!noteId || !pointer || !container) return
 
-    const rect = container.getBoundingClientRect()
-    let delta = 0
-    if (pointer.y < rect.top + AUTO_SCROLL_EDGE_PX) {
-      const strength = Math.min(1, (rect.top + AUTO_SCROLL_EDGE_PX - pointer.y) / AUTO_SCROLL_EDGE_PX)
-      delta = -Math.max(1, Math.ceil(AUTO_SCROLL_MAX_PX * strength))
-    } else if (pointer.y > rect.bottom - AUTO_SCROLL_EDGE_PX) {
-      const strength = Math.min(1, (pointer.y - (rect.bottom - AUTO_SCROLL_EDGE_PX)) / AUTO_SCROLL_EDGE_PX)
-      delta = Math.max(1, Math.ceil(AUTO_SCROLL_MAX_PX * strength))
-    }
+    const targetVelocity = autoScrollTargetVelocity(pointer.y, container.getBoundingClientRect())
+    const currentVelocity = autoScrollVelocityRef.current
+    const nextVelocity = currentVelocity + (targetVelocity - currentVelocity) * AUTO_SCROLL_EASING
+    autoScrollVelocityRef.current = Math.abs(nextVelocity) < 0.08 ? 0 : nextVelocity
 
-    if (delta === 0) return
+    if (autoScrollVelocityRef.current === 0) return
+
     const before = container.scrollTop
-    container.scrollTop += delta
-    if (container.scrollTop === before) return
+    container.scrollTop += autoScrollVelocityRef.current
+    if (container.scrollTop === before) {
+      autoScrollVelocityRef.current = 0
+      return
+    }
 
     reorderAtPoint(noteId, pointer.x, pointer.y)
     autoScrollFrameRef.current = window.requestAnimationFrame(runAutoScroll)
