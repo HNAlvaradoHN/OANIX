@@ -1,69 +1,96 @@
 # OANIX — Protocolo universal de continuidad entre chats
 
 Fecha de definición: 2026-09-03
+Última revisión: 2026-09-05
 
 Este protocolo existe para que el desarrollo de OANIX pueda continuar entre chats sin obligar al usuario a volver a explicar el trabajo anterior. GitHub es la fuente de verdad del estado del proyecto.
 
-## Registro secuencial actual
+## Registro rodante actual
 
-- Chat OANIX activo registrado: `OANIX #4`.
+- Chat OANIX activo: `OANIX #4`.
+- Próximo chat: `OANIX #5`.
 - Tratamiento del usuario: `Inge`.
-- El próximo chat nuevo de continuidad debe identificarse como `OANIX #5`.
-- Cada chat OANIX debe actualizar este registro al asumir su número, para que el siguiente asistente pueda responder correctamente incluso si el usuario pregunta directamente `¿qué número de OANIX eres?`.
-- Nunca reutilizar un número ya registrado ni inferirlo solamente del nombre de un checkpoint antiguo.
+- Checkpoint operativo único: `docs/OANIX_ACTIVE_CHECKPOINT.md`.
 
-## Encabezado obligatorio en cada respuesta
+Este registro es **rodante, no histórico**. Cuando un chat nuevo asume el número siguiente, debe reemplazar los dos valores anteriores. Ejemplo: `activo #4 / próximo #5` pasa a `activo #5 / próximo #6`. Nunca agregar una lista acumulativa de chats.
 
-Toda respuesta de trabajo dentro de un chat del proyecto OANIX debe comenzar obligatoriamente con el encabezado exacto:
+No crear nuevos archivos `OANIX_N_ACTIVE_CHECKPOINT.md` para cada chat. El único checkpoint operativo que debe mantenerse y sobrescribirse es `docs/OANIX_ACTIVE_CHECKPOINT.md`. Los checkpoints numerados antiguos son únicamente archivo histórico y no tienen autoridad para decidir el siguiente paso.
+
+## Encabezado obligatorio
+
+Toda respuesta de trabajo dentro de OANIX debe comenzar exactamente con:
 
 `Inge — OANIX #N`
 
-Donde `N` es el número activo registrado para ese chat.
+`N` es el número activo ya verificado para ese chat. No debe adivinarse ni tomarse de un checkpoint histórico.
 
-Esta obligación aplica a **cada respuesta**, no únicamente al primer mensaje del chat. No debe omitirse en respuestas breves, validaciones, análisis, reportes, instrucciones, confirmaciones, correcciones, revisiones de archivos, resultados de pruebas ni mensajes posteriores dentro del mismo chat.
+## Frase universal de continuidad
 
-Si el número activo no está claro, debe consultarse primero el `Registro secuencial actual` antes de responder. Nunca debe adivinarse el número.
-
-## Frase clave universal
-
-La frase clave es exactamente:
+La frase es:
 
 `SIGUE EL CHAT AQUÍ`
 
-Se acepta también con diferencias normales de mayúsculas/minúsculas o puntuación, por ejemplo: `Sigue el chat aquí.`
+También se aceptan diferencias normales de mayúsculas/minúsculas o puntuación.
 
-## Comportamiento obligatorio al recibirla en un chat nuevo del proyecto OANIX
+## Arranque verificado obligatorio
 
-1. No preguntar al usuario qué estaba haciendo ni pedirle que repita contexto.
-2. Consultar GitHub antes de comenzar trabajo técnico.
-3. Leer `AGENTS.md`, `docs/PROJECT_MEMORY.md` y `docs/CURRENT_STATE.md` cuando existan.
-4. Buscar y leer el handoff/checkpoint de continuidad más reciente que haya dejado el chat anterior. Si existe un handoff específico para el siguiente chat, ese documento tiene prioridad para el punto exacto de reanudación, siempre contrastándolo con el estado actual del repositorio.
-5. Verificar rama, PR y código actuales antes de modificar archivos. No asumir que siguen iguales únicamente por el handoff.
-6. Determinar el número del último chat OANIX registrado y asignar automáticamente al chat nuevo el siguiente número secuencial. Ejemplo: si el último chat activo registrado es `OANIX #15`, el nuevo chat pasa a ser `OANIX #16`.
-7. La primera respuesta debe comenzar con `Inge — OANIX #N`, usando el número nuevo calculado. A partir de ahí, todas las respuestas posteriores del mismo chat deben conservar exactamente el mismo encabezado con ese número activo.
-8. Actualizar inmediatamente el `Registro secuencial actual` de este documento al asumir el nuevo número y, cuando corresponda, la memoria/checkpoint del repositorio. Esto evita que dos chats posteriores reclamen el mismo número.
-9. Si el usuario pregunta qué número de OANIX es el chat actual, consultar primero este registro y responder con el número activo. No usar como respuesta el número de un handoff/checkpoint histórico salvo que coincida con el registro activo.
-10. Reanudar automáticamente desde el último punto pendiente real. No responder simplemente “tengo el contexto” ni terminar preguntando qué desea revisar.
-11. Si el último chat dejó una acción que requería una decisión explícita del usuario o una operación destructiva todavía no autorizada, conservar esa frontera de seguridad; continuidad no significa inventar aprobación.
-12. Si el estado actual de GitHub contradice el handoff, GitHub manda. Explicar brevemente la diferencia y continuar desde el estado real cuando sea seguro.
+Un chat nuevo **no puede afirmar su número OANIX ni declarar cuál es el siguiente trabajo** hasta completar este arranque contra GitHub.
+
+1. Consultar el `main` real y registrar su SHA actual.
+2. Consultar el árbol recursivo actual del repositorio para conocer la estructura vigente completa y detectar archivos eliminados, reemplazados o nuevos.
+3. Leer como autoridades mínimas: `AGENTS.md`, `docs/OANIX_CHAT_PROTOCOL.md`, `docs/PROJECT_MEMORY.md`, `docs/CURRENT_STATE.md` y `docs/OANIX_ACTIVE_CHECKPOINT.md`.
+4. Si existe PR activo indicado por el checkpoint, consultar en vivo su número, rama, HEAD, estado, archivos cambiados y checks/gates actuales. No confiar en SHAs o estados escritos anteriormente.
+5. Leer los archivos actuales directamente implicados por la siguiente acción pendiente. No asumir su contenido por memoria, resumen o conversación anterior.
+6. Contrastar checkpoint, memoria y GitHub. Si se contradicen, **GitHub manda**. Corregir el checkpoint operativo antes de continuar cuando esté desactualizado.
+7. Solo después de completar lo anterior, asumir el número `Próximo chat`, reemplazar el registro rodante por `activo = próximo` y `próximo = activo + 1`, y sobrescribir el checkpoint activo con el estado verificado.
+8. Reanudar la **siguiente acción exacta** del checkpoint verificado. No inventar una tarea nueva, no saltar a otro frente y no pedir al usuario que vuelva a explicar el trabajo.
+
+No es necesario abrir y leer el contenido de absolutamente todos los archivos fuente en cada chat: eso sería costoso y no mejora la certeza. La garantía exigida es consultar el **árbol completo**, las autoridades del proyecto, el PR/gates vivos y los archivos del frente activo antes de continuar.
+
+## Prueba visible de que la continuidad fue verificada
+
+La primera respuesta de continuidad de un chat nuevo debe incluir, además del encabezado, una línea breve con esta información real obtenida de GitHub:
+
+`Continuidad verificada — main <SHA corto> · PR #<N o ninguno> <HEAD corto/estado> · continúa: <siguiente acción exacta>`
+
+Si hay gates relevantes en curso o fallando, deben mencionarse también de forma compacta.
+
+Esta línea es la prueba visible para el usuario de que el chat no se limitó a leer un número. Si no puede obtener alguno de esos datos, el asistente **no debe afirmar que la continuidad está verificada ni avanzar el contador**.
+
+## Consulta directa del número
+
+Si el usuario pregunta `¿qué número de OANIX eres?` en un chat nuevo o tras una continuidad, no basta con responder el número. Primero debe cumplirse el arranque verificado. La respuesta debe incluir el número y la línea `Continuidad verificada` con el `main`, PR/HEAD y siguiente acción reales.
+
+Dentro de un chat ya activo y previamente verificado, se conserva el mismo número durante toda la conversación y no se incrementa de nuevo.
+
+## Fronteras de seguridad
+
+- Una acción destructiva o una decisión que requiera aprobación explícita sigue requiriéndola aunque exista continuidad.
+- Nunca adaptar código actual únicamente para satisfacer una expectativa obsoleta; primero comprobar el contrato vigente.
+- No declarar un trabajo terminado con gates aplicables en rojo.
+- No afirmar validación física en Android/PWA si el usuario no la confirmó.
 
 ## Diferencia con `OANIX-NOCHE`
 
-- `SIGUE EL CHAT AQUÍ` es la frase universal para continuar cualquier trabajo normal de OANIX en un chat nuevo.
-- `OANIX-NOCHE` conserva su significado especial para una sesión larga/nocturna previamente preparada: además de recuperar continuidad, debe cargar el handoff nocturno pendiente y comenzar el plan acordado sin pedir al usuario que lo repita.
+`SIGUE EL CHAT AQUÍ` reanuda cualquier trabajo normal mediante este protocolo. `OANIX-NOCHE` conserva su significado especial para una sesión larga/nocturna previamente preparada, pero debe ejecutar el mismo arranque verificado antes de tocar código.
 
-## Regla de cierre de cada chat
+## Mantenimiento del checkpoint único
 
-Durante el trabajo, las decisiones duraderas se registran en `docs/PROJECT_MEMORY.md` y el estado ejecutable inmediato en `docs/CURRENT_STATE.md`. Antes de abandonar deliberadamente un chat largo o preparar el siguiente, dejar un handoff/checkpoint suficientemente concreto para que `SIGUE EL CHAT AQUÍ` pueda reanudar sin depender del historial interno de ChatGPT.
+`docs/OANIX_ACTIVE_CHECKPOINT.md` debe contener únicamente el estado necesario para reanudar sin reconstruir la historia completa:
 
-El handoff debe indicar, cuando aplique: número del chat que termina y siguiente esperado, rama/PR, último checkpoint, estado validado, trabajo en curso, siguiente acción concreta, restricciones acordadas y cualquier validación pendiente.
+- chat activo y próximo;
+- `main` SHA verificado;
+- PR/rama/HEAD activos o `ninguno`;
+- último trabajo realmente completado;
+- estado de gates relevantes;
+- decisiones/restricciones vigentes del frente actual;
+- validaciones físicas pendientes;
+- **una siguiente acción exacta**.
 
-Además, todo cierre de OANIX debe incluir una sección explícita titulada `ÚLTIMO TRABAJO REALIZADO` con el trabajo más reciente efectivamente completado, no solo el siguiente pendiente. Debe registrar como mínimo:
+Debe sobrescribirse cuando cambie materialmente el estado. No acumular una cronología infinita dentro del archivo.
 
-- último PR o commit fusionado/producido, con número y SHA cuando exista;
-- qué comportamiento quedó implementado o corregido;
-- qué validaciones quedaron verdes o qué pruebas se ejecutaron;
-- qué quedó pendiente de validación física o funcional por parte del usuario;
-- cuál es la siguiente acción exacta recomendada para el próximo OANIX.
+## Regla de cierre
 
-Si durante el chat no se modificó código, la sección debe decirlo explícitamente y registrar cuál fue la última acción real realizada (por ejemplo: auditoría, diagnóstico, decisión técnica o prueba física pendiente). El objetivo es que el siguiente OANIX nunca tenga que reconstruir o adivinar qué fue lo último que hizo el chat anterior.
+Antes de abandonar deliberadamente un chat largo, actualizar el checkpoint único con el estado real y la siguiente acción exacta. Las decisiones duraderas de arquitectura siguen perteneciendo a `docs/PROJECT_MEMORY.md`; `docs/CURRENT_STATE.md` conserva el estado general del producto.
+
+Todo cierre de trabajo debe incluir una sección `ÚLTIMO TRABAJO REALIZADO` que diga qué se completó realmente, qué gates quedaron verificados y qué sigue pendiente. El checkpoint activo debe reflejar el mismo punto operativo sin duplicar una lista histórica de chats.
