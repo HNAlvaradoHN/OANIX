@@ -2,19 +2,18 @@
 
 Este documento conserva **decisiones duraderas y restricciones de producto/arquitectura** que no deben depender de un chat. No es un changelog ni un duplicado de `CURRENT_STATE.md`.
 
-Antes de trabajar: leer `AGENTS.md` y `docs/CURRENT_STATE.md`, verificar `main` y PR recientes. GitHub es la fuente de verdad del código actual.
+Antes de trabajar: fijar el repositorio canónico `HNAlvaradoHN/OANIX`, leer `AGENTS.md`, `docs/OANIX_CHAT_PROTOCOL.md` y `docs/OANIX_ACTIVE_CHECKPOINT.md`, verificar `main` y PR recientes. GitHub es la fuente de verdad del código actual.
 
-**Última actualización:** 2026-09-02
+**Última actualización:** 2026-09-05
 
-## 0. Continuidad de chats y seguimiento de página
+## 0. Continuidad entre chats
 
-- **Página/chat activo:** `OANIX #1` — 2026-09-02.
-- Al comenzar cada respuesta de trabajo de OANIX, dirigirse al usuario como **“Inge”** e indicar la página activa, por ejemplo: **“Inge — OANIX #1”**.
-- Cada nuevo chat de trabajo que continúe OANIX debe recibir el siguiente número secuencial (`#2`, `#3`, `#4`...). El número no se reutiliza para otro chat.
-- Antes de continuar trabajo en un chat, comparar su número con la página activa registrada aquí. Si el usuario está escribiendo en un chat anterior, advertirlo claramente antes de modificar código para evitar trabajar sobre una conversación equivocada.
-- Toda decisión relevante tomada con el usuario debe registrarse en `docs/PROJECT_MEMORY.md` durante el mismo trabajo. Si también cambia el punto exacto de ejecución, pendientes inmediatos, rama o checkpoint, actualizar además `docs/CURRENT_STATE.md`.
-- No dejar la actualización de continuidad para días después ni depender únicamente del historial del chat.
-- Cuando se abra una nueva página/chat, actualizar aquí **Página/chat activo**, fecha y número antes de avanzar con decisiones nuevas.
+- Tratamiento del usuario: **“Inge”**.
+- El número del chat OANIX **no se guarda en esta memoria**.
+- Las únicas autoridades para el número activo y el próximo son `docs/OANIX_CHAT_PROTOCOL.md` y `docs/OANIX_ACTIVE_CHECKPOINT.md`.
+- No conservar aquí números anteriores, listas de chats ni ejemplos numerados: pertenecen al historial de Git y pueden confundir el arranque de un chat nuevo.
+- Toda decisión relevante tomada con el usuario debe registrarse en `docs/PROJECT_MEMORY.md` durante el mismo trabajo cuando sea una decisión duradera. Si cambia el punto exacto de ejecución, pendientes inmediatos, rama o checkpoint, actualizar `docs/OANIX_ACTIVE_CHECKPOINT.md` y, cuando corresponda, `docs/CURRENT_STATE.md`.
+- No depender únicamente del historial del chat para continuar OANIX.
 
 ## 1. Principios permanentes
 
@@ -192,7 +191,6 @@ PR #219 amplió la prueba controlada a 100 MiB–1 GiB. La siguiente validación
 
 El resto del historial de implementación pertenece a `CHANGELOG.md`, PRs e issues. No acumular aquí detalles triviales, números de CI o estados transitorios.
 
-
 ## 10. Reconstrucción post-unlock y nueva experiencia — DECIDED (2026-08-31)
 
 ### Cambio de dirección
@@ -267,7 +265,6 @@ El preview de diseño sigue siendo un laboratorio visual; cuando el usuario sumi
 Además del fondo/portada, la carpeta activa puede aportar un **acento contextual de carpeta** a la superficie principal mediante variables visuales compartidas (por ejemplo degradado/acento suave). Al cambiar de carpeta, cambia ese acento; en `Todas` se vuelve al acento neutral global de OANIX.
 
 El acento contextual no sustituye Día/Noche ni debe teñir superficies sensibles como seguridad, errores, Cuenta o Ajustes. Día/Noche controla legibilidad global; la carpeta controla identidad visual local.
-
 
 DECIDED:
 - cada carpeta tiene color/icono propios;
