@@ -17,6 +17,18 @@
   background: color-mix(in srgb, var(--note-card-accent) 10%, transparent);
 }
 
+/* Keep the normal note surface scrollable. Only the dedicated drag handle below may claim touch panning. */
+.rebuild-notes,
+.rebuild-note-list,
+.rebuild-note-row,
+.rebuild-note-row__open {
+  touch-action: pan-y;
+}
+
+.rebuild-notes {
+  -webkit-overflow-scrolling: touch;
+}
+
 .rebuild-note-row {
   transition:
     opacity 140ms ease,
