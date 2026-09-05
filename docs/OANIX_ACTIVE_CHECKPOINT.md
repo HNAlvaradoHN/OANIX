@@ -4,52 +4,46 @@
 
 ## Continuidad
 
-- Chat activo: `OANIX #4`.
-- Próximo chat: `OANIX #5`.
+- Repositorio canónico: `HNAlvaradoHN/OANIX`.
+- Rama de autoridad: `main`.
+- Chat activo: `OANIX #5`.
+- Próximo chat: `OANIX #6`.
 - Usuario: `Inge`.
 - Frase: `SIGUE EL CHAT AQUÍ`.
-- El número y este checkpoint son rodantes: el siguiente chat debe sobrescribirlos, no crear otro archivo numerado.
+- El número y este checkpoint son rodantes: el siguiente chat debe sobrescribirlos, no crear otro archivo numerado ni conservar números anteriores como autoridad activa.
 
 ## Estado GitHub verificado
 
-- `main` observado al iniciar esta actualización de continuidad: `2a951c832110a30a33a764424a607b8990b7e284`.
-- Último merge funcional cerrado antes del frente actual: PR #629, merge `3a209839af2caed5c2873c44d258b4ac9df00387`.
-- PR activo: #630 — `feat: orden y personalización de tarjetas de nota`.
-- Rama: `feat/note-list-order-card-customization-2026-09-05`.
-- HEAD verificado de #630: `7aaad5d4ff28ceabf16e2b820f5f502ca7add41e`.
-- PR abierto, draft, no fusionado.
-- GitHub reportó `mergeable=false` después de que `main` avanzara con documentación de continuidad; reconsultar/actualizar contra `main` antes de fusionar.
+- `main` antes de actualizar este checkpoint: `c68bad3ce55749ee40df4e07d3aec81072125f17`.
+- PR #630 — `feat: orden y personalización de tarjetas de nota`: **fusionado**.
+- Merge de #630: `1a0621da1babbefbb0978f3bd891272c10c27371`.
+- Ajuste posterior en `main`: `5417265bc6b7b1e59618af9dd04f5a69319cbe31` — conserva el color personalizado de nota al cambiar entre `Todas` y carpetas.
+- Cambio de continuidad de este chat: `c68bad3ce55749ee40df4e07d3aec81072125f17` — fija `HNAlvaradoHN/OANIX` como repositorio canónico y registra el contador rodante `#5 → #6`.
+- PR activo del frente anterior: ninguno.
 
-## Gates de #630 en ese HEAD
-
-- OANIX CI #2769: **success**.
-- OANIX Android (`build-android-packages`): **success**.
-- Qwen Independent PR Review #1025: **success**.
-- Vercel Preview Comments: **success**, sin feedback pendiente.
-
-El fallo anterior de `Test OANIX` quedó resuelto en el HEAD actual; el commit más reciente es `test: remove obsolete note row assertions`.
-
-## Alcance actual de #630
+## Último trabajo funcional completado
 
 1. Confirmación antes de eliminar Cita/Lista/Numérica.
-2. Orden manual de notas en la lista principal.
-3. Personalización de tarjeta de nota con color suave e icono propio, manteniendo visible el fondo y compatible con Día/Noche.
-
-Archivos cambiados verificados: editor de líneas, diálogo/lista/Home/modelo/servicio de rebuild y pruebas específicas de confirmación, personalización y borrado. No hay archivos ajenos al frente en la lista actual del PR.
+2. Orden manual de notas independiente entre `Todas` y cada carpeta.
+3. Arrastre protegido con auto-scroll.
+4. Personalización persistente de icono y color por nota dentro de la metadata cifrada v2.
+5. Corrección para que el tinte personalizado de la nota permanezca visible al alternar entre `Todas` y carpetas.
 
 ## Restricciones vigentes
 
+- Toda operación OANIX debe dirigirse primero y explícitamente a `HNAlvaradoHN/OANIX`; no descubrir el repo mediante búsquedas globales.
+- Para el número de chat solo mandan `docs/OANIX_CHAT_PROTOCOL.md` y este checkpoint rodante.
+- Números históricos de chats no deben usarse para identificar el chat actual.
 - GitHub actual manda sobre cualquier resumen anterior.
 - No conservar pruebas o implementaciones obsoletas solo para compatibilidad artificial.
 - Si un comportamiento sigue siendo necesario, la prueba debe validar el contrato nuevo.
 - No fusionar con gates aplicables en rojo.
-- No afirmar validación física de los detalles nuevos de #630 hasta confirmación del usuario.
-- La confirmación de borrado debe pertenecer al flujo actual del bloque, sin mecanismos globales innecesarios.
+- No afirmar validación física que el usuario no haya confirmado.
 
 ## Siguiente acción exacta
 
-Reconsultar #630 contra el `main` vivo, resolver/actualizar su estado de mergeabilidad si quedó detrás por los commits de documentación, revisar el diff final de los tres comportamientos solicitados y, si el mismo HEAD o el HEAD actualizado conserva CI + Android + revisión verdes, dejar #630 listo para la validación física/decisión de merge sin introducir trabajo nuevo.
+Antes de iniciar un nuevo frente funcional, actualizar o limpiar cualquier documento de continuidad que todavía exponga números históricos de chat como si fueran autoridad activa. Después, reconsultar `main` y el estado general vigente para continuar desde el último trabajo funcional realmente completado, sin asumir tareas desde checkpoints antiguos.
 
 ## Último trabajo realmente completado
 
-Se corrigió el sistema de continuidad: `docs/OANIX_CHAT_PROTOCOL.md` ahora usa un contador rodante y exige un arranque verificado con árbol del repositorio, autoridades, PR/HEAD/gates vivos y una prueba visible de continuidad antes de declarar el número o el siguiente paso.
+Se corrigió la continuidad entre chats para que OANIX quede anclado a `HNAlvaradoHN/OANIX`, se registró este chat como `OANIX #5` y el próximo como `OANIX #6`, y se eliminó del protocolo la dependencia de ejemplos numerados históricos como fuente de identidad.
