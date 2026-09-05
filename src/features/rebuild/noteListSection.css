@@ -17,6 +17,14 @@
   background: color-mix(in srgb, var(--note-card-accent) 10%, transparent);
 }
 
+.rebuild-note-row.is-dragging {
+  position: relative;
+  z-index: 3;
+  opacity: .72;
+  transform: scale(.99);
+  box-shadow: 0 .55rem 1.5rem rgba(0, 0, 0, .12);
+}
+
 .rebuild-note-row__open {
   min-width: 0;
   display: flex;
@@ -69,6 +77,18 @@
   opacity: .28;
 }
 
+.rebuild-note-row__drag {
+  cursor: grab;
+  touch-action: none !important;
+  user-select: none;
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
+.rebuild-note-row__drag:active {
+  cursor: grabbing;
+}
+
 .rebuild-note-row__delete {
   font-size: .92rem;
 }
@@ -87,5 +107,9 @@
     width: 2rem;
     height: 2rem;
     font-size: .82rem;
+  }
+
+  .rebuild-note-row__drag {
+    font-size: 1rem !important;
   }
 }
