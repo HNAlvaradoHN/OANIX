@@ -20,9 +20,10 @@ test('note metadata supports independent Home and folder order plus soft card cu
   assert.match(service, /createPendingSyncWrite/)
 })
 
-test('note card customization uses a visible but low-impact tint with icon and color choices', () => {
+test('note card customization keeps its tint independent from folder and row backgrounds', () => {
   const dialog = readFileSync('src/features/rebuild/NoteCardCustomizationDialog.tsx', 'utf8')
   const css = readFileSync('src/features/rebuild/noteCardCustomizationDialog.css', 'utf8')
+  const list = readFileSync('src/features/rebuild/NoteListSection.tsx', 'utf8')
   const listCss = readFileSync('src/features/rebuild/noteListSection.css', 'utf8')
 
   assert.match(dialog, /Personalizar tarjeta/)
@@ -31,10 +32,21 @@ test('note card customization uses a visible but low-impact tint with icon and c
   assert.match(dialog, /V2_FOLDER_ICONS/)
   assert.match(dialog, /V2_FOLDER_GRADIENTS/)
   assert.match(css, /note-card-customization__colors/)
+  assert.match(list, /if \(note\.cardColor\)/)
+  assert.match(list, /data-note-tint=\{note\.cardColor \? 'true' : undefined\}/)
+  assert.match(listCss, /\.rebuild-note-row\[data-note-tint="true"\]::before/)
   assert.match(listCss, /var\(--note-card-accent\) 16%/)
   assert.match(listCss, /var\(--note-card-accent\) 20%/)
   assert.match(listCss, /var\(--note-card-accent\) 14%/)
   assert.match(listCss, /var\(--note-card-accent\) 18%/)
+  assert.match(listCss, /position: absolute;/)
+  assert.match(listCss, /pointer-events: none;/)
+  assert.match(listCss, /\.rebuild-note-row__open\s*\{[\s\S]*?z-index: 1;/)
+  assert.match(listCss, /\.rebuild-note-row__actions\s*\{[\s\S]*?z-index: 1;/)
+  assert.doesNotMatch(
+    listCss,
+    /\.rebuild-note-row\[data-note-tint="true"\]\s*\{\s*background:/,
+  )
   assert.match(listCss, /\[data-oanix-theme-mode="light"\]/)
 })
 
