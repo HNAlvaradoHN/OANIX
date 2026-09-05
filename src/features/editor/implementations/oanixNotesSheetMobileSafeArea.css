@@ -145,7 +145,13 @@
 
 .oanix-notes .oanix-notes__title::placeholder { font-weight: 800 !important; }
 .oanix-notes__body-wrap { padding-bottom: 88px; }
-.oanix-notes:focus-within .oanix-notes__body-wrap { padding-bottom: clamp(180px, 24dvh, 260px); }
+.oanix-notes__editor-container:focus-within .oanix-notes__body-wrap { padding-bottom: clamp(180px, 24dvh, 260px); }
+
+/* Hidden customization must not keep an interactive/focused sheet parked over the editor. */
+.oanix-notes__customize[aria-hidden="true"] {
+  display: none;
+  pointer-events: none;
+}
 
 @media (min-width: 768px) {
   .oanix-notes .oanix-notes__title { font-size: 48px !important; }
@@ -161,5 +167,5 @@
     font-weight: 900 !important;
   }
   .oanix-notes__body-wrap { padding-bottom: 96px; }
-  .oanix-notes:focus-within .oanix-notes__body-wrap { padding-bottom: clamp(200px, 28dvh, 300px); }
+  .oanix-notes__editor-container:focus-within .oanix-notes__body-wrap { padding-bottom: clamp(200px, 28dvh, 300px); }
 }
