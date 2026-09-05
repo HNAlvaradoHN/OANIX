@@ -235,6 +235,9 @@ export function NoteListSection({
 
   function beginPress(event: PointerEvent<HTMLButtonElement>, noteId: string) {
     if (!canReorder || event.button !== 0) return
+    const pointerOwner = listRef.current
+    if (!pointerOwner) return
+
     event.preventDefault()
     event.stopPropagation()
 
@@ -251,7 +254,7 @@ export function NoteListSection({
     }
     pressCandidateRef.current = candidate
     setPressingId(noteId)
-    event.currentTarget.setPointerCapture(event.pointerId)
+    pointerOwner.setPointerCapture(event.pointerId)
 
     if (canRegrabImmediately) {
       setReadyId(noteId)
@@ -277,9 +280,10 @@ export function NoteListSection({
     updateDragOrder(order)
   }
 
-  function cancelPendingPress(event: PointerEvent<HTMLButtonElement>) {
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId)
+  function cancelPendingPress(event: PointerEvent<HTMLElement>) {
+    const pointerOwner = listRef.current
+    if (pointerOwner?.hasPointerCapture(event.pointerId)) {
+      pointerOwner.releasePointerCapture(event.pointerId)
     }
     clearPressCandidate()
   }
@@ -431,7 +435,7 @@ export function NoteListSection({
     }
   }
 
-  function moveDrag(event: PointerEvent<HTMLButtonElement>) {
+  function moveDrag(event: PointerEvent<HTMLElement>) {
     const candidate = pressCandidateRef.current
     if (!candidate || candidate.pointerId !== event.pointerId) return
 
@@ -459,14 +463,15 @@ export function NoteListSection({
     ensureAutoScroll()
   }
 
-  function finishDrag(event: PointerEvent<HTMLButtonElement>, commit: boolean) {
+  function finishDrag(event: PointerEvent<HTMLElement>, commit: boolean) {
     const candidate = pressCandidateRef.current
     const activePointer = pointerIdRef.current
     if (candidate?.pointerId !== event.pointerId && activePointer !== event.pointerId) return
     event.preventDefault()
 
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId)
+    const pointerOwner = listRef.current
+    if (pointerOwner?.hasPointerCapture(event.pointerId)) {
+      pointerOwner.releasePointerCapture(event.pointerId)
     }
 
     const noteId = draggingIdRef.current
@@ -497,7 +502,13 @@ export function NoteListSection({
   }
 
   return (
-    <div ref={listRef} className={`rebuild-note-list${draggingId ? ' is-reordering' : ''}`}>
+    <div
+      ref={listRef}
+      className={`rebuild-note-list${draggingId ? ' is-reordering' : ''}`}
+      onPointerMove={moveDrag}
+      onPointerUp={(event) => finishDrag(event, true)}
+      onPointerCancel={(event) => finishDrag(event, false)}
+    >
       {renderedNotes.map((note) => {
         const folder = note.folderId ? folderById.get(note.folderId) ?? null : null
         const customized = Boolean(note.cardColor || note.cardIcon)
@@ -542,9 +553,6 @@ export function NoteListSection({
                   type="button"
                   className="rebuild-note-row__drag"
                   onPointerDown={(event) => beginPress(event, note.id)}
-                  onPointerMove={moveDrag}
-                  onPointerUp={(event) => finishDrag(event, true)}
-                  onPointerCancel={(event) => finishDrag(event, false)}
                   onContextMenu={(event) => event.preventDefault()}
                   onKeyDown={(event) => moveWithKeyboard(event, note.id)}
                   aria-label={`Mover ${note.title || 'nota'}`}
