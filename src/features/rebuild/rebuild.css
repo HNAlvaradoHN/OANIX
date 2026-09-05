@@ -10,6 +10,7 @@
   --rb-grad-soft: linear-gradient(135deg, rgba(124, 92, 255, .16), rgba(255, 110, 199, .10));
   position: relative;
   min-height: 100dvh;
+  height: 100dvh;
   color: var(--rb-text);
   background: var(--rb-bg-0);
   overflow: hidden;
@@ -44,6 +45,7 @@
   display: flex;
   flex-direction: column;
   min-height: 100dvh;
+  height: 100dvh;
   overflow: hidden;
   background:
     radial-gradient(700px 500px at 12% -8%, rgba(124, 92, 255, .18), transparent 65%),
@@ -206,6 +208,7 @@
   height: 1.8rem;
   display: grid;
   place-items: center;
+  flex: none;
   border: 1px solid color-mix(in srgb, var(--folder-accent) 28%, transparent);
   border-radius: .58rem;
   background: var(--folder-soft);
