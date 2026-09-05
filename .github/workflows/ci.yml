@@ -25,6 +25,10 @@ jobs:
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
 
+      - name: Diagnose direct suite concurrency 4
+        continue-on-error: true
+        run: node --experimental-strip-types --test --test-concurrency=4 tests/*.test.ts
+
       - name: Test OANIX
         run: npm test
 
