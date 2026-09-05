@@ -89,6 +89,47 @@ function isAtomicTextFormat(format: EditorTextBlockFormat | undefined) {
   return Boolean(format && ATOMIC_TEXT_FORMATS.has(format))
 }
 
+function isEmptyParagraph(line: LineData | undefined) {
+  return Boolean(line && (line.format ?? 'paragraph') === 'paragraph' && line.text.trim().length === 0)
+}
+
+function createEmptyParagraph(kind: LineData['kind']): LineData {
+  return {
+    id: createTextLineId(),
+    kind,
+    text: '',
+    format: 'paragraph',
+  }
+}
+
+function withAtomicParagraphBoundaries(source: readonly LineData[]) {
+  const lines: LineData[] = []
+  const added: LineData[] = []
+
+  source.forEach((line, index) => {
+    if (!isAtomicTextFormat(line.format)) {
+      lines.push({ ...line })
+      return
+    }
+
+    if (!isEmptyParagraph(lines.at(-1))) {
+      const before = createEmptyParagraph(line.kind)
+      lines.push(before)
+      added.push(before)
+    }
+
+    lines.push({ ...line })
+
+    if (!isEmptyParagraph(source[index + 1])) {
+      const after = createEmptyParagraph(line.kind)
+      lines.push(after)
+      added.push(after)
+    }
+  })
+
+  return { lines, added }
+}
+
 function headingToParagraphIfEmpty(line: LineData): LineData {
   if (line.text.trim().length > 0) return line
   if (line.format !== 'h2' && line.format !== 'h3') return line
@@ -360,6 +401,19 @@ export function OanixTextLineEditor({
     const title = document.createElement('strong')
     title.textContent = format === 'quote' ? 'Cita' : format === 'list' ? 'Lista' : 'Lista numérica'
     header.appendChild(title)
+
+    const deleteBlock = document.createElement('button')
+    deleteBlock.type = 'button'
+    deleteBlock.className = 'oanix-text-atomic__delete-block'
+    deleteBlock.textContent = 'Eliminar bloque'
+    deleteBlock.disabled = disabledRef.current
+    deleteBlock.setAttribute('aria-label', `Eliminar bloque ${title.textContent}`)
+    deleteBlock.addEventListener('click', (event) => {
+      event.preventDefault()
+      event.stopPropagation()
+      removeAtomicBlock(line.id)
+    })
+    header.appendChild(deleteBlock)
     root.appendChild(header)
 
     const handleAtomicFocus = () => clearStoredTextTarget()
@@ -614,6 +668,36 @@ export function OanixTextLineEditor({
     })
   }
 
+  function enqueueSegmentOrderSave(
+    previous: readonly LineData[],
+    next: readonly LineData[],
+    changed: readonly LineData[],
+    deletes: readonly string[] = [],
+  ) {
+    const previousIds = new Set(previous.map((line) => line.id))
+
+    enqueueStructuralSave((globalBlocks) => {
+      const globalIds = globalBlocks.map((block) => block.id)
+      const globalIdSet = new Set(globalIds)
+      let anchor = globalIds.findIndex((id) => previousIds.has(id))
+      if (anchor < 0) anchor = globalIds.length
+
+      const withoutPrevious = globalIds.filter((id) => !previousIds.has(id))
+      const beforeCount = globalIds.slice(0, anchor).filter((id) => !previousIds.has(id)).length
+      withoutPrevious.splice(beforeCount, 0, ...next.map((line) => line.id))
+
+      const explicitIds = new Set(changed.map((line) => line.id))
+      const missing = next.filter((line) => !globalIdSet.has(line.id) && !explicitIds.has(line.id))
+      const upserts = [...changed, ...missing]
+
+      return {
+        upserts: upserts.length > 0 ? upserts.map((line) => encodeTextBlock(line)) : undefined,
+        deletes: deletes.length > 0 ? [...deletes] : undefined,
+        order: withoutPrevious,
+      }
+    })
+  }
+
   function setLineType(id: string, format: EditorTextBlockFormat) {
     const line = getLine(id)
     if (!line) return null
@@ -653,6 +737,48 @@ export function OanixTextLineEditor({
     return line
   }
 
+  function insertLineBefore(refId: string, format: EditorTextBlockFormat, text: string) {
+    const index = linesRef.current.findIndex((item) => item.id === refId)
+    if (index < 0) return null
+    const refEl = getLineEl(refId)
+    if (!refEl) return null
+
+    const line: LineData = {
+      id: createTextLineId(),
+      kind: linesRef.current[index].kind,
+      text,
+      format,
+    }
+    const el = buildLineEl(line)
+    refEl.before(el)
+    linesRef.current = [
+      ...linesRef.current.slice(0, index),
+      line,
+      ...linesRef.current.slice(index),
+    ]
+    return line
+  }
+
+  function ensureAtomicParagraphBoundaries(lineId: string) {
+    const added: LineData[] = []
+    let index = linesRef.current.findIndex((line) => line.id === lineId)
+    const atomic = index >= 0 ? linesRef.current[index] : null
+    if (!atomic || !isAtomicTextFormat(atomic.format)) return added
+
+    if (!isEmptyParagraph(linesRef.current[index - 1])) {
+      const before = insertLineBefore(lineId, 'paragraph', '')
+      if (before) added.push(before)
+    }
+
+    index = linesRef.current.findIndex((line) => line.id === lineId)
+    if (!isEmptyParagraph(linesRef.current[index + 1])) {
+      const after = insertLineAfter(lineId, 'paragraph', '')
+      if (after) added.push(after)
+    }
+
+    return added
+  }
+
   function resetIfEmpty(line: LineData): LineData {
     const el = getLineEl(line.id)
     if (!el || el.textContent.trim().length > 0) return line
@@ -669,9 +795,43 @@ export function OanixTextLineEditor({
     else focusLine(lineId, start, end)
   }
 
+  function applyAtomicFormat(format: EditorTextBlockFormat, ctx: CurrentContext) {
+    const previous = cloneLines(linesRef.current)
+    let atomic: LineData | null = null
+
+    if (ctx.hasSelection && ctx.selectedText.trim().length > 0) {
+      atomic = setLineType(ctx.line!.id, format)
+    } else if (ctx.lineEl!.textContent.trim().length === 0) {
+      atomic = setLineType(ctx.line!.id, format)
+    } else {
+      atomic = insertLineAfter(ctx.line!.id, format, '')
+    }
+    if (!atomic) return false
+
+    const added = ensureAtomicParagraphBoundaries(atomic.id)
+    const currentAtomic = getLine(atomic.id)
+    if (!currentAtomic) return false
+
+    enqueueSegmentOrderSave(
+      previous,
+      cloneLines(linesRef.current),
+      [currentAtomic, ...added],
+    )
+    focusAtomicLine(currentAtomic.id)
+    return true
+  }
+
   function applyFormat(format: EditorTextBlockFormat) {
     const ctx = getCurrentContext()
     if (!ctx.line || !ctx.lineEl) return
+
+    if (isAtomicTextFormat(format)) {
+      if (!applyAtomicFormat(format, ctx)) return
+      callbacksRef.current.onActivity()
+      saveState()
+      updateToolbar()
+      return
+    }
 
     if (ctx.hasSelection && ctx.selectedText.trim().length > 0) {
       const next = setLineType(ctx.line.id, format)
@@ -691,12 +851,42 @@ export function OanixTextLineEditor({
         if (targetIndex >= 0) order.splice(targetIndex + 1, 0, inserted.id)
         return { upserts: [encodeTextBlock(inserted)], order }
       })
-      if (isAtomicTextFormat(format)) focusAtomicLine(inserted.id)
-      else focusLine(inserted.id, 0)
+      focusLine(inserted.id, 0)
     }
 
     callbacksRef.current.onActivity()
     saveState()
+    updateToolbar()
+  }
+
+  function removeAtomicBlock(lineId: string) {
+    const index = linesRef.current.findIndex((line) => line.id === lineId)
+    if (index < 0) return
+    const line = linesRef.current[index]
+    if (!isAtomicTextFormat(line.format)) return
+
+    const previous = cloneLines(linesRef.current)
+    getLineEl(lineId)?.remove()
+    lineRefs.current.delete(lineId)
+    dirtyBlocksRef.current.delete(lineId)
+    linesRef.current = linesRef.current.filter((item) => item.id !== lineId)
+
+    const changed: LineData[] = []
+    if (linesRef.current.length === 0) {
+      const fallback = createEmptyParagraph(line.kind)
+      linesRef.current = [fallback]
+      containerRef.current?.appendChild(buildLineEl(fallback))
+      changed.push(fallback)
+    }
+
+    const next = cloneLines(linesRef.current)
+    enqueueSegmentOrderSave(previous, next, changed, [lineId])
+
+    const target = linesRef.current[Math.min(index, linesRef.current.length - 1)]
+      ?? linesRef.current[Math.max(0, index - 1)]
+    callbacksRef.current.onActivity()
+    saveState()
+    if (target && !isAtomicTextFormat(target.format)) focusLine(target.id, 0)
     updateToolbar()
   }
 
@@ -1010,9 +1200,16 @@ export function OanixTextLineEditor({
   }
 
   useEffect(() => {
-    rebuildFromBlocks(initialLinesRef.current)
+    const initial = cloneLines(initialLinesRef.current)
+    const normalized = withAtomicParagraphBoundaries(initial)
+    rebuildFromBlocks(normalized.lines)
     undoStackRef.current = [cloneLines(linesRef.current)]
     redoStackRef.current = []
+
+    if (normalized.added.length > 0) {
+      enqueueSegmentOrderSave(initial, normalized.lines, normalized.added)
+    }
+
     return () => {
       containerRef.current?.replaceChildren()
       lineRefs.current.clear()
