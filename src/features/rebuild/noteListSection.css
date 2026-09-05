@@ -1,0 +1,91 @@
+.rebuild-note-row[data-note-tint="true"] {
+  background: color-mix(in srgb, var(--note-card-accent) 8%, transparent);
+  border-bottom-color: color-mix(in srgb, var(--note-card-accent) 18%, var(--rb-line));
+}
+
+.rebuild-note-row[data-note-tint="true"]:hover,
+.rebuild-note-row[data-note-tint="true"]:focus-within {
+  background: color-mix(in srgb, var(--note-card-accent) 12%, transparent);
+}
+
+[data-oanix-theme-mode="light"] .rebuild-note-row[data-note-tint="true"] {
+  background: color-mix(in srgb, var(--note-card-accent) 7%, transparent);
+}
+
+[data-oanix-theme-mode="light"] .rebuild-note-row[data-note-tint="true"]:hover,
+[data-oanix-theme-mode="light"] .rebuild-note-row[data-note-tint="true"]:focus-within {
+  background: color-mix(in srgb, var(--note-card-accent) 10%, transparent);
+}
+
+.rebuild-note-row__open {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: .78rem;
+  flex: 1;
+  align-self: stretch;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+
+.rebuild-note-row__open:focus-visible {
+  outline: 2px solid color-mix(in srgb, #7c5cff 55%, transparent);
+  outline-offset: 2px;
+  border-radius: .6rem;
+}
+
+.rebuild-note-row__actions {
+  display: flex;
+  align-items: center;
+  gap: .18rem;
+  flex: none;
+}
+
+.rebuild-note-row__actions > button {
+  width: 2.15rem;
+  height: 2.15rem;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: .6rem;
+  background: transparent;
+  color: var(--rb-muted);
+  touch-action: manipulation;
+}
+
+.rebuild-note-row__actions > button:hover,
+.rebuild-note-row__actions > button:focus-visible {
+  outline: none;
+  border-color: var(--rb-line);
+  background: color-mix(in srgb, var(--rb-bg-2) 76%, transparent);
+  color: var(--rb-text);
+}
+
+.rebuild-note-row__actions > button:disabled {
+  opacity: .28;
+}
+
+.rebuild-note-row__delete {
+  font-size: .92rem;
+}
+
+@media (max-width: 560px) {
+  .rebuild-note-row {
+    gap: .45rem;
+    padding-inline: .65rem;
+  }
+
+  .rebuild-note-row__actions {
+    gap: .05rem;
+  }
+
+  .rebuild-note-row__actions > button {
+    width: 2rem;
+    height: 2rem;
+    font-size: .82rem;
+  }
+}
