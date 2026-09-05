@@ -14,12 +14,18 @@
 
 ## Estado GitHub verificado
 
-- `main` antes de actualizar este checkpoint: `c68bad3ce55749ee40df4e07d3aec81072125f17`.
+- `main` verificado inmediatamente antes de este cierre documental: `77125e8d507a9208e39885338c85c55452e05a81`.
 - PR #630 — `feat: orden y personalización de tarjetas de nota`: **fusionado**.
 - Merge de #630: `1a0621da1babbefbb0978f3bd891272c10c27371`.
-- Ajuste posterior en `main`: `5417265bc6b7b1e59618af9dd04f5a69319cbe31` — conserva el color personalizado de nota al cambiar entre `Todas` y carpetas.
-- Cambio de continuidad de este chat: `c68bad3ce55749ee40df4e07d3aec81072125f17` — fija `HNAlvaradoHN/OANIX` como repositorio canónico y registra el contador rodante `#5 → #6`.
-- PR activo del frente anterior: ninguno.
+- Ajuste funcional posterior: `5417265bc6b7b1e59618af9dd04f5a69319cbe31` — conserva el color personalizado de nota al cambiar entre `Todas` y carpetas.
+- PR activo: ninguno verificado para el frente anterior.
+
+## Continuidad corregida en OANIX #5
+
+- `docs/OANIX_CHAT_PROTOCOL.md` fija `HNAlvaradoHN/OANIX` como repositorio canónico y prohíbe descubrir OANIX mediante búsquedas globales cuando la continuidad está disponible.
+- `AGENTS.md` obliga a fijar ese repositorio antes de consultar estado y declara que el número de chat solo pertenece al protocolo/checkpoint rodante.
+- `docs/PROJECT_MEMORY.md` ya no contiene un número histórico de chat como autoridad; conserva únicamente el tratamiento `Inge` y remite al protocolo/checkpoint para el número vigente.
+- Este chat es `OANIX #5`; el próximo es `OANIX #6`.
 
 ## Último trabajo funcional completado
 
@@ -31,19 +37,18 @@
 
 ## Restricciones vigentes
 
-- Toda operación OANIX debe dirigirse primero y explícitamente a `HNAlvaradoHN/OANIX`; no descubrir el repo mediante búsquedas globales.
+- Toda operación OANIX debe dirigirse primero y explícitamente a `HNAlvaradoHN/OANIX`.
 - Para el número de chat solo mandan `docs/OANIX_CHAT_PROTOCOL.md` y este checkpoint rodante.
 - Números históricos de chats no deben usarse para identificar el chat actual.
 - GitHub actual manda sobre cualquier resumen anterior.
 - No conservar pruebas o implementaciones obsoletas solo para compatibilidad artificial.
-- Si un comportamiento sigue siendo necesario, la prueba debe validar el contrato nuevo.
 - No fusionar con gates aplicables en rojo.
 - No afirmar validación física que el usuario no haya confirmado.
 
 ## Siguiente acción exacta
 
-Antes de iniciar un nuevo frente funcional, actualizar o limpiar cualquier documento de continuidad que todavía exponga números históricos de chat como si fueran autoridad activa. Después, reconsultar `main` y el estado general vigente para continuar desde el último trabajo funcional realmente completado, sin asumir tareas desde checkpoints antiguos.
+Al retomar desarrollo funcional, verificar el `main` vivo de `HNAlvaradoHN/OANIX`, leer el estado general vigente y los últimos commits posteriores a #630, y determinar desde esa evidencia el siguiente frente pendiente sin volver a usar checkpoints numéricos históricos.
 
 ## Último trabajo realmente completado
 
-Se corrigió la continuidad entre chats para que OANIX quede anclado a `HNAlvaradoHN/OANIX`, se registró este chat como `OANIX #5` y el próximo como `OANIX #6`, y se eliminó del protocolo la dependencia de ejemplos numerados históricos como fuente de identidad.
+Se corrigió el sistema de continuidad para que todos los chats de OANIX apunten explícitamente a `HNAlvaradoHN/OANIX`, se eliminó de la memoria operativa el número histórico que causaba confusión y quedó registrado el contador rodante `OANIX #5 → #6`.
