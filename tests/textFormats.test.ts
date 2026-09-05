@@ -127,6 +127,15 @@ test('only empty H2/H3 reset to paragraph in the extended OANIX format set', () 
   assert.match(editor, /format: 'paragraph' as const/)
 })
 
+test('paragraph is the permanent base mode and headings do not pull the next row upward', () => {
+  const css = readFileSync('src/features/editor/implementations/oanixNotesSheetMobileSafeArea.css', 'utf8')
+
+  assert.match(css, /\.oanix-notes \.oanix-notes__tool\[data-tool="paragraph"\][\s\S]*display:\s*none/)
+  assert.match(css, /\.oanix-mixed-document__text\[data-oanix-text-format="paragraph"\],[\s\S]*\.oanix-notes \.oanix-notes__body/)
+  assert.doesNotMatch(css, /margin-top:\s*calc\(-1 \* var\(--oanix-text-block-gap\)\)/)
+  assert.doesNotMatch(css, /--oanix-text-block-gap/)
+})
+
 test('paste remains plain text and structural focus does not depend on remount timers', () => {
   const editor = readFileSync('src/features/editor/implementations/OanixTextLineEditor.tsx', 'utf8')
 
