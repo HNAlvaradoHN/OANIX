@@ -6,9 +6,9 @@ Este protocolo existe para que el desarrollo de OANIX pueda continuar entre chat
 
 ## Registro secuencial actual
 
-- Chat OANIX activo registrado: `OANIX #3`.
+- Chat OANIX activo registrado: `OANIX #4`.
 - Tratamiento del usuario: `Inge`.
-- El próximo chat nuevo de continuidad debe identificarse como `OANIX #4`.
+- El próximo chat nuevo de continuidad debe identificarse como `OANIX #5`.
 - Cada chat OANIX debe actualizar este registro al asumir su número, para que el siguiente asistente pueda responder correctamente incluso si el usuario pregunta directamente `¿qué número de OANIX eres?`.
 - Nunca reutilizar un número ya registrado ni inferirlo solamente del nombre de un checkpoint antiguo.
 
