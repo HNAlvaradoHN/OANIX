@@ -31,6 +31,11 @@
   letter-spacing: -.04em;
 }
 
+/* Paragraph is the permanent base writing mode; it does not need a menu action. */
+.oanix-notes .oanix-notes__tool[data-tool="paragraph"] {
+  display: none;
+}
+
 .oanix-notes {
   --oanix-ruled-step: 30px;
   --oanix-ruled-baseline: 23px;
@@ -38,7 +43,6 @@
   --oanix-h2-ruled-baseline: 34px;
   --oanix-h3-ruled-step: 36px;
   --oanix-h3-ruled-baseline: 29px;
-  --oanix-text-block-gap: 14px;
   --oanix-ruled-color: color-mix(in srgb, var(--color-text-secondary) 24%, transparent);
 }
 
@@ -96,11 +100,6 @@
   background-repeat: repeat-y;
   background-size: 100% var(--oanix-h3-ruled-step);
   background-position: 0 0;
-}
-
-.oanix-notes .oanix-mixed-document__text[data-oanix-text-format="h2"] + .oanix-mixed-document__text[data-oanix-text-format="paragraph"],
-.oanix-notes .oanix-mixed-document__text[data-oanix-text-format="h3"] + .oanix-mixed-document__text[data-oanix-text-format="paragraph"] {
-  margin-top: calc(-1 * var(--oanix-text-block-gap));
 }
 
 .oanix-notes .oanix-mixed-document__text[data-oanix-text-format="quote"] {
@@ -168,10 +167,6 @@
 
 @media (min-width: 768px) {
   .oanix-notes .oanix-notes__title { font-size: 48px !important; }
-}
-
-@media (max-width: 640px) {
-  .oanix-notes { --oanix-text-block-gap: 12px; }
 }
 
 @media (max-width: 520px) {
