@@ -25,6 +25,7 @@ test('folder and tag pending writes use the entity as their own sync scope', () 
     noteId: 'folder-1',
     unitType: FOLDER_V2_TYPE,
     unitId: 'folder-1',
+    recordId: 'folder-1',
     revision: 4,
     operation: 'delete',
     queuedAt,
