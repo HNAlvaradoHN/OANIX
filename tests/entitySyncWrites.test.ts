@@ -4,8 +4,8 @@ import {
   createEntityPendingWrite,
   currentEntityRevision,
   nextEntityRevision,
-} from '../src/features/rebuild/entitySyncWrites'
-import { FOLDER_V2_TYPE, SYNC_V2_PENDING_TYPE } from '../src/features/rebuild/rebuildModel'
+} from '../src/features/rebuild/entitySyncWrites.ts'
+import { FOLDER_V2_TYPE, SYNC_V2_PENDING_TYPE } from '../src/features/rebuild/rebuildModel.ts'
 
 test('entity sync revisions upgrade legacy records without losing monotonicity', () => {
   assert.equal(currentEntityRevision({}), 1)
