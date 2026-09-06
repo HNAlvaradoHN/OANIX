@@ -63,7 +63,7 @@ test('history reuses encrypted_records and remains eligible for the existing non
   const types = readFileSync('src/features/versionHistory/versionHistoryTypes.ts', 'utf8')
   const sync = readFileSync('src/features/sync/syncService.ts', 'utf8')
 
-  assert.match(types, /NOTE_HISTORY_RECORD_TYPE = 'note\.history'/)
+  assert.match(types, /NOTE_HISTORY_RECORD_TYPE = 'note-history'/)
   assert.match(repository, /writeEncryptedRecord\(NOTE_HISTORY_RECORD_TYPE/)
   assert.match(repository, /listEncryptedRecords<unknown>\(NOTE_HISTORY_RECORD_TYPE\)/)
   assert.doesNotMatch(repository, /indexedDB|localStorage|sessionStorage|caches\.open/)
