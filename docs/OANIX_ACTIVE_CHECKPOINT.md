@@ -14,34 +14,42 @@
 
 ## Estado GitHub verificado
 
-- `main` tras merge de #641: `36af8cc9f85da3da2a57c570803f28738942cd39`.
-- PR #641 — `feat: activa sync v2 incremental con R2`: fusionado.
+- PR #641 — `feat: activa sync v2 incremental con R2`: fusionado el 2026-09-06.
+- Merge de #641: `36af8cc9f85da3da2a57c570803f28738942cd39`.
 - HEAD final fusionado de #641: `13adb16ae72c02f187684abefd7324afc207fe71`.
 - Gates del HEAD final antes del merge: OANIX CI #2873 success, OANIX Android #2225 success, Qwen Independent PR Review #1111 success.
-- `V2AutoSyncRuntime` queda montado post-unlock y `RebuildApp` se refresca mediante `key={workspaceRevision}` únicamente después de aplicar cambios remotos.
-- Se corrigieron expectativas de tests obsoletas sin retirar comportamiento correcto de la implementación.
-- `AGENTS.md` contiene ya la regla permanente: causa raíz suficientemente verificada → cambio mínimo seguro → ejecutar gates → repetir hasta verde; no quedarse en diagnóstico circular.
+- Después del merge solo se han realizado ajustes documentales de continuidad; verificar el SHA vivo de `main` antes de cualquier nueva modificación.
 
 ## Estado funcional alcanzado
 
-- La sincronización incremental v2 ya consume la cola cifrada `sync.v2.pending` mediante `runV2IncrementalSync`.
-- Supabase conserva metadata/cursor y R2 recibe payload cifrado; no se reactivó `AutoSyncRuntime` legacy ni el escaneo completo de ciphertext.
-- El runtime sincroniza tras inactividad, consulta cambios remotos incrementalmente, posterga/cancela ante actividad/offline/ocultamiento y no aplica cambios remotos mientras exista un editor de nota abierto.
-- Carpetas y etiquetas ya generan revisiones/pending para crear, editar, reordenar y eliminar.
+- El editor vigente quedó consolidado en PR #629 con edición natural por renglones `contentEditable`, Selection/Range, Párrafo/H2/H3, Enter/Backspace natural, undo/redo y persistencia incremental mediante el host. **No existe un frente activo de sustitución de editor.**
+- PRs #630–#638 completaron y corrigieron personalización, orden, scroll y drag/reorder del Home/lista de notas.
+- PR #639 preparó la sincronización v2 incremental con índice pequeño en Supabase y objetos cifrados en R2.
+- PR #640 conectó GitHub Pages con el gateway R2.
+- PR #641 montó `V2AutoSyncRuntime` post-unlock y activó `runV2IncrementalSync` sobre `sync.v2.pending`.
+- `RebuildApp` se refresca mediante `key={workspaceRevision}` solo después de aplicar cambios remotos.
+- Carpetas y etiquetas generan revisiones/pending para crear, editar, reordenar y eliminar.
+- No se reactivó `AutoSyncRuntime` legacy ni el escaneo completo de ciphertext.
+
+## Corrección de continuidad realizada en OANIX #6
+
+La documentación anterior todavía trataba una futura plantilla basada en `qwen.html`/`appquen.js` como siguiente frente. Eso estaba desfasado frente al código y a los PRs recientes. Esa dirección queda **SUPERSEDED como siguiente acción**. No buscar ni integrar esos archivos salvo nueva instrucción explícita del usuario.
+
+`docs/CURRENT_STATE.md` fue reescrito el 2026-09-06 para reflejar el estado implementado real: editor terminado, Home/lista avanzados y sync v2/R2 como frente más reciente.
 
 ## Restricciones vigentes
 
 - GitHub y el `main` real mandan sobre cualquier resumen anterior.
+- No modificar el editor salvo solicitud nueva o defecto concreto demostrado.
 - No retirar `key={workspaceRevision}` ni degradar el runtime v2 para satisfacer expectativas de tests antiguas.
 - No reactivar `AutoSyncRuntime` legacy ni escaneos completos de ciphertext.
 - Ante un fallo de CI: localizar el primer error concreto, contrastarlo con el HEAD que falló, determinar causa raíz y aplicar el cambio mínimo correcto. Si la causa ya está suficientemente verificada y el cambio es pequeño/reversible, actuar de inmediato y repetir los gates hasta verde; no estancarse repitiendo diagnóstico.
 - No afirmar validación física que no haya realizado el usuario.
-- La nueva plantilla de editor solo puede integrarse desde sus archivos fuente exactos; no reconstruir `qwen.html` ni `appquen.js` de memoria ni sustituirlos por versiones antiguas o aproximadas.
 
 ## Siguiente acción exacta
 
-Retomar el frente de la nueva plantilla del editor. Verificar/obtener los archivos fuente exactos `qwen.html` y `appquen.js`; actualmente no existen en el árbol de `main`. Cuando estén disponibles, sanearlos de forma aislada y adaptarlos detrás de `EditorSurface`, preservando las garantías actuales de guardado/reapertura/cierre/Atrás Android y sin mezclar la plantilla con persistencia, cifrado, vault, sync o Home.
+Validar de extremo a extremo la sincronización v2 recién activada, sin tocar el editor: comprobar intercambio real entre dos dispositivos/sesiones de la misma cuenta y bóveda, refresco remoto sin reload completo, bloqueo de aplicación remota mientras una nota esté abierta, recuperación tras offline y propagación incremental de notas/carpetas/etiquetas. Si aparece un fallo, investigar el flujo v2 actual y corregir su causa raíz.
 
 ## Último trabajo realmente completado
 
-Se corrigió la causa real del CI rojo de #641, se llevaron todos los gates del HEAD final a verde y se fusionó #641 en `main` como `36af8cc9f85da3da2a57c570803f28738942cd39`. Con ello quedó activa la sincronización incremental v2 con R2 sin reactivar el runtime legacy. También se actualizó la regla permanente de resolución de fallos y la continuidad OANIX #6 → #7. El siguiente frente vuelve a la integración de la nueva plantilla exacta del editor; sus archivos `qwen.html` y `appquen.js` aún no están disponibles en el repositorio.
+Se llevó #641 a verde, se fusionó en `main` y quedó activa la sincronización incremental v2 con R2. En este chat también se detectó y corrigió un error de continuidad: `CURRENT_STATE.md` y este checkpoint seguían apuntando a un trabajo viejo del editor pese a que PR #629 ya lo había consolidado días antes. El próximo trabajo ya no es el editor; es validar en uso real la sincronización v2 recién activada.
