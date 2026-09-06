@@ -403,6 +403,7 @@ async function pullRemote(
           // not advanced so a future conflict resolver can observe the tombstone again without payload egress.
           break
         }
+        abortIfNeeded(signal)
         await applyEncryptedV2Changes({
           writes: [{
             recordType: SYNC_V2_BINDING_TYPE,
@@ -418,6 +419,7 @@ async function pullRemote(
     }
 
     const remoteObject = await readRemoteObject(row, accessToken)
+    abortIfNeeded(signal)
     const identity = syncV2IdentityKey(remoteObject.unitType, remoteObject.unitId)
     const binding = state.bindingsByIdentity.get(identity) ?? null
     const pending = state.pending.get(identity) ?? null
@@ -437,6 +439,7 @@ async function pullRemote(
       continue
     }
 
+    abortIfNeeded(signal)
     await applyEncryptedV2Changes({
       writes: [
         { recordType: remoteObject.unitType, recordId: remoteObject.unitId, value: remoteObject.value },
