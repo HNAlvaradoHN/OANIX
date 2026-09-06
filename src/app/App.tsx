@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { VaultGate } from './VaultGate'
 import { RebuildApp } from '../features/rebuild/RebuildApp'
+import { V2AutoSyncRuntime } from '../features/sync/V2AutoSyncRuntime'
 import { AndroidAuthRuntime } from '../platform/android/AndroidAuthRuntime'
 import { NativeDocumentsRuntime } from '../platform/android/NativeDocumentsRuntime'
 import { AndroidBackRuntime } from '../platform/android/AndroidBackRuntime'
@@ -57,6 +58,7 @@ function UnlockedApp({ lockVault }: { lockVault: () => void }) {
     <>
       <AndroidBackRuntime />
       <AndroidKeystoreDiagnosticRuntime />
+      <V2AutoSyncRuntime />
       <RebuildApp onLock={lockVault} />
     </>
   )
