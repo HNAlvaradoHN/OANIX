@@ -54,12 +54,14 @@ async function prepareVisibleWorkspaceForUpdate() {
 }
 
 function UnlockedApp({ lockVault }: { lockVault: () => void }) {
+  const [workspaceRevision, setWorkspaceRevision] = useState(0)
+
   return (
     <>
       <AndroidBackRuntime />
       <AndroidKeystoreDiagnosticRuntime />
-      <V2AutoSyncRuntime />
-      <RebuildApp onLock={lockVault} />
+      <V2AutoSyncRuntime onRemoteApplied={() => setWorkspaceRevision((value) => value + 1)} />
+      <RebuildApp key={workspaceRevision} onLock={lockVault} />
     </>
   )
 }
