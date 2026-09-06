@@ -1,182 +1,156 @@
 # OANIX — Instrucciones para IA y agentes
 
-Este archivo es la puerta de entrada obligatoria para cualquier IA, agente de código o colaborador que vaya a continuar OANIX.
+Este archivo es la puerta de entrada obligatoria para cualquier IA, agente de código o colaborador que continúe OANIX.
 
 ## Repositorio canónico
 
-- OANIX vive en `HNAlvaradoHN/OANIX`.
-- La rama de autoridad es `main`.
-- Toda consulta o modificación de OANIX debe comenzar explícitamente acotada a `HNAlvaradoHN/OANIX`.
-- Si una herramienta abre, recuerda o sugiere otro repositorio, no usarlo para inferir estado de OANIX. Volver primero a `HNAlvaradoHN/OANIX`.
-- No usar búsquedas globales de GitHub para descubrir el repositorio de OANIX cuando este archivo o la documentación de continuidad estén disponibles.
+- Repositorio: `HNAlvaradoHN/OANIX`.
+- Rama de autoridad: `main`.
+- Toda lectura, búsqueda, PR, commit, issue, gate o modificación debe empezar acotada a ese repositorio.
+- Si una herramienta abre otro repositorio, ignorarlo y volver a `HNAlvaradoHN/OANIX` antes de inferir estado.
+- GitHub actual manda sobre memoria, chats y documentación desactualizada.
 
-## Objetivo
+## Arranque obligatorio
 
-El repositorio debe servir también como memoria operativa del proyecto. Si el usuario entrega únicamente el enlace de GitHub y dice algo como **«continuemos con lo que estaba»**, no se le debe pedir que reconstruya conversaciones anteriores si la información ya está registrada aquí o en la documentación de continuidad.
+Antes de proponer o implementar un cambio, contrastar como mínimo:
 
-Antes de proponer o implementar un cambio, leer y contrastar:
+1. `AGENTS.md`.
+2. `docs/OANIX_CHAT_PROTOCOL.md`.
+3. `docs/OANIX_ACTIVE_CHECKPOINT.md`.
+4. `docs/CURRENT_STATE.md`.
+5. `docs/ROADMAP.md`.
+6. `docs/PROJECT_MEMORY.md` cuando la tarea dependa de una decisión duradera.
+7. `docs/ARCHITECTURE.md` y `docs/SECURITY.md` cuando la tarea toque esas fronteras.
+8. Código, PRs, issues y tests actuales de `main` implicados en el frente activo.
 
-1. `AGENTS.md` — reglas de trabajo y traspaso entre IAs.
-2. `docs/OANIX_CHAT_PROTOCOL.md` — repositorio canónico, número rodante del chat y protocolo de arranque.
-3. `docs/OANIX_ACTIVE_CHECKPOINT.md` — punto operativo único y siguiente acción exacta.
-4. `docs/CURRENT_STATE.md` — checkpoint general actualizado para reanudar desde otro chat.
-5. `docs/ROADMAP.md` — alcance oficial, versión activa y orden obligatorio.
-6. `docs/PROJECT_MEMORY.md` — decisiones funcionales, pendientes, ideas diferidas, excepciones y contexto duradero; **no es autoridad para el número del chat**.
-7. `docs/ARCHITECTURE.md` — arquitectura vigente.
-8. `docs/SECURITY.md` — invariantes y modelo de seguridad.
-9. `docs/CHANGELOG.md` — cambios ya realizados.
-10. Código, issues, PRs y pruebas de `main` — verificación final del estado realmente implementado.
+`docs/OANIX_CHAT_PROTOCOL.md` y `docs/OANIX_ACTIVE_CHECKPOINT.md` son las únicas autoridades documentales para el número del chat. `CURRENT_STATE.md` resume el estado general, pero si contradice `main` debe corregirse.
 
-`docs/OANIX_CHAT_PROTOCOL.md` y `docs/OANIX_ACTIVE_CHECKPOINT.md` son las únicas autoridades documentales para identificar qué número OANIX corresponde al chat actual. Los números de chats anteriores pertenecen al historial de Git y no deben inferirse desde ejemplos, memoria duradera o documentos antiguos.
+No pedir al usuario que reconstruya decisiones que ya estén registradas.
 
-`docs/CURRENT_STATE.md` es un checkpoint operativo, no reemplaza los documentos históricos. Si contradice `main`, prevalece el repositorio real y debe corregirse el checkpoint.
+## Identidad e invariantes
 
-No asumir que un chat, una memoria externa o una descripción antigua representa el estado actual. Verificar siempre `HNAlvaradoHN/OANIX`.
+- El nombre oficial es **OANIX**.
+- OANIX es offline-first, con cifrado local y cuenta online opcional.
+- La cuenta no sustituye la contraseña maestra.
+- El transporte normal de sincronización mantiene E2EE; recuperación por correo conserva la excepción de confianza documentada en `SECURITY.md` y `PROJECT_MEMORY.md`.
+- PWA y Android/Capacitor comparten una sola base React + TypeScript; no duplicar lógica de negocio.
+- Seguridad, vault/session, cifrado y datos existentes no se degradan por conveniencia.
+- Ante incertidumbre de sync o conflictos, conservar datos tiene prioridad sobre sobrescribir silenciosamente.
+- No guardar secretos, claves, tokens o credenciales en código, repositorio, notas, localStorage, IndexedDB o la bóveda salvo el formato seguro expresamente diseñado para ello.
 
-## Identidad y principios de OANIX
+## Arquitectura, escala y rendimiento
 
-- El nombre oficial se escribe **OANIX**.
-- OANIX es una aplicación de notas segura, offline-first y con cifrado local.
-- La cuenta online es opcional; no sustituye la contraseña maestra.
-- El transporte normal de sincronización mantiene E2EE y sobres opacos. La recuperación por correo es una excepción explícita del modelo de confianza documentada en `docs/PROJECT_MEMORY.md`.
-- La misma base React + TypeScript + Vite/PWA está empaquetada también como aplicación Android mediante Capacitor; no mantener dos lógicas de negocio paralelas.
-- La arquitectura debe ser modular: un cambio debe afectar lo mínimo posible al resto del sistema, sin crear una proliferación innecesaria de carpetas, stores, cachés o capas paralelas.
-- Diseñar para escala real desde el inicio: notas muy extensas, miles de registros, muchas imágenes y archivos de varios GB no son casos extremos; son cargas esperadas que deben guiar render, almacenamiento, índices, memoria, cifrado y sincronización.
-- Evitar algoritmos o consultas que recorran colecciones completas cuando exista una alternativa indexada/incremental. No cargar en RAM contenido grande que pueda procesarse por partes, ni re-renderizar/reprocesar una nota completa por cambios pequeños.
-- Antes de aprobar una arquitectura nueva, revisar su complejidad y comportamiento con datos grandes, no solo con datasets de desarrollo pequeños.
-- Antes de ejecutar una propuesta técnica importante del usuario, evaluarla con criterio propio: indicar si la dirección es correcta, qué riesgos reales tiene y si existe una alternativa mejor. No implementar mecánicamente una idea solo porque fue solicitada; priorizar el resultado técnico de OANIX.
-- Regla de trabajo útil: no repetir cifrado, escritura, lectura, render, hash, subida o sincronización de datos que no cambiaron. Detectar no-op, agrupar operaciones compatibles, conservar revisiones/baselines, deduplicar pendientes y cancelar/postergar trabajo obsoleto cuando sea seguro.
-- La eficiencia no justifica sobreingeniería: elegir granularidad y cachés que reduzcan trabajo real sin multiplicar estados, registros o complejidad de coordinación innecesariamente.
-- Cada módulo debe tener una responsabilidad clara y vivir en la capa/carpeta que le corresponde. Evitar archivos monolíticos, lógica de dominio dentro de componentes visuales y utilidades genéricas usadas como cajón de sastre.
-- Comentar decisiones, invariantes, fronteras, riesgos y motivos no obvios. No sobrecomentar líneas evidentes ni usar comentarios como sustituto de nombres claros, tipos o funciones pequeñas y bien separadas.
-- Antes de añadir una nueva pieza, comprobar si pertenece a un módulo existente. Si una función crece hasta mezclar responsabilidades, separarla por comportamiento real, no por fragmentación artificial.
-- No crear persistencia paralela cuando pueda reutilizarse de forma segura el modelo existente.
-- Ante una duda de sincronización, se prioriza conservar datos sobre sobrescribirlos silenciosamente.
-- La contraseña maestra y la clave de bóveda no se persisten en texto plano. Las integraciones nativas deben respetar las fronteras de seguridad registradas para Android Keystore, biometría y temporales/URIs nativos.
+- Mantener la separación `UI → estado/servicios → dominio → almacenamiento cifrado → vault/crypto`.
+- No crear persistencia paralela si el modelo existente puede resolver el caso de forma segura.
+- Cada módulo debe tener una responsabilidad clara; evitar archivos monolíticos, dependencias cruzadas y utilidades-cajón.
+- Diseñar para notas grandes, miles de registros, muchas imágenes y archivos de varios GB.
+- Evitar escaneos completos cuando exista una alternativa indexada/incremental.
+- No cargar datos gigantes completos en RAM si pueden procesarse por fragmentos.
+- No repetir cifrado, escritura, lectura, render, hash, subida o sync de datos que no cambiaron.
+- Detectar no-op, conservar revisiones/baselines, deduplicar pendientes y cancelar/postergar trabajo obsoleto cuando sea seguro.
+- La eficiencia no justifica sobreingeniería.
+- Toda UI nueva debe considerarse en PC + móvil + Día + Noche.
 
-## Regla de versiones
+## Evaluación técnica
 
-OANIX se desarrolla estrictamente por versiones y en el orden de `docs/ROADMAP.md`.
+Antes de ejecutar una propuesta técnica importante del usuario, evaluar si la dirección es correcta, qué riesgos tiene y si existe una alternativa mejor. No implementar mecánicamente una idea si perjudica OANIX.
 
-Si el usuario propone una función de una versión futura:
+No inventar archivos, funciones, commits, configuraciones ni estado de repositorio. Si hace falta conocerlos, comprobarlos.
 
-1. indicar con claridad a qué versión pertenece;
-2. no implementarla antes de tiempo, salvo preparación arquitectónica estrictamente necesaria y documentada;
-3. registrarla en `docs/PROJECT_MEMORY.md` como `DEFERRED`, incluyendo versión objetivo y lo acordado;
-4. continuar con el bloque oficial activo.
+Al corregir un problema, buscar la causa real y considerar efectos sobre lo que ya funciona.
 
-Si por una razón válida se implementa algo fuera de orden, debe quedar registrado en `docs/PROJECT_MEMORY.md` como una **excepción de orden**, con fecha, motivo, alcance y efecto sobre el roadmap.
+## Decisiones y memoria
 
-## Protocolo de decisiones
+Las decisiones relevantes deben sobrevivir al chat. Actualizar `PROJECT_MEMORY.md`, `CURRENT_STATE.md` o el checkpoint según corresponda cuando:
 
-Toda decisión relevante conversada con el usuario debe sobrevivir al chat.
-
-Actualizar `docs/PROJECT_MEMORY.md` o el checkpoint vigente cuando ocurra cualquiera de estos casos:
-
-- se define cómo debe funcionar una característica;
-- se modifica una decisión anterior;
-- se descarta una idea;
-- se pospone una función para otra versión;
-- aparece un problema conocido que aún no se resolverá;
+- se define o cambia una característica;
+- se descarta, aplaza o sustituye una idea;
+- aparece un problema conocido pendiente;
 - se implementa algo que estaba pendiente;
-- se adelanta excepcionalmente una función;
-- se detecta una discrepancia entre intención, documentación y código.
+- se detecta discrepancia entre intención, documentación y código.
 
-Usar estados consistentes:
+Estados duraderos permitidos: `DECIDED`, `IN_PROGRESS`, `IMPLEMENTED`, `VALIDATION_DEBT`, `DEFERRED`, `SUPERSEDED`, `CANCELLED`.
 
-- `DECIDED`: lógica acordada, todavía no necesariamente implementada.
-- `IN_PROGRESS`: implementación activa.
-- `IMPLEMENTED`: existe en código y debe verificarse con pruebas/estado del repositorio.
-- `VALIDATION_DEBT`: implementación existente cuya validación real restante sigue visible y no debe inventarse.
-- `DEFERRED`: aceptado o solicitado, pero reservado para una versión/bloque posterior.
-- `SUPERSEDED`: reemplazado por una decisión posterior; conservar el historial y señalar la nueva decisión.
-- `CANCELLED`: se decidió no hacerlo.
+No borrar silenciosamente decisiones históricas que expliquen compatibilidad, seguridad o arquitectura. Sí eliminar de los documentos activos las instrucciones obsoletas que puedan reabrir trabajo ya terminado.
 
-No borrar silenciosamente decisiones anteriores. Si cambian, marcarlas como sustituidas para conservar la trazabilidad. Esta regla aplica a decisiones de producto/arquitectura, no al contador rodante de chats: los números anteriores no deben conservarse como autoridad activa.
-
-## Protocolo después de implementar
+## Después de implementar
 
 Al completar un cambio relevante:
 
-1. verificar pruebas y CI aplicables;
-2. actualizar la documentación de continuidad (`docs/OANIX_ACTIVE_CHECKPOINT.md`, `docs/CURRENT_STATE.md` y/o `docs/PROJECT_MEMORY.md` según corresponda);
-3. actualizar `docs/CHANGELOG.md` cuando el cambio forme parte del historial de producto;
-4. actualizar `docs/ROADMAP.md` cuando corresponda cambiar el estado oficial de un bloque;
-5. mantener `AGENTS.md` estable salvo que cambien las reglas generales o su checkpoint de continuidad quede obsoleto.
+1. verificar tests y gates aplicables;
+2. actualizar `OANIX_ACTIVE_CHECKPOINT.md` y `CURRENT_STATE.md` si cambió el punto operativo;
+3. actualizar `PROJECT_MEMORY.md` si cambió una decisión duradera;
+4. actualizar `CHANGELOG.md` cuando corresponda al historial de producto;
+5. actualizar `ROADMAP.md` si cambió el orden o estado de una etapa.
 
-La documentación de memoria no debe introducir lógica de ejecución ni modificar el comportamiento de la aplicación; es documentación de continuidad.
+No dejar para otro chat documentación activa que ya se sabe desactualizada.
 
 ## Avance automático de ajustes pequeños
 
-El usuario pidió explícitamente no detener el desarrollo por cambios pequeños y seguros. Si un ajuste es de bajo riesgo, local, no cambia seguridad/datos/alcance ni una decisión de producto importante y puede validarse con pruebas, corregirlo, probarlo, integrarlo y continuar con el siguiente trabajo útil.
+Si un ajuste es de bajo riesgo, local, reversible, no cambia seguridad/datos/alcance ni una decisión importante y puede validarse, corregirlo y continuar sin pedir confirmación adicional.
 
-Detenerse para pedir decisión únicamente cuando exista una alternativa real que cambie seguridad, datos, alcance o una experiencia importante.
+Detenerse solo cuando exista una decisión real que cambie seguridad, datos, alcance o una experiencia importante.
 
-## Regla de resolución de fallos y avance hasta verde
+## Resolución de fallos hasta verde
 
-Cuando una prueba, build o workflow aplicable falle durante un trabajo activo, el agente debe resolverlo de forma operativa y no quedarse repitiendo diagnóstico una vez que la causa raíz esté suficientemente verificada.
+Cuando falle una prueba, build o workflow aplicable:
 
-Secuencia obligatoria:
+1. confirmar que el fallo corresponde al HEAD actual;
+2. localizar el primer error concreto, no el `exit code 1` terminal;
+3. contrastarlo con código y tests actuales;
+4. identificar si la causa es implementación, test obsoleto, tipos/lint/build, configuración o infraestructura;
+5. si la causa está suficientemente verificada y el cambio es pequeño/reversible, aplicar de inmediato la corrección mínima correcta;
+6. no degradar comportamiento correcto para satisfacer una prueba vieja: actualizar la prueba si conserva un contrato obsoleto;
+7. ejecutar de nuevo todos los gates aplicables;
+8. repetir desde el primer error real del nuevo run hasta verde.
 
-1. verificar que el fallo corresponde al HEAD actual de la rama o PR que se está corrigiendo;
-2. localizar el primer error concreto del job/step fallido; mensajes terminales genéricos como `Process completed with exit code 1` no cuentan como causa raíz;
-3. contrastar el error con el código y las pruebas actuales antes de modificar nada;
-4. distinguir si la causa está en implementación, prueba obsoleta/incorrecta, tipos/lint/build, configuración o infraestructura;
-5. si la causa está suficientemente confirmada y el cambio es pequeño, local y reversible, aplicar inmediatamente la corrección mínima correcta sin pedir una confirmación adicional;
-6. no cambiar comportamiento correcto solo para hacer pasar una prueba: si la implementación nueva es intencional y la prueba conserva un contrato antiguo, actualizar la prueba preservando el comportamiento correcto;
-7. ejecutar de nuevo todos los gates aplicables sobre el nuevo HEAD;
-8. si aparece otro fallo, repetir desde el primer error concreto del nuevo run, sin acumular parches especulativos;
-9. no declarar el trabajo solucionado ni continuar al siguiente bloque mientras algún gate aplicable siga rojo.
+Seguir repitiendo el mismo diagnóstico cuando ya existe evidencia suficiente para actuar se considera estancamiento.
 
-Una vez que la evidencia ya permite actuar con seguridad razonable, seguir releyendo los mismos logs, repetir el mismo diagnóstico o detenerse a pedir una confirmación innecesaria se considera estancamiento y debe evitarse.
+Un trabajo no se considera cerrado mientras un gate técnico aplicable siga rojo. Una revisión automática externa que falle solo por cuota/API no sustituye los gates técnicos reales.
 
-## Regla operativa de GitHub
+## GitHub
 
-Cuando el agente tenga herramientas integradas de GitHub debe usarlas directamente para ramas, archivos, PRs, CI, logs, reintentos, merges, issues y artifacts. No convertir al usuario en operador de GitHub si la herramienta puede realizar la acción.
+Cuando existan herramientas integradas de GitHub, usarlas directamente para ramas, archivos, PRs, CI, logs, reintentos, merges, issues y artifacts. No convertir al usuario en operador de GitHub si la herramienta puede realizar la acción.
 
-Todas esas operaciones deben dirigirse a `HNAlvaradoHN/OANIX` salvo instrucción explícita del usuario en sentido contrario.
-
-Si una tarea requiere prueba física en Android, el agente debe llegar hasta generar/verificar el artifact y, cuando sus herramientas lo permitan, entregar la APK directamente al usuario. Nunca afirmar que un build fue probado físicamente si solo pasó CI.
+No afirmar una validación física de Android/PWA si solo pasó CI.
 
 ## Prioridad operativa actual
 
-La antigua secuencia RC/publicación quedó **SUPERSEDED** por la reconstrucción post-unlock decidida el 2026-08-31.
+La reconstrucción post-unlock de Home/editor ya está **IMPLEMENTED** y no debe reabrirse por documentación histórica. El editor natural por renglones quedó consolidado por PR #629; Home/lista y reorder recientes quedaron integrados en PR #630–#638.
 
-Orden vigente:
-1. mantener seguridad/bootstrap/vault intactos;
-2. reconstruir Home/editor/capa de notas sobre almacenamiento v2;
-3. recuperar el editor aprobado con renglones perfectamente alineados;
-4. validar el flujo local cifrado crear → escribir → guardar → reabrir;
-5. completar personalización visual pendiente;
-6. conectar después el nuevo coordinador de sincronización consciente de actividad;
-7. reincorporar imágenes, archivos y demás capacidades preservadas por capas.
+La sincronización incremental v2 con Supabase + R2 quedó implementada por PR #639–#641 y es el frente vigente de validación real.
 
-No reactivar workspace/runtimes visuales legacy para acelerar esta reconstrucción. Git conserva su historial si se necesita consultar una solución anterior.
+Orden actual:
 
-## Estado de continuidad actual
+1. preservar seguridad/bootstrap/vault y almacenamiento v2;
+2. validar sync v2 extremo a extremo entre dispositivos/sesiones reales;
+3. comprobar offline/reconexión, notas, carpetas y etiquetas, protección durante edición y ausencia de descargas innecesarias;
+4. corregir cualquier defecto encontrado en el flujo v2 actual y volver a verde;
+5. solo después abrir el siguiente bloque funcional indicado por el roadmap/checkpoint actualizado.
 
-El detalle operativo vivo no se duplica aquí. Consultar siempre `docs/OANIX_ACTIVE_CHECKPOINT.md` y verificarlo contra el `main` real antes de continuar.
+No volver a buscar `qwen.html`, `appquen.js`, reconstruir el editor ni reactivar `AutoSyncRuntime` legacy salvo una nueva decisión explícita o evidencia técnica nueva.
 
-Reglas permanentes:
+## Estado de continuidad
+
+El detalle vivo no se duplica aquí. Consultar `docs/OANIX_ACTIVE_CHECKPOINT.md` y verificarlo contra `main` antes de continuar.
+
+Reglas permanentes actuales:
 - `RebuildApp` es la autoridad post-unlock mientras `main` no demuestre una sustitución posterior.
-- `encrypted_records_v2` es el store cifrado v2 indexado y aditivo mientras `main` no demuestre una sustitución posterior.
-- Seguridad, vault/session, cifrado y datos antiguos deben permanecer preservados.
-- Toda UI nueva debe validarse en PC + móvil + Día + Noche.
-- Un trabajo no se considera cerrado mientras CI, Android o Pages aplicables estén rojos; corregir y volver a validar hasta verde.
+- `encrypted_records_v2` es el store cifrado v2 indexado/aditivo mientras `main` no demuestre una sustitución posterior.
+- `V2AutoSyncRuntime` es el runtime de sync incremental activo post-unlock; no sustituirlo por el runtime legacy por comodidad.
 
-## Regla especial de traspaso entre IAs
+## Traspaso entre IAs
 
-Cuando una IA nueva reciba este proyecto:
+Una IA nueva debe:
 
-- debe fijar primero `HNAlvaradoHN/OANIX` como repositorio canónico;
-- debe leer `AGENTS.md`, `docs/OANIX_CHAT_PROTOCOL.md` y `docs/OANIX_ACTIVE_CHECKPOINT.md` antes de inferir número o siguiente acción;
-- debe leer después `docs/CURRENT_STATE.md`, los documentos duraderos y el estado real de `main`;
-- no debe inventar requisitos para llenar huecos;
-- si encuentra contradicciones, debe señalarlas y usar evidencia del repo antes de actuar;
-- no debe pedir al usuario que repita decisiones que ya estén registradas;
-- debe registrar nuevas decisiones o pendientes antes de cerrar el trabajo correspondiente;
-- si el usuario dice «esto después», «guardalo para otra versión» o equivalente, debe quedar registrado aunque no se implemente ahora.
+- fijar primero `HNAlvaradoHN/OANIX`;
+- leer protocolo y checkpoint antes de inferir número o siguiente acción;
+- verificar `main`, PRs/gates vivos y archivos del frente activo;
+- corregir documentación activa si está desfasada antes de continuar;
+- no pedir decisiones ya registradas;
+- no reabrir frentes `IMPLEMENTED` solo porque sobreviva documentación histórica;
+- dejar registrado el nuevo estado y siguiente acción antes de cerrar.
 
 ## Visibilidad del repositorio
 
-El repositorio aparece actualmente como público. No cambiar su visibilidad, permisos o configuración sensible sin una instrucción explícita del usuario.
+El repositorio aparece actualmente como público. No cambiar visibilidad, permisos o configuración sensible sin instrucción explícita del usuario.
