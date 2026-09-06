@@ -1,5 +1,5 @@
 import type { EncryptedV2Write } from '../../storage/repositories/encryptedV2RecordRepository'
-import { createPendingSyncWrite } from './incrementalNoteText'
+import { createPendingSyncWrite } from './incrementalNoteText.ts'
 
 export function currentEntityRevision(value: { revision?: number }): number {
   return Number.isSafeInteger(value.revision) && (value.revision ?? 0) > 0
