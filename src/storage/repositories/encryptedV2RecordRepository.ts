@@ -63,6 +63,29 @@ function sameEncryptedPayload(left: EncryptedVaultPayload, right: EncryptedVault
   return left.scheme === right.scheme && left.iv === right.iv && left.ciphertext === right.ciphertext
 }
 
+function deleteStoredRecordIfPayloadMatches(
+  store: IDBObjectStore,
+  recordType: string,
+  recordId: string,
+  expectedPayload: EncryptedVaultPayload,
+): Promise<boolean> {
+  return new Promise((resolve, reject) => {
+    const request = store.get([recordType, recordId])
+    request.onerror = () => reject(request.error ?? new Error('IndexedDB request failed.'))
+    request.onsuccess = () => {
+      const current = request.result as StoredEncryptedV2Record | undefined
+      if (!current || !sameEncryptedPayload(current.payload, expectedPayload)) {
+        resolve(false)
+        return
+      }
+
+      const deletion = store.delete([recordType, recordId])
+      deletion.onsuccess = () => resolve(true)
+      deletion.onerror = () => reject(deletion.error ?? new Error('IndexedDB delete failed.'))
+    }
+  })
+}
+
 async function decryptStoredRecords<T>(
   records: StoredEncryptedV2Record[],
 ): Promise<DecryptedV2Record<T>[]> {
@@ -282,6 +305,7 @@ export async function deleteEncryptedV2RecordIfValueMatches<T>(
   if (!observed) return false
   const currentValue = await decryptVaultJson<T>(vaultKey, observed.payload, { recordType, recordId })
   if (JSON.stringify(currentValue) !== JSON.stringify(expectedValue)) return false
+  const observedPayload = observed.payload
 
   let deleted = false
   await retryTransientStorageOperation(async () => {
@@ -289,15 +313,12 @@ export async function deleteEncryptedV2RecordIfValueMatches<T>(
     try {
       const transaction = currentDatabase.transaction(V2_ENCRYPTED_RECORDS_STORE, 'readwrite')
       const completion = transactionCompleted(transaction)
-      const store = transaction.objectStore(V2_ENCRYPTED_RECORDS_STORE)
-      const current = await requestResult<StoredEncryptedV2Record | undefined>(
-        store.get([recordType, recordId]),
-        undefined,
+      deleted = await deleteStoredRecordIfPayloadMatches(
+        transaction.objectStore(V2_ENCRYPTED_RECORDS_STORE),
+        recordType,
+        recordId,
+        observedPayload,
       )
-      if (current && sameEncryptedPayload(current.payload, observed!.payload)) {
-        store.delete([recordType, recordId])
-        deleted = true
-      }
       await completion
     } finally {
       currentDatabase.close()
