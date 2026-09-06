@@ -1,107 +1,79 @@
 # OANIX — Roadmap
 
-**Última actualización:** 2026-08-21
+**Última actualización:** 2026-09-06
 
-Este documento indica dirección y orden. El estado exacto del trabajo actual vive en `CURRENT_STATE.md`; el historial detallado vive en `CHANGELOG.md`, PRs e issues.
+Este documento indica dirección y orden de producto. El estado operativo exacto vive en `docs/CURRENT_STATE.md` y `docs/OANIX_ACTIVE_CHECKPOINT.md`; el historial detallado vive en `docs/CHANGELOG.md`, PRs e issues. GitHub `main` prevalece ante cualquier contradicción.
 
 ## Cerrado funcionalmente
 
 ### V1 — Núcleo local
 
-PWA offline-first con bóveda local, contraseña maestra, cifrado, notas y editor estructurado, imágenes, checklists, fichas de contacto, entradas por día, carpetas, etiquetas, búsqueda y backup/restauración cifrada.
+PWA offline-first con bóveda local, contraseña maestra, cifrado, notas, editor, imágenes, checklists, fichas de contacto, entradas por día, carpetas, etiquetas, búsqueda y backup/restauración cifrada.
 
 **Estado:** cerrada funcionalmente.
 
 ### V2 — Cuenta y sincronización
 
-Cuenta opcional, autenticación, backend de sincronización, transporte E2EE, multidispositivo, conflictos, historial y recuperación de acceso.
+Cuenta opcional, autenticación, transporte E2EE, multidispositivo, conflictos, historial y recuperación de acceso.
 
-- [x] Resolución de conflictos
+La recuperación Email OTP sigue siendo una frontera de confianza explícita distinta del transporte normal E2EE; ver `SECURITY.md`.
 
-El estado compacto de sincronización y resolución reutiliza el registro cifrado `system.sync-state`; no se crea una persistencia paralela para esa coordinación.
+La implementación histórica de sync basada en el runtime legacy no es la dirección activa. El transporte incremental v2 actual usa almacenamiento local v2, metadata/cursor remoto en Supabase y payload cifrado en R2 mediante gateway privado.
 
-La recuperación Email OTP es una frontera de confianza explícita distinta del transporte normal E2EE; ver `SECURITY.md`.
+**Estado funcional:** implementada. La validación real del transporte incremental v2 recién activado es el frente inmediato.
 
-Deudas de validación de campo que siguen siendo reales:
-- #69: conflictos multidispositivo (`VALIDATION_DEBT`);
-- #70: historial/versiones;
-- #73: recuperación en escenarios multidispositivo/offline.
-
-**Estado:** cerrada funcionalmente; no declarar esas deudas como validadas hasta ejecutar sus casos reales.
+Deudas históricas de validación deben verificarse contra sus issues antes de asumir que siguen abiertas; no usar este roadmap como fuente de estado de issues.
 
 ### V3 — Android / Capacitor
 
 Misma base React/TypeScript empaquetada con Capacitor, con integraciones nativas de Keystore/biometría, cámara, archivos, compartir y navegación Atrás. La lógica de negocio no se duplica en Kotlin.
 
-La firma definitiva de publicación/Play Store, identidad final de publicación y validaciones nativas pendientes pertenecen al cierre de distribución, no justifican una segunda aplicación Android.
+La firma/identidad definitiva de publicación y otras validaciones de distribución pertenecen al cierre de publicación.
 
 **Estado:** cerrada funcionalmente.
 
-## Fase actual — archivos y almacenamiento
+## Reconstrucción post-unlock — IMPLEMENTED
 
-OANIX evoluciona de bloc de notas a contenedor privado capaz de manejar imágenes y archivos generales (PDF, Office, ZIP, APK, audio, video y otros) conservando formato original, cifrado y bajo consumo de memoria.
+La reconstrucción de Home, lista de notas y editor ya no es un frente pendiente.
 
-### Motor de archivos grandes
+- `RebuildApp` es la autoridad post-unlock actual.
+- El editor natural por renglones quedó consolidado por PR #629 detrás de `EditorSurface`.
+- Orden, personalización, scroll y drag/reorder recientes de Home/lista quedaron integrados en PR #630–#638.
+- No reabrir una sustitución de editor ni buscar plantillas antiguas salvo nueva decisión explícita o defecto concreto demostrado.
 
-Implementado:
-- procesamiento secuencial por fragmentos;
-- AES-GCM por fragmento e IV independiente;
-- SHA-256/manifiestos;
-- checkpoint persistente y reanudación;
-- subida/descarga por rangos;
-- caché técnica separada de la bóveda;
-- preflight de destino/cuota;
-- abstracción `OanixStorageProvider`;
-- Google Drive como primer proveedor.
+## Sincronización incremental v2 + R2 — FRENTE ACTUAL
 
-Validado en PWA:
-- archivo real de ~120 MiB con subida, recuperación íntegra y reanudación tras corte de Internet/cierre de PWA;
-- archivo real de **818 MB** con subida completa y **103 fragmentos íntegros y descifrados** en la verificación final.
+Implementado en PR #639–#641:
 
-PR #219 amplió la prueba controlada a **100 MiB–1 GiB**.
+- `sync_v2_records` como índice remoto pequeño con cursor monotónico;
+- bindings opacos y protocolo incremental;
+- `runV2IncrementalSync` consume la cola cifrada `sync.v2.pending`;
+- payload cifrado almacenado en R2 detrás de un gateway privado;
+- GitHub Pages conectado al endpoint público del gateway sin credenciales R2 en cliente;
+- `V2AutoSyncRuntime` montado únicamente con bóveda desbloqueada;
+- intento tras ~3 s de inactividad y consulta remota incremental cada 60 s;
+- cancelación/postergación por actividad, offline u ocultamiento;
+- no aplicar cambios remotos mientras una nota está abierta;
+- refresco de `RebuildApp` después de aplicar remoto sin recarga completa;
+- sin reactivar `AutoSyncRuntime` legacy ni escaneo completo de ciphertext.
 
 ### Orden inmediato
 
-1. Repetir la prueba de ~818 MB con interrupción alrededor del 30–50%, cerrar/reabrir OANIX y confirmar reanudación sin reiniciar.
-2. Aumentar tamaños gradualmente después de validar estabilidad. **No saltar directamente a 5 GB.**
-3. Integrar archivos grandes al flujo normal de notas solo después de estabilizar el motor y la UX de transferencia.
+1. Validar sync real extremo a extremo entre dos dispositivos/sesiones con la misma cuenta y bóveda.
+2. Verificar crear/editar nota, recepción remota sin reload completo y protección mientras el editor está abierto.
+3. Verificar offline → cambios locales → reconexión → sincronización sin pérdida.
+4. Verificar crear/editar/reordenar/eliminar carpetas y etiquetas mediante la cola incremental.
+5. Confirmar que una bóveda sin cambios no descarga payload remoto innecesariamente.
+6. Confirmar que fallos de red/auth/egress conservan contenido local y pendientes de forma no destructiva.
+7. Corregir cualquier defecto encontrado en el flujo v2 actual y repetir gates hasta verde antes de abrir otro bloque funcional.
 
-Objetivo inicial de producto: **5 GB por archivo**, sin convertir 5 GB en techo arquitectónico.
+## Archivos grandes y almacenamiento — PRESERVADO / NO ES FRENTE INMEDIATO
 
-## Transferencias en segundo plano
+El motor existente de archivos grandes no se elimina ni se reimplementa. Conserva procesamiento por fragmentos, AES-GCM por fragmento, manifiestos/hash, checkpoints/reanudación, subida/descarga por rangos, caché técnica separada, preflight y la frontera `OanixStorageProvider`.
 
-Antes de considerar terminado el sistema de archivos grandes en Android:
-- la APK deberá poder continuar transferencias grandes en segundo plano cuando el usuario cambie de app o apague la pantalla, respetando las restricciones del sistema Android;
-- el progreso y checkpoint deberán sobrevivir interrupciones del proceso cuando sea posible y reanudarse sin volver a empezar;
-- la PWA no prometerá ejecución continua en background, porque el navegador puede suspenderla; allí la garantía será reanudación fiable desde checkpoint/progreso remoto confirmado.
+La validación histórica de archivos grandes y la evolución hacia archivos dentro de notas, transferencias Android en segundo plano, video bajo demanda y proveedores adicionales siguen siendo trabajo futuro, pero **no desplazan la validación actual de sync v2**.
 
-No implementar este bloque antes de estabilizar el motor de transferencia actual.
-
-## Después de estabilizar transferencias
-
-### Archivos dentro de notas
-
-- selector/adjunto general reutilizando el motor estable;
-- representación compacta dentro de la nota;
-- mantener archivo original cifrado;
-- abrir/descargar/exportar de forma segura;
-- distinguir `Liberar del dispositivo` de `Eliminar de OANIX`.
-
-### Video bajo demanda
-
-No descargar videos gigantes completos para reproducirlos.
-
-- lectura remota por rangos;
-- descifrado únicamente de lo necesario;
-- reproducción y seek;
-- caché local limitada/bajo demanda;
-- `Guardar sin conexión` y `Liberar espacio`.
-
-### Proveedores adicionales
-
-Google Drive demuestra la frontera `OanixStorageProvider`, pero OANIX no dependerá exclusivamente de Google.
-
-Candidatos futuros según necesidad real: almacenamiento local, OneDrive, S3 compatible, WebDAV/NAS y eventualmente infraestructura propia. **No implementar múltiples proveedores anticipadamente.**
+Objetivo de producto preservado: soportar archivos de hasta **5 GB** inicialmente sin convertir 5 GB en techo arquitectónico.
 
 ## Publicación y producto
 
@@ -109,7 +81,7 @@ Antes de distribución pública estable:
 - resolver firma/identidad definitiva de Android;
 - revisar permisos y políticas de tienda;
 - ejecutar validaciones reales pendientes relevantes;
-- auditoría de seguridad/privacidad y limpieza de datos temporales;
+- auditoría de seguridad/privacidad y limpieza de temporales;
 - comprobar PWA y APK en dispositivos representativos.
 
 ## Monetización
@@ -118,4 +90,4 @@ Decisión vigente: **no dividir por ahora OANIX en Free/Pro ni bloquear funcione
 
 ## Regla del roadmap
 
-No usar este archivo como lista infinita de PRs. Registrar aquí solo etapas y orden de producto. Los detalles históricos van a `CHANGELOG.md`; el siguiente trabajo concreto va a `CURRENT_STATE.md`.
+No usar este archivo como lista infinita de PRs ni como checkpoint de ejecución. Los detalles históricos van a `CHANGELOG.md`; el siguiente trabajo concreto va a `CURRENT_STATE.md` y `OANIX_ACTIVE_CHECKPOINT.md`.
