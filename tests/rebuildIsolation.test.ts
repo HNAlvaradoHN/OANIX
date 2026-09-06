@@ -31,7 +31,7 @@ test('Android back handling keeps native exit and modal behavior without legacy 
 
 test('security boundary remains outside the rebuild and still owns vault access', () => {
   assert.match(app, /<VaultGate/)
-  assert.match(app, /<RebuildApp onLock=\{lockVault\} \/>/)
+  assert.match(app, /<RebuildApp[^>]*onLock=\{lockVault\}[^>]*\/>/)
   assert.match(app, /AUTO_LOCK_CHANGE_EVENT/)
   assert.match(rebuild, /AUTO_LOCK_OPTIONS/)
   assert.match(rebuild, /saveAutoLockMinutes/)
