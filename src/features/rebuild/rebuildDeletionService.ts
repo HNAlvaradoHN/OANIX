@@ -24,7 +24,10 @@ import {
   type NoteV2Meta,
   type TagV2Record,
 } from './rebuildModel'
-import { FOLDER_V2_COVER_TYPE } from './workspaceCoverService'
+import {
+  FOLDER_V2_COVER_TYPE,
+  type WorkspaceCoverRecord,
+} from './workspaceCoverService'
 
 function nextNoteRevision(note: NoteV2Meta): number {
   return (Number.isSafeInteger(note.revision) && note.revision > 0 ? note.revision : 1) + 1
@@ -45,8 +48,11 @@ function metadataUpdateWrite(meta: NoteV2Meta, queuedAt: string): EncryptedV2Wri
 }
 
 export async function deleteRebuildFolder(folderId: string): Promise<NoteV2Meta[]> {
-  const [folder, noteRecords] = await Promise.all([
-    readEncryptedV2Record<FolderV2Record>(FOLDER_V2_TYPE, folderId),
+  const folder = await readEncryptedV2Record<FolderV2Record>(FOLDER_V2_TYPE, folderId)
+  const [cover, noteRecords] = await Promise.all([
+    folder?.coverAssetId
+      ? readEncryptedV2Record<WorkspaceCoverRecord>(FOLDER_V2_COVER_TYPE, folder.coverAssetId)
+      : Promise.resolve(null),
     listEncryptedV2Records<NoteV2Meta>(NOTE_V2_META_TYPE),
   ])
   const queuedAt = new Date().toISOString()
@@ -66,6 +72,15 @@ export async function deleteRebuildFolder(folderId: string): Promise<NoteV2Meta[
       FOLDER_V2_TYPE,
       folderId,
       nextEntityRevision(folder),
+      'delete',
+      queuedAt,
+    ))
+  }
+  if (cover && folder?.coverAssetId) {
+    writes.push(createEntityPendingWrite(
+      FOLDER_V2_COVER_TYPE,
+      folder.coverAssetId,
+      nextEntityRevision(cover),
       'delete',
       queuedAt,
     ))
