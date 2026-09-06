@@ -118,6 +118,7 @@ export interface NoteV2BlockManifest {
 
 export interface SyncV2PendingRecord {
   version: 2
+  /** Scope that owns the unit. For note units this is the note id; other v2 entities use their own id. */
   noteId: string
   unitType: string
   unitId: string
@@ -128,6 +129,7 @@ export interface SyncV2PendingRecord {
 
 export interface FolderV2Record {
   version: 2
+  revision: number
   id: string
   name: string
   icon: string
@@ -143,6 +145,7 @@ export interface FolderV2Record {
 
 export interface TagV2Record {
   version: 2
+  revision: number
   id: string
   name: string
   color: string
