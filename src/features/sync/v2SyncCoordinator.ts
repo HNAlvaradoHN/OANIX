@@ -6,6 +6,7 @@ import {
 import { requireActiveVaultKey } from '../../security/vault/vaultSession'
 import {
   applyEncryptedV2Changes,
+  deleteEncryptedV2RecordIfValueMatches,
   listEncryptedV2Records,
   readEncryptedV2Record,
   readEncryptedV2Records,
@@ -52,7 +53,6 @@ interface SyncV2GcRecord {
 }
 
 interface UploadQueueEntry {
-  id: string
   pending: SyncV2PendingRecord
   ack: SyncV2AckRecord | null
   binding: SyncV2BindingRecord | null
@@ -153,6 +153,14 @@ async function currentSession() {
   return data.session
 }
 
+async function clearAcknowledgedPending(pending: SyncV2PendingRecord): Promise<void> {
+  await deleteEncryptedV2RecordIfValueMatches(
+    SYNC_V2_PENDING_TYPE,
+    syncV2IdentityKey(pending.unitType, pending.unitId),
+    pending,
+  )
+}
+
 async function writeAckAndBinding(
   pending: SyncV2PendingRecord,
   binding: SyncV2BindingRecord | null,
@@ -206,6 +214,7 @@ async function uploadOne(
   if (pending.operation === 'delete' && !binding) {
     // Created and deleted before its first remote commit: there is nothing to tombstone remotely.
     await writeAckAndBinding(pending, null, null)
+    await clearAcknowledgedPending(pending)
     return 'skipped'
   }
 
@@ -281,6 +290,7 @@ async function uploadOne(
 
   const row = requireSyncV2RemoteRow(remoteValue)
   await writeAckAndBinding(pending, binding, row)
+  await clearAcknowledgedPending(pending)
 
   if (
     previousObjectKey
@@ -310,7 +320,6 @@ async function loadUploadQueue(): Promise<UploadQueueEntry[]> {
   ])
 
   return pendingRecords.map((record, index) => ({
-    id: record.recordId,
     pending: record.value,
     ack: acks[index],
     binding: bindings[index],
@@ -486,7 +495,7 @@ async function pullRemote(
         await recordTombstoneConflict(
           knownBinding,
           row,
-          pending.revision ?? knownBinding.revision,
+          pending.revision,
         )
         result.conflicts += 1
         await saveCursor(row.change_seq)
