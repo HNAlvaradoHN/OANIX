@@ -3,10 +3,10 @@ import {
   listEncryptedV2Records,
   readEncryptedV2Record,
   readEncryptedV2Records,
-  writeEncryptedV2Record,
   type EncryptedV2RecordIdentity,
   type EncryptedV2Write,
 } from '../../storage/repositories/encryptedV2RecordRepository'
+import { createEntityPendingWrite } from './entitySyncWrites'
 import {
   buildIncrementalTextUpdate,
   buildInitialIncrementalText,
@@ -397,6 +397,7 @@ export async function createRebuildFolder(name: string): Promise<FolderV2Record>
   const id = createId()
   const folder: FolderV2Record = {
     version: 2,
+    revision: 1,
     id,
     name: normalizeName(name, 60, 'Escribe un nombre para la carpeta.'),
     icon: V2_FOLDER_ICONS[secureRandomIndex(V2_FOLDER_ICONS.length)],
@@ -407,7 +408,12 @@ export async function createRebuildFolder(name: string): Promise<FolderV2Record>
     updatedAt: now,
   }
 
-  await writeEncryptedV2Record(FOLDER_V2_TYPE, id, folder)
+  await applyEncryptedV2Changes({
+    writes: [
+      { recordType: FOLDER_V2_TYPE, recordId: id, value: folder },
+      createEntityPendingWrite(FOLDER_V2_TYPE, id, folder.revision!, 'upsert', now),
+    ],
+  })
   return folder
 }
 
@@ -417,6 +423,7 @@ export async function createRebuildTag(name: string): Promise<TagV2Record> {
   const color = V2_FOLDER_GRADIENTS[secureRandomIndex(V2_FOLDER_GRADIENTS.length)][0]
   const tag: TagV2Record = {
     version: 2,
+    revision: 1,
     id,
     name: normalizeName(name, 40, 'Escribe un nombre para la etiqueta.'),
     color,
@@ -424,6 +431,11 @@ export async function createRebuildTag(name: string): Promise<TagV2Record> {
     updatedAt: now,
   }
 
-  await writeEncryptedV2Record(TAG_V2_TYPE, id, tag)
+  await applyEncryptedV2Changes({
+    writes: [
+      { recordType: TAG_V2_TYPE, recordId: id, value: tag },
+      createEntityPendingWrite(TAG_V2_TYPE, id, tag.revision!, 'upsert', now),
+    ],
+  })
   return tag
 }
