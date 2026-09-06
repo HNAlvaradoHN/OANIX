@@ -38,6 +38,7 @@ jobs:
       - name: Build OANIX
         env:
           VITE_GOOGLE_DRIVE_WEB_CLIENT_ID: ${{ vars.VITE_GOOGLE_DRIVE_WEB_CLIENT_ID }}
+          VITE_OANIX_OBJECT_API_URL: https://oanix-object-gateway.geovaalvarado0.workers.dev
         run: npm run build
 
       - name: Upload Pages artifact
