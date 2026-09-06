@@ -165,6 +165,7 @@ async function writeAckAndBinding(
   pending: SyncV2PendingRecord,
   binding: SyncV2BindingRecord | null,
   row: SyncV2RemoteRow | null,
+  garbageObjectKey: string | null = null,
 ): Promise<void> {
   const acknowledgedAt = new Date().toISOString()
   const remoteChangeSeq = row?.change_seq ?? binding?.remoteChangeSeq ?? 0
@@ -195,6 +196,7 @@ async function writeAckAndBinding(
     }
     writes.push(...bindingWrites(nextBinding))
   }
+  if (garbageObjectKey) writes.push(gcWrite(garbageObjectKey))
 
   await applyEncryptedV2Changes({ writes })
 }
@@ -289,15 +291,12 @@ async function uploadOne(
   }
 
   const row = requireSyncV2RemoteRow(remoteValue)
-  await writeAckAndBinding(pending, binding, row)
-  await clearAcknowledgedPending(pending)
-
-  if (
-    previousObjectKey
+  const garbageObjectKey = previousObjectKey
     && (pending.operation === 'delete' || previousObjectKey !== row.object_key)
-  ) {
-    await applyEncryptedV2Changes({ writes: [gcWrite(previousObjectKey)] })
-  }
+    ? previousObjectKey
+    : null
+  await writeAckAndBinding(pending, binding, row, garbageObjectKey)
+  await clearAcknowledgedPending(pending)
 
   return pending.operation === 'delete' ? 'deleted' : 'uploaded'
 }
@@ -319,11 +318,16 @@ async function loadUploadQueue(): Promise<UploadQueueEntry[]> {
     readEncryptedV2Records<SyncV2BindingRecord>(bindingIdentities),
   ])
 
-  return pendingRecords.map((record, index) => ({
+  const entries = pendingRecords.map((record, index) => ({
     pending: record.value,
     ack: acks[index],
     binding: bindings[index],
   }))
+  const acknowledged = entries.filter((entry) => !pendingNeedsUpload(entry.pending, entry.ack))
+  if (acknowledged.length > 0) {
+    await Promise.all(acknowledged.map((entry) => clearAcknowledgedPending(entry.pending)))
+  }
+  return entries
 }
 
 async function uploadPending(
@@ -492,11 +496,7 @@ async function pullRemote(
       const identity = bindingRecordId(knownBinding.unitType, knownBinding.unitId)
       const { pending, ack } = await readPendingAndAck(identity)
       if (pending && pendingNeedsUpload(pending, ack)) {
-        await recordTombstoneConflict(
-          knownBinding,
-          row,
-          pending.revision,
-        )
+        await recordTombstoneConflict(knownBinding, row, pending.revision)
         result.conflicts += 1
         await saveCursor(row.change_seq)
         continue
