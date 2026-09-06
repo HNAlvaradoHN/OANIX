@@ -1,6 +1,7 @@
 import {
   applyEncryptedV2Changes,
   type EncryptedV2Write,
+  writeEncryptedV2Records,
 } from '../../storage/repositories/encryptedV2RecordRepository'
 import { createEntityPendingWrite, nextEntityRevision } from './entitySyncWrites'
 import {
@@ -181,7 +182,7 @@ export async function reorderRebuildFolders(
     createEntityPendingWrite(FOLDER_V2_TYPE, folder.id, folder.revision!, 'upsert', now),
   ])
 
-  if (writes.length > 0) await applyEncryptedV2Changes({ writes })
+  if (writes.length > 0) await writeEncryptedV2Records(writes)
   return ordered
 }
 
@@ -207,7 +208,7 @@ export async function reorderRebuildTags(
     createEntityPendingWrite(TAG_V2_TYPE, tag.id, tag.revision!, 'upsert', now),
   ])
 
-  if (writes.length > 0) await applyEncryptedV2Changes({ writes })
+  if (writes.length > 0) await writeEncryptedV2Records(writes)
   return ordered
 }
 
