@@ -61,7 +61,7 @@ test('private box is absent from normal lists and requires reauthentication', ()
 })
 
 test('note privacy implementation remains encrypted but is deferred from the first rebuild milestone', () => {
-  assert.match(appSource, /<RebuildApp onLock=\{lockVault\} \/>/)
+  assert.match(appSource, /<RebuildApp[^>]*onLock=\{lockVault\}[^>]*\/>/)
   assert.doesNotMatch(appSource, /<NotePrivacyRuntime|<NoteBulkPrivacyRuntime|<NotesWorkspace/)
   assert.match(appSource, /renderUnlocked=\{\(lockVault\) => <UnlockedApp lockVault=\{lockVault\} \/>\}/)
 })
