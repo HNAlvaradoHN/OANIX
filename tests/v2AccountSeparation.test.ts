@@ -39,8 +39,9 @@ test('V2 account auth remains isolated from the local master password while sync
   assert.match(panel, /Sincronización automática/)
   assert.doesNotMatch(panel, /Enviar registros cifrados/)
 
-  assert.match(app, /<RebuildApp onLock=\{lockVault\} \/>/)
-  assert.doesNotMatch(app, /AutoSyncRuntime|workspaceRevision/)
+  assert.match(app, /<RebuildApp[^>]*onLock=\{lockVault\}[^>]*\/>/)
+  assert.match(app, /<V2AutoSyncRuntime onRemoteApplied=/)
+  assert.doesNotMatch(app, /<AutoSyncRuntime/)
   assert.match(rebuild, /<AccountPanel onClose=/)
   assert.match(rebuild, /aria-label="Cuenta de OANIX"/)
   assert.match(styles, /\.account-header-action/)
