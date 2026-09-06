@@ -63,7 +63,7 @@ test('history reuses encrypted_records and remains eligible for the existing non
   const types = readFileSync('src/features/versionHistory/versionHistoryTypes.ts', 'utf8')
   const sync = readFileSync('src/features/sync/syncService.ts', 'utf8')
 
-  assert.match(types, /NOTE_HISTORY_RECORD_TYPE = 'note-history'/)
+  assert.match(types, /NOTE_HISTORY_RECORD_TYPE = 'note\.history'/)
   assert.match(repository, /writeEncryptedRecord\(NOTE_HISTORY_RECORD_TYPE/)
   assert.match(repository, /listEncryptedRecords<unknown>\(NOTE_HISTORY_RECORD_TYPE\)/)
   assert.doesNotMatch(repository, /indexedDB|localStorage|sessionStorage|caches\.open/)
@@ -88,7 +88,7 @@ test('version history implementation remains preserved for later rebuild integra
   const center = readFileSync('src/features/versionHistory/VersionHistoryCenter.tsx', 'utf8')
   const css = readFileSync('src/features/versionHistory/versionHistory.css', 'utf8')
 
-  assert.match(app, /<RebuildApp onLock=\{lockVault\} \/>/)
+  assert.match(app, /<RebuildApp[^>]*onLock=\{lockVault\}[^>]*\/>/)
   assert.doesNotMatch(app, /<VersionHistoryCenter/)
   assert.match(center, /Historial de versiones/)
   assert.match(center, /Restaurar esta versión/)
