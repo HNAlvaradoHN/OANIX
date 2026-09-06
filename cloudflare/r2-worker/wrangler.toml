@@ -1,0 +1,12 @@
+name = "oanix-object-gateway"
+main = "src/index.js"
+compatibility_date = "2026-09-05"
+
+[[r2_buckets]]
+binding = "OANIX_R2"
+bucket_name = "oanix-encrypted-objects"
+
+# Configure these as Worker variables/secrets outside the repository:
+# SUPABASE_URL=https://kpnhdtiscxckveqeyqfq.supabase.co
+# SUPABASE_PUBLISHABLE_KEY=<Supabase publishable/anon key>
+# ALLOWED_ORIGINS=https://<official-oanix-origin>
