@@ -112,6 +112,24 @@ El usuario pidió explícitamente no detener el desarrollo por cambios pequeños
 
 Detenerse para pedir decisión únicamente cuando exista una alternativa real que cambie seguridad, datos, alcance o una experiencia importante.
 
+## Regla de resolución de fallos y avance hasta verde
+
+Cuando una prueba, build o workflow aplicable falle durante un trabajo activo, el agente debe resolverlo de forma operativa y no quedarse repitiendo diagnóstico una vez que la causa raíz esté suficientemente verificada.
+
+Secuencia obligatoria:
+
+1. verificar que el fallo corresponde al HEAD actual de la rama o PR que se está corrigiendo;
+2. localizar el primer error concreto del job/step fallido; mensajes terminales genéricos como `Process completed with exit code 1` no cuentan como causa raíz;
+3. contrastar el error con el código y las pruebas actuales antes de modificar nada;
+4. distinguir si la causa está en implementación, prueba obsoleta/incorrecta, tipos/lint/build, configuración o infraestructura;
+5. si la causa está suficientemente confirmada y el cambio es pequeño, local y reversible, aplicar inmediatamente la corrección mínima correcta sin pedir una confirmación adicional;
+6. no cambiar comportamiento correcto solo para hacer pasar una prueba: si la implementación nueva es intencional y la prueba conserva un contrato antiguo, actualizar la prueba preservando el comportamiento correcto;
+7. ejecutar de nuevo todos los gates aplicables sobre el nuevo HEAD;
+8. si aparece otro fallo, repetir desde el primer error concreto del nuevo run, sin acumular parches especulativos;
+9. no declarar el trabajo solucionado ni continuar al siguiente bloque mientras algún gate aplicable siga rojo.
+
+Una vez que la evidencia ya permite actuar con seguridad razonable, seguir releyendo los mismos logs, repetir el mismo diagnóstico o detenerse a pedir una confirmación innecesaria se considera estancamiento y debe evitarse.
+
 ## Regla operativa de GitHub
 
 Cuando el agente tenga herramientas integradas de GitHub debe usarlas directamente para ramas, archivos, PRs, CI, logs, reintentos, merges, issues y artifacts. No convertir al usuario en operador de GitHub si la herramienta puede realizar la acción.
