@@ -6,8 +6,10 @@ import {
 import { requireActiveVaultKey } from '../../security/vault/vaultSession'
 import {
   applyEncryptedV2Changes,
+  deleteEncryptedV2RecordIfValueMatches,
   listEncryptedV2Records,
   readEncryptedV2Record,
+  readEncryptedV2Records,
   type EncryptedV2Write,
 } from '../../storage/repositories/encryptedV2RecordRepository'
 import { getOnlineDataClient } from '../account/accountService'
@@ -39,6 +41,7 @@ import {
 
 const REMOTE_OBJECT_RECORD_TYPE = 'sync.v2.remote-object'
 const SYNC_V2_GC_TYPE = 'sync.v2.gc'
+const SYNC_V2_REMOTE_BINDING_TYPE = 'sync.v2.remote-binding'
 const CURSOR_RECORD_ID = 'primary'
 const PULL_BATCH_SIZE = 48
 const UPLOAD_BATCH_SIZE = 24
@@ -47,6 +50,12 @@ interface SyncV2GcRecord {
   version: 2
   objectKey: string
   queuedAt: string
+}
+
+interface UploadQueueEntry {
+  pending: SyncV2PendingRecord
+  ack: SyncV2AckRecord | null
+  binding: SyncV2BindingRecord | null
 }
 
 export interface SyncV2RunResult {
@@ -99,6 +108,21 @@ function conflictRecordId(unitType: string, unitId: string): string {
   return syncV2IdentityKey(unitType, unitId)
 }
 
+function bindingWrites(binding: SyncV2BindingRecord): EncryptedV2Write[] {
+  return [
+    {
+      recordType: SYNC_V2_BINDING_TYPE,
+      recordId: bindingRecordId(binding.unitType, binding.unitId),
+      value: binding,
+    },
+    {
+      recordType: SYNC_V2_REMOTE_BINDING_TYPE,
+      recordId: binding.recordKey,
+      value: binding,
+    },
+  ]
+}
+
 function gcWrite(objectKey: string): EncryptedV2Write<SyncV2GcRecord> {
   return {
     recordType: SYNC_V2_GC_TYPE,
@@ -129,12 +153,20 @@ async function currentSession() {
   return data.session
 }
 
+async function clearAcknowledgedPending(pending: SyncV2PendingRecord): Promise<void> {
+  await deleteEncryptedV2RecordIfValueMatches(
+    SYNC_V2_PENDING_TYPE,
+    syncV2IdentityKey(pending.unitType, pending.unitId),
+    pending,
+  )
+}
+
 async function writeAckAndBinding(
   pending: SyncV2PendingRecord,
   binding: SyncV2BindingRecord | null,
   row: SyncV2RemoteRow | null,
+  garbageObjectKey: string | null = null,
 ): Promise<void> {
-  const writes: EncryptedV2Write[] = []
   const acknowledgedAt = new Date().toISOString()
   const remoteChangeSeq = row?.change_seq ?? binding?.remoteChangeSeq ?? 0
   const ack: SyncV2AckRecord = {
@@ -146,26 +178,26 @@ async function writeAckAndBinding(
     remoteChangeSeq,
     acknowledgedAt,
   }
-  writes.push({
+  const writes: EncryptedV2Write[] = [{
     recordType: SYNC_V2_ACK_TYPE,
     recordId: ackRecordId(pending.unitType, pending.unitId),
     value: ack,
-  })
+  }]
+
   if (row) {
-    writes.push({
-      recordType: SYNC_V2_BINDING_TYPE,
-      recordId: bindingRecordId(pending.unitType, pending.unitId),
-      value: {
-        version: 2,
-        unitType: pending.unitType,
-        unitId: pending.unitId,
-        recordKey: row.record_key,
-        objectKey: row.object_key,
-        revision: row.revision,
-        remoteChangeSeq: row.change_seq,
-      } satisfies SyncV2BindingRecord,
-    })
+    const nextBinding: SyncV2BindingRecord = {
+      version: 2,
+      unitType: pending.unitType,
+      unitId: pending.unitId,
+      recordKey: row.record_key,
+      objectKey: row.object_key,
+      revision: row.revision,
+      remoteChangeSeq: row.change_seq,
+    }
+    writes.push(...bindingWrites(nextBinding))
   }
+  if (garbageObjectKey) writes.push(gcWrite(garbageObjectKey))
+
   await applyEncryptedV2Changes({ writes })
 }
 
@@ -184,6 +216,7 @@ async function uploadOne(
   if (pending.operation === 'delete' && !binding) {
     // Created and deleted before its first remote commit: there is nothing to tombstone remotely.
     await writeAckAndBinding(pending, null, null)
+    await clearAcknowledgedPending(pending)
     return 'skipped'
   }
 
@@ -215,7 +248,9 @@ async function uploadOne(
     await putEncryptedR2Object(nextObjectKey, accessToken, serializedPayload)
   }
 
-  abortIfNeeded(signal)
+  // Once a fresh immutable R2 object exists, finish the metadata commit for this unit.
+  // Aborting in this narrow window would strand an unreferenced object. The outer loop
+  // observes the aborted signal before starting another unit or before pulling remote work.
   const patch = {
     object_key: nextObjectKey,
     revision: pending.revision,
@@ -256,25 +291,43 @@ async function uploadOne(
   }
 
   const row = requireSyncV2RemoteRow(remoteValue)
-  const writes: EncryptedV2Write[] = []
-  if (previousObjectKey && previousObjectKey !== row.object_key) writes.push(gcWrite(previousObjectKey))
-  await writeAckAndBinding(pending, binding, row)
-  if (writes.length > 0) await applyEncryptedV2Changes({ writes })
+  const garbageObjectKey = previousObjectKey
+    && (pending.operation === 'delete' || previousObjectKey !== row.object_key)
+    ? previousObjectKey
+    : null
+  await writeAckAndBinding(pending, binding, row, garbageObjectKey)
+  await clearAcknowledgedPending(pending)
+
   return pending.operation === 'delete' ? 'deleted' : 'uploaded'
 }
 
-async function loadStateMaps() {
-  const [pendingRecords, ackRecords, bindingRecords] = await Promise.all([
-    listEncryptedV2Records<SyncV2PendingRecord>(SYNC_V2_PENDING_TYPE),
-    listEncryptedV2Records<SyncV2AckRecord>(SYNC_V2_ACK_TYPE),
-    listEncryptedV2Records<SyncV2BindingRecord>(SYNC_V2_BINDING_TYPE),
+async function loadUploadQueue(): Promise<UploadQueueEntry[]> {
+  const pendingRecords = await listEncryptedV2Records<SyncV2PendingRecord>(SYNC_V2_PENDING_TYPE)
+  if (pendingRecords.length === 0) return []
+
+  const ackIdentities = pendingRecords.map((record) => ({
+    recordType: SYNC_V2_ACK_TYPE,
+    recordId: record.recordId,
+  }))
+  const bindingIdentities = pendingRecords.map((record) => ({
+    recordType: SYNC_V2_BINDING_TYPE,
+    recordId: record.recordId,
+  }))
+  const [acks, bindings] = await Promise.all([
+    readEncryptedV2Records<SyncV2AckRecord>(ackIdentities),
+    readEncryptedV2Records<SyncV2BindingRecord>(bindingIdentities),
   ])
-  return {
-    pending: new Map(pendingRecords.map((record) => [record.recordId, record.value])),
-    ack: new Map(ackRecords.map((record) => [record.recordId, record.value])),
-    bindingsByIdentity: new Map(bindingRecords.map((record) => [record.recordId, record.value])),
-    bindingsByRemoteKey: new Map(bindingRecords.map((record) => [record.value.recordKey, record.value])),
+
+  const entries = pendingRecords.map((record, index) => ({
+    pending: record.value,
+    ack: acks[index],
+    binding: bindings[index],
+  }))
+  const acknowledged = entries.filter((entry) => !pendingNeedsUpload(entry.pending, entry.ack))
+  if (acknowledged.length > 0) {
+    await Promise.all(acknowledged.map((entry) => clearAcknowledgedPending(entry.pending)))
   }
+  return entries
 }
 
 async function uploadPending(
@@ -283,18 +336,18 @@ async function uploadPending(
   result: SyncV2RunResult,
   signal?: AbortSignal,
 ): Promise<void> {
-  const state = await loadStateMaps()
-  const dirty = [...state.pending.entries()]
-    .filter(([id, pending]) => pendingNeedsUpload(pending, state.ack.get(id) ?? null))
-    .sort((left, right) => left[1].queuedAt.localeCompare(right[1].queuedAt))
+  const queue = await loadUploadQueue()
+  const dirty = queue
+    .filter((entry) => pendingNeedsUpload(entry.pending, entry.ack))
+    .sort((left, right) => left.pending.queuedAt.localeCompare(right.pending.queuedAt))
     .slice(0, UPLOAD_BATCH_SIZE)
 
-  for (const [id, pending] of dirty) {
+  for (const entry of dirty) {
     abortIfNeeded(signal)
     const outcome = await uploadOne(
-      pending,
-      state.ack.get(id) ?? null,
-      state.bindingsByIdentity.get(id) ?? null,
+      entry.pending,
+      entry.ack,
+      entry.binding,
       userId,
       accessToken,
       signal,
@@ -344,6 +397,7 @@ async function recordConflict(
     localRevision,
     remoteRevision: row.revision,
     remoteChangeSeq: row.change_seq,
+    remoteDeleted: false,
     remoteValue: remoteObject.value,
     detectedAt: new Date().toISOString(),
   }
@@ -356,11 +410,47 @@ async function recordConflict(
   })
 }
 
+async function recordTombstoneConflict(
+  binding: SyncV2BindingRecord,
+  row: SyncV2RemoteRow,
+  localRevision: number,
+): Promise<void> {
+  const conflict: SyncV2ConflictRecord = {
+    version: 2,
+    unitType: binding.unitType,
+    unitId: binding.unitId,
+    localRevision,
+    remoteRevision: row.revision,
+    remoteChangeSeq: row.change_seq,
+    remoteDeleted: true,
+    remoteValue: null,
+    detectedAt: new Date().toISOString(),
+  }
+  await applyEncryptedV2Changes({
+    writes: [{
+      recordType: SYNC_V2_CONFLICT_TYPE,
+      recordId: conflictRecordId(binding.unitType, binding.unitId),
+      value: conflict,
+    }],
+  })
+}
+
 async function saveCursor(changeSeq: number): Promise<void> {
   const cursor: SyncV2CursorRecord = { version: 2, lastChangeSeq: changeSeq }
   await applyEncryptedV2Changes({
     writes: [{ recordType: SYNC_V2_CURSOR_TYPE, recordId: CURSOR_RECORD_ID, value: cursor }],
   })
+}
+
+async function readPendingAndAck(identity: string): Promise<{
+  pending: SyncV2PendingRecord | null
+  ack: SyncV2AckRecord | null
+}> {
+  const [pending, ack] = await Promise.all([
+    readEncryptedV2Record<SyncV2PendingRecord>(SYNC_V2_PENDING_TYPE, identity),
+    readEncryptedV2Record<SyncV2AckRecord>(SYNC_V2_ACK_TYPE, identity),
+  ])
+  return { pending, ack }
 }
 
 async function pullRemote(
@@ -381,11 +471,14 @@ async function pullRemote(
     .limit(PULL_BATCH_SIZE)
   if (response.error) throw response.error
 
-  const state = await loadStateMaps()
   for (const rawRow of response.data ?? []) {
     abortIfNeeded(signal)
     const row = requireSyncV2RemoteRow(rawRow)
-    const knownBinding = state.bindingsByRemoteKey.get(row.record_key) ?? null
+    const knownBinding = await readEncryptedV2Record<SyncV2BindingRecord>(
+      SYNC_V2_REMOTE_BINDING_TYPE,
+      row.record_key,
+    )
+
     if (knownBinding && row.change_seq <= knownBinding.remoteChangeSeq) {
       result.skipped += 1
       await saveCursor(row.change_seq)
@@ -393,40 +486,52 @@ async function pullRemote(
     }
 
     if (row.deleted) {
-      if (knownBinding) {
-        const identity = bindingRecordId(knownBinding.unitType, knownBinding.unitId)
-        const pending = state.pending.get(identity) ?? null
-        const ack = state.ack.get(identity) ?? null
-        if (pending && pendingNeedsUpload(pending, ack)) {
-          result.conflicts += 1
-          // A remote tombstone never silently destroys a dirty local unit. Cursor is intentionally
-          // not advanced so a future conflict resolver can observe the tombstone again without payload egress.
-          break
-        }
-        await applyEncryptedV2Changes({
-          writes: [{
-            recordType: SYNC_V2_BINDING_TYPE,
-            recordId: identity,
-            value: { ...knownBinding, revision: row.revision, remoteChangeSeq: row.change_seq },
-          }],
-          deletes: [{ recordType: knownBinding.unitType, recordId: knownBinding.unitId }],
-        })
-        result.deletedLocal += 1
+      if (!knownBinding) {
+        // This device never bound the opaque remote key, so there is no local unit to delete.
+        result.skipped += 1
+        await saveCursor(row.change_seq)
+        continue
       }
+
+      const identity = bindingRecordId(knownBinding.unitType, knownBinding.unitId)
+      const { pending, ack } = await readPendingAndAck(identity)
+      if (pending && pendingNeedsUpload(pending, ack)) {
+        await recordTombstoneConflict(knownBinding, row, pending.revision)
+        result.conflicts += 1
+        await saveCursor(row.change_seq)
+        continue
+      }
+
+      abortIfNeeded(signal)
+      const updatedBinding: SyncV2BindingRecord = {
+        ...knownBinding,
+        revision: row.revision,
+        remoteChangeSeq: row.change_seq,
+      }
+      await applyEncryptedV2Changes({
+        writes: [
+          ...bindingWrites(updatedBinding),
+          gcWrite(knownBinding.objectKey),
+        ],
+        deletes: [{ recordType: knownBinding.unitType, recordId: knownBinding.unitId }],
+      })
+      result.deletedLocal += 1
       await saveCursor(row.change_seq)
       continue
     }
 
     const remoteObject = await readRemoteObject(row, accessToken)
+    abortIfNeeded(signal)
     const identity = syncV2IdentityKey(remoteObject.unitType, remoteObject.unitId)
-    const binding = state.bindingsByIdentity.get(identity) ?? null
-    const pending = state.pending.get(identity) ?? null
-    const ack = state.ack.get(identity) ?? null
-    const hasDirtyLocal = !!pending && pendingNeedsUpload(pending, ack)
+    const [binding, state] = await Promise.all([
+      readEncryptedV2Record<SyncV2BindingRecord>(SYNC_V2_BINDING_TYPE, identity),
+      readPendingAndAck(identity),
+    ])
+    const hasDirtyLocal = !!state.pending && pendingNeedsUpload(state.pending, state.ack)
     const disposition = canApplyRemoteChange(row, binding, hasDirtyLocal)
 
     if (disposition === 'conflict') {
-      await recordConflict(remoteObject, row, pending?.revision ?? binding?.revision ?? 1)
+      await recordConflict(remoteObject, row, state.pending?.revision ?? binding?.revision ?? 1)
       result.conflicts += 1
       await saveCursor(row.change_seq)
       continue
@@ -437,25 +542,8 @@ async function pullRemote(
       continue
     }
 
-    await applyEncryptedV2Changes({
-      writes: [
-        { recordType: remoteObject.unitType, recordId: remoteObject.unitId, value: remoteObject.value },
-        {
-          recordType: SYNC_V2_BINDING_TYPE,
-          recordId: identity,
-          value: {
-            version: 2,
-            unitType: remoteObject.unitType,
-            unitId: remoteObject.unitId,
-            recordKey: row.record_key,
-            objectKey: row.object_key,
-            revision: row.revision,
-            remoteChangeSeq: row.change_seq,
-          } satisfies SyncV2BindingRecord,
-        },
-      ],
-    })
-    state.bindingsByRemoteKey.set(row.record_key, {
+    abortIfNeeded(signal)
+    const nextBinding: SyncV2BindingRecord = {
       version: 2,
       unitType: remoteObject.unitType,
       unitId: remoteObject.unitId,
@@ -463,6 +551,12 @@ async function pullRemote(
       objectKey: row.object_key,
       revision: row.revision,
       remoteChangeSeq: row.change_seq,
+    }
+    await applyEncryptedV2Changes({
+      writes: [
+        { recordType: remoteObject.unitType, recordId: remoteObject.unitId, value: remoteObject.value },
+        ...bindingWrites(nextBinding),
+      ],
     })
     result.downloaded += 1
     await saveCursor(row.change_seq)

@@ -59,6 +59,33 @@ function requestResult<T>(request: IDBRequest<T>, fallback: T): Promise<T> {
   })
 }
 
+function sameEncryptedPayload(left: EncryptedVaultPayload, right: EncryptedVaultPayload): boolean {
+  return left.scheme === right.scheme && left.iv === right.iv && left.ciphertext === right.ciphertext
+}
+
+function deleteStoredRecordIfPayloadMatches(
+  store: IDBObjectStore,
+  recordType: string,
+  recordId: string,
+  expectedPayload: EncryptedVaultPayload,
+): Promise<boolean> {
+  return new Promise((resolve, reject) => {
+    const request = store.get([recordType, recordId])
+    request.onerror = () => reject(request.error ?? new Error('IndexedDB request failed.'))
+    request.onsuccess = () => {
+      const current = request.result as StoredEncryptedV2Record | undefined
+      if (!current || !sameEncryptedPayload(current.payload, expectedPayload)) {
+        resolve(false)
+        return
+      }
+
+      const deletion = store.delete([recordType, recordId])
+      deletion.onsuccess = () => resolve(true)
+      deletion.onerror = () => reject(deletion.error ?? new Error('IndexedDB delete failed.'))
+    }
+  })
+}
+
 async function decryptStoredRecords<T>(
   records: StoredEncryptedV2Record[],
 ): Promise<DecryptedV2Record<T>[]> {
@@ -251,4 +278,57 @@ export async function deleteEncryptedV2Record(
   recordId: string,
 ): Promise<void> {
   return applyEncryptedV2Changes({ deletes: [{ recordType, recordId }] })
+}
+
+export async function deleteEncryptedV2RecordIfValueMatches<T>(
+  recordType: string,
+  recordId: string,
+  expectedValue: T,
+): Promise<boolean> {
+  validateRecordIdentity(recordType, recordId)
+  const vaultKey = requireActiveVaultKey()
+  const database = await openLocalDatabase()
+  let observed: StoredEncryptedV2Record | undefined
+
+  try {
+    const transaction = database.transaction(V2_ENCRYPTED_RECORDS_STORE, 'readonly')
+    const completion = transactionCompleted(transaction)
+    observed = await requestResult<StoredEncryptedV2Record | undefined>(
+      transaction.objectStore(V2_ENCRYPTED_RECORDS_STORE).get([recordType, recordId]),
+      undefined,
+    )
+    await completion
+  } finally {
+    database.close()
+  }
+
+  if (!observed) return false
+  const currentValue = await decryptVaultJson<T>(vaultKey, observed.payload, { recordType, recordId })
+  if (JSON.stringify(currentValue) !== JSON.stringify(expectedValue)) return false
+  const observedPayload = observed.payload
+
+  let deleted = false
+  await retryTransientStorageOperation(async () => {
+    const currentDatabase = await openLocalDatabase()
+    try {
+      const transaction = currentDatabase.transaction(V2_ENCRYPTED_RECORDS_STORE, 'readwrite')
+      const completion = transactionCompleted(transaction)
+      deleted = await deleteStoredRecordIfPayloadMatches(
+        transaction.objectStore(V2_ENCRYPTED_RECORDS_STORE),
+        recordType,
+        recordId,
+        observedPayload,
+      )
+      await completion
+    } finally {
+      currentDatabase.close()
+    }
+  })
+
+  if (deleted && typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('oanix:v2-local-data-changed', {
+      detail: [{ recordType, recordId, operation: 'delete' }],
+    }))
+  }
+  return deleted
 }

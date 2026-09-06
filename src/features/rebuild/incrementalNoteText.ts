@@ -8,7 +8,7 @@ import {
   NOTE_V2_MANIFEST_TYPE,
   NOTE_V2_TEXT_CHUNK_TYPE,
   SYNC_V2_PENDING_TYPE,
-} from './rebuildModel'
+} from './rebuildModel.ts'
 import type {
   EncryptedV2RecordIdentity,
   EncryptedV2Write,

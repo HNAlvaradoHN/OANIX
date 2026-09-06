@@ -1,8 +1,8 @@
 import {
-  deleteEncryptedV2Record,
+  applyEncryptedV2Changes,
   readEncryptedV2Record,
-  writeEncryptedV2Record,
 } from '../../storage/repositories/encryptedV2RecordRepository'
+import { createEntityPendingWrite, nextEntityRevision } from './entitySyncWrites'
 
 export const FOLDER_V2_COVER_TYPE = 'folder.v2.cover'
 const MAX_SOURCE_BYTES = 8 * 1024 * 1024
@@ -10,8 +10,9 @@ const MAX_COVER_EDGE = 1440
 const MAX_STORED_BYTES = 900 * 1024
 const COVER_QUALITIES = [.84, .76, .68]
 
-interface WorkspaceCoverRecord {
+export interface WorkspaceCoverRecord {
   version: 1
+  revision: number
   assetId: string
   mimeType: string
   dataUrl: string
@@ -100,14 +101,21 @@ async function prepareCover(file: File): Promise<Blob> {
 export async function saveWorkspaceFolderCover(file: File): Promise<string> {
   const blob = await prepareCover(file)
   const assetId = createAssetId()
+  const queuedAt = new Date().toISOString()
   const record: WorkspaceCoverRecord = {
     version: 1,
+    revision: 1,
     assetId,
     mimeType: blob.type,
     dataUrl: await blobToDataUrl(blob),
-    updatedAt: new Date().toISOString(),
+    updatedAt: queuedAt,
   }
-  await writeEncryptedV2Record(FOLDER_V2_COVER_TYPE, assetId, record)
+  await applyEncryptedV2Changes({
+    writes: [
+      { recordType: FOLDER_V2_COVER_TYPE, recordId: assetId, value: record },
+      createEntityPendingWrite(FOLDER_V2_COVER_TYPE, assetId, record.revision, 'upsert', queuedAt),
+    ],
+  })
   return assetId
 }
 
@@ -126,7 +134,21 @@ export async function readWorkspaceFolderCover(assetId: string): Promise<string 
   return record.dataUrl
 }
 
-export function deleteWorkspaceFolderCover(assetId: string): Promise<void> {
-  if (!assetId) return Promise.resolve()
-  return deleteEncryptedV2Record(FOLDER_V2_COVER_TYPE, assetId)
+export async function deleteWorkspaceFolderCover(assetId: string): Promise<void> {
+  if (!assetId) return
+  const existing = await readEncryptedV2Record<WorkspaceCoverRecord>(FOLDER_V2_COVER_TYPE, assetId)
+  if (!existing) return
+  const queuedAt = new Date().toISOString()
+  await applyEncryptedV2Changes({
+    writes: [
+      createEntityPendingWrite(
+        FOLDER_V2_COVER_TYPE,
+        assetId,
+        nextEntityRevision(existing),
+        'delete',
+        queuedAt,
+      ),
+    ],
+    deletes: [{ recordType: FOLDER_V2_COVER_TYPE, recordId: assetId }],
+  })
 }

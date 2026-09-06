@@ -10,7 +10,7 @@ const providerSource = readFileSync(new URL('../src/features/largeObjects/google
 const contractSource = readFileSync(new URL('../src/features/largeObjects/largeObjectTransferContract.ts', import.meta.url), 'utf8')
 
 test('attachment engine stays preserved but is deferred from the first rebuild milestone', () => {
-  assert.match(appSource, /<RebuildApp onLock=\{lockVault\} \/>/)
+  assert.match(appSource, /<RebuildApp[^>]*onLock=\{lockVault\}[^>]*\/>/)
   assert.doesNotMatch(appSource, /NoteAttachmentsRuntime|<NotesWorkspace/)
   assert.match(runtimeSource, /storeEncryptedAttachment/)
 })

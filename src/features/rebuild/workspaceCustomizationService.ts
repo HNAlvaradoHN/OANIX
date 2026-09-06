@@ -1,4 +1,9 @@
-import { writeEncryptedV2Records } from '../../storage/repositories/encryptedV2RecordRepository'
+import {
+  applyEncryptedV2Changes,
+  type EncryptedV2Write,
+  writeEncryptedV2Records,
+} from '../../storage/repositories/encryptedV2RecordRepository'
+import { createEntityPendingWrite, nextEntityRevision } from './entitySyncWrites'
 import {
   FOLDER_V2_TYPE,
   TAG_V2_TYPE,
@@ -55,6 +60,19 @@ function arraysContainSameIds(records: Array<{ id: string }>, orderedIds: string
   return orderedIds.every((id) => expected.has(id))
 }
 
+async function persistEntityUpdate<T extends { id: string; revision?: number }>(
+  unitType: string,
+  value: T,
+  queuedAt: string,
+): Promise<void> {
+  await applyEncryptedV2Changes({
+    writes: [
+      { recordType: unitType, recordId: value.id, value },
+      createEntityPendingWrite(unitType, value.id, value.revision!, 'upsert', queuedAt),
+    ],
+  })
+}
+
 export async function customizeRebuildFolder(
   existing: FolderV2Record,
   input: FolderCustomizationInput,
@@ -97,8 +115,10 @@ export async function customizeRebuildFolder(
     return existing
   }
 
+  const queuedAt = new Date().toISOString()
   const updated: FolderV2Record = {
     ...existing,
+    revision: nextEntityRevision(existing),
     name: nextName,
     icon: nextIcon,
     gradientIndex: nextGradientIndex,
@@ -106,10 +126,10 @@ export async function customizeRebuildFolder(
     coverAssetId: nextCoverAssetId,
     ...(nextPinned ? { pinned: true } : { pinned: false }),
     ...(nextFavorite ? { favorite: true } : { favorite: false }),
-    updatedAt: new Date().toISOString(),
+    updatedAt: queuedAt,
   }
 
-  await writeEncryptedV2Records([{ recordType: FOLDER_V2_TYPE, recordId: existing.id, value: updated }])
+  await persistEntityUpdate(FOLDER_V2_TYPE, updated, queuedAt)
   return updated
 }
 
@@ -127,14 +147,16 @@ export async function customizeRebuildTag(
 
   if (nextName === existing.name && nextColor === existing.color.toLowerCase()) return existing
 
+  const queuedAt = new Date().toISOString()
   const updated: TagV2Record = {
     ...existing,
+    revision: nextEntityRevision(existing),
     name: nextName,
     color: nextColor,
-    updatedAt: new Date().toISOString(),
+    updatedAt: queuedAt,
   }
 
-  await writeEncryptedV2Records([{ recordType: TAG_V2_TYPE, recordId: existing.id, value: updated }])
+  await persistEntityUpdate(TAG_V2_TYPE, updated, queuedAt)
   return updated
 }
 
@@ -150,11 +172,15 @@ export async function reorderRebuildFolders(
   const now = new Date().toISOString()
   const ordered = orderedIds.map((id, order) => {
     const folder = byId.get(id)!
-    return folder.order === order ? folder : { ...folder, order, updatedAt: now }
+    return folder.order === order
+      ? folder
+      : { ...folder, revision: nextEntityRevision(folder), order, updatedAt: now }
   })
-  const writes = ordered
-    .filter((folder, order) => folder !== byId.get(orderedIds[order]))
-    .map((folder) => ({ recordType: FOLDER_V2_TYPE, recordId: folder.id, value: folder }))
+  const changed = ordered.filter((folder, order) => folder !== byId.get(orderedIds[order]))
+  const writes: EncryptedV2Write[] = changed.flatMap((folder) => [
+    { recordType: FOLDER_V2_TYPE, recordId: folder.id, value: folder },
+    createEntityPendingWrite(FOLDER_V2_TYPE, folder.id, folder.revision!, 'upsert', now),
+  ])
 
   if (writes.length > 0) await writeEncryptedV2Records(writes)
   return ordered
@@ -172,11 +198,15 @@ export async function reorderRebuildTags(
   const now = new Date().toISOString()
   const ordered = orderedIds.map((id, order) => {
     const tag = byId.get(id)!
-    return tag.order === order ? tag : { ...tag, order, updatedAt: now }
+    return tag.order === order
+      ? tag
+      : { ...tag, revision: nextEntityRevision(tag), order, updatedAt: now }
   })
-  const writes = ordered
-    .filter((tag, order) => tag !== byId.get(orderedIds[order]))
-    .map((tag) => ({ recordType: TAG_V2_TYPE, recordId: tag.id, value: tag }))
+  const changed = ordered.filter((tag, order) => tag !== byId.get(orderedIds[order]))
+  const writes: EncryptedV2Write[] = changed.flatMap((tag) => [
+    { recordType: TAG_V2_TYPE, recordId: tag.id, value: tag },
+    createEntityPendingWrite(TAG_V2_TYPE, tag.id, tag.revision!, 'upsert', now),
+  ])
 
   if (writes.length > 0) await writeEncryptedV2Records(writes)
   return ordered

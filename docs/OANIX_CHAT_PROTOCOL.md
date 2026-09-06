@@ -1,7 +1,7 @@
 # OANIX — Protocolo universal de continuidad entre chats
 
 Fecha de definición: 2026-09-03
-Última revisión: 2026-09-05
+Última revisión: 2026-09-06
 
 Este protocolo existe para que el desarrollo de OANIX pueda continuar entre chats sin obligar al usuario a volver a explicar el trabajo anterior. GitHub es la fuente de verdad del estado del proyecto.
 
@@ -16,8 +16,8 @@ Este protocolo existe para que el desarrollo de OANIX pueda continuar entre chat
 
 ## Registro rodante actual
 
-- Chat OANIX activo: `OANIX #5`.
-- Próximo chat: `OANIX #6`.
+- Chat OANIX activo: `OANIX #6`.
+- Próximo chat: `OANIX #7`.
 - Tratamiento del usuario: `Inge`.
 - Checkpoint operativo único: `docs/OANIX_ACTIVE_CHECKPOINT.md`.
 

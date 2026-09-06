@@ -54,7 +54,8 @@ export interface SyncV2ConflictRecord<T = unknown> {
   localRevision: number
   remoteRevision: number
   remoteChangeSeq: number
-  remoteValue: T
+  remoteDeleted: boolean
+  remoteValue: T | null
   detectedAt: string
 }
 

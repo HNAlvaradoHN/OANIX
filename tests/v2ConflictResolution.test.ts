@@ -57,8 +57,8 @@ test('legacy conflict center remains implemented but is deferred with sync from 
   const app = readFileSync('src/app/App.tsx', 'utf8')
   const center = readFileSync('src/features/sync/ConflictCenter.tsx', 'utf8')
 
-  assert.match(app, /<RebuildApp onLock=\{lockVault\} \/>/)
-  assert.doesNotMatch(app, /ConflictCenter|setWorkspaceRevision/)
+  assert.match(app, /<RebuildApp[^>]*onLock=\{lockVault\}[^>]*\/>/)
+  assert.doesNotMatch(app, /ConflictCenter/)
   assert.match(center, /scanSyncConflicts/)
   assert.match(center, /resolveSyncConflict/)
   assert.match(center, /oanix:sync-status/)

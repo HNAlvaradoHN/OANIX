@@ -1,60 +1,49 @@
 # OANIX — checkpoint operativo activo
 
-Última actualización: 2026-09-05
+Última actualización: 2026-09-06
 
 ## Continuidad
 
 - Repositorio canónico: `HNAlvaradoHN/OANIX`.
 - Rama de autoridad: `main`.
-- Chat activo: `OANIX #5`.
-- Próximo chat: `OANIX #6`.
+- Chat activo: `OANIX #6`.
+- Próximo chat: `OANIX #7`.
 - Usuario: `Inge`.
 - Frase: `SIGUE EL CHAT AQUÍ`.
 - El número y este checkpoint son rodantes: el siguiente chat debe sobrescribirlos, no crear otro archivo numerado ni conservar números anteriores como autoridad activa.
 
 ## Estado GitHub verificado
 
-- `main` vigente antes de este checkpoint: `74aa2e2be43ae249ffac313c97d0cd8294d380d7`.
-- PR #630 — `feat: orden y personalización de tarjetas de nota`: fusionado.
-- Ajuste funcional posterior: `5417265bc6b7b1e59618af9dd04f5a69319cbe31` — conserva el color personalizado de nota al cambiar entre `Todas` y carpetas.
-- PR activo: #632 — `fix: restablece scroll táctil real en la lista de notas`.
-- Rama: `fix/note-list-mobile-scroll-2026-09-05`.
-- HEAD funcional verificado de #632: `7355103ad27896141b6a262acf8f0f4874eb928d`.
-- El diff funcional de #632 queda limitado a dos cambios de viewport (`height: 100dvh` en `.rebuild-shell` y `.rebuild-main`) y una prueba de contrato nueva.
+- `main`: `d400700788ece2fedb7a1fd23303fdf72b06549b`.
+- PR activo: #641 — `feat: activa sync v2 incremental con R2`.
+- Rama: `feat/activate-r2-incremental-sync-2026-09-05`.
+- HEAD funcional previo a este checkpoint: `bc2e60c5613f44797d6675d9176d581bebc89de3`.
+- El PR mantiene `V2AutoSyncRuntime` post-unlock y refresca `RebuildApp` mediante `key={workspaceRevision}` después de aplicar cambios remotos.
+- Se corrigieron expectativas de tests obsoletas que exigían la forma antigua exacta de `<RebuildApp onLock={lockVault} />`; no se retiró el comportamiento correcto de la implementación para satisfacer esos tests.
+- Se añadió a `AGENTS.md` la regla permanente de resolución activa de fallos: causa raíz suficientemente verificada → cambio mínimo seguro → ejecutar gates → repetir hasta verde, evitando diagnóstico circular.
 
-## Diagnóstico actual
+## Gates del PR #641
 
-La prueba física del usuario demostró que el parche anterior basado solo en `touch-action: pan-y` no resolvió el problema: el gesto vertical no inicia desde el centro de las tarjetas, aunque sí desde zonas periféricas.
+Para HEAD `bc2e60c5613f44797d6675d9176d581bebc89de3` al registrar este checkpoint:
 
-La causa corregida en #632 es geométrica: `.rebuild-shell` y `.rebuild-main` tenían únicamente `min-height: 100dvh`, por lo que el árbol podía crecer con la lista y `.rebuild-notes` dejaba de actuar como viewport vertical real pese a tener `overflow-y: auto`. Al fijar también `height: 100dvh`, la lista flexible (`flex: 1; min-height: 0; overflow-y: auto`) vuelve a poseer el scroll vertical.
-
-No se añadieron handlers táctiles nuevos y no se modificaron drag, orden, personalización, persistencia ni cifrado.
-
-## Gates de #632
-
-Para HEAD `7355103ad27896141b6a262acf8f0f4874eb928d` al registrar este checkpoint:
-
-- OANIX CI #2817: queued.
-- OANIX Android #2169: queued.
-- Qwen Independent PR Review #1060: queued.
-- Vercel correspondiente al HEAD anterior se había iniciado; reconsultar el HEAD actual antes de usar su estado como gate.
-
-No declarar el arreglo cerrado hasta tener gates aplicables verdes y validación física del gesto desde el centro de una tarjeta en móvil/Android.
+- OANIX CI #2871: success.
+- Qwen Independent PR Review #1109: success.
+- OANIX Android #2223: in progress.
+- Reconsultar los gates sobre el HEAD actual antes de decidir merge, porque este propio checkpoint crea un commit posterior.
 
 ## Restricciones vigentes
 
-- Toda operación OANIX debe dirigirse primero y explícitamente a `HNAlvaradoHN/OANIX`.
-- Para el número de chat solo mandan `docs/OANIX_CHAT_PROTOCOL.md` y este checkpoint rodante.
-- GitHub actual manda sobre cualquier resumen anterior.
-- No conservar pruebas o implementaciones obsoletas solo para compatibilidad artificial.
-- No fusionar con gates aplicables en rojo.
-- No afirmar validación física que el usuario no haya confirmado.
-- No volver a tratar Vercel como causa del fallo de scroll salvo evidencia nueva; el síntoma está en la interacción/viewport de la lista.
+- GitHub y el `main` real mandan sobre cualquier resumen anterior.
+- No retirar `key={workspaceRevision}` ni degradar el runtime v2 para satisfacer expectativas de tests antiguas.
+- No reactivar `AutoSyncRuntime` legacy ni escaneos completos de ciphertext.
+- No declarar trabajo cerrado ni fusionar mientras un gate aplicable esté rojo o pendiente.
+- Ante un fallo de CI: localizar el primer error concreto, contrastarlo con el HEAD que falló, determinar causa raíz y aplicar el cambio mínimo correcto. Si la causa ya está suficientemente verificada y el cambio es pequeño/reversible, actuar de inmediato y repetir los gates hasta verde; no estancarse repitiendo diagnóstico.
+- No afirmar validación física que no haya realizado el usuario.
 
 ## Siguiente acción exacta
 
-Reconsultar los gates de PR #632 sobre HEAD `7355103ad27896141b6a262acf8f0f4874eb928d`. Si quedan verdes, validar físicamente en móvil/Android que el scroll puede iniciarse arrastrando directamente desde el centro de cualquier tarjeta de nota y que el drag mediante la agarradera sigue funcionando. Solo después decidir el merge.
+Reconsultar los gates del PR #641 sobre el HEAD más reciente generado por este checkpoint. Si CI, Android y Qwen quedan verdes, revisar el PR final y decidir/iniciar el merge de #641 según el flujo normal del proyecto. Después del merge, verificar `main` y actualizar la continuidad para el siguiente bloque del roadmap.
 
 ## Último trabajo realmente completado
 
-Se identificó la causa probable real del fallo de scroll táctil de la lista, se abrió PR #632 con un ajuste mínimo de geometría del viewport y una prueba de regresión, y se verificó que su diff no contiene cambios funcionales ajenos al scroll. La validación automática y física sigue pendiente.
+Se diagnosticó el CI rojo de #641 como expectativas de tests obsoletas frente al montaje intencional de `RebuildApp` con `workspaceRevision`; se corrigieron todas las expectativas encontradas hasta obtener OANIX CI y Qwen verdes. Android estaba aún ejecutándose en el último HEAD funcional consultado. También se registró en `AGENTS.md` la regla permanente para que futuros agentes no se queden en diagnóstico circular cuando una corrección pequeña y segura ya está suficientemente determinada.

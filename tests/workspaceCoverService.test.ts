@@ -5,11 +5,14 @@ import test from 'node:test'
 const cover = readFileSync('src/features/rebuild/workspaceCoverService.ts', 'utf8')
 const dialog = readFileSync('src/features/rebuild/WorkspaceCustomizationDialog.tsx', 'utf8')
 
-test('workspace covers live in an encrypted v2 asset record, separate from the folder record', () => {
+test('workspace covers live in an encrypted v2 asset record with incremental sync metadata', () => {
   assert.match(cover, /FOLDER_V2_COVER_TYPE = 'folder\.v2\.cover'/)
-  assert.match(cover, /writeEncryptedV2Record/)
+  assert.match(cover, /applyEncryptedV2Changes/)
   assert.match(cover, /readEncryptedV2Record/)
-  assert.match(cover, /deleteEncryptedV2Record/)
+  assert.match(cover, /createEntityPendingWrite/)
+  assert.match(cover, /revision: 1/)
+  assert.match(cover, /'upsert'/)
+  assert.match(cover, /'delete'/)
   assert.match(cover, /assetId/)
 })
 

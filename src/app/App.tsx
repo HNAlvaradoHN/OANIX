@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { VaultGate } from './VaultGate'
 import { RebuildApp } from '../features/rebuild/RebuildApp'
+import { V2AutoSyncRuntime } from '../features/sync/V2AutoSyncRuntime'
 import { AndroidAuthRuntime } from '../platform/android/AndroidAuthRuntime'
 import { NativeDocumentsRuntime } from '../platform/android/NativeDocumentsRuntime'
 import { AndroidBackRuntime } from '../platform/android/AndroidBackRuntime'
@@ -53,11 +54,14 @@ async function prepareVisibleWorkspaceForUpdate() {
 }
 
 function UnlockedApp({ lockVault }: { lockVault: () => void }) {
+  const [workspaceRevision, setWorkspaceRevision] = useState(0)
+
   return (
     <>
       <AndroidBackRuntime />
       <AndroidKeystoreDiagnosticRuntime />
-      <RebuildApp onLock={lockVault} />
+      <V2AutoSyncRuntime onRemoteApplied={() => setWorkspaceRevision((value) => value + 1)} />
+      <RebuildApp key={workspaceRevision} onLock={lockVault} />
     </>
   )
 }

@@ -88,11 +88,12 @@ test('automatic sync reacts quickly to local and remote changes without idle ful
   assert.match(runtime, /onRemoteAppliedRef\.current\(\)/)
 })
 
-test('legacy autosync is intentionally detached while the rebuild coordinator is pending', () => {
+test('legacy autosync stays detached while v2 incremental autosync is mounted', () => {
   const app = readFileSync('src/app/App.tsx', 'utf8')
 
-  assert.match(app, /<RebuildApp onLock=\{lockVault\} \/>/)
-  assert.doesNotMatch(app, /AutoSyncRuntime|workspaceRevision|<NotesWorkspace/)
+  assert.match(app, /<RebuildApp[^>]*onLock=\{lockVault\}[^>]*\/>/)
+  assert.match(app, /<V2AutoSyncRuntime onRemoteApplied=/)
+  assert.doesNotMatch(app, /<AutoSyncRuntime|<NotesWorkspace/)
   assert.doesNotMatch(app, /location\.reload\(\)/)
 })
 

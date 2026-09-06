@@ -55,7 +55,7 @@ test('legacy incoming-share pipeline stays preserved but is deferred from the re
   )
 
   assert.match(app, /function UnlockedApp/)
-  assert.match(app, /<RebuildApp onLock=\{lockVault\} \/>/)
+  assert.match(app, /<RebuildApp[^>]*onLock=\{lockVault\}[^>]*\/>/)
   assert.doesNotMatch(app, /<NativeShareRuntime/)
   assert.match(runtime, /importPendingAndroidShare\(/)
   assert.match(runtime, /addAndroidShareReceivedListener/)
