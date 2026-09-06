@@ -5,12 +5,16 @@ import { runV2IncrementalSync } from './v2SyncCoordinator'
 const IDLE_DELAY_MS = 3000
 const REMOTE_POLL_MS = 60000
 
-export const V2_SYNC_APPLIED_EVENT = 'oanix:v2-sync-applied'
+interface V2AutoSyncRuntimeProps {
+  onRemoteApplied?: () => void
+}
 
 function workspaceIsSafeForSync(): boolean {
   if (!navigator.onLine) return false
   if (document.visibilityState !== 'visible') return false
-  if (document.querySelector('[data-oanix-editor-open="true"]')) return false
+  // This button exists for the full lifetime of an opened editor, even when the editor is clean.
+  // Never apply remote changes while a note is open: the in-memory editor remains authoritative.
+  if (document.querySelector('[data-oanix-save-and-close="true"]')) return false
   if (document.querySelector('[data-oanix-unsaved="true"]')) return false
   return true
 }
@@ -27,7 +31,7 @@ function isAbortError(error: unknown): boolean {
  * an active editing session. The periodic check only asks Supabase for change_seq rows
  * newer than the encrypted local cursor; unchanged payloads are not downloaded.
  */
-export function V2AutoSyncRuntime() {
+export function V2AutoSyncRuntime({ onRemoteApplied }: V2AutoSyncRuntimeProps) {
   const idleTimerRef = useRef<number | null>(null)
   const controllerRef = useRef<AbortController | null>(null)
   const runningRef = useRef(false)
@@ -67,7 +71,7 @@ export function V2AutoSyncRuntime() {
           && !controller.signal.aborted
           && (result.downloaded > 0 || result.deletedLocal > 0)
         ) {
-          window.dispatchEvent(new CustomEvent(V2_SYNC_APPLIED_EVENT, { detail: result }))
+          onRemoteApplied?.()
         }
       } catch (error) {
         if (!isAbortError(error)) {
@@ -134,7 +138,7 @@ export function V2AutoSyncRuntime() {
       window.removeEventListener('input', handleActivity)
       document.removeEventListener('visibilitychange', handleVisibility)
     }
-  }, [])
+  }, [onRemoteApplied])
 
   return null
 }
