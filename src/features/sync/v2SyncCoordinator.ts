@@ -215,7 +215,9 @@ async function uploadOne(
     await putEncryptedR2Object(nextObjectKey, accessToken, serializedPayload)
   }
 
-  abortIfNeeded(signal)
+  // Once a fresh immutable R2 object exists, finish the metadata commit for this unit.
+  // Aborting in this narrow window would strand an unreferenced object. The outer loop
+  // observes the aborted signal before starting another unit or before pulling remote work.
   const patch = {
     object_key: nextObjectKey,
     revision: pending.revision,
