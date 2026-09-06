@@ -1,189 +1,124 @@
 # OANIX — Estado actual para continuidad
 
-**Última actualización:** 2026-09-01
+**Última actualización:** 2026-09-06
 
-Checkpoint operativo corto. Antes de trabajar, verificar siempre el `main` real y PR recientes; GitHub es la fuente de verdad del código.
+Este documento es el checkpoint general vigente. Antes de trabajar, verificar siempre `main`, PRs recientes y `docs/OANIX_ACTIVE_CHECKPOINT.md`; GitHub es la fuente de verdad.
 
 ## Dirección activa
 
-OANIX está en una **reconstrucción limpia de la experiencia posterior al desbloqueo**. La prioridad actual es rendimiento, mantenibilidad y superficies visuales reemplazables sin tocar seguridad/datos.
+La reconstrucción post-unlock ya superó los frentes de Home y editor. **No existe un trabajo activo para sustituir o reconstruir el editor.**
 
-Se conserva:
-- bootstrap y flujo de bloqueo/desbloqueo;
-- vault/session;
-- cifrado AES-GCM/AAD de `contentCrypto.ts`;
-- infraestructura de sync E2EE y binarios/archivos como base a reutilizar selectivamente;
-- datos existentes, sin borrado destructivo.
+El frente más reciente implementado es la sincronización incremental v2 con Supabase + R2. El trabajo inmediato debe partir de esa realidad y no de planes anteriores de plantilla/editor.
 
-La reconstrucción del Home ya alcanzó su base funcional vigente. El frente activo pasa al editor nuevo y, después, a la coordinación de sincronización alrededor de ese editor.
-
-La dirección infográfica anterior queda **SUPERSEDED como dirección activa**. No arrastrar plantillas visuales anteriores dentro de la nueva hoja: el historial de Git sirve como referencia técnica, no como dependencia visual o de runtime.
-
-PR #532 aisló la nueva superficie post-unlock de la UI/runtime legacy. PR #534 eliminó físicamente del árbol activo los gates, runtimes, editor visual, presentación de imágenes y CSS legacy ya sustituidos. Los servicios/tipos reutilizables y la seguridad permanecen.
+Se conservan como invariantes:
+- bootstrap y bloqueo/desbloqueo;
+- vault/session y cifrado AES-GCM/AAD;
+- almacenamiento cifrado local v2;
+- datos existentes y migración no destructiva;
+- misma base React + TypeScript para PWA y Android/Capacitor;
+- UI desacoplada de persistencia, cifrado y sync.
 
 ## Regla operativa de cierre
 
-Un trabajo de OANIX no se da por terminado con gates reales en rojo.
+Un trabajo de OANIX no se da por terminado con gates aplicables en rojo.
 
-- Si OANIX CI, OANIX Android o GitHub Pages fallan, corregir la causa y volver a validar hasta verde.
-- Si un check sigue ejecutándose, continuar consultándolo dentro del mismo flujo cuando sea posible; no cerrar solo por estar esperando.
-- No crear timers/recordatorios para sustituir esa espera activa.
-- Qwen automático no es gate técnico cuando falla por API/cuota; no debe bloquear un merge que ya tenga los gates reales verdes.
+- localizar el primer fallo real contra el HEAD que falló;
+- confirmar causa raíz antes de parchear;
+- si la causa está suficientemente verificada y el cambio es pequeño/reversible, corregir inmediatamente;
+- ejecutar de nuevo los gates y repetir hasta verde;
+- no modificar comportamiento correcto solo para satisfacer una expectativa de test obsoleta.
 
-## Home — base completada
+## Home y lista de notas — IMPLEMENTED
 
-La base nueva del Inicio quedó integrada y validada en `main`.
+El Home reconstruido es la autoridad post-unlock mediante `RebuildApp`.
 
-Estado vigente:
-- submenú izquierdo modular para carpetas y etiquetas;
-- creación de carpeta/etiqueta desde el propio submenú;
-- personalización persistente de carpeta;
-- color/degradado contextual de carpeta;
-- portada/fondo de carpeta almacenado como asset cifrado separado y cargado solo para la carpeta activa;
-- orden manual persistente de carpetas y etiquetas;
-- un reorder que termina sin cambios no vuelve a cifrar ni escribir el mismo orden;
-- logo/identidad real de OANIX en el Home;
-- Home consume controladores/servicios y no debe convertirse en autoridad de almacenamiento o cifrado.
+Estado reciente integrado:
+- carpetas, etiquetas y notas sobre persistencia v2;
+- personalización de tarjetas de nota con icono/color;
+- orden independiente en `Todas` y por carpeta;
+- drag/reorder móvil con propietario de pointer estable, hit-test vertical, autoscroll y animación FLIP;
+- scroll táctil real de la lista;
+- reordenamiento/personalización sin crear persistencias paralelas.
 
-PR #554 conectó la personalización al workspace activo. PR #556 eliminó writes de reordenamiento cuando el orden no cambió.
+PRs de referencia recientes: #630–#638.
 
-Toda evolución futura del Home debe conservar esta frontera: la presentación puede reemplazarse sin crear CRUD, stores de apariencia o persistencia paralelos.
+## Editor — IMPLEMENTED / NO ES FRENTE ACTIVO
 
-## Reglas visuales obligatorias
+El editor actual quedó integrado y no debe reabrirse como proyecto de sustitución salvo nueva solicitud del usuario o un defecto concreto demostrado.
 
-Toda UI nueva debe considerarse simultáneamente en:
-**PC + móvil + Día + Noche**.
+PR #629 (`refactor: adapta editor natural de renglones al prototipo original`) estableció el núcleo vigente:
+- cada renglón de texto usa `div contentEditable`;
+- selección/cursor mediante `Selection`/`Range`;
+- Párrafo/H2/H3 con comportamiento natural por renglones;
+- Enter divide y continúa en Párrafo;
+- Backspace al inicio fusiona con el renglón anterior;
+- pegado como texto plano;
+- undo/redo y atajos dentro del editor;
+- conservación local de selección al usar paneles;
+- el host queda como adaptador de persistencia mediante `loadBlocks`, `saveBlockChanges` y flush al cerrar;
+- escritura agrupada por ~3 s de inactividad;
+- no se reactivó el bridge/remount anterior.
 
-Preview visual:
-- archivo: `public/preview/index.html`;
-- URL: `https://hnalvaradohn.github.io/OANIX/preview/`;
-- se usa como laboratorio de diseño, no como almacenamiento/seguridad de producción.
+Los PR #622–#628 contienen la evolución previa de formatos y comportamiento de H2/H3; #629 es la consolidación posterior que manda sobre ellos.
 
-Decisiones visuales vigentes:
-- navegación inferior: **Inicio · Buscar · + · Recientes · Ajustes**;
-- `+` ofrece Nota / Carpeta / Etiqueta;
-- cada carpeta usa identidad visual coherente en submenú/lista/workspace;
-- al entrar a una carpeta, su fondo puede ocupar todo el espacio detrás de la lista de notas;
-- fondo por defecto = degradado estable; imagen personalizada = opcional;
-- las portadas deben mantener alta calidad, cargar solo la activa y mantener contraste en Día/Noche;
-- evitar blur grande en tiempo real y base64 dentro del registro de carpeta;
-- base visual global = neutral: Noche carbón/grafito con acento frío sobrio; Día blanco/gris claro con acento neutro;
-- carpeta activa = acento contextual opcional mediante su degradado/color; `Todas` vuelve al acento neutral global.
+`EditorSurface` continúa como frontera arquitectónica entre Home y la implementación del editor. Eso **no significa que haya una plantilla nueva pendiente**.
 
-## Editor — transición activa
+Cualquier referencia anterior a obtener `qwen.html`, `appquen.js` o sustituir el editor queda **SUPERSEDED como siguiente acción** por el estado realmente integrado en GitHub.
 
-La persistencia y el cierre seguro del editor de texto actual están implementados y sirven como garantía funcional durante la transición, **no como plantilla visual que deba heredarse**.
+## Persistencia incremental local — IMPLEMENTED
 
-Fundación relevante:
-- PR #538: base de editor/persistencia v2;
-- PR #543: autoguardado incremental por idle;
-- PR #545: cierre inmediato guarda el snapshot DOM más reciente aunque todavía no haya vencido el idle;
-- PR #549: Atrás Android cierra la capa activa correcta; el flujo fue validado físicamente;
-- PR #555: contrato de superficie de editor reemplazable;
-- PR #557: Home ya entra al editor mediante `EditorSurface`, no mediante una importación directa de `NoteEditor`.
+Las notas v2 usan metadata + manifiesto + unidades/chunks estables y cola cifrada `sync.v2.pending`.
 
-`EditorSurface` es el punto de composición autorizado para seleccionar/adaptar la implementación visual del editor. Home, cifrado, persistencia, navegación, vault y sync no deben importar ni conocer detalles de una plantilla concreta.
+Propiedades vigentes:
+- no-op evita cifrado/escritura innecesarios;
+- cambios localizados reescriben únicamente unidades afectadas;
+- writes/deletes/tombstones se coordinan de forma atómica;
+- datos legacy compatibles migran perezosamente cuando corresponde;
+- carpetas y etiquetas también generan revisiones/pending para cambios relevantes.
 
-El editor actual sigue temporalmente detrás de `EditorSurface` para conservar las garantías ya demostradas mientras la nueva hoja se integra. No usar `ruledSheet.css`, Aurora, Qwen ni cualquier hoja/plantilla anterior como dependencia de la nueva implementación. Cuando la nueva hoja demuestre guardado, reapertura, cierre, Atrás Android y rendimiento bajo carga, la implementación visual transitoria puede retirarse sin cambiar Home ni la capa de datos.
+## Sincronización incremental v2 + R2 — IMPLEMENTED, VALIDACIÓN REAL SIGUIENTE
 
-### Nueva plantilla seleccionada
+PR #639 preparó el protocolo remoto incremental:
+- `sync_v2_records` como índice remoto pequeño con cursor monotónico;
+- bindings opacos, ACKs y control de conflictos;
+- gateway privado R2 sin credenciales R2 en PWA/APK;
+- `runV2IncrementalSync` consume `sync.v2.pending` y mueve únicamente unidades cambiadas;
+- Supabase conserva metadata operativa y R2 payload cifrado.
 
-La plantilla externa nueva seleccionada por el usuario es la autoridad visual/funcional objetivo de la futura hoja, pero debe tratarse como **fuente fresca**, no como continuación de prototipos anteriores.
+PR #640 conectó el build oficial de GitHub Pages con el gateway R2 de producción sin exponer credenciales.
 
-Antes de integrarla:
-- usar exactamente sus archivos fuente actuales; no reconstruirla de memoria;
-- sanear el prototipo fuera del camino de persistencia: eliminar JS duplicado, reconciliar IDs/controles y corregir inserción contextual de bloques;
-- preservar diseño/experiencia, pero separar DOM/editor de almacenamiento, cifrado, sync y navegación de OANIX;
-- no copiar persistencia demo, datos demo, blob URLs como almacenamiento permanente ni dependencias CDN innecesarias;
-- bloques pesados deben referenciar assets de OANIX, no materializar archivos grandes completos en DOM/RAM.
+PR #641 activó el runtime automático v2:
+- `V2AutoSyncRuntime` se monta solo con la bóveda desbloqueada;
+- intenta sync tras ~3 s de inactividad;
+- consulta cambios remotos incrementalmente cada 60 s;
+- cancela/posterga ante nueva actividad, offline u ocultamiento;
+- no aplica cambios remotos mientras una nota esté abierta;
+- tras aplicar cambios remotos incrementa `workspaceRevision` para refrescar `RebuildApp` sin recargar la página;
+- no reactiva `AutoSyncRuntime` legacy ni escanea todo el ciphertext.
 
-**Bloqueo actual de integración visual:** en las ejecuciones automatizadas de 2026-09-01 no estuvieron accesibles los archivos exactos `qwen.html` y `appquen.js` mediante la biblioteca disponible. No sustituirlos por archivos antiguos o parecidos. Continuar únicamente con trabajo seguro que no requiera inventar su contenido y volver a buscar la fuente exacta en ejecuciones posteriores.
+En el HEAD final de #641 pasaron OANIX CI, OANIX Android y Qwen antes del merge.
 
-## Garantías de edición que la nueva hoja debe conservar
+## Estado de `main`
 
-El cuerpo actual usa un editor uncontrolled: una tecla no copia el documento entero a estado React ni vuelve a renderizar Home.
+PR #641 fue fusionado el 2026-09-06. Después del merge se realizaron únicamente actualizaciones documentales de continuidad.
 
-- snapshot completo solo en fronteras seguras de guardado;
-- autoguardado local después de ~3 s sin actividad;
-- no cifrar ni escribir IndexedDB dentro de `onInput`;
-- guardados serializados y baseline solo después de commit local correcto;
-- si el usuario escribe durante un guardado, la generación nueva queda dirty y se guarda después;
-- cerrar espera cualquier save en curso y persiste el snapshot pendiente más reciente;
-- el cierre rápido antes del idle no puede perder texto;
-- Atrás Android debe seguir la capa activa y conservar el mismo cierre seguro.
-
-El camino crítico de una tecla no debe:
-- serializar todo el DOM;
-- cifrar;
-- escribir IndexedDB;
-- recorrer la bóveda;
-- disparar sync pesado.
-
-La antigua hoja rayada y su contrato histórico pueden servir para entender problemas pasados, pero **no son autoridad visual ni base técnica de la nueva plantilla**.
-
-## Persistencia incremental y sincronización futura
-
-**Persistencia incremental local implementada:** las notas nuevas usan metadata + manifiesto + chunks de texto estables y una cola cifrada `sync.v2.pending`.
-
-Propiedades actuales:
-- chunks de texto con objetivo ~16 Ki caracteres y límites normales 8–24 Ki;
-- una edición localizada reescribe únicamente las unidades afectadas y el manifiesto pequeño;
-- cambios separados intentan resincronizarse con chunks intactos para no reescribir el tramo intermedio;
-- no-op de título/texto evita cifrado/escritura innecesarios;
-- writes/deletes + tombstones pendientes se confirman atómicamente;
-- notas `plain-text-v1` anteriores siguen legibles y migran perezosamente al editarse, sin borrar todavía el registro legacy;
-- reabrir lee solo los chunks referenciados por esa nota;
-- PR #543 añadió autoguardado local por idle sobre esta misma persistencia incremental.
-
-**Aún pendiente:** el coordinador remoto no consume todavía `sync.v2.pending`.
-
-DECIDED para el coordinador, todavía no conectado:
-- actividad de edición bloquea el trabajo pesado de sincronización;
-- cada modificación renueva la actividad;
-- después de ~3 s sin cambios se puede intentar sync;
-- si el usuario vuelve a editar, el intento pendiente se cancela/posterga y el trabajo en curso se pausa cooperativamente después de la operación atómica segura;
-- no aplicar cambios remotos sobre la nota activa mientras se edita;
-- no habrá botón manual de sincronizar;
-- al salir, si hay sync pendiente y conexión, usar pantalla completa de **Sincronizando…** antes de volver a la lista;
-- offline: guardar cifrado local y permitir salir.
-
-El `AutoSyncRuntime` anterior no se reutiliza tal cual como coordinador del nuevo editor.
-
-## Feedback de operaciones largas
-
-Si una operación tarda aproximadamente más de 500–800 ms, OANIX debe indicar que sigue trabajando.
-
-- porcentaje solo si es medible de verdad;
-- si no, progreso indeterminado;
-- mostrar fases reales: Guardando / Cifrando / Sincronizando / Verificando / Listo;
-- usar pantalla completa cuando la acción bloquee navegación o sea crítica;
-- aplicar en móvil/PC y Día/Noche.
-
-## Arquitectura
-
-Requisito permanente:
-`UI → estado/servicios → dominio → almacenamiento cifrado → vault/crypto`.
-
-Un rediseño futuro debe poder reemplazar componentes visuales sin reescribir seguridad, almacenamiento, sync o reglas de negocio.
-
-La misma regla aplica al Home y al editor: una plantilla es una superficie reemplazable, no una nueva arquitectura de datos.
-
-## Archivos grandes
-
-El motor de archivos grandes y Google Drive ya implementados **no se borran**. Se preservan durante la reconstrucción y se retomarán después de estabilizar la nueva base.
-
-No cargar archivos gigantes completos en RAM; mantener procesamiento por fragmentos y reanudación/checkpoints existentes.
+Consultar el SHA vivo de `main` antes de cualquier nueva modificación; no congelar aquí un SHA como autoridad permanente.
 
 ## Próximo paso exacto
 
-1. Volver a obtener los archivos fuente exactos de la nueva plantilla (`qwen.html` y `appquen.js`) sin usar copias antiguas o aproximadas.
-2. Sanear esa plantilla de forma aislada: una sola autoridad JS, IDs coherentes, inserción de bloques en contexto y controles funcionales.
-3. Adaptarla detrás de `EditorSurface` sin que importe persistencia, cifrado, vault, sync, Home ni hojas anteriores.
-4. Conectar primero título + texto al contrato existente y demostrar guardar/reabrir/cerrar/Atrás Android sin pérdida.
-5. Incorporar bloques especiales progresivamente con identidad por bloque y assets referenciados.
-6. Someterla a estrés con documentos grandes, muchos bloques, escritura rápida, scroll largo, imágenes/archivos, móvil/PC y Día/Noche.
-7. Solo entonces retirar la implementación visual transitoria y avanzar al coordinador remoto de `sync.v2.pending`.
+**Validar de extremo a extremo la sincronización v2 recién activada en condiciones reales antes de abrir otro frente funcional.**
+
+La validación debe comprobar, sin modificar el editor:
+1. dispositivo A crea/edita una nota y el cambio local queda sincronizado después del idle;
+2. dispositivo B, con la misma cuenta/bóveda, recibe el cambio remoto sin recarga completa;
+3. no se aplica contenido remoto mientras una nota está abierta en edición;
+4. offline conserva cambios locales y los sincroniza al recuperar conexión;
+5. crear/editar/reordenar/eliminar carpetas y etiquetas viaja mediante la cola incremental;
+6. una bóveda sin cambios no provoca descargas de payload remoto innecesarias;
+7. ante fallo de red/auth/egress, contenido local y pendientes permanecen intactos.
+
+Si aparece un fallo, investigar la causa en el flujo v2 actual; **no volver al editor ni al runtime legacy como atajo**.
 
 ## Continuidad
 
-Las decisiones duraderas completas están en `docs/PROJECT_MEMORY.md`. No pedir al usuario que vuelva a explicar decisiones registradas allí; verificar siempre el código real antes de implementar.
+El punto operativo exacto vive en `docs/OANIX_ACTIVE_CHECKPOINT.md`. Las decisiones duraderas continúan en `docs/PROJECT_MEMORY.md`. Los PRs y el código de `main` prevalecen cuando cualquier documento antiguo contradiga el estado implementado.
