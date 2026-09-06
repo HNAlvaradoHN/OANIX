@@ -8,7 +8,7 @@ Este documento es el checkpoint general vigente. Antes de trabajar, verificar si
 
 La reconstrucción post-unlock ya superó los frentes de Home y editor. **No existe un trabajo activo para sustituir o reconstruir el editor.**
 
-El frente más reciente implementado es la sincronización incremental v2 con Supabase + R2. El trabajo inmediato debe partir de esa realidad y no de planes anteriores de plantilla/editor.
+El frente más reciente implementado es la sincronización incremental v2 con Supabase + R2. La implementación está terminada y fusionada; su validación real extremo a extremo queda temporalmente bloqueada por una restricción operativa de Supabase comunicada por el usuario, prevista hasta aproximadamente el **2026-09-16**.
 
 Se conservan como invariantes:
 - bootstrap y bloqueo/desbloqueo;
@@ -17,16 +17,6 @@ Se conservan como invariantes:
 - datos existentes y migración no destructiva;
 - misma base React + TypeScript para PWA y Android/Capacitor;
 - UI desacoplada de persistencia, cifrado y sync.
-
-## Regla operativa de cierre
-
-Un trabajo de OANIX no se da por terminado con gates aplicables en rojo.
-
-- localizar el primer fallo real contra el HEAD que falló;
-- confirmar causa raíz antes de parchear;
-- si la causa está suficientemente verificada y el cambio es pequeño/reversible, corregir inmediatamente;
-- ejecutar de nuevo los gates y repetir hasta verde;
-- no modificar comportamiento correcto solo para satisfacer una expectativa de test obsoleta.
 
 ## Home y lista de notas — IMPLEMENTED
 
@@ -44,26 +34,11 @@ PRs de referencia recientes: #630–#638.
 
 ## Editor — IMPLEMENTED / NO ES FRENTE ACTIVO
 
-El editor actual quedó integrado y no debe reabrirse como proyecto de sustitución salvo nueva solicitud del usuario o un defecto concreto demostrado.
-
-PR #629 (`refactor: adapta editor natural de renglones al prototipo original`) estableció el núcleo vigente:
-- cada renglón de texto usa `div contentEditable`;
-- selección/cursor mediante `Selection`/`Range`;
-- Párrafo/H2/H3 con comportamiento natural por renglones;
-- Enter divide y continúa en Párrafo;
-- Backspace al inicio fusiona con el renglón anterior;
-- pegado como texto plano;
-- undo/redo y atajos dentro del editor;
-- conservación local de selección al usar paneles;
-- el host queda como adaptador de persistencia mediante `loadBlocks`, `saveBlockChanges` y flush al cerrar;
-- escritura agrupada por ~3 s de inactividad;
-- no se reactivó el bridge/remount anterior.
-
-Los PR #622–#628 contienen la evolución previa de formatos y comportamiento de H2/H3; #629 es la consolidación posterior que manda sobre ellos.
+PR #629 consolidó el editor natural por renglones con `contentEditable`, `Selection`/`Range`, Párrafo/H2/H3, Enter/Backspace natural, pegado de texto plano, undo/redo y persistencia incremental mediante el host.
 
 `EditorSurface` continúa como frontera arquitectónica entre Home y la implementación del editor. Eso **no significa que haya una plantilla nueva pendiente**.
 
-Cualquier referencia anterior a obtener `qwen.html`, `appquen.js` o sustituir el editor queda **SUPERSEDED como siguiente acción** por el estado realmente integrado en GitHub.
+Las referencias anteriores a `qwen.html`, `appquen.js`, réplica V16 o sustitución del editor quedan **SUPERSEDED como siguiente acción**.
 
 ## Persistencia incremental local — IMPLEMENTED
 
@@ -76,7 +51,7 @@ Propiedades vigentes:
 - datos legacy compatibles migran perezosamente cuando corresponde;
 - carpetas y etiquetas también generan revisiones/pending para cambios relevantes.
 
-## Sincronización incremental v2 + R2 — IMPLEMENTED, VALIDACIÓN REAL SIGUIENTE
+## Sincronización incremental v2 + R2 — IMPLEMENTED
 
 PR #639 preparó el protocolo remoto incremental:
 - `sync_v2_records` como índice remoto pequeño con cursor monotónico;
@@ -98,26 +73,25 @@ PR #641 activó el runtime automático v2:
 
 En el HEAD final de #641 pasaron OANIX CI, OANIX Android y Qwen antes del merge.
 
+## Validación real — VALIDATION_DEBT / BLOCKED_EXTERNAL
+
+El usuario informó el 2026-09-06 que Supabase mantiene una restricción que impide ejecutar por ahora la prueba real completa, con final previsto alrededor del **2026-09-16**.
+
+Por tanto:
+- la implementación de R2/Supabase/sync v2 **no se considera incompleta** por esta limitación externa;
+- todavía no se puede declarar validado en campo el recorrido dispositivo A → nube → dispositivo B;
+- no rehacer la arquitectura ni reactivar el runtime legacy por este bloqueo;
+- cuando Supabase vuelva a estar disponible, la primera prueba pendiente es validar notas, carpetas, etiquetas, offline/reconexión y aplicación remota sin reload completo.
+
 ## Estado de `main`
 
-PR #641 fue fusionado el 2026-09-06. Después del merge se realizaron únicamente actualizaciones documentales de continuidad.
-
-Consultar el SHA vivo de `main` antes de cualquier nueva modificación; no congelar aquí un SHA como autoridad permanente.
+PR #641 fue fusionado el 2026-09-06. Después del merge se realizaron únicamente ajustes documentales de continuidad y limpieza de trabajo viejo. Consultar el SHA vivo de `main` antes de cualquier nueva modificación.
 
 ## Próximo paso exacto
 
-**Validar de extremo a extremo la sincronización v2 recién activada en condiciones reales antes de abrir otro frente funcional.**
+Mientras continúe la restricción de Supabase, avanzar únicamente en trabajo que no dependa de esa validación remota. **No abrir de nuevo el editor ni rehacer R2/Supabase.**
 
-La validación debe comprobar, sin modificar el editor:
-1. dispositivo A crea/edita una nota y el cambio local queda sincronizado después del idle;
-2. dispositivo B, con la misma cuenta/bóveda, recibe el cambio remoto sin recarga completa;
-3. no se aplica contenido remoto mientras una nota está abierta en edición;
-4. offline conserva cambios locales y los sincroniza al recuperar conexión;
-5. crear/editar/reordenar/eliminar carpetas y etiquetas viaja mediante la cola incremental;
-6. una bóveda sin cambios no provoca descargas de payload remoto innecesarias;
-7. ante fallo de red/auth/egress, contenido local y pendientes permanecen intactos.
-
-Si aparece un fallo, investigar la causa en el flujo v2 actual; **no volver al editor ni al runtime legacy como atajo**.
+Cuando Supabase vuelva a estar disponible, retomar inmediatamente la validación extremo a extremo de sync v2 + R2 y cerrar esa deuda solo con evidencia real.
 
 ## Continuidad
 
