@@ -20,12 +20,12 @@ test('folder and tag pending writes use the entity as their own sync scope', () 
   const write = createEntityPendingWrite(FOLDER_V2_TYPE, 'folder-1', 4, 'delete', queuedAt)
 
   assert.equal(write.recordType, SYNC_V2_PENDING_TYPE)
+  assert.equal(write.recordId, JSON.stringify([FOLDER_V2_TYPE, 'folder-1']))
   assert.deepEqual(write.value, {
     version: 2,
     noteId: 'folder-1',
     unitType: FOLDER_V2_TYPE,
     unitId: 'folder-1',
-    recordId: 'folder-1',
     revision: 4,
     operation: 'delete',
     queuedAt,
